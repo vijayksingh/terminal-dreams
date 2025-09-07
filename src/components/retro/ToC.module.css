@@ -1,0 +1,27 @@
+.toc {
+  color: #a0a0a0;
+}
+
+.tocTitle {
+  color: #a0a0a0;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.tocList { list-style: none; padding-left: 0; }
+.tocItem { padding: 0.25rem 0; }
+.tocLink { color: #808080; text-decoration: none; font-size: 0.9rem; }
+.tocLink:hover { color: #e0e0e0; }
+.tocActive { color: #e0e0e0; }
+
+/* variants */
+.side { position: sticky; top: calc(100vh - 12rem); bottom: 0; height: max-content; }
+.bottom { margin-top: 2rem; border-top: 1px solid #1a1a1a; padding-top: 1rem; }
+
+@media (max-width: 768px) {
+  .side { display: none; }
+}
+
+
