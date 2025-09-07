@@ -1,7 +1,7 @@
 import RetroBlog from "@/components/retro/RetroBlog";
 import { getAllPosts } from "@/lib/mdx";
 
-export default function Home() {
+export default function BlogIndexPage() {
   const posts = getAllPosts().map((p) => ({
     slug: p.slug,
     title: p.frontmatter.title,
@@ -12,3 +12,5 @@ export default function Home() {
   }));
   return <RetroBlog posts={posts} />;
 }
+
+
