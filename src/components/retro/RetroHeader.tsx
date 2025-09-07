@@ -3,7 +3,13 @@
 import styles from "./retro.module.css";
 
 export function RetroHeader() {
-  const items = ["Home", "Archives", "About", "Guestbook", "Webring"];
+  const items = [
+    { label: "Home", href: "/" },
+    { label: "Archives", href: "/blog" },
+    { label: "About", href: "/about" },
+    { label: "Guestbook", href: "/guestbook" },
+    { label: "Webring", href: "/webring" },
+  ];
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
@@ -12,25 +18,23 @@ export function RetroHeader() {
           TERMINAL_DREAMS
         </h1>
         <p className={styles.subtitle}>{"// Nostalgic bytes from the digital underground"}</p>
-        <nav style={{ marginTop: "2rem" }}>
+        <nav style={{ marginTop: "var(--space-6)" }}>
           <ul className={styles.navList}>
             {items.map((item) => (
-              <li key={item}>
+              <li key={item.label}>
                 <a
-                  href={item === "Home" ? "/" : "#"}
+                  href={item.href}
                   className={styles.navLink}
                   onMouseEnter={(e) => {
                     const target = e.currentTarget as HTMLAnchorElement;
-                    target.style.color = "#e0e0e0";
-                    target.textContent = `[ ${item} ]`;
+                    target.textContent = `[ ${item.label} ]`;
                   }}
                   onMouseLeave={(e) => {
                     const target = e.currentTarget as HTMLAnchorElement;
-                    target.style.color = "#a0a0a0";
-                    target.textContent = item;
+                    target.textContent = item.label;
                   }}
                 >
-                  {item}
+                  {item.label}
                 </a>
               </li>
             ))}

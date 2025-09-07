@@ -1,3 +1,5 @@
+import CommandPalette from "@/components/CommandPalette/CommandPalette";
+import { getAllPosts } from "@/lib/mdx";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -28,11 +30,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const posts = getAllPosts().map((p) => ({
+    slug: p.slug,
+    title: p.frontmatter.title,
+    category: p.frontmatter.category,
+  }));
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <CommandPalette posts={posts} />
         {children}
       </body>
     </html>

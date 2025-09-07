@@ -7,6 +7,15 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Component defaults using semantic tokens */
+:root {
+  --component-panel-bg: var(--panel-bg);
+  --component-panel-border: var(--panel-border);
+  --component-panel-radius: var(--panel-radius);
+  --component-panel-padding-x: var(--panel-padding-x);
+  --component-panel-padding-y: var(--panel-padding-y);
+}
+
 /* Retro blog global touches */
 body {
   cursor: crosshair;

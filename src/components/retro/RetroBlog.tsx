@@ -85,14 +85,14 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
               TERMINAL_DREAMS
             </h1>
             <p className={styles.subtitle}>{"// Nostalgic bytes from the digital underground"}</p>
-            <nav style={{ marginTop: "2rem" }}>
+            <nav style={{ marginTop: "var(--space-6)" }}>
               <ul className={styles.navList}>
                 {[
                   { label: "Home", href: "/" },
                   { label: "Archives", href: "/blog" },
-                  { label: "About", href: "#" },
-                  { label: "Guestbook", href: "#" },
-                  { label: "Webring", href: "#" },
+                  { label: "About", href: "/about" },
+                  { label: "Guestbook", href: "/guestbook" },
+                  { label: "Webring", href: "/webring" },
                 ].map((item) => (
                   <li key={item.label}>
                     <a
@@ -100,12 +100,10 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
                       className={styles.navLink}
                       onMouseEnter={(e) => {
                         const target = e.currentTarget as HTMLAnchorElement;
-                        target.style.color = "#e0e0e0";
                         target.textContent = `[ ${item.label} ]`;
                       }}
                       onMouseLeave={(e) => {
                         const target = e.currentTarget as HTMLAnchorElement;
-                        target.style.color = "#a0a0a0";
                         target.textContent = item.label;
                       }}
                     >

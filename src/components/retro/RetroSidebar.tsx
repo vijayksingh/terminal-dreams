@@ -8,7 +8,7 @@ export function RetroSidebar() {
       <div className={styles.sidebarDivider} />
       <div className={styles.widget}>
         <h3 className={`${styles.widgetTitle} ${styles.pulseAnimation}`}>
-          <span style={{ color: "#606060" }}>{">"}</span> System Status
+          <span style={{ color: "var(--color-muted)" }}>{">"}</span> System Status
         </h3>
         <div className={styles.statusRow}>
           {[

@@ -29,10 +29,10 @@ export function RetroBackLink({ href = "/", label = "Back" }: RetroBackLinkProps
           el.textContent = label;
         }}
         style={{
-          border: "1px solid #303030",
-          padding: "0.25rem 0.5rem",
-          borderRadius: 4,
-          background: "#141414",
+          border: "1px solid var(--color-border)",
+          padding: "var(--space-1) var(--space-2)",
+          borderRadius: "var(--radius-1)",
+          background: "var(--color-surface)",
         }}
       >
         {label}

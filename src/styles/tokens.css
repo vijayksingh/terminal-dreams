@@ -29,6 +29,7 @@
   /* Typography */
   --font-sans: var(--font-geist-sans, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial);
   --font-mono: var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+  --font-ui: var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
 
   --text-xs: 0.75rem;
   --text-sm: 0.85rem;
@@ -36,6 +37,30 @@
   --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
+
+  /* Z-index scale */
+  --z-overlay: 1000;
+  --z-overlay-content: 1001;
+
+  /* Shadows */
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.02) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* Semantic component tokens (edit here to restyle app-wide) */
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+
+  --panel-bg: var(--color-surface);
+  --panel-border: var(--color-border);
+  --panel-radius: var(--radius-2);
+  --panel-padding-x: var(--space-3);
+  --panel-padding-y: var(--space-2);
+  --panel-shadow: var(--shadow-2);
+
+  --kbd-bg: var(--color-surface);
+  --kbd-border: var(--color-border);
+  --kbd-text: var(--color-text);
+  --kbd-radius: var(--radius-1);
+  --kbd-padding-x: var(--space-1);
 }
 
 @media (prefers-color-scheme: light) {
@@ -47,6 +72,10 @@
     --color-muted: #7a7a7a;
     --color-text: #141414;
     --color-link: #141414;
+
+    /* Light mode component tokens */
+    --overlay-bg: rgba(0, 0, 0, 0.35);
+    --panel-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04) inset, 0 20px 60px rgba(0, 0, 0, 0.2);
   }
 }
 
