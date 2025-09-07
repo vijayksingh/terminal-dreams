@@ -33,4 +33,6 @@ export function InteractiveCounter() {
   );
 }
 
+export default InteractiveCounter;
+
 

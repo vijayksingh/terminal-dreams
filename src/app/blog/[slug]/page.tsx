@@ -3,22 +3,24 @@ import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { RetroSidebar } from "@/components/retro/RetroSidebar";
 import { getAllPostSlugs, getPostBySlug } from "@/lib/mdx";
+import { buildComponentsForSlug } from "@/mdx/registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import Link from "next/link";
+// import Link from "next/link";
+import { RetroBackLink } from "@/components/retro/RetroBackLink";
 import { notFound } from "next/navigation";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
-import { InteractiveCounter } from "./components";
 
 export async function generateStaticParams() {
   return getAllPostSlugs().map((slug) => ({ slug }));
 }
 
-export default function BlogPostPage({ params }: { params: { slug: string } }) {
-  const post = getPostBySlug(params.slug);
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const awaitedParams = await params;
+  const post = getPostBySlug(awaitedParams.slug);
   if (!post) return notFound();
 
-  const components = { InteractiveCounter } as const;
+  const components = await buildComponentsForSlug(post.slug);
 
   return (
     <div className={styles.container}>
@@ -26,9 +28,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       {/* Cursor glow is a client effect; keep static page clean */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/" className={`${styles.navLink}`}>
-            ← Back
-          </Link>
+          <RetroBackLink href="/blog" label="Back" />
           <h1 className={`${styles.title}`}>{post.frontmatter.title}</h1>
           <div className={styles.meta}>
             <span>{"// "}{post.frontmatter.date}</span>
@@ -52,13 +52,14 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
                     remarkPlugins: [remarkGfm],
                     rehypePlugins: [
                       [
-                        // @ts-expect-error - typing from plugin is loose
                         rehypePrettyCode,
                         {
                           theme: {
-                            dark: "github-dark",
+                            // Vibrant, readable color theme
+                            dark: "nord",
                             light: "github-light",
                           },
+                          keepBackground: false,
                         },
                       ],
                     ],

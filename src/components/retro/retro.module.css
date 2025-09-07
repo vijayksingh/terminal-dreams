@@ -390,6 +390,10 @@
   color: #c0c0c0;
 }
 
+.backLink {
+  display: inline-block;
+}
+
 @media (max-width: 980px) {
   .headerGrid { grid-template-columns: 1fr; }
 }

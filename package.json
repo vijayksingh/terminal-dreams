@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "framer-motion": "^12.23.12",
     "next": "15.5.2",
     "next-mdx-remote": "^5.0.0",
     "react": "19.1.0",
