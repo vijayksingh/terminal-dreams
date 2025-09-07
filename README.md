@@ -65,3 +65,19 @@ Home also shows the latest posts using the same renderer.
 ```bash
 npm run test
 ```
+
+## TODO 
+- [ ] Fix the file architecture to have the css and components in a folder so that they don't all go into same folder.
+- [ ] Implement the timeline component for blogs posts
+- [ ] Implement different styles of cards for the different blog types
+  - [ ] Blog Card
+  - [ ] TIL Card
+  - [ ] Project Card
+  - [ ] Notes Card
+  - [ ] Essays 
+- [ ] Implement the guestbook component
+- [ ] Implement the webring component
+- [ ] Implement the system status component
+- [ ] Implement the recent posts component
+- [ ] Implement the categories component
+- [ ] Implement the stats grid component

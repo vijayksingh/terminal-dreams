@@ -69,6 +69,13 @@
   padding: 0 2rem;
 }
 
+.headerGrid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 2rem;
+  align-items: start;
+}
+
 .ascii {
   font-size: 0.7rem;
   line-height: 1;
@@ -304,6 +311,87 @@
   font-size: 0.6rem;
   line-height: 1;
   opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+/* About card */
+.aboutCard {
+  background: linear-gradient(180deg, #121212 0%, #0c0c0c 100%);
+  border: 1px solid #303030;
+  border-radius: 12px;
+  padding: 1.25rem 1.25rem 1rem;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.35);
+}
+
+.aboutHeaderRow {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.aboutAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 1px solid #303030;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.06), rgba(0,0,0,0) 60%);
+  color: #e0e0e0;
+  font-weight: 700;
+}
+
+.aboutHandle {
+  color: #e0e0e0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.aboutTagline {
+  color: #a0a0a0;
+  font-size: 0.9rem;
+}
+
+.aboutList {
+  list-style: none;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+}
+
+.aboutListItem {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.aboutListItem:last-child {
+  border-bottom: none;
+}
+
+.aboutLink {
+  color: #d0d0d0;
+  text-decoration: none;
+}
+
+.aboutLink:hover {
+  color: #ffffff;
+}
+
+.aboutMeta {
+  color: #8a8a8a;
+  font-size: 0.85rem;
+}
+
+.aboutMono {
+  font-family: var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+  color: #c0c0c0;
+}
+
+@media (max-width: 980px) {
+  .headerGrid { grid-template-columns: 1fr; }
 }
 
 .flickerAnimation {
