@@ -1,12 +1,10 @@
 import styles from "@/components/retro/retro.module.css";
+import { RetroBackLink } from "@/components/retro/RetroBackLink";
 import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import { RetroFooter } from "@/components/retro/RetroFooter";
-import { RetroSidebar } from "@/components/retro/RetroSidebar";
 import { getAllPostSlugs, getPostBySlug } from "@/lib/mdx";
 import { buildComponentsForSlug } from "@/mdx/registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
-// import Link from "next/link";
-import { RetroBackLink } from "@/components/retro/RetroBackLink";
 import { notFound } from "next/navigation";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
@@ -67,7 +65,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
           </article>
         </main>
-        <RetroSidebar />
       </div>
 
       <RetroFooter />

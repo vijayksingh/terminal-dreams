@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
+// import Link from "next/link";
 import { useEffect, useState } from "react";
 import styles from "./retro.module.css";
 import { RetroAboutCard } from "./RetroAboutCard";
 import { CursorGlow, ScanlineOverlay } from "./RetroDecor";
 import { RetroFooter } from "./RetroFooter";
 import { RetroSidebar } from "./RetroSidebar";
+import { RetroTimeline } from "./RetroTimeline";
 
 declare global {
   interface Window {
@@ -29,7 +30,7 @@ export type BlogListItem = {
 
 export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [glitchIndex, setGlitchIndex] = useState<number | null>(null);
+  const [/*glitchIndex*/, setGlitchIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -125,42 +126,17 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
       {/* Main Content */}
       <div className={styles.main}>
         <main>
-          {posts.map((post, index) => (
-            <article key={post.slug} className={styles.article}>
-              <div className={styles.meta}>
-                <span>{"// "}{post.date}</span>
-                {post.category ? <span>{"// "}{post.category}</span> : null}
-                <span>{"// "}{post.readTime}</span>
-              </div>
-              <h2
-                className={`${styles.postTitle} ${glitchIndex === index ? styles.glitchShadow : ""
-                  }`}
-              >
-                <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-              </h2>
-              <div className={styles.content}>
-                {post.summary ? (
-                  <p style={{ marginBottom: "1rem" }}>{post.summary}</p>
-                ) : null}
-              </div>
-              <Link
-                href={`/blog/${post.slug}`}
-                className={styles.readMore}
-                onMouseEnter={(e) => {
-                  const target = e.currentTarget as HTMLAnchorElement;
-                  target.textContent = "Continue Reading >>>";
-                }}
-                onMouseLeave={(e) => {
-                  const target = e.currentTarget as HTMLAnchorElement;
-                  target.textContent = "Continue Reading";
-                }}
-              >
-                Continue Reading
-              </Link>
-            </article>
-          ))}
+          <RetroTimeline
+            posts={posts.map((p) => ({
+              slug: p.slug,
+              title: p.title,
+              date: p.date,
+              category: p.category,
+              readTime: p.readTime,
+            }))}
+          />
+          <RetroSidebar />
         </main>
-        <RetroSidebar />
       </div>
 
       <RetroFooter />
