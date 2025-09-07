@@ -81,3 +81,5 @@ npm run test
 - [ ] Implement the recent posts component
 - [ ] Implement the categories component
 - [ ] Implement the stats grid component
+- [ ] The TOC component is not sticking to bottom and is moving along with the article, it should be detached from the article and should be sticky to the bottom of the page.
+- [ ] add this animation library : npx shadcn@latest add "https://icons.pqoqubbw.dev/c/square-arrow-right.json"

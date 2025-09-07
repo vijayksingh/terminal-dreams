@@ -65,8 +65,8 @@
 
 .container {
   font-family: var(--font-jetbrains-mono), monospace;
-  background: #0a0a0a;
-  color: #e0e0e0;
+  background: var(--color-bg);
+  color: var(--color-text);
   min-height: 100vh;
   line-height: 1.6;
   position: relative;
@@ -103,8 +103,8 @@
 }
 
 .header {
-  background: linear-gradient(180deg, #141414 0%, #0a0a0a 100%);
-  border-bottom: 1px solid #303030;
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+  border-bottom: 1px solid var(--color-border);
   padding: 2rem 0;
   position: relative;
   z-index: 10;
@@ -185,8 +185,8 @@
 }
 
 .article {
-  background: #141414;
-  border: 1px solid #303030;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   padding: 2rem;
   margin-bottom: 2rem;
   position: relative;
@@ -204,7 +204,7 @@
   gap: 1rem;
   margin-bottom: 1rem;
   font-size: 0.8rem;
-  color: #606060;
+  color: var(--color-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   flex-wrap: wrap;
@@ -219,11 +219,11 @@
 }
 
 .glitchShadow {
-  text-shadow: -2px 0 #606060, 2px 0 #303030;
+  text-shadow: -2px 0 var(--color-muted), 2px 0 var(--color-border);
 }
 
 .content {
-  color: #a0a0a0;
+  color: var(--accent-weak);
   line-height: 1.8;
   margin-bottom: 1.5rem;
 }
@@ -357,7 +357,7 @@
 }
 
 .readMore {
-  color: #e0e0e0;
+  color: var(--color-text);
   text-decoration: none;
   font-size: 0.9rem;
   text-transform: uppercase;
@@ -415,8 +415,8 @@
 }
 
 .widget {
-  background: #141414;
-  border: 1px solid #303030;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   padding: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -438,10 +438,10 @@
 
 .listItem {
   padding: 0.5rem 0;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--color-surface-2);
   transition: all 0.3s;
   padding-left: 0;
-  color: #a0a0a0;
+  color: var(--accent-weak);
 }
 
 .listItem:last-child {
@@ -450,7 +450,7 @@
 
 .listItem:hover {
   padding-left: 1rem;
-  color: #e0e0e0;
+  color: var(--color-text);
 }
 
 .listLink {
@@ -470,8 +470,8 @@
 .statCard {
   text-align: center;
   padding: 0.5rem;
-  background: #1a1a1a;
-  border: 1px solid #303030;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
 }
 
 .statNumber {
