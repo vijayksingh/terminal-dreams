@@ -2,44 +2,9 @@
 
 import styles from "./retro.module.css";
 
-interface RetroSidebarProps {
-  recentPosts: string[];
-  categories: string[];
-}
-
-export function RetroSidebar({ recentPosts, categories }: RetroSidebarProps) {
+export function RetroSidebar() {
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.widget}>
-        <h3 className={`${styles.widgetTitle} ${styles.pulseAnimation}`}>
-          <span style={{ color: "#606060" }}>{">"}</span> Recent Posts
-        </h3>
-        <ul className={styles.list}>
-          {recentPosts.map((post, i) => (
-            <li key={i} className={styles.listItem}>
-              <a href="#" className={styles.listLink}>
-                {post}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className={styles.widget}>
-        <h3 className={`${styles.widgetTitle} ${styles.pulseAnimation}`}>
-          <span style={{ color: "#606060" }}>{">"}</span> Categories
-        </h3>
-        <ul className={styles.list}>
-          {categories.map((category, i) => (
-            <li key={i} className={styles.listItem}>
-              <a href="#" className={styles.listLink}>
-                {category}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
       <div className={styles.widget}>
         <h3 className={`${styles.widgetTitle} ${styles.pulseAnimation}`}>
           <span style={{ color: "#606060" }}>{">"}</span> System Status

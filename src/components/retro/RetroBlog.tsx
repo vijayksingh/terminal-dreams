@@ -23,21 +23,9 @@ export type BlogListItem = {
   summary?: string;
 };
 
-const RECENT_POSTS = [
-  "The Lost Art of ASCII Dreams",
-  "Dial-Up Symphony: A Love Letter to 56k",
-  "GeoCities Ghost Towns",
-  "IRC Memories and Late Night Chats",
-  "When Viruses Had Personalities",
-];
+// Sidebar cards for recent posts/categories removed per design update.
 
-const CATEGORIES = [
-  "Cyberspace",
-  "Nostalgia",
-  "Hacker Culture",
-  "Digital Art",
-  "Retro Tech",
-];
+//
 
 export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -172,7 +160,7 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
             </article>
           ))}
         </main>
-        <RetroSidebar recentPosts={RECENT_POSTS} categories={CATEGORIES} />
+        <RetroSidebar />
       </div>
 
       <RetroFooter />

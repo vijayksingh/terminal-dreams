@@ -55,11 +55,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                         rehypePrettyCode,
                         {
                           theme: {
-                            // Vibrant, readable color theme
-                            dark: "nord",
+                            dark: "github-dark",
                             light: "github-light",
                           },
-                          keepBackground: false,
                         },
                       ],
                     ],
@@ -69,10 +67,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
           </article>
         </main>
-        <RetroSidebar
-          recentPosts={[post.frontmatter.title]}
-          categories={[post.frontmatter.category ?? "General"]}
-        />
+        <RetroSidebar />
       </div>
 
       <RetroFooter />
