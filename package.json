@@ -7,9 +7,12 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "ui:init": "npx --yes shadcn@latest init -y",
+    "ui:add": "npx --yes shadcn@latest add"
   },
   "dependencies": {
+    "@types/uuid": "10.0.0",
     "cmdk": "^1.1.1",
     "framer-motion": "^12.23.12",
     "next": "15.5.2",
@@ -19,7 +22,8 @@
     "reading-time": "^1.5.0",
     "rehype-pretty-code": "^0.14.1",
     "remark-gfm": "^4.0.1",
-    "shiki": "^3.12.2"
+    "shiki": "^3.12.2",
+    "uuid": "12.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

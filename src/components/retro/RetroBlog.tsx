@@ -1,6 +1,7 @@
 "use client";
 
 // import Link from "next/link";
+import { PixelTrail } from "@/components/interactions/PixelTrail";
 import { useEffect, useState } from "react";
 import styles from "./retro.module.css";
 import { RetroAboutCard } from "./RetroAboutCard";
@@ -78,6 +79,9 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
 
       {/* Header extracted for reuse */}
       <header className={styles.header}>
+        <div className={styles.headerOverlay}>
+          <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-white/20" />
+        </div>
         <div className={`${styles.headerInner} ${styles.headerGrid}`}>
           <div>
             <pre className={`${styles.ascii} ${styles.flickerAnimation}`}>{`╔═══════════════════════════════════════════════════════════════╗\n║  ████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗ ║\n║  ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║ ║\n║     ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║ ║\n║     ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║ ║\n║     ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███╗║\n║     ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══╝║\n╚═══════════════════════════════════════════════════════════════╝`}</pre>

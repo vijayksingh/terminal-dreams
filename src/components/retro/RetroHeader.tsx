@@ -1,5 +1,6 @@
 "use client";
 
+import { PixelTrail } from "@/components/interactions/PixelTrail";
 import styles from "./retro.module.css";
 
 export function RetroHeader() {
@@ -11,6 +12,9 @@ export function RetroHeader() {
   ];
   return (
     <header className={styles.header}>
+      <div className={styles.headerOverlay}>
+        <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-white/20" />
+      </div>
       <div className={styles.headerInner}>
         <pre className={`${styles.ascii} ${styles.flickerAnimation}`}>{`╔═══════════════════════════════════════════════════════════════╗\n║  ████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗ ║\n║  ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║ ║\n║     ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║ ║\n║     ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║ ║\n║     ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███╗║\n║     ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══╝║\n╚═══════════════════════════════════════════════════════════════╝`}</pre>
         <h1 className={`${styles.title} ${styles.glitchAnimation} ${styles.blinkCursor}`}>
