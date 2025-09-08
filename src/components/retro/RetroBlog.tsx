@@ -88,27 +88,13 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
             <nav style={{ marginTop: "var(--space-6)" }}>
               <ul className={styles.navList}>
                 {[
-                  { label: "Home", href: "/" },
-                  { label: "Archives", href: "/blog" },
-                  { label: "About", href: "/about" },
-                  { label: "Guestbook", href: "/guestbook" },
-                  { label: "Webring", href: "/webring" },
+                  { label: "~/archive", href: "/blog" },
+                  { label: "~/about", href: "/about" },
+                  { label: "~/guestbook", href: "/guestbook" },
+                  { label: "~/webring", href: "/webring" },
                 ].map((item) => (
                   <li key={item.label}>
-                    <a
-                      href={item.href}
-                      className={styles.navLink}
-                      onMouseEnter={(e) => {
-                        const target = e.currentTarget as HTMLAnchorElement;
-                        target.textContent = `[ ${item.label} ]`;
-                      }}
-                      onMouseLeave={(e) => {
-                        const target = e.currentTarget as HTMLAnchorElement;
-                        target.textContent = item.label;
-                      }}
-                    >
-                      {item.label}
-                    </a>
+                    <a href={item.href} className={styles.navLink}>{item.label}</a>
                   </li>
                 ))}
               </ul>

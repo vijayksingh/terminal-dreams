@@ -4,11 +4,10 @@ import styles from "./retro.module.css";
 
 export function RetroHeader() {
   const items = [
-    { label: "Home", href: "/" },
-    { label: "Archives", href: "/blog" },
-    { label: "About", href: "/about" },
-    { label: "Guestbook", href: "/guestbook" },
-    { label: "Webring", href: "/webring" },
+    { label: "~/archive", href: "/blog" },
+    { label: "~/about", href: "/about" },
+    { label: "~/guestbook", href: "/guestbook" },
+    { label: "~/webring", href: "/webring" },
   ];
   return (
     <header className={styles.header}>
@@ -22,20 +21,7 @@ export function RetroHeader() {
           <ul className={styles.navList}>
             {items.map((item) => (
               <li key={item.label}>
-                <a
-                  href={item.href}
-                  className={styles.navLink}
-                  onMouseEnter={(e) => {
-                    const target = e.currentTarget as HTMLAnchorElement;
-                    target.textContent = `[ ${item.label} ]`;
-                  }}
-                  onMouseLeave={(e) => {
-                    const target = e.currentTarget as HTMLAnchorElement;
-                    target.textContent = item.label;
-                  }}
-                >
-                  {item.label}
-                </a>
+                <a href={item.href} className={styles.navLink}>{item.label}</a>
               </li>
             ))}
           </ul>

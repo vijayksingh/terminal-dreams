@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { groupByMonth, shortDateLabel } from "../../../public/utils/helper";
 import styles from "./retro.module.css";
 
 export type TimelinePostItem = {
@@ -8,52 +9,6 @@ export type TimelinePostItem = {
   category?: string;
   readTime?: string;
 };
-
-type Group = {
-  key: string; // e.g. 2025-09
-  label: string; // e.g. September 2025
-  items: TimelinePostItem[];
-};
-
-function formatMonthLabel(dateStr: string): string {
-  const d = new Date(dateStr);
-  const month = d.toLocaleString("en-US", { month: "long" });
-  const year = d.getFullYear();
-  return `${month} ${year}`;
-}
-
-// kept for potential future use
-// function dayFromDate(dateStr: string): string {
-//   const d = new Date(dateStr);
-//   const day = d.getDate();
-//   return day.toString().padStart(2, "0");
-// }
-
-function shortDateLabel(dateStr: string): string {
-  const d = new Date(dateStr);
-  const month = d.toLocaleString("en-US", { month: "short" });
-  const day = d.getDate().toString().padStart(2, "0");
-  return `${month} ${day}`;
-}
-
-function groupByMonth(posts: TimelinePostItem[]): Group[] {
-  const map: Record<string, Group> = {};
-  posts.forEach((p) => {
-    const d = new Date(p.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (!map[key]) {
-      map[key] = { key, label: formatMonthLabel(p.date), items: [] };
-    }
-    map[key].items.push(p);
-  });
-  // Sort groups by date desc and items by date desc
-  return Object.values(map)
-    .sort((a, b) => (a.key > b.key ? -1 : 1))
-    .map((g) => ({
-      ...g,
-      items: g.items.sort((a, b) => (a.date > b.date ? -1 : 1)),
-    }));
-}
 
 export function RetroTimeline({ posts }: { posts: TimelinePostItem[] }) {
   const groups = groupByMonth(posts);
