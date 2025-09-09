@@ -13,10 +13,7 @@
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils"
-  },
-  "registries": [
-    { "name": "shadcn", "baseUrl": "https://ui.shadcn.com" }
-  ]
+  }
 }
 
 
