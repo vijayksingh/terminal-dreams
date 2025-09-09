@@ -1,5 +1,6 @@
 "use client";
 
+import ScrambleHover from "@/components/fancy/text/scramble-hover";
 import { PixelTrail } from "@/components/interactions/PixelTrail";
 import styles from "./retro.module.css";
 
@@ -25,7 +26,9 @@ export function RetroHeader() {
           <ul className={styles.navList}>
             {items.map((item) => (
               <li key={item.label}>
-                <a href={item.href} className={styles.navLink}>{item.label}</a>
+                <a href={item.href} className={styles.navLink}>
+                  <ScrambleHover text={item.label} scrambleSpeed={40} maxIterations={8} />
+                </a>
               </li>
             ))}
           </ul>

@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "../styles/tokens.css";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
+ 
 
 body {
   background: var(--color-bg);
@@ -42,11 +40,4 @@ body {
   background: #606060;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
+ 

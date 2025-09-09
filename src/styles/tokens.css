@@ -9,6 +9,27 @@
   --color-text: #e0e0e0;
   --color-link: #e0e0e0;
 
+  /* shadcn-compatible semantic colors */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 88%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 60%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 88%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 88%;
+  --border: 0 0% 19%;
+  --input: 0 0% 19%;
+  --primary: 0 0% 88%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 0 0% 88%;
+  --accent: 0 0% 14%;
+  --accent-foreground: 0 0% 88%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 0 0% 35%;
+
   /* Brand accents */
   --accent-weak: #a0a0a0;
 
@@ -63,15 +84,97 @@
   --kbd-padding-x: var(--space-1);
 }
 
+/* Manual theme overrides using data-theme switcher */
+[data-theme="dark"] {
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1a1a1a;
+  --color-border: #303030;
+  --color-muted: #606060;
+  --color-text: #e0e0e0;
+  --color-link: #e0e0e0;
+
+  --background: 0 0% 4%;
+  --foreground: 0 0% 88%;
+  --muted: 0 0% 20%;
+  --muted-foreground: 0 0% 60%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 88%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 88%;
+  --border: 0 0% 19%;
+  --input: 0 0% 19%;
+  --primary: 0 0% 88%;
+  --primary-foreground: 0 0% 4%;
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 0 0% 88%;
+  --accent: 0 0% 14%;
+  --accent-foreground: 0 0% 88%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 0 0% 35%;
+}
+
+[data-theme="light"] {
+  --color-bg: #f8f8f8;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f1f1;
+  --color-border: #e6e6e6;
+  --color-muted: #737373;
+  --color-text: #1a1a1a;
+  --color-link: #1a1a1a;
+
+  --background: 0 0% 98%;
+  --foreground: 0 0% 10%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 12%;
+  --border: 0 0% 85%;
+  --input: 0 0% 85%;
+  --primary: 0 0% 12%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 12%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 12%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 0 0% 55%;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
-    --color-bg: #ffffff;
-    --color-surface: #f6f6f6;
-    --color-surface-2: #efefef;
-    --color-border: #e0e0e0;
-    --color-muted: #7a7a7a;
-    --color-text: #141414;
-    --color-link: #141414;
+    --color-bg: #f8f8f8;
+    --color-surface: #ffffff;
+    --color-surface-2: #f1f1f1;
+    --color-border: #e6e6e6;
+    --color-muted: #737373;
+    --color-text: #1a1a1a;
+    --color-link: #1a1a1a;
+
+    /* shadcn-compatible light tokens */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 12%;
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --primary: 0 0% 12%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 12%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 12%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --ring: 0 0% 55%;
 
     /* Light mode component tokens */
     --overlay-bg: rgba(0, 0, 0, 0.35);

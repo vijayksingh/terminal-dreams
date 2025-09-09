@@ -1,6 +1,7 @@
 "use client";
 
 // import Link from "next/link";
+import ScrambleHover from "@/components/fancy/text/scramble-hover";
 import { PixelTrail } from "@/components/interactions/PixelTrail";
 import { useEffect, useState } from "react";
 import styles from "./retro.module.css";
@@ -9,6 +10,7 @@ import { CursorGlow, ScanlineOverlay } from "./RetroDecor";
 import { RetroFooter } from "./RetroFooter";
 import { RetroSidebar } from "./RetroSidebar";
 import { RetroTimeline } from "./RetroTimeline";
+import { ThemeToggle } from "./ThemeToggle";
 
 declare global {
   interface Window {
@@ -98,11 +100,14 @@ export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
                   { label: "~/webring", href: "/webring" },
                 ].map((item) => (
                   <li key={item.label}>
-                    <a href={item.href} className={styles.navLink}>{item.label}</a>
+                    <a href={item.href} className={styles.navLink}><ScrambleHover text={item.label} scrambleSpeed={40} maxIterations={8} /></a>
                   </li>
                 ))}
               </ul>
             </nav>
+            <div style={{ marginTop: "var(--space-4)" }}>
+              <ThemeToggle />
+            </div>
           </div>
           <div>
             {/* About card on the right side */}
