@@ -35,6 +35,7 @@ export default function CommandPalette({ posts }: CommandPaletteProps) {
     () => [
       { label: "Home", href: "/" },
       { label: "Archives", href: "/blog" },
+      { label: "Playground", href: "/playground" },
       { label: "About", href: "/about" },
       { label: "Guestbook", href: "/guestbook" },
       { label: "Webring", href: "/webring" },
@@ -57,7 +58,17 @@ export default function CommandPalette({ posts }: CommandPaletteProps) {
     >
       <RadixDialog.Title className={styles.srOnly}>Site search</RadixDialog.Title>
       <div className={styles.inputWrap}>
-        <Command.Input placeholder="Search pages and posts…" className={styles.input} />
+        <label htmlFor="command-palette-search" className={styles.srOnly}>
+          Search pages and posts
+        </label>
+        <Command.Input
+          id="command-palette-search"
+          name="site-search"
+          aria-label="Search pages and posts"
+          autoComplete="off"
+          placeholder="Search pages and posts…"
+          className={styles.input}
+        />
       </div>
       <Command.List className={styles.list}>
         <Command.Empty className={styles.empty}>No results found.</Command.Empty>

@@ -3,6 +3,7 @@
 import { motion, useAnimation } from 'motion/react';
 import type { HTMLAttributes } from 'react';
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
+import { usePrefersReducedMotion } from '@/hooks/use-prefers-reduced-motion';
 import { cn } from '@/lib/utils';
 
 export interface LockOpenIconHandle {
@@ -16,6 +17,7 @@ interface LockOpenIconProps extends HTMLAttributes<HTMLDivElement> {
 
 const LockOpenIcon = forwardRef<LockOpenIconHandle, LockOpenIconProps>(
   ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+    const prefersReducedMotion = usePrefersReducedMotion();
     const controls = useAnimation();
     const isControlledRef = useRef(false);
 
@@ -74,12 +76,12 @@ const LockOpenIcon = forwardRef<LockOpenIconHandle, LockOpenIconProps>(
               scale: 1,
             },
             animate: {
-              rotate: [2, 4, -2, 0],
-              scale: [1.05, 0.95, 1.02, 1],
+              rotate: prefersReducedMotion ? 0 : [2, 4, -2, 0],
+              scale: prefersReducedMotion ? 1 : [1.05, 0.95, 1.02, 1],
             },
           }}
           transition={{
-            duration: 1,
+            duration: prefersReducedMotion ? 0 : 1,
             ease: [0.4, 0, 0.2, 1],
           }}
           animate={controls}
@@ -93,11 +95,11 @@ const LockOpenIcon = forwardRef<LockOpenIconHandle, LockOpenIconProps>(
                 pathLength: 0.8,
               },
               animate: {
-                pathLength: 1,
+                pathLength: prefersReducedMotion ? 0.8 : 1,
               },
             }}
             transition={{
-              duration: 0.3,
+              duration: prefersReducedMotion ? 0 : 0.3,
               ease: [0.4, 0, 0.2, 1],
             }}
             animate={controls}

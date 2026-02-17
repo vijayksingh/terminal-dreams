@@ -3,6 +3,7 @@
 import { motion } from "motion/react"
 import { useEffect, useState } from "react"
 
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { cn } from "@/lib/utils"
 
 interface ScrambleHoverProps {
@@ -29,12 +30,18 @@ const ScrambleHover: React.FC<ScrambleHoverProps> = ({
   revealDirection = "start",
   ...props
 }) => {
+  const prefersReducedMotion = usePrefersReducedMotion()
   const [displayText, setDisplayText] = useState(text)
   const [isHovering, setIsHovering] = useState(false)
   const [isScrambling, setIsScrambling] = useState(false)
-  const [revealedIndices, setRevealedIndices] = useState(new Set<number>())
+  const [revealedIndices] = useState(new Set<number>())
 
   useEffect(() => {
+    if (prefersReducedMotion) {
+      setDisplayText(text)
+      return
+    }
+
     let interval: NodeJS.Timeout
     let currentIteration = 0
 
@@ -158,12 +165,13 @@ const ScrambleHover: React.FC<ScrambleHoverProps> = ({
     revealDirection,
     maxIterations,
     revealedIndices,
+    prefersReducedMotion,
   ])
 
   return (
     <motion.span
-      onHoverStart={() => setIsHovering(true)}
-      onHoverEnd={() => setIsHovering(false)}
+      onHoverStart={prefersReducedMotion ? undefined : () => setIsHovering(true)}
+      onHoverEnd={prefersReducedMotion ? undefined : () => setIsHovering(false)}
       className={cn("inline-block whitespace-pre-wrap", className)}
       {...props}
     >

@@ -7,11 +7,14 @@ export function InteractiveCounter() {
   const [count, setCount] = useState(0);
   return (
     <div className={styles.widget}>
-      <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
         <button
           onClick={() => setCount((c) => c - 1)}
           className={styles.listLink}
-          style={{ border: "1px solid #303030", padding: "0.25rem 0.5rem" }}
+          style={{
+            border: "1px solid var(--color-border)",
+            padding: "var(--space-1) var(--space-2)",
+          }}
         >
           −
         </button>
@@ -21,12 +24,15 @@ export function InteractiveCounter() {
         <button
           onClick={() => setCount((c) => c + 1)}
           className={styles.listLink}
-          style={{ border: "1px solid #303030", padding: "0.25rem 0.5rem" }}
+          style={{
+            border: "1px solid var(--color-border)",
+            padding: "var(--space-1) var(--space-2)",
+          }}
         >
           +
         </button>
       </div>
-      <div className={styles.statLabel} style={{ marginTop: "0.5rem" }}>
+      <div className={styles.statLabel} style={{ marginTop: "var(--space-2)" }}>
         Interactive Counter
       </div>
     </div>

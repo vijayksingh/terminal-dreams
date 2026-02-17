@@ -13,7 +13,10 @@
 .tocList { list-style: none; padding-left: 0; }
 .tocItem { padding: var(--space-1) 0; }
 .tocLink { color: var(--accent-weak); text-decoration: none; font-size: var(--text-base); }
-.tocLink:hover { color: var(--color-text); }
+.tocLink:focus-visible {
+  outline: 2px dashed var(--color-border);
+  outline-offset: 2px;
+}
 .tocActive { color: var(--color-text); }
 
 /* variants */
@@ -22,6 +25,10 @@
 
 @media (max-width: 768px) {
   .side { display: none; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tocLink:hover { color: var(--color-text); }
 }
 
 

@@ -25,14 +25,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <div className={`${styles.container} readingView`}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <RetroBackLink href="/blog" label="Back" />
           <h1 className={`${styles.title}`}>{post.frontmatter.title}</h1>
-          <div className={styles.meta}>
-            <span>{"// "}{post.frontmatter.date}</span>
-            {post.frontmatter.category ? (
-              <span>{"// "}{post.frontmatter.category}</span>
-            ) : null}
-            <span>{"// "}{post.readTime}</span>
+          <div className={styles.postHeaderMetaRow}>
+            <RetroBackLink href="/blog" label="Back to archive" variant="inline" />
+            <div className={styles.meta}>
+              <span>{"// "}{post.frontmatter.date}</span>
+              {post.frontmatter.category ? (
+                <span>{"// "}{post.frontmatter.category}</span>
+              ) : null}
+              <span>{"// "}{post.readTime}</span>
+            </div>
           </div>
         </div>
       </header>

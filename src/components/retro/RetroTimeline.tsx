@@ -1,14 +1,8 @@
 import Link from "next/link";
-import { groupByMonth, shortDateLabel } from "../../../public/utils/helper";
-import styles from "./retro.module.css";
+import { groupByMonth, shortDateLabel, type TimelinePost } from "@/lib/timeline";
+import styles from "./RetroTimeline.module.css";
 
-export type TimelinePostItem = {
-  slug: string;
-  title: string;
-  date: string; // ISO-like string e.g. 2025-09-01
-  category?: string;
-  readTime?: string;
-};
+export type TimelinePostItem = TimelinePost;
 
 export function RetroTimeline({ posts }: { posts: TimelinePostItem[] }) {
   const groups = groupByMonth(posts);

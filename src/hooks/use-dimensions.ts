@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type ElementDimensions = { width: number; height: number };
 
 export function useDimensions<T extends HTMLElement = HTMLDivElement>(
-  ref: React.RefObject<T>
+  ref: React.RefObject<T | null>
 ): ElementDimensions {
   const [size, setSize] = useState<ElementDimensions>({ width: 0, height: 0 });
   const observerRef = useRef<ResizeObserver | null>(null);

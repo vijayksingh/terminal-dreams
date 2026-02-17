@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { useDimensions } from "@/hooks/use-dimensions";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
 export interface PixelTrailProps {
@@ -15,6 +16,8 @@ export interface PixelTrailProps {
   pixelClassName?: string;
 }
 
+type PixelDotNode = HTMLDivElement & { __animatePixel?: () => void };
+
 export const PixelTrail: React.FC<PixelTrailProps> = ({
   pixelSize = 12,
   fadeDuration = 400,
@@ -22,6 +25,7 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
   className,
   pixelClassName,
 }) => {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useDimensions(containerRef);
   const trailId = useRef(uuidv4());
@@ -46,9 +50,9 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
 
       const pixelElement = document.getElementById(
         `${trailId.current}-pixel-${x}-${y}`
-      );
+      ) as PixelDotNode | null;
       if (pixelElement) {
-        const animatePixel = (pixelElement as any).__animatePixel;
+        const animatePixel = pixelElement.__animatePixel;
         if (animatePixel) animatePixel();
       }
     },
@@ -56,9 +60,11 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
   );
 
   useEffect(() => {
+    if (prefersReducedMotion) return;
+
     window.addEventListener("mousemove", handleMouseMoveWindow, { passive: true });
     return () => window.removeEventListener("mousemove", handleMouseMoveWindow);
-  }, [handleMouseMoveWindow]);
+  }, [handleMouseMoveWindow, prefersReducedMotion]);
 
   const columns = useMemo(
     () => Math.max(0, Math.ceil(dimensions.width / pixelSize)),
@@ -68,6 +74,8 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
     () => Math.max(0, Math.ceil(dimensions.height / pixelSize)),
     [dimensions.height, pixelSize]
   );
+
+  if (prefersReducedMotion) return null;
 
   return (
     <div
@@ -114,8 +122,9 @@ const PixelDot: React.FC<PixelDotProps> = React.memo(
 
     const ref = useCallback(
       (node: HTMLDivElement | null) => {
-        if (node) {
-          (node as any).__animatePixel = animatePixel;
+        const pixelNode = node as PixelDotNode | null;
+        if (pixelNode) {
+          pixelNode.__animatePixel = animatePixel;
         }
       },
       [animatePixel]

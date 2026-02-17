@@ -2,7 +2,18 @@
 
 import styles from "./retro.module.css";
 
-export function RetroSidebar() {
+type RetroSidebarProps = {
+  postsCount: number;
+};
+
+export function RetroSidebar({ postsCount }: RetroSidebarProps) {
+  const stats = [
+    { number: "1337", label: "Visitors" },
+    { number: String(postsCount), label: "Posts" },
+    { number: "∞", label: "Dreams" },
+    { number: "90s", label: "Forever" },
+  ];
+
   return (
     <aside className={`${styles.sidebar} ${styles.sidebarCompact}`}>
       <div className={styles.sidebarDivider} />
@@ -11,13 +22,8 @@ export function RetroSidebar() {
           <span style={{ color: "var(--color-muted)" }}>{">"}</span> System Status
         </h3>
         <div className={styles.statusRow}>
-          {[
-            { number: "1337", label: "Visitors" },
-            { number: "42", label: "Posts" },
-            { number: "∞", label: "Dreams" },
-            { number: "90s", label: "Forever" },
-          ].map((stat, i) => (
-            <div key={i} className={styles.statusChip}>
+          {stats.map((stat) => (
+            <div key={stat.label} className={styles.statusChip}>
               <div className={styles.statusNumberSm}>{stat.number}</div>
               <div className={styles.statusLabelSm}>{stat.label}</div>
             </div>

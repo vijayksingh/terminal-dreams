@@ -34,8 +34,16 @@
   line-height: 1.5;
   color: var(--color-text);
   background: transparent;
-  outline: none;
   border: 0;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-border);
+  outline-offset: 2px;
+}
+
+.inputWrap:focus-within {
+  box-shadow: var(--panel-shadow), 0 0 0 2px var(--color-border);
 }
 
 .list {
@@ -68,6 +76,11 @@
   justify-content: space-between;
   padding: var(--panel-padding-y) var(--panel-padding-x);
   cursor: pointer;
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--color-border);
+  outline-offset: -2px;
 }
 
 .item[aria-selected="true"],

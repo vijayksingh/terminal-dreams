@@ -22,9 +22,18 @@ export type PostContent = PostListItem & {
 };
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
+let cachedPosts: PostListItem[] | null = null;
+
+type FrontmatterInput = {
+  title?: unknown;
+  date?: unknown;
+  category?: unknown;
+  tags?: unknown;
+  summary?: unknown;
+};
 
 export function getAllPostSlugs(): string[] {
-  ensureContentDir();
+  if (!fs.existsSync(BLOG_DIR)) return [];
   return fs
     .readdirSync(BLOG_DIR)
     .filter((file) => file.endsWith(".mdx") || file.endsWith(".md"))
@@ -32,7 +41,10 @@ export function getAllPostSlugs(): string[] {
 }
 
 export function getAllPosts(): PostListItem[] {
-  ensureContentDir();
+  if (process.env.NODE_ENV === "production" && cachedPosts) {
+    return cachedPosts;
+  }
+
   const slugs = getAllPostSlugs();
   const posts = slugs
     .map((slug) => getPostBySlug(slug))
@@ -47,11 +59,16 @@ export function getAllPosts(): PostListItem[] {
       const bd = new Date(b.frontmatter.date).getTime();
       return bd - ad;
     });
+
+  if (process.env.NODE_ENV === "production") {
+    cachedPosts = posts;
+  }
+
   return posts;
 }
 
 export function getPostBySlug(slug: string): PostContent | null {
-  ensureContentDir();
+  if (!fs.existsSync(BLOG_DIR)) return null;
   const fullPathMdx = path.join(BLOG_DIR, `${slug}.mdx`);
   const fullPathMd = path.join(BLOG_DIR, `${slug}.md`);
   const fullPath = fs.existsSync(fullPathMdx) ? fullPathMdx : fullPathMd;
@@ -68,21 +85,56 @@ export function getPostBySlug(slug: string): PostContent | null {
   };
 }
 
-function normalizeFrontmatter(data: any): PostFrontmatter {
+function normalizeFrontmatter(data: unknown): PostFrontmatter {
+  const fmInput = (typeof data === "object" && data !== null ? data : {}) as FrontmatterInput;
   const fm: PostFrontmatter = {
-    title: data.title ?? "Untitled",
-    date: data.date ?? new Date().toISOString().slice(0, 10),
-    category: data.category ?? undefined,
-    tags: Array.isArray(data.tags) ? data.tags : undefined,
-    summary: data.summary ?? undefined,
+    title: normalizeRequiredTitle(fmInput.title),
+    date: normalizeDate(fmInput.date),
+    category: normalizeOptionalString(fmInput.category),
+    tags: normalizeTags(fmInput.tags),
+    summary: normalizeOptionalString(fmInput.summary),
   };
   return fm;
 }
 
-function ensureContentDir() {
-  if (!fs.existsSync(BLOG_DIR)) {
-    fs.mkdirSync(BLOG_DIR, { recursive: true });
+function normalizeRequiredTitle(value: unknown): string {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
   }
+  return "Untitled";
+}
+
+function normalizeDate(value: unknown): string {
+  const fallback = new Date().toISOString().slice(0, 10);
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return fallback;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function normalizeTags(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const tags = value
+    .filter((tag): tag is string => typeof tag === "string")
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+  return tags.length > 0 ? tags : undefined;
 }
 
 function formatReadTime(text: string): string {

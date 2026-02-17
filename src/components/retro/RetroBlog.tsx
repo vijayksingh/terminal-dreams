@@ -1,134 +1,36 @@
 "use client";
 
-// import Link from "next/link";
-import ScrambleHover from "@/components/fancy/text/scramble-hover";
-import { PixelTrail } from "@/components/interactions/PixelTrail";
-import { useEffect, useState } from "react";
+import { useRetroEffects } from "@/hooks/use-retro-effects";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import type { BlogPostListItem } from "@/lib/posts";
 import styles from "./retro.module.css";
-import { RetroAboutCard } from "./RetroAboutCard";
 import { CursorGlow, ScanlineOverlay } from "./RetroDecor";
 import { RetroFooter } from "./RetroFooter";
+import { RetroHeader } from "./RetroHeader";
 import { RetroSidebar } from "./RetroSidebar";
 import { RetroTimeline } from "./RetroTimeline";
-import { ThemeToggle } from "./ThemeToggle";
-
-declare global {
-  interface Window {
-    hack: () => string;
-  }
-}
-
-export type BlogListItem = {
-  slug: string;
-  title: string;
-  date: string;
-  category?: string;
-  readTime: string;
-  summary?: string;
-};
+export type BlogListItem = BlogPostListItem;
 
 // Sidebar cards for recent posts/categories removed per design update.
 
 //
 
 export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [/*glitchIndex*/, setGlitchIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    document.addEventListener("mousemove", handleMouseMove);
-
-    const glitchInterval = window.setInterval(() => {
-      setGlitchIndex(Math.floor(Math.random() * 3));
-      window.setTimeout(() => setGlitchIndex(null), 100);
-    }, 5000);
-
-    // Console easter egg
-    window.hack = () => {
-      console.log(
-        "%cACCESS GRANTED",
-        "color: #00ff00; font-size: 20px; font-family: monospace;"
-      );
-      console.log(
-        "%cYou are now part of the resistance.",
-        "color: #00ff00; font-family: monospace;"
-      );
-      return "1337";
-    };
-    console.log(
-      "%c" +
-      `\n` +
-      `Welcome to the Underground, Hacker\n` +
-      `The Gibson awaits your commands...\n` +
-      `Type: hack() to begin` +
-      `\n`,
-      "color: #00ff00; font-family: monospace;"
-    );
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      window.clearInterval(glitchInterval);
-    };
-  }, []);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const mousePosition = useRetroEffects(!prefersReducedMotion);
 
   return (
     <div className={styles.container}>
       <ScanlineOverlay />
-      <CursorGlow x={mousePosition.x} y={mousePosition.y} />
+      {!prefersReducedMotion ? <CursorGlow x={mousePosition.x} y={mousePosition.y} /> : null}
 
-      {/* Header extracted for reuse */}
-      <header className={styles.header}>
-        <div className={styles.headerOverlay}>
-          <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-white/20" />
-        </div>
-        <div className={`${styles.headerInner} ${styles.headerGrid}`}>
-          <div>
-            <pre className={`${styles.ascii} ${styles.flickerAnimation}`}>{`╔═══════════════════════════════════════════════════════════════╗\n║  ████████╗███████╗██████╗ ███╗   ███╗██╗███╗   ██╗ █████╗ ██╗ ║\n║  ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██║████╗  ██║██╔══██╗██║ ║\n║     ██║   █████╗  ██████╔╝██╔████╔██║██║██╔██╗ ██║███████║██║ ║\n║     ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║██║██║╚██╗██║██╔══██║██║ ║\n║     ██║   ███████╗██║  ██║██║ ╚═╝ ██║██║██║ ╚████║██║  ██║███╗║\n║     ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══╝║\n╚═══════════════════════════════════════════════════════════════╝`}</pre>
-            <h1 className={`${styles.title} ${styles.glitchAnimation} ${styles.blinkCursor}`}>
-              TERMINAL_DREAMS
-            </h1>
-            <p className={styles.subtitle}>{"// Nostalgic bytes from the digital underground"}</p>
-            <nav style={{ marginTop: "var(--space-6)" }}>
-              <ul className={styles.navList}>
-                {[
-                  { label: "~/archive", href: "/blog" },
-                  { label: "~/about", href: "/about" },
-                  { label: "~/guestbook", href: "/guestbook" },
-                  { label: "~/webring", href: "/webring" },
-                ].map((item) => (
-                  <li key={item.label}>
-                    <a href={item.href} className={styles.navLink}><ScrambleHover text={item.label} scrambleSpeed={40} maxIterations={8} /></a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-            <div style={{ marginTop: "var(--space-4)" }}>
-              <ThemeToggle />
-            </div>
-          </div>
-          <div>
-            {/* About card on the right side */}
-            <RetroAboutCard />
-          </div>
-        </div>
-      </header>
+      <RetroHeader showAboutCard />
 
       {/* Main Content */}
       <div className={styles.main}>
         <main>
-          <RetroTimeline
-            posts={posts.map((p) => ({
-              slug: p.slug,
-              title: p.title,
-              date: p.date,
-              category: p.category,
-              readTime: p.readTime,
-            }))}
-          />
-          <RetroSidebar />
+          <RetroTimeline posts={posts} />
+          <RetroSidebar postsCount={posts.length} />
         </main>
       </div>
 

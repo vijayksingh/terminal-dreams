@@ -43,13 +43,13 @@ export function RetroAboutCard({
 
       <ul className={styles.aboutList}>
         <li className={styles.aboutListItem}>
-          <a className={styles.aboutLink} href="#">{nowText}</a>
+          <span className={styles.aboutLink}>{nowText}</span>
         </li>
         <li className={styles.aboutListItem}>
-          <a className={styles.aboutLink} href="#">{usesText}</a>
+          <span className={styles.aboutLink}>{usesText}</span>
         </li>
         <li className={styles.aboutListItem}>
-          <a className={styles.aboutLink} href="#">{webringText}</a>
+          <span className={styles.aboutLink}>{webringText}</span>
         </li>
       </ul>
 

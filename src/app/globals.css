@@ -28,16 +28,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0a0a;
+  background: var(--color-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #303030;
+  background: var(--color-border);
   border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #606060;
+  background: var(--color-muted);
 }
 
  

@@ -1,6 +1,7 @@
 "use client";
 
 import { LockOpenIcon, LockOpenIconHandle } from "@/components/ui/lock-open";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 function getInitialTheme(): "dark" | "light" {
@@ -15,6 +16,7 @@ function getInitialTheme(): "dark" | "light" {
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">(getInitialTheme);
   const iconRef = useRef<LockOpenIconHandle | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -30,10 +32,14 @@ export function ThemeToggle() {
       aria-label="Toggle theme"
       onClick={() => {
         const next = theme === "dark" ? "light" : "dark";
-        iconRef.current?.startAnimation();
+        if (!prefersReducedMotion) {
+          iconRef.current?.startAnimation();
+        }
         setTheme(next);
-        // settle animation back
-        window.setTimeout(() => iconRef.current?.stopAnimation(), 600);
+        if (!prefersReducedMotion) {
+          // settle animation back
+          window.setTimeout(() => iconRef.current?.stopAnimation(), 600);
+        }
       }}
       className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
     >

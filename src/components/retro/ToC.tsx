@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import styles from "./ToC.module.css";
 
 type TocItem = { id: string; text: string; level: number };
+const TOC_HEADING_SELECTOR = "h1, h2, h3";
+const TOC_ROOT_MARGIN = "-20% 0px -70% 0px";
+const TOC_THRESHOLD: [number, number] = [0, 1];
+const INDENT_PER_LEVEL_PX = 12;
 
 function slugify(text: string): string {
   return text
@@ -13,17 +17,24 @@ function slugify(text: string): string {
     .replace(/\s+/g, "-");
 }
 
-function extractTocFromDocument(): { items: TocItem[]; elements: HTMLElement[] } {
-  const headings = Array.from(document.querySelectorAll<HTMLElement>("h1, h2, h3"));
-  const elements: HTMLElement[] = [];
-  const items: TocItem[] = headings.map((el) => {
-    const text = el.innerText;
-    const id = el.id || slugify(text);
-    if (!el.id) el.id = id;
-    elements.push(el);
-    return { id, text, level: Number(el.tagName.charAt(1)) };
+function collectHeadings(): HTMLElement[] {
+  return Array.from(document.querySelectorAll<HTMLElement>(TOC_HEADING_SELECTOR));
+}
+
+function ensureHeadingIds(elements: HTMLElement[]) {
+  elements.forEach((element) => {
+    if (!element.id) {
+      element.id = slugify(element.innerText);
+    }
   });
-  return { items, elements };
+}
+
+function buildTocItems(elements: HTMLElement[]): TocItem[] {
+  return elements.map((element) => ({
+    id: element.id,
+    text: element.innerText,
+    level: Number(element.tagName.charAt(1)),
+  }));
 }
 
 export function ToC({ variant = "plain" as "side" | "bottom" | "plain" }) {
@@ -31,24 +42,26 @@ export function ToC({ variant = "plain" as "side" | "bottom" | "plain" }) {
   const [items, setItems] = useState<TocItem[]>([]);
 
   useEffect(() => {
-    const { items: list, elements } = extractTocFromDocument();
+    const headings = collectHeadings();
+    ensureHeadingIds(headings);
+    const list = buildTocItems(headings);
     setItems(list);
 
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort((a, b) => (a.boundingClientRect.top > b.boundingClientRect.top ? 1 : -1));
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]?.target) setActiveId((visible[0].target as HTMLElement).id);
       },
-      { rootMargin: "-20% 0px -70% 0px", threshold: [0, 1] }
+      { rootMargin: TOC_ROOT_MARGIN, threshold: TOC_THRESHOLD }
     );
 
-    elements.forEach((el) => observer.observe(el));
+    headings.forEach((heading) => observer.observe(heading));
     return () => observer.disconnect();
   }, []);
 
-  const indent = (level: number) => ({ paddingLeft: `${(level - 1) * 12}px` });
+  const indent = (level: number) => ({ paddingLeft: `${(level - 1) * INDENT_PER_LEVEL_PX}px` });
 
   if (items.length === 0) return null;
   const variantClass = variant === "side" ? styles.side : variant === "bottom" ? styles.bottom : "";
