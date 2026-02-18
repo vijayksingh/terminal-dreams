@@ -2,20 +2,15 @@
 
 import { useRetroEffects } from "@/hooks/use-retro-effects";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import type { BlogPostListItem } from "@/lib/posts";
+import type { TimelinePost } from "@/lib/timeline";
 import styles from "./retro.module.css";
 import { CursorGlow, ScanlineOverlay } from "./RetroDecor";
 import { RetroFooter } from "./RetroFooter";
 import { RetroHeader } from "./RetroHeader";
 import { RetroSidebar } from "./RetroSidebar";
 import { RetroTimeline } from "./RetroTimeline";
-export type BlogListItem = BlogPostListItem;
 
-// Sidebar cards for recent posts/categories removed per design update.
-
-//
-
-export function RetroBlog({ posts }: { posts: BlogListItem[] }) {
+export function RetroBlog({ posts }: { posts: TimelinePost[] }) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const mousePosition = useRetroEffects(!prefersReducedMotion);
 

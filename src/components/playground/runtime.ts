@@ -2,7 +2,7 @@ import * as Babel from "@babel/standalone";
 import { init, parse } from "es-module-lexer";
 import MagicString from "magic-string";
 
-import type { PlaygroundFile, PlaygroundWorkspace } from "@/components/playground/types";
+import type { PlaygroundDependencyMap, PlaygroundFile, PlaygroundWorkspace } from "@/components/playground/types";
 import { dirname, ensureWorkspacePath, normalizePath, toFileByPath } from "@/components/playground/workspace-utils";
 
 // Use a bare-specifier namespace so import maps work inside `about:srcdoc`.
@@ -71,6 +71,69 @@ function toCdnSpecifier(specifier: string): string {
     ? withoutHash
     : `${withoutHash}${joiner}bundle`;
   return `https://esm.sh/${withBundle}${hash ? `#${hash}` : ""}`;
+}
+
+function splitSpecifierPathAndSuffix(specifier: string): { pathPart: string; suffix: string } {
+  const queryIndex = specifier.indexOf("?");
+  const hashIndex = specifier.indexOf("#");
+  const suffixIndex =
+    queryIndex >= 0 && hashIndex >= 0
+      ? Math.min(queryIndex, hashIndex)
+      : queryIndex >= 0
+        ? queryIndex
+        : hashIndex;
+
+  if (suffixIndex < 0) {
+    return { pathPart: specifier, suffix: "" };
+  }
+
+  return {
+    pathPart: specifier.slice(0, suffixIndex),
+    suffix: specifier.slice(suffixIndex),
+  };
+}
+
+function splitPackageSpecifier(pathPart: string): { packageName: string; subpath: string } | null {
+  if (!pathPart) return null;
+
+  if (pathPart.startsWith("@")) {
+    const [scope, packageName, ...rest] = pathPart.split("/");
+    if (!scope || !packageName) return null;
+    return {
+      packageName: `${scope}/${packageName}`,
+      subpath: rest.join("/"),
+    };
+  }
+
+  const [packageName, ...rest] = pathPart.split("/");
+  if (!packageName) return null;
+  return {
+    packageName,
+    subpath: rest.join("/"),
+  };
+}
+
+function hasPinnedVersion(packageName: string): boolean {
+  if (packageName.startsWith("@")) {
+    const slashIndex = packageName.indexOf("/");
+    if (slashIndex < 0) return false;
+    return packageName.slice(slashIndex + 1).includes("@");
+  }
+  return packageName.includes("@");
+}
+
+function toPinnedSpecifier(specifier: string, dependencies: PlaygroundDependencyMap): string {
+  const { pathPart, suffix } = splitSpecifierPathAndSuffix(specifier);
+  const parsed = splitPackageSpecifier(pathPart);
+  if (!parsed) return specifier;
+  if (hasPinnedVersion(parsed.packageName)) return specifier;
+
+  const version = dependencies[parsed.packageName];
+  if (!version) return specifier;
+
+  const packageWithVersion = `${parsed.packageName}@${version}`;
+  const withVersion = parsed.subpath ? `${packageWithVersion}/${parsed.subpath}` : packageWithVersion;
+  return `${withVersion}${suffix}`;
 }
 
 function resolveLocalPath(
@@ -183,7 +246,8 @@ function transpileModule(file: PlaygroundFile): string {
 function rewriteImports(
   importerPath: string,
   code: string,
-  filesByPath: Map<string, PlaygroundFile>
+  filesByPath: Map<string, PlaygroundFile>,
+  dependencies: PlaygroundDependencyMap
 ): string {
   const [imports] = parse(code);
   if (imports.length === 0) return code;
@@ -213,7 +277,8 @@ function rewriteImports(
       return;
     }
 
-    magicString.overwrite(item.s, item.e, toCdnSpecifier(specifier));
+    const pinnedSpecifier = toPinnedSpecifier(specifier, dependencies);
+    magicString.overwrite(item.s, item.e, toCdnSpecifier(pinnedSpecifier));
   });
 
   return magicString.toString();
@@ -286,6 +351,7 @@ export async function buildPlaygroundSource(workspace: PlaygroundWorkspace): Pro
   await lexerReady;
 
   const filesByPath = toFileByPath(workspace.files);
+  const dependencies = workspace.dependencies ?? {};
   const entryPath = normalizePath(workspace.entry);
 
   if (!filesByPath.has(entryPath)) {
@@ -299,7 +365,7 @@ export async function buildPlaygroundSource(workspace: PlaygroundWorkspace): Pro
 
   const rewrittenByPath = new Map<string, string>();
   transpiledByPath.forEach((code, path) => {
-    rewrittenByPath.set(path, rewriteImports(path, code, filesByPath));
+    rewrittenByPath.set(path, rewriteImports(path, code, filesByPath, dependencies));
   });
 
   const importMap: Record<string, string> = {};

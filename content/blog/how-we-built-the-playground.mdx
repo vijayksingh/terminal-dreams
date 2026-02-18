@@ -1,0 +1,821 @@
+---
+title: "How We Built a Browser-Native React Playground"
+date: "2026-02-18"
+category: "engineering"
+tags: ["react", "babel", "browser", "architecture", "typescript"]
+summary: "A deep dive into assembling four browser primitives — Babel standalone, import maps, blob URLs, and srcdoc iframes — into a zero-backend TypeScript/React playground. The single reference for anyone building this themselves."
+interactive: true
+---
+
+There is a specific kind of delight that comes from typing code and watching a result
+appear before you lift your hands from the keyboard. No build step. No server round-trip.
+No progress spinner. The feedback loop closes in under a hundred milliseconds and your
+brain starts to feel like it is talking directly to the machine.
+
+That feeling is what a playground is actually selling. The visible feature is the editor
+and the preview pane. The real product is the latency collapse.
+
+We built ours with no backend, no cloud sandbox service, and no build daemon. Every
+transformation — from the TypeScript you type to the React component you see — happens
+inside the browser tab. When you close the page, nothing persists on a server anywhere.
+
+The interesting engineering problem is that browsers are not Node.js. Running arbitrary
+TypeScript/React code in a browser requires assembling four low-level browser primitives
+that almost never appear together in tutorials. This post is the reference I wish had
+existed before we started. It documents exactly what each primitive does, why it exists,
+and how the four of them interlock.
+
+---
+
+## Why Your Browser Can't Run Your Code
+
+Before we describe the solution, it is worth being precise about what the problem
+actually is. There are three separate failures, not one. Conflating them leads you to
+grab the wrong tool.
+
+**Problem one: the syntax.** Paste a `.tsx` file directly into a `<script>` tag and the
+browser throws a `SyntaxError` before it executes a single line. TypeScript's type
+annotations — `const count: number = 0` — are not JavaScript. JSX — `<App />` — is not
+JavaScript. The browser's JavaScript engine has never been updated to understand either
+of them because they were deliberately designed to require a compilation step before
+deployment.
+
+```tsx
+// This is a SyntaxError from the browser's perspective.
+// The browser has no idea what ": number" means.
+function greet(name: string): string {
+  return <p>Hello, {name}</p>;
+}
+```
+
+**Problem two: the imports.** After you strip the TypeScript and transpile the JSX to
+`React.createElement` calls, you are left with valid ES module JavaScript. Except for
+the import statements:
+
+```js
+import { useState } from "react";
+import { App } from "./App";
+```
+
+Browsers resolve module specifiers as URLs. `"react"` is not a URL. It is a bare
+specifier — a package name that Node.js knows how to resolve by walking up the file
+system to find `node_modules/react/index.js`. The browser has no `node_modules`. It has
+no concept of a package registry. When you try to import a bare specifier in a browser,
+you get a `TypeError: Failed to resolve module specifier "react"` at runtime.
+
+The relative `"./App"` import looks like it should work — it is a relative path, not a
+bare specifier. But it doesn't work either. Relative imports are resolved against the
+URL of the importing file. If your file lives at a blob URL
+(`blob:null/abc-123...`), a relative import would try to resolve against
+`blob:null/abc-`, which is meaningless.
+
+**Problem three: the isolation.** Suppose you solve the first two problems and get user
+code running. Now it has full access to the host page: your `document`, your
+`localStorage`, your cookies, your session state. Any user script running in your origin
+can read or modify anything on the page.
+
+These are three distinct problems and they require three distinct solutions. What makes
+the playground architecture interesting is that the solutions are not independent — each
+one creates a constraint that shapes the next.
+
+---
+
+## The Pipeline
+
+Here is the full transformation, from keypress to rendered component:
+
+```
+User edits code
+      │
+      ▼
+① Babel standalone
+  TypeScript + JSX → plain ES module JavaScript
+      │
+      ▼
+② es-module-lexer
+  Extract import specifier character offsets (no AST)
+      │
+      ▼
+③ magic-string
+  Surgical specifier rewrites:
+  "./App"    → "td-playground/src/App.tsx"   (virtual namespace)
+  "react"    → "https://esm.sh/react@19.1.0?bundle"
+  http URLs  → passthrough unchanged
+      │
+      ▼
+④ URL.createObjectURL(new Blob([code]))
+  One blob URL per file in the workspace
+      │
+      ▼
+⑤ Import map: { "td-playground/src/App.tsx": "blob:null/..." }
+      │
+      ▼
+⑥ <script type="importmap"> injected into srcdoc
+      │
+      ▼
+⑦ <iframe srcdoc="..."> renders the component
+```
+
+Each stage is independent. Stage 1 knows nothing about stage 6. You can understand and
+test each one in isolation. The coupling between stages flows in exactly one direction —
+later stages consume the output of earlier ones.
+
+The only async work is a one-time initialization call for the lexer WASM binary, which
+we fire at module load time. Every subsequent build is synchronous.
+
+---
+
+## Babel Standalone: The Browser's Compiler
+
+`@babel/standalone` is the full Babel compiler packaged as a single browser-ready
+bundle. It ships all the same transforms as the Node.js Babel packages — including the
+TypeScript and React presets — but bundles them into a format that loads directly in a
+`<script>` tag. No Node.js, no webpack, no build tool required.
+
+It is large. The full distribution is around 1.3 MB gzipped. For a playground that only
+needs React and TypeScript transforms, you pay that cost once on first load, and then
+Babel lives in memory. Transforms for typical playground-sized files (a few hundred
+lines each) complete in single-digit milliseconds.
+
+We configure two presets:
+
+```ts
+const presets: Array<string | [string, Record<string, unknown>]> = [];
+
+if (needsReact) {
+  presets.push(["react", { runtime: "automatic" }]);
+}
+if (needsTypescript) {
+  presets.push(["typescript", {
+    allExtensions: true,
+    isTSX: normalizedPath.endsWith(".tsx"),
+  }]);
+}
+
+const transformed = Babel.transform(file.content, {
+  filename: normalizedPath,
+  sourceType: "module",
+  presets,
+  babelrc: false,
+  configFile: false,
+  retainLines: true,
+});
+```
+
+Three decisions here are non-obvious and each one matters.
+
+**Presets apply right-to-left.** This is Babel convention. TypeScript runs first
+(stripping annotations), then React (transforming JSX). If the order were reversed,
+the React preset would see TypeScript syntax it doesn't understand. The `push` order in
+the array produces `["react", "typescript"]` which means TypeScript runs first.
+
+**`runtime: "automatic"`** changes what the React JSX transform emits. With the
+classical runtime, `<App />` becomes `React.createElement(App, null)` — which requires
+`React` to be in scope. With the automatic runtime it becomes
+`import { jsx } from "react/jsx-runtime"` at the top of the file. This matters because
+those auto-generated imports (`react/jsx-runtime`) flow through our import rewriting
+pipeline just like any other import. Users don't need to manually `import React` at the
+top of every file.
+
+**`retainLines: true`** tells Babel not to collapse multiple source lines onto fewer
+output lines. Consider what happens without it: a syntax error on line 47 of the user's
+code might report itself as an error on line 3 of the transpiled output, because Babel
+compressed everything. With `retainLines`, each output line corresponds to exactly the
+same line number in the input. When an uncaught error fires `window.onerror` inside the
+iframe with a line number, that line number points back to the user's original code.
+
+CSS and JSON files skip Babel entirely. CSS becomes a JavaScript module that injects a
+`<style>` tag (keyed by a deterministic ID so re-runs don't accumulate duplicate
+sheets). JSON becomes `export default <parsed value>`.
+
+Here is a React/TypeScript component you can experiment with right now:
+
+<EmbeddablePlayground
+  preset="react-ts"
+  height={460}
+  activeFile="/src/App.tsx"
+  files={[
+    {
+      path: "/src/App.tsx",
+      content: "import { useState } from \"react\";\n\ntype CounterProps = {\n  step?: number;\n};\n\nexport function App({ step = 1 }: CounterProps) {\n  const [count, setCount] = useState(0);\n\n  return (\n    <main style={{ fontFamily: \"system-ui\", padding: 24 }}>\n      <h2>Counter (step={step})</h2>\n      <p style={{ fontSize: 32 }}>{count}</p>\n      <button onClick={() => setCount(c => c + step)}>\n        +{step}\n      </button>\n      <button onClick={() => setCount(0)} style={{ marginLeft: 8 }}>\n        Reset\n      </button>\n    </main>\n  );\n}\n"
+    },
+    {
+      path: "/src/main.tsx",
+      content: "import { createRoot } from \"react-dom/client\";\nimport { App } from \"./App\";\n\nconst root = document.getElementById(\"root\");\nif (!root) throw new Error(\"Root not found\");\ncreateRoot(root).render(<App step={2} />);\n"
+    }
+  ]}
+/>
+
+Notice there is no `import React` at the top of `App.tsx`. The automatic JSX runtime
+handles it. Change the `step` prop in `main.tsx` and the counter updates immediately.
+
+---
+
+## The Import Problem
+
+After Babel runs, the code is syntactically valid JavaScript. The import statements are
+still wrong, but they are at least parseable. Let us be precise about what "wrong" means.
+
+A browser loading a module script resolves specifiers in one of two ways: absolute URL,
+or relative path (resolved against the module's own URL). That is the entire list.
+`"react"`, `"framer-motion"`, `"@tanstack/react-query"` — none of these are URLs or
+relative paths. They are bare specifiers, and bare specifiers produce an immediate
+`TypeError` with no fallback.
+
+The relative import problem is subtler. `"./App"` looks like a relative path. In a real
+file system it would resolve correctly. But our transpiled files are not real files on
+disk. They are strings. We are going to put them into blob URLs in a moment, and a blob
+URL looks like `blob:null/8a3f1b2c-...`. There is no meaningful "directory" for a
+relative path to be relative to. The browser cannot traverse a virtual file tree by
+following `../utils/helpers` from a blob URL.
+
+So we cannot use bare specifiers, and we cannot use relative paths. What can we use?
+
+---
+
+## Import Maps
+
+The answer is import maps. Import maps are a browser-native mechanism — part of the
+HTML living standard — for telling the module loader how to resolve specifiers. They
+look like this:
+
+```html
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.1.0?bundle",
+    "react-dom/client": "https://esm.sh/react-dom@19.1.0/client?bundle",
+    "td-playground/src/App.tsx": "blob:null/8a3f1b2c-..."
+  }
+}
+</script>
+```
+
+With this map in the page, `import { useState } from "react"` resolves to the esm.sh
+URL. `import { App } from "td-playground/src/App.tsx"` resolves to the blob URL. The
+bare specifier TypeError disappears.
+
+There is one hard constraint: **the import map must appear before any `<script type="module">` that uses the specifiers it covers.** The browser builds the import map
+registry before any module scripts execute. If a module script starts loading before the
+map is parsed, specifiers that should be in the map will fail to resolve. The ordering
+in our generated HTML is therefore: importmap first, then the entry module script.
+
+Import maps handle our npm packages (via esm.sh) and our local files (via blob URLs).
+But there is a gap: the transpiled files still contain the original import specifiers —
+`"./App"`, `"react"`. We need to rewrite them to the form the import map expects
+before we create the blob URLs. That is what the next two tools handle.
+
+---
+
+## The Virtual Namespace
+
+Here is the key insight of the architecture. We need a stable, unambiguous way to refer
+to each file in the workspace from any other file. The specifier we use in the rewritten
+import must match the key in the import map.
+
+We cannot use the file's actual path (`/src/App.tsx`) as an import specifier, because
+import maps require specifiers to be either URLs or valid module specifier strings. A
+bare `/src/App.tsx` would be treated as a URL-relative-path from the page's origin —
+not what we want.
+
+We cannot use a data URL or pre-computed blob URL as the specifier, because we need to
+rewrite the import specifiers before we create the blob URLs (the creation order must be
+reversed).
+
+The solution is a virtual namespace: a made-up bare specifier prefix that we own.
+
+```ts
+const PLAYGROUND_LOCAL_PREFIX = "td-playground";
+
+function toVirtualSpecifier(path: string): string {
+  return `${PLAYGROUND_LOCAL_PREFIX}${normalizePath(path)}`;
+}
+// "/src/App.tsx" → "td-playground/src/App.tsx"
+```
+
+When we rewrite imports, every local file reference becomes a `td-playground/...`
+specifier. When we build the import map, every `td-playground/...` key maps to the blob
+URL for that file. The map entry is constructed last, after all blob URLs exist.
+
+The virtual prefix also solves a secondary problem: it is unambiguous. A specifier
+starting with `td-playground/` cannot be confused with an npm package, a URL, or a
+relative path. The import rewriter can pattern-match on the prefix to determine exactly
+what kind of specifier it is dealing with.
+
+Here is a multi-file workspace where you can see cross-file imports working:
+
+<EmbeddablePlayground
+  preset="react-ts"
+  height={480}
+  activeFile="/src/App.tsx"
+  files={[
+    {
+      path: "/src/main.tsx",
+      content: "import { createRoot } from \"react-dom/client\";\nimport { App } from \"./App\";\n\nconst root = document.getElementById(\"root\");\nif (!root) throw new Error(\"Root not found\");\ncreateRoot(root).render(<App />);\n"
+    },
+    {
+      path: "/src/App.tsx",
+      content: "import { formatBytes, formatDuration } from \"./utils\";\n\nexport function App() {\n  return (\n    <main style={{ fontFamily: \"system-ui\", padding: 24 }}>\n      <h2>Cross-file imports</h2>\n      <p>{formatBytes(1_048_576)}</p>\n      <p>{formatDuration(3725)}</p>\n    </main>\n  );\n}\n"
+    },
+    {
+      path: "/src/utils.ts",
+      content: "export function formatBytes(bytes: number): string {\n  if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;\n  if (bytes >= 1_000) return `${(bytes / 1_000).toFixed(1)} KB`;\n  return `${bytes} B`;\n}\n\nexport function formatDuration(seconds: number): string {\n  const h = Math.floor(seconds / 3600);\n  const m = Math.floor((seconds % 3600) / 60);\n  const s = seconds % 60;\n  return [h, m, s].map(n => String(n).padStart(2, \"0\")).join(\":\");\n}\n"
+    }
+  ]}
+/>
+
+`App.tsx` imports from `./utils`, which becomes `td-playground/src/utils.ts` in the
+rewritten source and maps to the blob URL for `utils.ts` in the import map. Edit
+`utils.ts` and the output updates. The resolution chain works because every file in the
+workspace has exactly one entry in the import map.
+
+---
+
+## es-module-lexer
+
+We need to find every import specifier in a file and replace it. The temptation is to
+use a regular expression. Resist it.
+
+Import specifiers appear in patterns like:
+
+```js
+import { x } from "specifier";
+import("specifier");
+export { y } from "specifier";
+```
+
+But they also do not appear in contexts that look similar:
+
+```js
+const s = "import from 'fake'"; // string literal
+// import from "commented out"  // comment
+const t = `import from "${dynamic}"`;  // template literal
+```
+
+A regex that matches `from\s+["']([^"']+)["']` will produce false positives in all
+three of those cases. You would need to write a partial JavaScript parser to correctly
+handle all the edge cases — which is what [es-module-lexer](https://github.com/guybedford/es-module-lexer) already did.
+
+es-module-lexer is a WebAssembly binary that scans ES module source and returns the
+character offsets of every import and export statement. It does not build an AST. It
+does not understand the semantics of the code. It only finds the boundaries.
+
+```ts
+import { init, parse } from "es-module-lexer";
+
+await init; // one-time WASM initialization
+
+const [imports] = parse(code);
+// imports = [
+//   { n: "react", s: 27, e: 32 },      // s = start of specifier, e = end
+//   { n: "./App", s: 68, e: 73 },
+// ]
+```
+
+`s` and `e` are character offsets into the source string, pointing to the content of
+the specifier (the text inside the quotes). `n` is the resolved specifier string. With
+these offsets we can replace any specifier surgically — without touching any other
+character in the source — using magic-string.
+
+The WASM binary is small (~36 KB) and parses faster than any JavaScript alternative
+because the main loop is native machine code. We initialize it once at module load time
+so the async `init` promise is settled before the first build request arrives.
+
+---
+
+## magic-string
+
+Once we have character offsets, we need a tool that can replace substrings at specific
+positions in a string without invalidating the positions of subsequent replacements.
+
+You could do this with a naive string substitution, but you have to be careful: if you
+replace a 5-character specifier with a 47-character URL, every offset after that
+position shifts by 42. If you apply replacements front-to-back, you have to adjust all
+subsequent offsets. If you apply them back-to-front, you can avoid the adjustment — but
+back-to-front is fragile and the logic gets ugly quickly.
+
+[magic-string](https://github.com/rich-harris/magic-string) is a library designed
+exactly for this problem. It wraps a string and tracks a sequence of mutations. Offsets
+always refer to the original string, so you can apply all replacements in any order
+without offset arithmetic:
+
+```ts
+import MagicString from "magic-string";
+
+const magicString = new MagicString(code);
+
+for (const item of imports) {
+  if (!item.n) continue;
+  const newSpecifier = rewriteSpecifier(item.n);
+  // s and e are offsets into the original string — no adjustment needed
+  magicString.overwrite(item.s, item.e, `"${newSpecifier}"`);
+}
+
+const rewritten = magicString.toString();
+```
+
+magic-string tracks all mutations internally and applies them correctly when you call
+`toString()`. It also maintains a source map of every character rewrite, which is useful
+if you ever want to generate proper source maps. We do not emit source maps (we use
+`retainLines` instead, which is simpler), but magic-string's origin in the Rollup
+ecosystem means the source map capability comes for free.
+
+---
+
+## Blob URLs
+
+With each file transpiled and its imports rewritten to virtual specifiers, we have a
+collection of JavaScript strings. We need to turn them into something the browser can
+load as a module.
+
+`URL.createObjectURL` converts an in-memory `Blob` into a `blob:` URL:
+
+```ts
+const blobUrl = URL.createObjectURL(
+  new Blob([rewrittenCode], { type: "text/javascript" })
+);
+```
+
+The browser treats this URL as a real resource. You can use it anywhere you would use
+an HTTP URL: in an import map, in a `<script src>`, in a fetch request. Blob URLs are
+same-origin with the page that created them (or null-origin for opaque origins, which
+is what we have in our srcdoc iframe).
+
+Each file in the workspace gets its own blob URL. We collect them all into the import
+map alongside the esm.sh URLs for npm packages:
+
+```ts
+importMap["td-playground/src/App.tsx"] = blobUrl;
+importMap["td-playground/src/utils.ts"] = blobUrl2;
+importMap["react"] = "https://esm.sh/react@19.1.0?bundle";
+```
+
+**Memory management.** Blob URLs are reference-counted. The browser will not garbage
+collect the underlying data until you call `URL.revokeObjectURL(url)`. A playground
+that rebuilds on every keystroke can create dozens of blob URLs per minute if it leaks
+them. We track every blob URL we create in a ref, and before each new build we revoke
+the previous set:
+
+```ts
+export type PlaygroundBuildResult = {
+  srcDoc: string;
+  blobUrls: string[];
+};
+```
+
+```ts
+// In the component, before triggering a new build:
+revokeBlobUrls(blobUrlsRef.current);
+blobUrlsRef.current = [];
+
+// After the build succeeds:
+blobUrlsRef.current = result.blobUrls;
+```
+
+The effect cleanup also revokes on unmount, so navigating away from the page does not
+leak blob URLs into the browser's memory.
+
+---
+
+## The iframe Sandbox
+
+The transpiled, import-rewritten, blob-URL-resolved workspace is now ready to render.
+We inject it into an `<iframe srcdoc="...">` element.
+
+`srcdoc` lets us set the entire HTML document of the iframe as a string attribute. No
+network request, no URL, no server. The iframe loads its document from the string we
+provide. The generated HTML looks like:
+
+```html
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19.1.0?bundle",
+        "react/jsx-runtime": "https://esm.sh/react@19.1.0/jsx-runtime?bundle",
+        "react-dom/client": "https://esm.sh/react-dom@19.1.0/client?bundle",
+        "td-playground/src/main.tsx": "blob:null/...",
+        "td-playground/src/App.tsx": "blob:null/...",
+        "td-playground/src/utils.ts": "blob:null/..."
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>/* error handler */</script>
+    <script type="module">
+      import("td-playground/src/main.tsx");
+    </script>
+  </body>
+</html>
+```
+
+There are several non-obvious constraints in this structure.
+
+**Import map ordering.** The `<script type="importmap">` must come before any
+`<script type="module">` that references the mapped specifiers. If the module script
+begins executing before the import map is parsed, bare specifiers will fail. We always
+emit the importmap first.
+
+**The `sandbox` attribute trap.** Your first instinct might be to add
+`sandbox="allow-scripts"` to the iframe for security. Do not do this. The `sandbox`
+attribute, without `allow-same-origin`, strips the iframe of its origin and gives it a
+unique opaque origin. Blob URLs created outside the iframe — which is where we create
+them — are same-origin with the outer page. An opaque-origin iframe cannot load
+same-origin blob URLs. They fail silently with a CORS-like error. If you want to use
+`sandbox`, you must also include `allow-same-origin`, which largely defeats the purpose
+of sandboxing.
+
+We do not set `sandbox` at all. Instead, we rely on the fact that `srcdoc` iframes
+have a null origin by default — they are not same-origin with the host page. User
+scripts inside the iframe cannot access `window.parent`'s DOM, localStorage, or cookies
+via the same-origin policy. The isolation is automatic and free.
+
+**The `</script>` escaping trick.** The import map and error handler JavaScript are
+embedded directly in the srcdoc HTML string. If that JavaScript contains the literal
+string `</script>`, the HTML parser will think the script element has ended prematurely.
+We escape it:
+
+```ts
+function escapeScriptEnd(value: string): string {
+  return value.replace(/<\/script/gi, "<\\/script");
+}
+```
+
+This is called on both the import map JSON and the error handler source before
+embedding them in the srcdoc string.
+
+Here is a component that deliberately mutates global state so you can confirm the iframe
+is isolated from the host page:
+
+<EmbeddablePlayground
+  preset="react-ts"
+  height={440}
+  activeFile="/src/App.tsx"
+  files={[
+    {
+      path: "/src/main.tsx",
+      content: "import { createRoot } from \"react-dom/client\";\nimport { App } from \"./App\";\n\nconst root = document.getElementById(\"root\");\nif (!root) throw new Error(\"Root not found\");\ncreateRoot(root).render(<App />);\n"
+    },
+    {
+      path: "/src/App.tsx",
+      content: "import { useState } from \"react\";\n\nexport function App() {\n  const [log, setLog] = useState<string[]>([]);\n\n  function tryEscape() {\n    try {\n      // This runs inside the iframe — window is the iframe window\n      (window as any).__hostPageSecret = \"leaked!\";\n      const val = window.parent?.document?.title ?? \"(blocked)\";\n      setLog(prev => [...prev, `parent.document.title = ${val}`]);\n    } catch (e) {\n      setLog(prev => [...prev, `Blocked: ${e}`]);\n    }\n  }\n\n  return (\n    <main style={{ fontFamily: \"system-ui\", padding: 24 }}>\n      <h2>Sandbox test</h2>\n      <p>Try to access the host page. The null origin blocks it.</p>\n      <button onClick={tryEscape}>Attempt escape</button>\n      <ul>\n        {log.map((entry, i) => <li key={i}>{entry}</li>)}\n      </ul>\n    </main>\n  );\n}\n"
+    }
+  ]}
+/>
+
+Click "Attempt escape." The access to `window.parent.document` throws a
+`SecurityError`. The isolation works.
+
+---
+
+## Error Handling
+
+A playground that silently fails on user errors is frustrating. We need the iframe to
+communicate errors back to the host page.
+
+The entry module script is wrapped in a try/catch, and two event listeners capture
+unhandled errors. They all post structured messages to the parent frame:
+
+```js
+window.addEventListener("error", function(event) {
+  parent.postMessage({
+    channel: "td-playground",
+    type: "runtime-error",
+    payload: {
+      message: event.error?.message ?? event.message,
+      stack: event.error?.stack,
+      lineno: event.lineno,
+      colno: event.colno,
+    }
+  }, "*");
+  event.preventDefault();
+});
+
+window.addEventListener("unhandledrejection", function(event) {
+  parent.postMessage({
+    channel: "td-playground",
+    type: "runtime-error",
+    payload: {
+      message: event.reason?.message ?? String(event.reason),
+      stack: event.reason?.stack,
+    }
+  }, "*");
+});
+```
+
+The `channel: "td-playground"` field namespaces our messages from any other postMessage
+traffic on the page. The host listens on `window.addEventListener("message", ...)` and
+filters by channel before dispatching.
+
+We also post a `"ready"` message after the entry module successfully imports. This
+allows the host to clear any previous error state when the user's code transitions from
+broken to working:
+
+```js
+try {
+  await import("td-playground/src/main.tsx");
+  parent.postMessage({ channel: "td-playground", type: "ready" }, "*");
+} catch (e) {
+  parent.postMessage({
+    channel: "td-playground",
+    type: "build-error",
+    payload: { message: e.message, stack: e.stack }
+  }, "*");
+}
+```
+
+The `retainLines: true` Babel option becomes critical here. Without it, a Babel
+transform might collapse a 50-line component into 3 lines for code-size reasons, and
+the `lineno` reported by `window.onerror` would point into the compressed output — not
+the user's original source. With `retainLines`, every line in the transformed output
+corresponds to the same line in the input. Error line numbers are directly usable.
+
+---
+
+## Monaco and Multi-File Types
+
+The editor is Monaco — the same engine that powers VS Code. We load it via
+`next/dynamic` with `ssr: false`. Monaco is a substantial bundle and it has no
+server-side rendering path; loading it dynamically keeps it out of the initial
+page payload.
+
+Each file in the workspace gets its own Monaco model, identified by a URI:
+
+```ts
+const uri = monaco.Uri.parse(`file://${file.path}`);
+let model = monaco.editor.getModel(uri);
+if (!model) {
+  model = monaco.editor.createModel(file.content, file.language, uri);
+}
+```
+
+Switching between file tabs does not unmount and remount the Monaco component. Instead
+it calls `editor.setModel(model)` to swap the active model. This preserves each file's
+independent undo/redo history, scroll position, and cursor location. Remounting would
+reset all of these, and users would notice.
+
+The multi-file TypeScript language service is the best part. Because all models are
+registered with the same Monaco instance and all use URIs in the `file://` scheme,
+Monaco's TypeScript language server can resolve cross-file imports automatically. When
+`App.tsx` contains `import { formatBytes } from "./utils"`, TypeScript resolves it to
+the model at `file:///src/utils.ts` and provides type checking, autocompletion, and
+go-to-definition across the workspace. No additional configuration — it works by
+convention of the URI scheme.
+
+The Vesper dark theme we apply is an intentional design decision. Playgrounds embedded
+in articles are competing with the article text for attention. A neutral dark theme with
+muted syntax highlighting keeps the focus on the structure of the code rather than the
+colors. The theme data is loaded from a static JSON file and registered with Monaco's
+`defineTheme` API before the first render.
+
+---
+
+## Storage: Three Layers
+
+The playground's state needs to survive page refreshes. We use three `localStorage`
+layers, each with its own key prefix:
+
+| Layer | Key pattern | Contents |
+|-------|------------|----------|
+| Legacy workspace | `td:playground:workspace:{key}` | Original single-workspace storage |
+| Recipe index | `td:playground:recipes:index:{key}` | Ordered metadata, active/recent IDs |
+| Recipe item | `td:playground:recipes:item:{key}:{id}` | Full workspace + snapshots for one recipe |
+
+The recipe layer was added after the original single-workspace storage, not instead of
+it. We chose not to write a one-time migration script because migration scripts are
+brittle — they run once, and if the schema evolves further you need another script. We
+use opportunistic migration instead: when `ensureRecipeStore` finds no recipe index key,
+it checks for the legacy workspace key and promotes it to a recipe automatically. Users
+who have never opened the playground simply start with an empty recipe store. Users with
+existing workspaces see their data automatically promoted on first load.
+
+The coercion layer is the most important design decision in the storage module. Every
+read from `localStorage` passes through a `coerce*` function:
+
+```ts
+function coerceWorkspace(raw: unknown): PlaygroundWorkspace {
+  const obj = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    version: 1,
+    preset: coercePresetId(obj.preset),
+    entry: typeof obj.entry === "string" ? obj.entry : "/src/main.tsx",
+    activeFileId: typeof obj.activeFileId === "string" ? obj.activeFileId : "",
+    folders: Array.isArray(obj.folders) ? obj.folders : ["/src"],
+    files: Array.isArray(obj.files) ? obj.files.map(coerceFile) : [],
+    dependencies: coerceDependencies(obj.dependencies),
+  };
+}
+```
+
+This function validates and normalizes the stored JSON against the current schema. If
+a field is missing (because the data was written by an older version of the app), it
+gets a sensible default. If a field has changed shape, it gets coerced to the new shape.
+We do not crash on malformed data; we repair it at read time. This means we can freely
+evolve the shape of stored objects — add fields, rename fields, change types — without
+bumping a schema version key and without writing migration scripts.
+
+Snapshots are stored inline within the recipe object. This keeps each recipe
+self-contained: one `localStorage.getItem` retrieves a recipe and all its named
+checkpoints. The tradeoff is that very large workspaces with many snapshots will
+produce large serialized values. In practice, `localStorage` keys are limited to about
+5 MB per origin. We have not hit this limit with any real-world recipe.
+
+Here is the full IDE experience with multiple files and tabs:
+
+<EmbeddablePlayground
+  preset="react-ts"
+  height={520}
+  activeFile="/src/App.tsx"
+  files={[
+    {
+      path: "/src/main.tsx",
+      content: "import { createRoot } from \"react-dom/client\";\nimport { App } from \"./App\";\n\nconst root = document.getElementById(\"root\");\nif (!root) throw new Error(\"Root not found\");\ncreateRoot(root).render(<App />);\n"
+    },
+    {
+      path: "/src/App.tsx",
+      content: "import { useTimer } from \"./hooks\";\nimport { Badge } from \"./Badge\";\n\nexport function App() {\n  const elapsed = useTimer();\n\n  return (\n    <main style={{ fontFamily: \"system-ui\", padding: 24 }}>\n      <h2>Multi-file IDE</h2>\n      <Badge label=\"Elapsed\" value={`${elapsed}s`} />\n      <Badge label=\"Files\" value=\"3\" />\n    </main>\n  );\n}\n"
+    },
+    {
+      path: "/src/Badge.tsx",
+      content: "type BadgeProps = { label: string; value: string };\n\nexport function Badge({ label, value }: BadgeProps) {\n  return (\n    <span style={{\n      display: \"inline-flex\",\n      alignItems: \"center\",\n      gap: 6,\n      padding: \"4px 10px\",\n      borderRadius: 6,\n      background: \"#1e1e2e\",\n      color: \"#cdd6f4\",\n      fontFamily: \"monospace\",\n      fontSize: 13,\n      marginRight: 8,\n    }}>\n      <span style={{ color: \"#6c7086\" }}>{label}</span>\n      <span>{value}</span>\n    </span>\n  );\n}\n"
+    },
+    {
+      path: "/src/hooks.ts",
+      content: "import { useState, useEffect } from \"react\";\n\nexport function useTimer(): number {\n  const [seconds, setSeconds] = useState(0);\n\n  useEffect(() => {\n    const id = setInterval(() => setSeconds(s => s + 1), 1000);\n    return () => clearInterval(id);\n  }, []);\n\n  return seconds;\n}\n"
+    }
+  ]}
+/>
+
+---
+
+## The Lessons
+
+**What we got wrong the first time.** Our first implementation used `sandbox="allow-scripts"` on the iframe and spent three hours debugging why import maps
+stopped working. The spec is clear on this: without `allow-same-origin`, blob URLs from
+the parent origin are inaccessible. We removed `sandbox` entirely and the isolation we
+cared about (null origin) was already there.
+
+**What surprised us.** Monaco's cross-file TypeScript works without any configuration.
+We expected to write glue code to feed cross-file type information to the language
+server. We didn't. The URI convention handles it automatically. This is the kind of
+surprise you only get by trying something rather than reading about it.
+
+**The postMessage naming collision.** The first time we deployed the playground to a
+page that also used an analytics library, we got phantom error messages populating the
+error panel. The analytics library was posting messages to the window. We had not
+namespaced our listener. Adding the `channel: "td-playground"` filter field fixed it
+in one line.
+
+**The `retainLines` discovery.** We shipped without `retainLines` for the first two
+weeks. Error line numbers were useless. Users reported that the error panel showed
+"line 2" for errors that were clearly on line 40. Adding `retainLines: true` fixed the
+correspondence immediately. It costs a little output size (more newlines preserved) but
+that cost is irrelevant for in-memory strings.
+
+**The spec as documentation.** Every unintuitive behavior we encountered — import map
+ordering, `sandbox` and null origins, blob URL same-origin rules — was explained
+correctly and in detail in the HTML living standard. Browser vendor documentation
+(MDN, Chrome DevTools docs) explained what the APIs do. The spec explained why they
+behave the way they do when the behavior was surprising. For low-level browser API
+work, the spec is the fastest path to understanding.
+
+---
+
+## What's Next
+
+**Worker-based transpilation.** Babel runs on the main thread. For playground-sized
+files this is imperceptible, but a single large file (thousands of lines, many
+dependencies) can block the event loop for tens of milliseconds. Moving Babel to a
+Web Worker would keep the editor fully responsive and would allow us to cancel
+in-flight transpilation when the user types faster than Babel can keep up.
+
+**Shareable links via URL hash.** Encode the workspace as a compressed base64 blob in
+the URL fragment. No backend required. The main constraint is URL length: LZ-string
+compression typically gets a medium-sized workspace (a few files, a few hundred lines
+each) under 2000 characters, which fits comfortably in a URL. Longer workspaces would
+need a backend link-shortener or a different encoding strategy.
+
+**Server-side pre-build for recipe articles.** In recipe articles, each step's workspace
+is static and known at Next.js build time. We could pre-transpile every step's files,
+pre-compute the import map, and hydrate the client with already-resolved blob URLs.
+This would eliminate the first-load Babel pass entirely for recipe readers. It is more
+infrastructure to maintain, but it would make the first-render of embedded playgrounds
+instantaneous.
+
+The architecture has held up well to the recipes feature, which places four to six
+independent playgrounds on a single page. Each playground is a genuine island: separate
+iframe, separate blob URL namespace, blob URLs cleaned up between re-renders. Editing
+one playground's code has no effect on any other. The isolation boundary that we
+designed for security turns out to be equally valuable for correctness.
+
+The core takeaway from building this: the browser platform is more capable than most
+developers assume. Import maps, blob URLs, srcdoc iframes, and IntersectionObserver are
+all documented in the living HTML standard. They work in every modern browser. You do
+not need a cloud function or a build daemon to run a TypeScript/React playground in the
+browser. You need four APIs and the patience to read their specifications carefully.

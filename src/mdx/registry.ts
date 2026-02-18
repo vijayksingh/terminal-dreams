@@ -2,7 +2,9 @@
 // - Shared components available everywhere
 // - Per-post components can be registered in postComponentLoaders
 
+import { EmbeddablePlayground } from "@/mdx/shared/EmbeddablePlayground";
 import { InteractiveCounter } from "@/mdx/shared/InteractiveCounter";
+import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
 import { MotionBadge } from "@/mdx/shared/MotionBadge";
 import { Playground } from "@/mdx/shared/Playground";
 import type { ComponentType } from "react";
@@ -14,9 +16,12 @@ type PostComponentLoader = () => Promise<MdxComponentModule>;
 export type MdxComponentMap = Record<string, MdxComponent>;
 
 export const sharedComponents: MdxComponentMap = {
+  EmbeddablePlayground,
   InteractiveCounter,
+  MonacoCodeBlock,
   MotionBadge,
   Playground,
+  pre: MonacoCodeBlock,
 };
 
 const postComponentLoaders: Record<string, PostComponentLoader> = {

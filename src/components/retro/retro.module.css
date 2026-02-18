@@ -4,14 +4,13 @@
   padding: 3rem 2rem;
   display: grid;
   grid-template-columns: 240px 1fr;
-  gap: 2rem;
+  gap: 3rem;
 }
 
 .tocAsideStickyBottom {
-  position: sticky;
-  bottom: 2rem;
-  align-self: end;
-  height: max-content;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 @media (max-width: 768px) {
@@ -70,7 +69,6 @@
   min-height: 100vh;
   line-height: 1.6;
   position: relative;
-  overflow: hidden;
 }
 
 .scanline {
@@ -257,10 +255,35 @@
   margin-bottom: 1.5rem;
 }
 
-.content :where(h1,h2,h3){
+.content p {
+  margin-bottom: 1.1rem;
+}
+
+.content h1 {
   color: var(--color-text);
-  margin: var(--space-5) 0 var(--space-3);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: var(--space-6) 0 var(--space-3);
   scroll-margin-top: var(--space-6);
+}
+
+.content h2 {
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: var(--space-6) 0 var(--space-3);
+  scroll-margin-top: var(--space-6);
+  border-bottom: 1px solid var(--color-surface-2);
+  padding-bottom: var(--space-2);
+}
+
+.content h3 {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 500;
+  margin: var(--space-5) 0 var(--space-2);
+  scroll-margin-top: var(--space-6);
+  opacity: 0.85;
 }
 
 .content pre{
@@ -273,6 +296,11 @@
 .content code{
   font-family: var(--font-mono);
   color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-size: 0.875em;
 }
 
 .content a{

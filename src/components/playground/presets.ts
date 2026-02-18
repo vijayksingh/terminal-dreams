@@ -1,4 +1,5 @@
 import type {
+  PlaygroundDependencyMap,
   PlaygroundFile,
   PlaygroundFileLanguage,
   PlaygroundPresetId,
@@ -17,6 +18,7 @@ type PlaygroundPreset = {
   label: string;
   description: string;
   entry: string;
+  dependencies: PlaygroundDependencyMap;
   files: PresetFileSeed[];
 };
 
@@ -36,6 +38,10 @@ export const PLAYGROUND_PRESETS: Record<PlaygroundPresetId, PlaygroundPreset> = 
     label: "React + TypeScript",
     description: "Starter with TSX components and helper module.",
     entry: "/src/main.tsx",
+    dependencies: {
+      react: "19.1.0",
+      "react-dom": "19.1.0",
+    },
     files: [
       {
         path: "/src/main.tsx",
@@ -86,6 +92,10 @@ export function getTimestamp(): string {
     label: "React + JavaScript",
     description: "Starter with JSX and simple utility module.",
     entry: "/src/main.jsx",
+    dependencies: {
+      react: "19.1.0",
+      "react-dom": "19.1.0",
+    },
     files: [
       {
         path: "/src/main.jsx",
@@ -136,6 +146,11 @@ export const PLAYGROUND_PRESET_OPTIONS = Object.values(PLAYGROUND_PRESETS).map((
   description: preset.description,
 }));
 
+export function getPresetDependencies(presetId: PlaygroundPresetId): PlaygroundDependencyMap {
+  const preset = PLAYGROUND_PRESETS[presetId] ?? PLAYGROUND_PRESETS["react-ts"];
+  return { ...preset.dependencies };
+}
+
 export function createWorkspaceFromPreset(presetId: PlaygroundPresetId): PlaygroundWorkspace {
   const preset = PLAYGROUND_PRESETS[presetId] ?? PLAYGROUND_PRESETS["react-ts"];
   const files = preset.files.map(toFileSeed);
@@ -147,5 +162,6 @@ export function createWorkspaceFromPreset(presetId: PlaygroundPresetId): Playgro
     activeFileId: firstFile?.id ?? "",
     folders: ["/src"],
     files,
+    dependencies: { ...preset.dependencies },
   };
 }

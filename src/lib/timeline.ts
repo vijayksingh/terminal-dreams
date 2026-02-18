@@ -4,6 +4,7 @@ export type TimelinePost = {
   date: string;
   category?: string;
   readTime?: string;
+  kind: "post" | "recipe";
 };
 
 export type TimelineGroup = {

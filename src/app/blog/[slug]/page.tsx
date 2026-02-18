@@ -1,5 +1,5 @@
 import styles from "@/components/retro/retro.module.css";
-import { RetroBackLink } from "@/components/retro/RetroBackLink";
+import { Breadcrumb } from "@/components/retro/Breadcrumb";
 // import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { ToC } from "@/components/retro/ToC";
@@ -7,7 +7,6 @@ import { getAllPostSlugs, getPostBySlug } from "@/lib/mdx";
 import { buildComponentsForSlug } from "@/mdx/registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import { notFound } from "next/navigation";
-import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 
 export async function generateStaticParams() {
@@ -27,7 +26,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className={styles.headerInner}>
           <h1 className={`${styles.title}`}>{post.frontmatter.title}</h1>
           <div className={styles.postHeaderMetaRow}>
-            <RetroBackLink href="/blog" label="Back to archive" variant="inline" />
+            <Breadcrumb items={[{ label: "blog", href: "/blog" }]} />
             <div className={styles.meta}>
               <span>{"// "}{post.frontmatter.date}</span>
               {post.frontmatter.category ? (
@@ -52,17 +51,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 options={{
                   mdxOptions: {
                     remarkPlugins: [remarkGfm],
-                    rehypePlugins: [
-                      [
-                        rehypePrettyCode,
-                        {
-                          theme: {
-                            dark: "github-dark",
-                            light: "github-light",
-                          },
-                        },
-                      ],
-                    ],
+                    rehypePlugins: [],
                   },
                 }}
               />

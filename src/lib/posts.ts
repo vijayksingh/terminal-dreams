@@ -8,6 +8,7 @@ export type BlogPostListItem = {
   category?: string;
   readTime: string;
   summary?: string;
+  kind: "post";
 };
 
 export type CommandPalettePostItem = {
@@ -26,6 +27,7 @@ export const getBlogListItems = cache((): BlogPostListItem[] => {
     category: post.frontmatter.category,
     readTime: post.readTime,
     summary: post.frontmatter.summary,
+    kind: "post" as const,
   }));
 });
 

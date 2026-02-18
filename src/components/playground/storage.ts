@@ -1,4 +1,5 @@
 import type {
+  PlaygroundDependencyMap,
   PlaygroundFile,
   PlaygroundRecipe,
   PlaygroundRecipeMetadata,
@@ -17,6 +18,21 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function coerceDependencies(value: unknown): PlaygroundDependencyMap {
+  if (!isPlainObject(value)) return {};
+
+  const dependencies: PlaygroundDependencyMap = {};
+  Object.entries(value).forEach(([rawName, rawVersion]) => {
+    if (typeof rawVersion !== "string") return;
+    const name = rawName.trim();
+    const version = rawVersion.trim();
+    if (!name || !version) return;
+    dependencies[name] = version;
+  });
+
+  return dependencies;
 }
 
 function createId(prefix: string): string {
@@ -55,6 +71,7 @@ function coerceWorkspace(value: unknown): PlaygroundWorkspace | null {
       ? value.activeFileId
       : files[0].id;
   const preset = value.preset === "react-js" ? "react-js" : "react-ts";
+  const dependencies = coerceDependencies(value.dependencies);
 
   return {
     version: 1,
@@ -63,6 +80,7 @@ function coerceWorkspace(value: unknown): PlaygroundWorkspace | null {
     activeFileId,
     folders: folders.length > 0 ? folders : ["/src"],
     files,
+    dependencies,
   };
 }
 
@@ -80,12 +98,10 @@ export function getRecipeStorageKey(storageKey: string, recipeId: string): strin
 
 export function loadWorkspace(storageKey: string): PlaygroundWorkspace | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(getWorkspaceStorageKey(storageKey));
-  if (!raw) return null;
-
   try {
-    const parsed = JSON.parse(raw);
-    return coerceWorkspace(parsed);
+    const raw = window.localStorage.getItem(getWorkspaceStorageKey(storageKey));
+    if (!raw) return null;
+    return coerceWorkspace(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -93,7 +109,11 @@ export function loadWorkspace(storageKey: string): PlaygroundWorkspace | null {
 
 export function saveWorkspace(storageKey: string, workspace: PlaygroundWorkspace) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(getWorkspaceStorageKey(storageKey), JSON.stringify(workspace));
+  try {
+    window.localStorage.setItem(getWorkspaceStorageKey(storageKey), JSON.stringify(workspace));
+  } catch {
+    // Throws in Safari private mode, when quota exceeded, or when storage is disabled
+  }
 }
 
 export type PlaygroundRecipeIndex = {
@@ -158,7 +178,7 @@ function coerceMetadata(value: unknown): PlaygroundRecipeMetadata | null {
   };
 }
 
-function coerceRecipe(value: unknown): PlaygroundRecipe | null {
+export function coerceRecipe(value: unknown): PlaygroundRecipe | null {
   if (!isPlainObject(value)) return null;
   const metadata = coerceMetadata(value);
   const workspace = coerceWorkspace(value.workspace);
@@ -202,9 +222,9 @@ function coerceRecipeIndex(value: unknown): PlaygroundRecipeIndex | null {
 
 function readRecipeIndex(storageKey: string): PlaygroundRecipeIndex | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(getRecipeIndexStorageKey(storageKey));
-  if (!raw) return null;
   try {
+    const raw = window.localStorage.getItem(getRecipeIndexStorageKey(storageKey));
+    if (!raw) return null;
     return coerceRecipeIndex(JSON.parse(raw));
   } catch {
     return null;
@@ -213,7 +233,11 @@ function readRecipeIndex(storageKey: string): PlaygroundRecipeIndex | null {
 
 function writeRecipeIndex(storageKey: string, index: PlaygroundRecipeIndex) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(getRecipeIndexStorageKey(storageKey), JSON.stringify(index));
+  try {
+    window.localStorage.setItem(getRecipeIndexStorageKey(storageKey), JSON.stringify(index));
+  } catch {
+    // Throws in Safari private mode, when quota exceeded, or when storage is disabled
+  }
 }
 
 function withRecentIds(previous: string[], nextId: string): string[] {
@@ -257,9 +281,9 @@ export function loadRecipeIndex(storageKey: string): PlaygroundRecipeIndex | nul
 
 export function loadRecipe(storageKey: string, recipeId: string): PlaygroundRecipe | null {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(getRecipeStorageKey(storageKey, recipeId));
-  if (!raw) return null;
   try {
+    const raw = window.localStorage.getItem(getRecipeStorageKey(storageKey, recipeId));
+    if (!raw) return null;
     return coerceRecipe(JSON.parse(raw));
   } catch {
     return null;
@@ -302,7 +326,11 @@ export function upsertRecipe(
   options?: { setActive?: boolean; touchRecent?: boolean }
 ): PlaygroundRecipeIndex {
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(getRecipeStorageKey(storageKey, recipe.id), JSON.stringify(recipe));
+    try {
+      window.localStorage.setItem(getRecipeStorageKey(storageKey, recipe.id), JSON.stringify(recipe));
+    } catch {
+      // Throws in Safari private mode, when quota exceeded, or when storage is disabled
+    }
   }
 
   const currentIndex = readRecipeIndex(storageKey) ?? {
@@ -351,7 +379,11 @@ export function setActiveRecipe(storageKey: string, recipeId: string): Playgroun
 
 export function removeRecipe(storageKey: string, recipeId: string): PlaygroundRecipeIndex | null {
   if (typeof window !== "undefined") {
-    window.localStorage.removeItem(getRecipeStorageKey(storageKey, recipeId));
+    try {
+      window.localStorage.removeItem(getRecipeStorageKey(storageKey, recipeId));
+    } catch {
+      // Ignore
+    }
   }
   const index = readRecipeIndex(storageKey);
   if (!index) return null;

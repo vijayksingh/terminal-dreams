@@ -24,9 +24,12 @@ export function RetroTimeline({ posts }: { posts: TimelinePostItem[] }) {
                 {g.items.map((p) => (
                   <li key={p.slug} className={styles.timelineRow}>
                     <span className={styles.timelineBadge}>
-                      {(p.category ?? "post").toUpperCase()}
+                      {p.kind === "recipe" ? "RECIPE" : (p.category ?? "post").toUpperCase()}
                     </span>
-                    <Link href={`/blog/${p.slug}`} className={styles.timelineTitle}>
+                    <Link
+                      href={p.kind === "recipe" ? `/recipes/${p.slug}` : `/blog/${p.slug}`}
+                      className={styles.timelineTitle}
+                    >
                       {p.title}
                     </Link>
                     <span className={styles.timelineDate}>{shortDateLabel(p.date)}</span>

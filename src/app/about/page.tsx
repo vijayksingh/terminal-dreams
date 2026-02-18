@@ -1,3 +1,4 @@
+import { Breadcrumb } from "@/components/retro/Breadcrumb";
 import RetroFooter from "@/components/retro/RetroFooter";
 import styles from "@/components/retro/retro.module.css";
 
@@ -6,6 +7,7 @@ export default function AboutPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
+          <Breadcrumb items={[{ label: "about" }]} />
           <h1 className={styles.title}>About</h1>
           <p className={styles.subtitle}>{"// Placeholder — more soon"}</p>
         </div>

@@ -12,7 +12,7 @@ describe('RetroBlog', () => {
             date: '2025-09-01',
             category: 'Cyberspace',
             readTime: '3 min read',
-            summary: 'A sample MDX post with code highlighting and an interactive counter component.',
+            kind: 'post' as const,
           },
         ]}
       />

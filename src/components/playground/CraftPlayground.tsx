@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import type { Monaco } from "@monaco-editor/react";
 import {
   type NodeRendererProps,
@@ -10,7 +9,7 @@ import {
 } from "react-arborist";
 import { type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { PLAYGROUND_PRESET_OPTIONS, createWorkspaceFromPreset } from "@/components/playground/presets";
+import { createWorkspaceFromPreset, getPresetDependencies } from "@/components/playground/presets";
 import {
   PLAYGROUND_POST_MESSAGE_CHANNEL,
   PlaygroundBuildError,
@@ -18,6 +17,7 @@ import {
   revokeBlobUrls,
 } from "@/components/playground/runtime";
 import {
+  coerceRecipe,
   createRecipeId,
   ensureRecipeStore,
   loadRecipe,
@@ -27,6 +27,7 @@ import {
   type PlaygroundRecipeIndex,
 } from "@/components/playground/storage";
 import type {
+  PlaygroundDependencyMap,
   PlaygroundFile,
   PlaygroundPresetId,
   PlaygroundRecipe,
@@ -47,6 +48,8 @@ import {
 import { useDimensions } from "@/hooks/use-dimensions";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
+import { setupMonaco } from "@/lib/monaco-setup";
+import { VESPER_THEME_NAME } from "@/lib/monaco-vesper";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((mod) => mod.default), {
   ssr: false,
@@ -87,6 +90,8 @@ const DEFAULT_PREVIEW_DOC = `<!doctype html>
 
 const PANEL_MIN_RATIO = 0.32;
 const PANEL_MAX_RATIO = 0.72;
+const NPM_SEARCH_DEBOUNCE_MS = 260;
+const NPM_SEARCH_LIMIT = 7;
 
 const statusLabelMap: Record<PlaygroundRunStatus, string> = {
   idle: "Idle",
@@ -115,6 +120,12 @@ type CraftPlaygroundProps = {
 type RuntimePayload = {
   message?: string;
   stack?: string;
+};
+
+type NpmSearchResult = {
+  name: string;
+  version: string;
+  description: string;
 };
 
 type ExplorerNode = {
@@ -285,12 +296,19 @@ function normalizeWorkspace(workspace: PlaygroundWorkspace): PlaygroundWorkspace
     ? normalizePath(workspace.entry)
     : firstFile.path;
 
+  const presetDependencies = getPresetDependencies(workspace.preset);
+  const workspaceDependencies = normalizeDependencies(workspace.dependencies);
+
   return {
     ...workspace,
     activeFileId,
     entry,
     folders: sortFolders(folderSet),
     files: normalizedFiles,
+    dependencies: {
+      ...presetDependencies,
+      ...workspaceDependencies,
+    },
   };
 }
 
@@ -327,6 +345,60 @@ function parseTags(raw: string): string[] {
     .filter(Boolean);
 }
 
+function normalizeDependencies(value: unknown): PlaygroundDependencyMap {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const dependencies: PlaygroundDependencyMap = {};
+  Object.entries(value as Record<string, unknown>).forEach(([rawName, rawVersion]) => {
+    if (typeof rawVersion !== "string") return;
+    const name = rawName.trim();
+    const version = rawVersion.trim();
+    if (!name || !version) return;
+    dependencies[name] = version;
+  });
+
+  return dependencies;
+}
+
+function parseNpmSearchResults(value: unknown): NpmSearchResult[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  const objects = (value as { objects?: unknown }).objects;
+  if (!Array.isArray(objects)) {
+    return [];
+  }
+
+  return objects.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return [];
+    }
+    const pkg = (item as { package?: unknown }).package;
+    if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
+      return [];
+    }
+
+    const name = typeof (pkg as { name?: unknown }).name === "string"
+      ? (pkg as { name: string }).name.trim()
+      : "";
+    const version = typeof (pkg as { version?: unknown }).version === "string"
+      ? (pkg as { version: string }).version.trim()
+      : "";
+    const description = typeof (pkg as { description?: unknown }).description === "string"
+      ? (pkg as { description: string }).description.trim()
+      : "";
+
+    if (!name || !version) {
+      return [];
+    }
+
+    return [{ name, version, description }];
+  });
+}
+
 export function CraftPlayground({
   storageKey = "default",
   initialPreset = "react-ts",
@@ -339,6 +411,7 @@ export function CraftPlayground({
   const prefersReducedMotion = usePrefersReducedMotion();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const explorerRef = useRef<HTMLDivElement | null>(null);
+  const explorerTreeRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -358,7 +431,6 @@ export function CraftPlayground({
   const [activeRecipe, setActiveRecipe] = useState<PlaygroundRecipe>(
     normalizeRecipe(initialStoreRef.current.activeRecipe)
   );
-  const [recipeQuery, setRecipeQuery] = useState("");
   const [templatePreset, setTemplatePreset] = useState<PlaygroundPresetId>(initialPreset);
   const [runStatus, setRunStatus] = useState<PlaygroundRunStatus>("idle");
   const [previewDoc, setPreviewDoc] = useState(DEFAULT_PREVIEW_DOC);
@@ -369,7 +441,7 @@ export function CraftPlayground({
   const [splitRatio, setSplitRatio] = useState(embedded ? 0.58 : 0.53);
   const [isResizing, setIsResizing] = useState(false);
   const [copyFeedbackState, setCopyFeedbackState] = useState<"idle" | "copied" | "failed">("idle");
-  const [saveState, setSaveState] = useState<"saving" | "saved">("saved");
+  const [, setSaveState] = useState<"saving" | "saved">("saved");
   const [hydrated, setHydrated] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>("");
@@ -378,10 +450,24 @@ export function CraftPlayground({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [contextMenu, setContextMenu] = useState<ExplorerContextMenu | null>(null);
-  const [tagsInput, setTagsInput] = useState(activeRecipe.tags.join(", "));
-  const explorerSize = useDimensions(explorerRef);
+  const [tagsInput, setTagsInput] = useState(() => activeRecipe.tags.join(", "));
+  const [explorerCollapsed, setExplorerCollapsed] = useState(false);
+  const [dependencyPanelOpen, setDependencyPanelOpen] = useState(true);
+  const [dependencyQuery, setDependencyQuery] = useState("");
+  const [dependencySearchState, setDependencySearchState] = useState<"idle" | "loading" | "error">("idle");
+  const [dependencySearchError, setDependencySearchError] = useState<string | null>(null);
+  const [dependencySearchResults, setDependencySearchResults] = useState<NpmSearchResult[]>([]);
+  const explorerTreeSize = useDimensions(explorerTreeRef);
 
   const workspace = activeRecipe.workspace;
+  const presetDependencies = useMemo(
+    () => getPresetDependencies(workspace.preset),
+    [workspace.preset]
+  );
+  const installedDependencies = useMemo(
+    () => Object.entries(workspace.dependencies ?? {}).sort(([left], [right]) => left.localeCompare(right)),
+    [workspace.dependencies]
+  );
   const activeFile = useMemo(
     () => workspace.files.find((file) => file.id === workspace.activeFileId) ?? workspace.files[0],
     [workspace]
@@ -389,10 +475,6 @@ export function CraftPlayground({
   const activeFileUri = useMemo(
     () => (activeFile ? toMonacoFileUri(activeFile.path) : undefined),
     [activeFile]
-  );
-  const runnableFiles = useMemo(
-    () => workspace.files.filter((file) => isRunnableFile(file.path)),
-    [workspace.files]
   );
   const diagnosticsCount = Number(Boolean(buildError)) + Number(Boolean(runtimeError));
   const treeData = useMemo(
@@ -411,30 +493,7 @@ export function CraftPlayground({
     return null;
   }, [fileByPath, selectedPath, workspace.folders]);
 
-  const filteredRecipes = useMemo(() => {
-    const term = recipeQuery.trim().toLowerCase();
-    if (!term) return recipeIndex.recipes;
-    return recipeIndex.recipes.filter((recipe) => {
-      const haystack = [
-        recipe.name,
-        recipe.description ?? "",
-        recipe.tags.join(" "),
-      ].join(" ").toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [recipeIndex.recipes, recipeQuery]);
-
-  const recentRecipes = useMemo(() => {
-    const map = new Map(recipeIndex.recipes.map((recipe) => [recipe.id, recipe]));
-    return recipeIndex.recentRecipeIds
-      .map((id) => map.get(id))
-      .filter((recipe): recipe is NonNullable<typeof recipe> => Boolean(recipe))
-      .slice(0, 4);
-  }, [recipeIndex.recipes, recipeIndex.recentRecipeIds]);
-
   const compactChrome = fullPageChrome && fillHeight;
-  const controlHeightClass = compactChrome ? "h-8" : "h-9";
-  const controlTextClass = compactChrome ? "text-xs" : "text-sm";
 
   const mutateRecipe = useCallback((updater: (previous: PlaygroundRecipe) => PlaygroundRecipe) => {
     setActiveRecipe((previous) => {
@@ -458,38 +517,30 @@ export function CraftPlayground({
     }));
   }, [mutateRecipe]);
 
+  const installDependency = useCallback((name: string, version: string) => {
+    updateWorkspace((previous) => ({
+      ...previous,
+      dependencies: {
+        ...previous.dependencies,
+        [name]: version,
+      },
+    }));
+  }, [updateWorkspace]);
+
+  const removeDependency = useCallback((name: string) => {
+    updateWorkspace((previous) => {
+      const nextDependencies: PlaygroundDependencyMap = { ...previous.dependencies };
+      delete nextDependencies[name];
+      return {
+        ...previous,
+        dependencies: nextDependencies,
+      };
+    });
+  }, [updateWorkspace]);
+
   const configureMonaco = useCallback((monaco: Monaco) => {
     monacoRef.current = monaco;
-    const defaults = monaco.languages.typescript.typescriptDefaults;
-    const jsDefaults = monaco.languages.typescript.javascriptDefaults;
-
-    const compilerOptions = {
-      target: monaco.languages.typescript.ScriptTarget.ES2017,
-      module: monaco.languages.typescript.ModuleKind.ESNext,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-      jsx: monaco.languages.typescript.JsxEmit.Preserve,
-      strict: true,
-      allowJs: true,
-      esModuleInterop: true,
-      allowSyntheticDefaultImports: true,
-      resolveJsonModule: true,
-      isolatedModules: true,
-      skipLibCheck: true,
-      allowNonTsExtensions: true,
-    };
-
-    defaults.setCompilerOptions(compilerOptions);
-    defaults.setEagerModelSync(true);
-    defaults.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: false,
-    });
-    jsDefaults.setCompilerOptions(compilerOptions);
-    jsDefaults.setEagerModelSync(true);
-    jsDefaults.setDiagnosticsOptions({
-      noSemanticValidation: true,
-      noSyntaxValidation: false,
-    });
+    setupMonaco(monaco);
   }, []);
 
   const syncWorkspaceModels = useCallback(() => {
@@ -595,6 +646,15 @@ export function CraftPlayground({
       activeFileId: fileId,
     }));
   }, [openFolderChain, updateWorkspace, workspace.files]);
+
+  const handleTreeSelect = useCallback((nodes: NodeApi<ExplorerNode>[]) => {
+    const node = nodes[0];
+    if (!node) return;
+    setSelectedPath(node.data.path);
+    if (node.data.type === "file" && node.data.fileId) {
+      openFile(node.data.fileId);
+    }
+  }, [openFile]);
 
   const createFileAtPath = useCallback((rawPath: string) => {
     const fallbackExtension = activeFile?.path.match(/\.[a-z0-9]+$/i)?.[0] ?? ".ts";
@@ -923,23 +983,15 @@ export function CraftPlayground({
 
   const importRecipe = useCallback(async (file: File) => {
     const raw = await file.text();
-    const parsed = JSON.parse(raw) as Partial<PlaygroundRecipe>;
+    const parsed = coerceRecipe(JSON.parse(raw));
+    if (!parsed) throw new Error("Invalid recipe JSON.");
     const timestamp = nowIso();
-    const importedWorkspace = parsed.workspace
-      ? normalizeWorkspace(parsed.workspace as PlaygroundWorkspace)
-      : normalizeWorkspace(createWorkspaceFromPreset(initialPreset));
-    const importedRecipe: PlaygroundRecipe = normalizeRecipe({
+    const importedRecipe = normalizeRecipe({
+      ...parsed,
       id: createRecipeId(),
-      name: (typeof parsed.name === "string" && parsed.name.trim().length > 0) ? parsed.name.trim() : "Imported recipe",
-      description: typeof parsed.description === "string" ? parsed.description : "",
-      tags: Array.isArray(parsed.tags) ? parsed.tags.filter((tag): tag is string => typeof tag === "string") : [],
-      notes: typeof parsed.notes === "string" ? parsed.notes : "",
       createdAt: timestamp,
       updatedAt: timestamp,
       lastOpenedAt: timestamp,
-      snapshotsCount: Array.isArray(parsed.snapshots) ? parsed.snapshots.length : 0,
-      snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots as PlaygroundSnapshot[] : [],
-      workspace: importedWorkspace,
     });
     const nextIndex = upsertRecipe(storageKey, importedRecipe, { setActive: true, touchRecent: true });
     setRecipeIndex(nextIndex);
@@ -947,7 +999,7 @@ export function CraftPlayground({
     setTagsInput(importedRecipe.tags.join(", "));
     setSelectedPath(importedRecipe.workspace.files[0]?.path ?? null);
     resetRuntimeState();
-  }, [initialPreset, resetRuntimeState, storageKey]);
+  }, [resetRuntimeState, storageKey]);
 
   const beginResize = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     const panel = panelRef.current;
@@ -1003,7 +1055,8 @@ export function CraftPlayground({
           {node.data.type === "folder" ? (
             <button
               type="button"
-              className="w-4 text-center text-[10px]"
+              aria-label={node.isOpen ? "Collapse folder" : "Expand folder"}
+              className="w-4 text-center text-[10px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-text)]/40"
               onClick={(event) => {
                 event.stopPropagation();
                 node.toggle();
@@ -1025,6 +1078,61 @@ export function CraftPlayground({
     },
     [workspace.entry]
   );
+
+  useEffect(() => {
+    const term = dependencyQuery.trim();
+    if (term.length < 2) {
+      setDependencySearchState("idle");
+      setDependencySearchError(null);
+      setDependencySearchResults([]);
+      return;
+    }
+
+    const abortController = new AbortController();
+    setDependencySearchState("loading");
+    setDependencySearchError(null);
+
+    const timeout = window.setTimeout(() => {
+      const params = new URLSearchParams({
+        text: term,
+        size: String(NPM_SEARCH_LIMIT),
+      });
+
+      const run = async () => {
+        try {
+          const response = await fetch(`https://registry.npmjs.org/-/v1/search?${params.toString()}`, {
+            signal: abortController.signal,
+            headers: {
+              Accept: "application/json",
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`npm search failed (${response.status}).`);
+          }
+
+          const payload = await response.json();
+          if (abortController.signal.aborted) return;
+
+          setDependencySearchResults(parseNpmSearchResults(payload));
+          setDependencySearchState("idle");
+        } catch (error) {
+          if (abortController.signal.aborted) return;
+          const message = error instanceof Error ? error.message : "Could not search npm packages.";
+          setDependencySearchResults([]);
+          setDependencySearchError(message);
+          setDependencySearchState("error");
+        }
+      };
+
+      void run();
+    }, NPM_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      abortController.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [dependencyQuery]);
 
   useEffect(() => {
     setHydrated(true);
@@ -1143,10 +1251,11 @@ export function CraftPlayground({
 
   const editorHeight = embedded ? minHeight : Math.max(minHeight, 520);
   const explorerWidth = embedded ? 230 : 270;
+  const col1 = explorerCollapsed ? 40 : explorerWidth;
   const workspaceLayoutStyle = fillHeight
-    ? { gridTemplateColumns: `${explorerWidth}px minmax(0, 1fr)` }
+    ? { gridTemplateColumns: `${col1}px minmax(0, 1fr)` }
     : {
-        gridTemplateColumns: `${explorerWidth}px minmax(0, 1fr)`,
+        gridTemplateColumns: `${col1}px minmax(0, 1fr)`,
         minHeight: `${editorHeight}px`,
       };
   const editorSplitStyle = fillHeight
@@ -1155,7 +1264,7 @@ export function CraftPlayground({
         gridTemplateColumns: `${Math.round(splitRatio * 100)}% 8px minmax(0, 1fr)`,
         minHeight: `${editorHeight}px`,
       };
-  const treeHeight = Math.max(220, explorerSize.height - 40);
+  const treeHeight = Math.max(160, explorerTreeSize.height);
   const selectedNodeName = selectedNode ? selectedNode.path.split("/").filter(Boolean).at(-1) ?? selectedNode.path : "";
 
   if (!hydrated) {
@@ -1184,143 +1293,33 @@ export function CraftPlayground({
         className
       )}
     >
-      <header className={cn("border-b border-[var(--color-border)] bg-[var(--color-bg)]/55 px-3 py-2")}>
-        <div className="grid gap-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.1fr)_auto]">
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {compactChrome ? (
-              <Link
-                href="/blog"
-                className="rounded-md border border-[var(--color-border)] px-2 py-1 text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
-              >
-                Back
-              </Link>
-            ) : null}
-            <span className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-muted)]">Recipe</span>
-            <input
-              value={recipeQuery}
-              onChange={(event) => setRecipeQuery(event.target.value)}
-              placeholder="Search recipes..."
-              className={cn(
-                controlHeightClass,
-                controlTextClass,
-                "min-w-[8rem] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2"
-              )}
-            />
-            <select
-              aria-label="Recipe selector"
-              value={activeRecipe.id}
-              onChange={(event) => loadRecipeIntoView(event.target.value)}
-              className={cn(
-                controlHeightClass,
-                controlTextClass,
-                "min-w-[11rem] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2"
-              )}
-            >
-              {filteredRecipes.map((recipe) => (
-                <option key={recipe.id} value={recipe.id}>
-                  {recipe.name}
-                </option>
-              ))}
-            </select>
-            <span className="rounded border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.08em] text-[var(--color-muted)]">
-              {saveState}
-            </span>
-          </div>
-
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            <span className="text-[11px] uppercase tracking-[0.1em] text-[var(--color-muted)]">Template</span>
-            <select
-              aria-label="Template preset"
-              value={templatePreset}
-              onChange={(event) => setTemplatePreset(event.target.value as PlaygroundPresetId)}
-              className={cn(
-                controlHeightClass,
-                controlTextClass,
-                "rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2"
-              )}
-            >
-              {PLAYGROUND_PRESET_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                setDraftError(null);
-                setDraftAction({ kind: "new-recipe", value: `Recipe ${recipeIndex.recipes.length + 1}` });
-              }}
-              className={cn(controlHeightClass, controlTextClass, "rounded-md border border-[var(--color-border)] px-2 hover:bg-[var(--color-surface-2)]")}
-            >
-              New from template
-            </button>
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-[var(--color-muted)]">
-              <span className="hidden sm:inline">Run target</span>
-              <select
-                aria-label="Run target file"
-                value={workspace.entry}
-                onChange={(event) => setRunTarget(event.target.value)}
-                className={cn(
-                  controlHeightClass,
-                  controlTextClass,
-                  "min-w-[10rem] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 normal-case"
-                )}
-              >
-                {runnableFiles.map((file) => (
-                  <option key={file.id} value={file.path}>
-                    {file.path}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span
-              className={cn(
-                "rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.08em]",
-                statusColorMap[runStatus]
-              )}
-            >
-              {statusLabelMap[runStatus]}
-            </span>
-            <button
-              type="button"
-              disabled={runStatus === "building"}
-              onClick={() => void runWorkspace()}
-              className={cn(
-                controlHeightClass,
-                controlTextClass,
-                "rounded-md border border-[var(--color-border)] px-3 font-medium hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
-              )}
-            >
-              Run
-            </button>
-            <button
-              type="button"
-              onClick={() => setDiagnosticsOpen((open) => !open)}
-              className={cn(controlHeightClass, "rounded-md border border-[var(--color-border)] px-2 text-[11px] hover:bg-[var(--color-surface-2)]")}
-            >
-              {diagnosticsOpen ? "Hide" : "Diagnostics"}{diagnosticsCount > 0 ? ` (${diagnosticsCount})` : ""}
-            </button>
-          </div>
-        </div>
-        {recentRecipes.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Recent</span>
-            {recentRecipes.map((recipe) => (
-              <button
-                key={recipe.id}
-                type="button"
-                onClick={() => loadRecipeIntoView(recipe.id)}
-                className="rounded border border-[var(--color-border)] px-2 py-0.5 text-[10px] text-[var(--color-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
-              >
-                {recipe.name}
-              </button>
-            ))}
-          </div>
-        ) : null}
+      <header className="flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)]/55 px-3 py-2">
+        <span className="flex-1 truncate text-xs font-mono text-[var(--color-muted)]">
+          {activeRecipe.name}
+        </span>
+        <span
+          className={cn(
+            "shrink-0 rounded-full border border-[var(--color-border)] px-2 py-1 text-[10px] uppercase tracking-[0.08em]",
+            statusColorMap[runStatus]
+          )}
+        >
+          {statusLabelMap[runStatus]}
+        </span>
+        <button
+          type="button"
+          disabled={runStatus === "building"}
+          onClick={() => void runWorkspace()}
+          className="h-8 shrink-0 rounded-md border border-[var(--color-border)] px-3 text-sm font-medium hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
+        >
+          Run
+        </button>
+        <button
+          type="button"
+          onClick={() => setDiagnosticsOpen((open) => !open)}
+          className="h-8 shrink-0 rounded-md border border-[var(--color-border)] px-2 text-[11px] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
+        >
+          {diagnosticsOpen ? "Hide" : "Diagnostics"}{diagnosticsCount > 0 ? ` (${diagnosticsCount})` : ""}
+        </button>
       </header>
 
       {draftAction ? (
@@ -1348,12 +1347,12 @@ export function CraftPlayground({
                   setDraftError(null);
                 }
               }}
-              className="h-8 min-w-[18rem] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm"
+              className="h-8 min-w-[18rem] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             />
             <button
               type="button"
               onClick={submitDraftAction}
-              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)]"
+              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             >
               Save
             </button>
@@ -1363,7 +1362,7 @@ export function CraftPlayground({
                 setDraftAction(null);
                 setDraftError(null);
               }}
-              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)]"
+              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             >
               Cancel
             </button>
@@ -1383,14 +1382,14 @@ export function CraftPlayground({
             <button
               type="button"
               onClick={submitConfirmAction}
-              className="h-8 rounded-md border border-red-500/40 px-3 text-xs text-red-200 hover:bg-red-500/10"
+              className="h-8 rounded-md border border-red-500/40 px-3 text-xs text-red-200 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
             >
               Confirm delete
             </button>
             <button
               type="button"
               onClick={() => setConfirmAction(null)}
-              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)]"
+              className="h-8 rounded-md border border-[var(--color-border)] px-3 text-xs hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             >
               Cancel
             </button>
@@ -1402,15 +1401,37 @@ export function CraftPlayground({
         className={cn("grid w-full border-t border-[var(--color-border)]", fillHeight ? "min-h-0 flex-1" : "")}
         style={workspaceLayoutStyle}
       >
-        <aside ref={explorerRef} className="min-h-0 border-r border-[var(--color-border)] bg-[var(--color-bg)]/35">
+        <aside ref={explorerRef} className="flex min-h-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg)]/35 overflow-hidden">
+          {explorerCollapsed ? (
+            <button
+              type="button"
+              onClick={() => setExplorerCollapsed(false)}
+              title="Expand explorer"
+              className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--color-muted)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
+            >
+              <span className="text-[10px]">▶</span>
+            </button>
+          ) : (
+          <>
           <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2 text-[11px] uppercase tracking-[0.1em] text-[var(--color-muted)]">
             <span>Explorer</span>
-            <span className="truncate text-[10px] normal-case text-[var(--color-muted)]">
-              {selectedNodeName || "right-click for actions"}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="truncate text-[10px] normal-case text-[var(--color-muted)]">
+                {selectedNodeName || "right-click for actions"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setExplorerCollapsed(true)}
+                title="Collapse explorer"
+                className="shrink-0 text-[10px] hover:text-[var(--color-text)] focus-visible:outline-none"
+              >
+                ◀
+              </button>
+            </div>
           </div>
           <div
-            className="h-full min-h-0 overflow-hidden px-1 py-1"
+            ref={explorerTreeRef}
+            className="min-h-0 flex-1 overflow-hidden px-1 py-1"
             onContextMenu={(event) => {
               const target = event.target as HTMLElement | null;
               if (target?.closest("[data-explorer-node='true']")) {
@@ -1437,14 +1458,7 @@ export function CraftPlayground({
                 setOpenState((previous) => ({ ...previous, [id]: !previous[id] }));
               }}
               selection={selectedPath ?? undefined}
-              onSelect={(nodes: NodeApi<ExplorerNode>[]) => {
-                const node = nodes[0];
-                if (!node) return;
-                setSelectedPath(node.data.path);
-                if (node.data.type === "file" && node.data.fileId) {
-                  openFile(node.data.fileId);
-                }
-              }}
+              onSelect={handleTreeSelect}
               onActivate={(node: NodeApi<ExplorerNode>) => {
                 if (node.data.type === "file" && node.data.fileId) {
                   openFile(node.data.fileId);
@@ -1457,6 +1471,131 @@ export function CraftPlayground({
               {renderExplorerNode}
             </Tree>
           </div>
+          <div className="border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={() => setDependencyPanelOpen((open) => !open)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30 focus-visible:ring-inset"
+            >
+              <span className="w-3 text-center text-[10px]">{dependencyPanelOpen ? "▾" : "▸"}</span>
+              <span>Dependencies</span>
+              <span className="ml-auto rounded bg-[var(--color-surface-2)]/70 px-1.5 py-0.5 text-[10px] normal-case">
+                {installedDependencies.length}
+              </span>
+            </button>
+            {dependencyPanelOpen ? (
+              <div className="space-y-2 px-2 pb-2">
+                <input
+                  value={dependencyQuery}
+                  onChange={(event) => setDependencyQuery(event.target.value)}
+                  placeholder="Search npm packages..."
+                  aria-label="Search npm packages"
+                  className="h-8 w-full rounded-md border border-[var(--color-border)]/60 bg-[var(--color-bg)] px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
+                />
+
+                {dependencySearchState === "loading" ? (
+                  <p className="text-[11px] text-[var(--color-muted)]">Searching...</p>
+                ) : null}
+
+                {dependencySearchError ? (
+                  <p className="text-[11px] text-red-300">{dependencySearchError}</p>
+                ) : null}
+
+                {dependencyQuery.trim().length >= 2
+                && dependencySearchState === "idle"
+                && dependencySearchResults.length === 0 ? (
+                  <p className="text-[11px] text-[var(--color-muted)]">No matching npm packages found.</p>
+                ) : null}
+
+                {dependencySearchResults.length > 0 ? (
+                  <ul className="max-h-44 space-y-1.5 overflow-auto pr-1">
+                    {dependencySearchResults.map((result) => {
+                      const installedVersion = workspace.dependencies[result.name];
+                      const alreadyInstalled = installedVersion === result.version;
+
+                      return (
+                        <li
+                          key={`${result.name}@${result.version}`}
+                          className="rounded-md bg-[var(--color-surface-2)]/40 px-2 py-1.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate text-xs text-[var(--color-text)]">{result.name}@{result.version}</p>
+                              {result.description ? (
+                                <p className="truncate text-[11px] text-[var(--color-muted)]">{result.description}</p>
+                              ) : null}
+                            </div>
+                            <button
+                              type="button"
+                              disabled={alreadyInstalled}
+                              onClick={() => installDependency(result.name, result.version)}
+                              className={cn(
+                                "h-6 whitespace-nowrap rounded px-1.5 text-[10px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-text)]/40",
+                                alreadyInstalled
+                                  ? "cursor-not-allowed text-[var(--color-muted)] opacity-70"
+                                  : "text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+                              )}
+                            >
+                              {alreadyInstalled ? "Installed" : "Install"}
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+
+                <div className="max-h-28 overflow-auto pr-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {installedDependencies.length > 0 ? (
+                      installedDependencies.map(([name, version]) => {
+                        const isCoreDependency = Object.prototype.hasOwnProperty.call(presetDependencies, name);
+                        const canResetCore = isCoreDependency && presetDependencies[name] !== version;
+
+                        return (
+                          <span
+                            key={name}
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--color-surface-2)]/40 px-2 py-0.5 text-[10px] text-[var(--color-text)]"
+                          >
+                            <span className="max-w-[10rem] truncate">{name}@{version}</span>
+                            {isCoreDependency ? (
+                              <span className="px-1 py-0 text-[9px] text-[var(--color-muted)]">
+                                core
+                              </span>
+                            ) : null}
+                            {!isCoreDependency ? (
+                              <button
+                                type="button"
+                                aria-label={`Remove dependency ${name}`}
+                                onClick={() => removeDependency(name)}
+                                className="rounded px-1 text-[10px] text-[var(--color-muted)] hover:text-red-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-text)]/40"
+                              >
+                                x
+                              </button>
+                            ) : null}
+                            {canResetCore ? (
+                              <button
+                                type="button"
+                                aria-label={`Reset dependency ${name} to core version`}
+                                onClick={() => removeDependency(name)}
+                                className="rounded px-1 text-[10px] text-[var(--color-muted)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-text)]/40"
+                              >
+                                reset
+                              </button>
+                            ) : null}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-[11px] text-[var(--color-muted)]">No dependencies installed yet.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          </>
+          )}
         </aside>
 
         <div
@@ -1474,7 +1613,7 @@ export function CraftPlayground({
               value={activeFile?.content ?? ""}
               onChange={updateActiveFileContent}
               beforeMount={configureMonaco}
-              theme="vs-dark"
+              theme={VESPER_THEME_NAME}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -1489,8 +1628,20 @@ export function CraftPlayground({
           <div
             role="separator"
             aria-orientation="vertical"
+            aria-label="Resize editor and preview"
+            tabIndex={0}
             onPointerDown={beginResize}
-            className="cursor-col-resize bg-[var(--color-surface-2)] transition-colors duration-150 ease-out hover:bg-[var(--color-border)]"
+            onKeyDown={(event) => {
+              const step = 0.05;
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                setSplitRatio((r) => Math.max(PANEL_MIN_RATIO, r - step));
+              } else if (event.key === "ArrowRight") {
+                event.preventDefault();
+                setSplitRatio((r) => Math.min(PANEL_MAX_RATIO, r + step));
+              }
+            }}
+            className="cursor-col-resize bg-[var(--color-surface-2)] transition-colors duration-150 ease-out hover:bg-[var(--color-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/40"
           />
           <div className="min-w-0 bg-[var(--color-bg)]/30 p-2">
             <iframe
@@ -1507,6 +1658,8 @@ export function CraftPlayground({
       {contextMenu ? (
         <div
           ref={contextMenuRef}
+          role="menu"
+          aria-label="File actions"
           className="fixed z-50 min-w-[180px] rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-1 shadow-[var(--shadow-1)]"
           style={{
             left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - 196)),
@@ -1518,7 +1671,8 @@ export function CraftPlayground({
         >
           <button
             type="button"
-            className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+            role="menuitem"
+            className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             onClick={() => {
               setDraftError(null);
               setDraftAction({ kind: "new-file", value: `${contextMenu.baseFolder}/new-file.ts` });
@@ -1529,7 +1683,8 @@ export function CraftPlayground({
           </button>
           <button
             type="button"
-            className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+            role="menuitem"
+            className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             onClick={() => {
               setDraftError(null);
               setDraftAction({ kind: "new-folder", value: `${contextMenu.baseFolder}/new-folder` });
@@ -1541,7 +1696,8 @@ export function CraftPlayground({
           {contextMenu.node?.type === "file" && contextMenu.node.fileId ? (
             <button
               type="button"
-              className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+              role="menuitem"
+              className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
               onClick={() => {
                 const node = contextMenu.node;
                 if (!node || node.type !== "file") return;
@@ -1555,7 +1711,8 @@ export function CraftPlayground({
           {contextMenu.node?.type === "file" && isRunnableFile(contextMenu.node.path) ? (
             <button
               type="button"
-              className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+              role="menuitem"
+              className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
               onClick={() => {
                 const node = contextMenu.node;
                 if (!node || node.type !== "file") return;
@@ -1571,7 +1728,8 @@ export function CraftPlayground({
               <div className="my-1 h-px bg-[var(--color-border)]" />
               <button
                 type="button"
-                className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)]"
+                role="menuitem"
+                className="w-full rounded px-2 py-1.5 text-left text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
                 onClick={() => {
                   const node = contextMenu.node;
                   if (!node) return;
@@ -1584,7 +1742,8 @@ export function CraftPlayground({
               </button>
               <button
                 type="button"
-                className="w-full rounded px-2 py-1.5 text-left text-xs text-red-300 hover:bg-red-500/10"
+                role="menuitem"
+                className="w-full rounded px-2 py-1.5 text-left text-xs text-red-300 hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
                 onClick={() => {
                   setConfirmAction({ kind: "delete-node", node: contextMenu.node });
                   setContextMenu(null);
@@ -1608,7 +1767,7 @@ export function CraftPlayground({
           <button
             type="button"
             onClick={() => setLearningOpen((open) => !open)}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             {learningOpen ? "Hide recipe notebook" : "Show recipe notebook"}
           </button>
@@ -1618,35 +1777,35 @@ export function CraftPlayground({
               setDraftError(null);
               setDraftAction({ kind: "rename-recipe", value: activeRecipe.name });
             }}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             Rename recipe
           </button>
           <button
             type="button"
             onClick={duplicateRecipe}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             Duplicate recipe
           </button>
           <button
             type="button"
             onClick={() => setConfirmAction({ kind: "delete-recipe" })}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-red-300"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
           >
             Delete recipe
           </button>
           <button
             type="button"
             onClick={exportActiveRecipe}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             Export recipe
           </button>
           <button
             type="button"
             onClick={() => importInputRef.current?.click()}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             Import recipe
           </button>
@@ -1677,6 +1836,7 @@ export function CraftPlayground({
                 status: runStatus,
                 recipe: activeRecipe.name,
                 runTarget: workspace.entry,
+                dependencies: workspace.dependencies,
                 files: workspace.files.map((file) => ({
                   path: file.path,
                   language: file.language,
@@ -1696,7 +1856,7 @@ export function CraftPlayground({
                 window.setTimeout(() => setCopyFeedbackState("idle"), 1500);
               }
             }}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             {copyFeedbackState === "copied"
               ? "Report copied"
@@ -1707,7 +1867,7 @@ export function CraftPlayground({
           <button
             type="button"
             onClick={() => setDiagnosticsOpen((open) => !open)}
-            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)]"
+            className="rounded px-2 py-1 transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
           >
             {diagnosticsOpen ? "Hide diagnostics" : "Show diagnostics"}
           </button>
@@ -1733,25 +1893,28 @@ export function CraftPlayground({
       >
         <div className="grid gap-3 px-3 py-3 md:grid-cols-[1.3fr_1fr]">
           <div className="space-y-2">
-            <label className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Description</label>
+            <label htmlFor="recipe-description" className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Description</label>
             <input
+              id="recipe-description"
               value={activeRecipe.description ?? ""}
               onChange={(event) => mutateRecipe((previous) => ({ ...previous, description: event.target.value }))}
-              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs"
+              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             />
-            <label className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Tags</label>
+            <label htmlFor="recipe-tags" className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Tags</label>
             <input
+              id="recipe-tags"
               value={tagsInput}
               onChange={(event) => setTagsInput(event.target.value)}
               onBlur={() => mutateRecipe((previous) => ({ ...previous, tags: parseTags(tagsInput) }))}
-              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs"
+              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
               placeholder="ui, animation, card, idea"
             />
-            <label className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Notes</label>
+            <label htmlFor="recipe-notes" className="block text-[11px] uppercase tracking-[0.08em] text-[var(--color-muted)]">Notes</label>
             <textarea
+              id="recipe-notes"
               value={activeRecipe.notes}
               onChange={(event) => mutateRecipe((previous) => ({ ...previous, notes: event.target.value }))}
-              className="min-h-28 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-xs"
+              className="min-h-28 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
               placeholder="Capture what you learned from this recipe..."
             />
           </div>
@@ -1767,7 +1930,7 @@ export function CraftPlayground({
                     value: `Snapshot ${activeRecipe.snapshots.length + 1}`,
                   });
                 }}
-                className="h-7 rounded-md border border-[var(--color-border)] px-2 text-[11px] hover:bg-[var(--color-surface-2)]"
+                className="h-7 rounded-md border border-[var(--color-border)] px-2 text-[11px] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
               >
                 Save snapshot
               </button>
@@ -1775,7 +1938,8 @@ export function CraftPlayground({
             <select
               value={selectedSnapshotId}
               onChange={(event) => setSelectedSnapshotId(event.target.value)}
-              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs"
+              aria-label="Select snapshot"
+              className="h-8 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             >
               <option value="">Select snapshot</option>
               {activeRecipe.snapshots.map((snapshot) => (
@@ -1796,7 +1960,7 @@ export function CraftPlayground({
                 setRuntimeError(null);
                 setPreviewDoc(DEFAULT_PREVIEW_DOC);
               }}
-              className="h-8 rounded-md border border-[var(--color-border)] px-2 text-xs hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-8 rounded-md border border-[var(--color-border)] px-2 text-xs hover:bg-[var(--color-surface-2)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-text)]/30"
             >
               Restore snapshot
             </button>

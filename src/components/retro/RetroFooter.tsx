@@ -4,17 +4,14 @@ import styles from "./retro.module.css";
 
 export function RetroFooter() {
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} style={{ padding: "var(--space-3) var(--space-4)" }}>
       <div className={styles.footerInner}>
-        <pre className={styles.divider}>════════════════════════════════════════════════════════════════</pre>
-        <p>© 2025 TERMINAL_DREAMS // Crafted with love in the digital void</p>
-        <p>Best viewed in Netscape Navigator 4.0 at 800x600 resolution</p>
-        <p>[EOF]</p>
+        <p className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>
+          ──────────────── [EOF] // © 2026 ────────────────
+        </p>
       </div>
     </footer>
   );
 }
 
 export default RetroFooter;
-
-

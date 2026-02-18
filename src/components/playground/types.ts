@@ -2,6 +2,8 @@ export type PlaygroundFileLanguage = "typescript" | "javascript" | "css" | "json
 
 export type PlaygroundPresetId = "react-ts" | "react-js";
 
+export type PlaygroundDependencyMap = Record<string, string>;
+
 export type PlaygroundFile = {
   id: string;
   path: string;
@@ -16,6 +18,7 @@ export type PlaygroundWorkspace = {
   activeFileId: string;
   folders: string[];
   files: PlaygroundFile[];
+  dependencies: PlaygroundDependencyMap;
 };
 
 export type PlaygroundRunStatus = "idle" | "building" | "running" | "error";

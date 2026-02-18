@@ -1,7 +1,10 @@
 import RetroBlog from "@/components/retro/RetroBlog";
 import { getBlogListItems } from "@/lib/posts";
+import { getRecipeListItems } from "@/lib/recipes";
 
-export default function BlogIndexPage() {
+export default async function BlogIndexPage() {
   const posts = getBlogListItems();
-  return <RetroBlog posts={posts} />;
+  const recipes = await getRecipeListItems();
+  const all = [...posts, ...recipes].sort((a, b) => b.date.localeCompare(a.date));
+  return <RetroBlog posts={all} />;
 }

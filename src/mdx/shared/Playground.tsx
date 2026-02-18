@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 
 import type { PlaygroundPresetId } from "@/components/playground/types";
 
-const LazyCraftPlayground = dynamic(
-  () => import("@/components/playground/CraftPlayground").then((mod) => mod.CraftPlayground),
+const LazyEmbeddedPlayground = dynamic(
+  () => import("@/mdx/shared/EmbeddedPlayground").then((mod) => mod.EmbeddedPlayground),
   {
     ssr: false,
     loading: () => (
@@ -17,7 +17,6 @@ const LazyCraftPlayground = dynamic(
 );
 
 type PlaygroundProps = {
-  storageKey?: string;
   preset?: PlaygroundPresetId;
   height?: number | string;
 };
@@ -39,14 +38,12 @@ function normalizeHeight(height: number | string | undefined): number {
   return 420;
 }
 
-export function Playground({ storageKey = "mdx-embed", preset, height }: PlaygroundProps) {
+export function Playground({ preset, height }: PlaygroundProps) {
   return (
     <div className="my-6">
-      <LazyCraftPlayground
-        embedded
-        storageKey={storageKey}
-        initialPreset={normalizePreset(preset)}
-        minHeight={normalizeHeight(height)}
+      <LazyEmbeddedPlayground
+        preset={normalizePreset(preset)}
+        height={normalizeHeight(height)}
       />
     </div>
   );
