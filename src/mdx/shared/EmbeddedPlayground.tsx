@@ -13,10 +13,11 @@ import type { PlaygroundPresetId, PlaygroundWorkspace } from "@/components/playg
 import { normalizePath } from "@/components/playground/workspace-utils";
 import { setupMonaco } from "@/lib/monaco-setup";
 import { VESPER_THEME_NAME } from "@/lib/monaco-vesper";
+import { ShikiCodeViewer } from "./ShikiCodeViewer";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.default),
-  { ssr: false }
+  { ssr: false, loading: () => null }
 );
 
 function getFileName(path: string): string {
@@ -45,6 +46,7 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
   const [buildResult, setBuildResult] = useState<PlaygroundBuildResult | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMonacoLoaded, setIsMonacoLoaded] = useState(false);
   const blobUrlsRef = useRef<string[]>([]);
   const pendingRevocationRef = useRef<string[]>([]);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -136,27 +138,37 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
       </div>
 
       {/* Editor pane */}
-      <div className="min-h-0" style={{ flex: 1 }}>
-        <MonacoEditor
-          height="100%"
-          path={activeFile ? `file:///embed-${activeFile.id}${activeFile.path.match(/\.[^./\\]+$/)?.[0] ?? ""}` : undefined}
-          language={activeFile?.language ?? "typescript"}
-          value={activeFile?.content ?? ""}
-          onChange={handleChange}
-          beforeMount={setupMonaco}
-          theme={VESPER_THEME_NAME}
-          options={{
-            minimap: { enabled: false },
-            fontSize: 14,
-            wordWrap: "on",
-            smoothScrolling: true,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            padding: { top: 14, bottom: 14 },
-            contextmenu: false,
-          }}
-        />
+      <div className="min-h-0 relative" style={{ flex: 1 }}>
+        {!isMonacoLoaded && activeFile && (
+          <ShikiCodeViewer
+            code={activeFile.content}
+            language={activeFile.language ?? "typescript"}
+            height="100%"
+          />
+        )}
+        <div style={{ display: isMonacoLoaded ? "block" : "none", height: "100%" }}>
+          <MonacoEditor
+            height="100%"
+            path={activeFile ? `file:///embed-${activeFile.id}${activeFile.path.match(/\.[^./\\]+$/)?.[0] ?? ""}` : undefined}
+            language={activeFile?.language ?? "typescript"}
+            value={activeFile?.content ?? ""}
+            onChange={handleChange}
+            beforeMount={setupMonaco}
+            onMount={() => setIsMonacoLoaded(true)}
+            theme={VESPER_THEME_NAME}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              wordWrap: "on",
+              smoothScrolling: true,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              tabSize: 2,
+              padding: { top: 14, bottom: 14 },
+              contextmenu: false,
+            }}
+          />
+        </div>
       </div>
 
       {/* Preview pane */}
