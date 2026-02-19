@@ -8,6 +8,7 @@ import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
 import { MotionBadge } from "@/mdx/shared/MotionBadge";
 import { Playground } from "@/mdx/shared/Playground";
 import type { ComponentType } from "react";
+import { cache } from "react";
 
 type MdxComponent = ComponentType<Record<string, unknown>>;
 type MdxComponentModule = { default?: unknown } & Record<string, unknown>;
@@ -58,10 +59,10 @@ export async function getPostComponents(slug: string): Promise<MdxComponentMap> 
   }
 }
 
-export async function buildComponentsForSlug(slug: string): Promise<MdxComponentMap> {
+export const buildComponentsForSlug = cache(async (slug: string): Promise<MdxComponentMap> => {
   const perPost = await getPostComponents(slug);
   return {
     ...sharedComponents,
     ...perPost,
   };
-}
+});

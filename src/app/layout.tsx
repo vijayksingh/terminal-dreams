@@ -25,12 +25,12 @@ export const metadata: Metadata = {
   description: "Nostalgic bytes from the digital underground",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const posts = getCommandPalettePosts();
+  const posts = await getCommandPalettePosts();
   return (
     <html lang="en" suppressHydrationWarning>
       <body

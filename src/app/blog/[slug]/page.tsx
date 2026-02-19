@@ -15,7 +15,7 @@ export async function generateStaticParams() {
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const awaitedParams = await params;
-  const post = getPostBySlug(awaitedParams.slug);
+  const post = await getPostBySlug(awaitedParams.slug);
   if (!post) return notFound();
 
   const components = await buildComponentsForSlug(post.slug);

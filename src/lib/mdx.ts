@@ -1,4 +1,5 @@
 import fs from "fs";
+import { readFile } from "fs/promises";
 import matter from "gray-matter";
 import path from "path";
 import readingTime from "reading-time";
@@ -23,6 +24,7 @@ export type PostContent = PostListItem & {
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 let cachedPosts: PostListItem[] | null = null;
+const postCache = new Map<string, PostContent>();
 
 type FrontmatterInput = {
   title?: unknown;
@@ -40,14 +42,15 @@ export function getAllPostSlugs(): string[] {
     .map((file) => file.replace(/\.(md|mdx)$/i, ""));
 }
 
-export function getAllPosts(): PostListItem[] {
+export async function getAllPosts(): Promise<PostListItem[]> {
   if (process.env.NODE_ENV === "production" && cachedPosts) {
     return cachedPosts;
   }
 
   const slugs = getAllPostSlugs();
-  const posts = slugs
-    .map((slug) => getPostBySlug(slug))
+  const postPromises = slugs.map((slug) => getPostBySlug(slug));
+  const postsWithNull = await Promise.all(postPromises);
+  const posts = postsWithNull
     .filter((p): p is PostContent => Boolean(p))
     .map(({ slug, frontmatter, content }) => ({
       slug,
@@ -67,22 +70,31 @@ export function getAllPosts(): PostListItem[] {
   return posts;
 }
 
-export function getPostBySlug(slug: string): PostContent | null {
+export async function getPostBySlug(slug: string): Promise<PostContent | null> {
+  // Check cache first
+  if (postCache.has(slug)) {
+    return postCache.get(slug)!;
+  }
+
   if (!fs.existsSync(BLOG_DIR)) return null;
   const fullPathMdx = path.join(BLOG_DIR, `${slug}.mdx`);
   const fullPathMd = path.join(BLOG_DIR, `${slug}.md`);
   const fullPath = fs.existsSync(fullPathMdx) ? fullPathMdx : fullPathMd;
   if (!fs.existsSync(fullPath)) return null;
 
-  const raw = fs.readFileSync(fullPath, "utf8");
+  const raw = await readFile(fullPath, "utf8");
   const { data, content } = matter(raw);
   const fm = normalizeFrontmatter(data);
-  return {
+  const post = {
     slug,
     frontmatter: fm,
     content,
     readTime: formatReadTime(readingTime(content).text),
   };
+
+  // Cache the result
+  postCache.set(slug, post);
+  return post;
 }
 
 function normalizeFrontmatter(data: unknown): PostFrontmatter {

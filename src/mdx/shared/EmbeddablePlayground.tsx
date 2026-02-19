@@ -33,7 +33,7 @@ class PlaygroundErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(_error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true };
   }
 
@@ -50,7 +50,7 @@ class PlaygroundErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundar
       return (
         <div className="my-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
           <div className="text-sm text-[var(--color-text)] mb-3">
-            This interactive example couldn't load
+            This interactive example couldn&apos;t load
           </div>
           <button
             type="button"

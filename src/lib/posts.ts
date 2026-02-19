@@ -17,10 +17,11 @@ export type CommandPalettePostItem = {
   category?: string;
 };
 
-const getAllPostsCached = cache(() => getAllPosts());
+const getAllPostsCached = cache(async () => await getAllPosts());
 
-export const getBlogListItems = cache((): BlogPostListItem[] => {
-  return getAllPostsCached().map((post) => ({
+export const getBlogListItems = cache(async (): Promise<BlogPostListItem[]> => {
+  const posts = await getAllPostsCached();
+  return posts.map((post) => ({
     slug: post.slug,
     title: post.frontmatter.title,
     date: post.frontmatter.date,
@@ -31,8 +32,9 @@ export const getBlogListItems = cache((): BlogPostListItem[] => {
   }));
 });
 
-export const getCommandPalettePosts = cache((): CommandPalettePostItem[] => {
-  return getAllPostsCached().map((post) => ({
+export const getCommandPalettePosts = cache(async (): Promise<CommandPalettePostItem[]> => {
+  const posts = await getAllPostsCached();
+  return posts.map((post) => ({
     slug: post.slug,
     title: post.frontmatter.title,
     category: post.frontmatter.category,
