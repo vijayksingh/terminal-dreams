@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import { createWorkspaceFromPreset } from "@/components/playground/presets";
 import type { PlaygroundPresetId, PlaygroundWorkspace } from "@/components/playground/types";
@@ -17,6 +18,54 @@ const LazyEmbeddedPlayground = dynamic(
     ),
   }
 );
+
+type ErrorBoundaryProps = {
+  children: ReactNode;
+};
+
+type ErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class PlaygroundErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(_error: Error): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Playground error:", error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="my-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <div className="text-sm text-[var(--color-text)] mb-3">
+            This interactive example couldn't load
+          </div>
+          <button
+            type="button"
+            onClick={this.handleReset}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-2 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-2)] transition-colors"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 type FileOverride = {
   path: string;
@@ -116,11 +165,13 @@ export function EmbeddablePlayground({
 
   return (
     <div className="my-6">
-      <LazyEmbeddedPlayground
-        preset={presetId}
-        height={resolvedHeight}
-        initialWorkspace={workspace}
-      />
+      <PlaygroundErrorBoundary>
+        <LazyEmbeddedPlayground
+          preset={presetId}
+          height={resolvedHeight}
+          initialWorkspace={workspace}
+        />
+      </PlaygroundErrorBoundary>
     </div>
   );
 }
