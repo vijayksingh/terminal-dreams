@@ -44,7 +44,10 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
   );
   const [buildResult, setBuildResult] = useState<PlaygroundBuildResult | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const blobUrlsRef = useRef<string[]>([]);
+  const pendingRevocationRef = useRef<string[]>([]);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const activeFile =
     workspace.files.find((f) => f.id === activeFileId) ?? workspace.files[0];
@@ -52,6 +55,7 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
   useEffect(() => {
     let cancelled = false;
     setIsBuilding(true);
+    setError(null);
 
     buildPlaygroundSource(workspace)
       .then((result) => {
@@ -59,13 +63,18 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
           revokeBlobUrls(result.blobUrls);
           return;
         }
-        revokeBlobUrls(blobUrlsRef.current);
+        // Queue old blob URLs for revocation after iframe loads
+        if (blobUrlsRef.current.length > 0) {
+          pendingRevocationRef.current.push(...blobUrlsRef.current);
+        }
         blobUrlsRef.current = result.blobUrls;
         setBuildResult(result);
         setIsBuilding(false);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!cancelled) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          setError(errorMessage);
           setIsBuilding(false);
         }
       });
@@ -75,9 +84,18 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
     };
   }, [workspace]);
 
+  const handleIframeLoad = useCallback(() => {
+    // Revoke pending blob URLs now that iframe has loaded
+    if (pendingRevocationRef.current.length > 0) {
+      revokeBlobUrls(pendingRevocationRef.current);
+      pendingRevocationRef.current = [];
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       revokeBlobUrls(blobUrlsRef.current);
+      revokeBlobUrls(pendingRevocationRef.current);
     };
   }, []);
 
@@ -144,14 +162,29 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
       {/* Preview pane */}
       <div className="flex min-h-0 flex-col" style={{ flex: 1 }}>
         <div className="flex flex-none items-center border-t border-b border-[var(--color-border)] bg-[var(--color-bg)]/55 px-3 py-1 text-xs text-[var(--color-muted)]">
-          {isBuilding ? "Building\u2026" : "Preview"}
+          {isBuilding ? "Building\u2026" : error ? "Build Failed" : "Preview"}
         </div>
-        <iframe
-          title="Playground preview"
-          sandbox="allow-scripts allow-same-origin"
-          srcDoc={buildResult?.srcDoc ?? ""}
-          className="min-h-0 flex-1 w-full bg-[var(--color-bg)]"
-        />
+        {error ? (
+          <div className="flex-1 overflow-auto bg-[var(--color-bg)] p-4">
+            <div className="rounded-lg border border-red-900/50 bg-red-950/30 p-4">
+              <div className="mb-2 font-mono text-sm font-semibold text-red-400">
+                Build Error
+              </div>
+              <pre className="whitespace-pre-wrap font-mono text-xs text-red-200/90">
+                {error}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          <iframe
+            ref={iframeRef}
+            title="Playground preview"
+            sandbox="allow-scripts allow-same-origin"
+            srcDoc={buildResult?.srcDoc ?? ""}
+            onLoad={handleIframeLoad}
+            className="min-h-0 flex-1 w-full bg-[var(--color-bg)]"
+          />
+        )}
       </div>
     </div>
   );
