@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import styles from "./retro.module.css";
 
 type RetroSidebarProps = {
@@ -21,14 +22,14 @@ export function RetroSidebar({ postsCount }: RetroSidebarProps) {
         <h3 className={`${styles.widgetTitle} ${styles.pulseAnimation}`}>
           <span style={{ color: "var(--color-muted)" }}>{">"}</span> System Status
         </h3>
-        <div className={styles.statusRow}>
+        <dl className={styles.statusRow} role="list">
           {stats.map((stat) => (
-            <div key={stat.label} className={styles.statusChip}>
-              <div className={styles.statusNumberSm}>{stat.number}</div>
-              <div className={styles.statusLabelSm}>{stat.label}</div>
-            </div>
+            <React.Fragment key={stat.label}>
+              <dt className={styles.statusLabelSm}>{stat.label}</dt>
+              <dd className={styles.statusNumberSm}>{stat.number}</dd>
+            </React.Fragment>
           ))}
-        </div>
+        </dl>
       </div>
     </aside>
   );

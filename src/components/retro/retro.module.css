@@ -26,7 +26,7 @@
 }
 
 .tocTitle {
-  color: #a0a0a0;
+  color: var(--color-muted);
   font-size: 0.85rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -35,9 +35,9 @@
 
 .tocList { list-style: none; padding-left: 0; }
 .tocItem { padding: 0.25rem 0; }
-.tocLink { color: #808080; text-decoration: none; font-size: 0.9rem; }
-.tocLink:hover { color: #e0e0e0; }
-.tocActive { color: #e0e0e0; }
+.tocLink { color: var(--accent-weak); text-decoration: none; font-size: 0.9rem; }
+.tocLink:hover { color: var(--color-accent); }
+.tocActive { color: var(--color-accent); }
 
 .postContent {
   background: transparent;
@@ -136,7 +136,7 @@
   color: var(--color-muted);
   margin-bottom: var(--space-4);
   white-space: pre;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .title {
@@ -251,8 +251,9 @@
 
 .content {
   color: var(--accent-weak);
-  line-height: 1.8;
+  line-height: 1.9;
   margin-bottom: 1.5rem;
+  font-size: 1.05rem;
 }
 
 .content p {
@@ -261,29 +262,31 @@
 
 .content h1 {
   color: var(--color-text);
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.8rem;
+  font-weight: 800;
   margin: var(--space-6) 0 var(--space-3);
   scroll-margin-top: var(--space-6);
+  letter-spacing: -0.02em;
 }
 
 .content h2 {
   color: var(--color-text);
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: 1.35rem;
+  font-weight: 700;
   margin: var(--space-6) 0 var(--space-3);
   scroll-margin-top: var(--space-6);
   border-bottom: 1px solid var(--color-surface-2);
   padding-bottom: var(--space-2);
+  letter-spacing: -0.01em;
 }
 
 .content h3 {
   color: var(--color-text);
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 1.1rem;
+  font-weight: 600;
   margin: var(--space-5) 0 var(--space-2);
   scroll-margin-top: var(--space-6);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .content pre{
@@ -304,8 +307,9 @@
 }
 
 .content a{
-  color: #e0e0e0;
+  color: var(--color-accent);
   text-decoration: underline;
+  text-decoration-color: var(--color-accent);
 }
 
 .readMore {
@@ -338,6 +342,25 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
+  margin: 0;
+}
+
+.statusRow dt,
+.statusRow dd {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: var(--space-3);
+  text-align: center;
+  margin: 0;
+  grid-column: span 1;
+}
+
+.statusRow dt {
+  grid-row: 1;
+}
+
+.statusRow dd {
+  grid-row: 2;
 }
 
 .statusChip {

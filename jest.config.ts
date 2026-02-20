@@ -8,8 +8,18 @@ const config: Config = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   testPathIgnorePatterns: ['/node_modules/', '/.next/'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(uuid|framer-motion|motion)/)',
+  ],
   transform: {
     '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.jest.json',
+        useESM: false,
+      },
+    ],
+    '^.+\\.js$': [
       'ts-jest',
       {
         tsconfig: '<rootDir>/tsconfig.jest.json',
@@ -20,5 +30,3 @@ const config: Config = {
 };
 
 export default config;
-
-

@@ -1,13 +1,14 @@
 /* Design tokens: colors, spacing, radii, typography */
 :root {
   /* Palette */
-  --color-bg: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-2: #1a1a1a;
-  --color-border: #303030;
-  --color-muted: #606060;
-  --color-text: #e0e0e0;
-  --color-link: #e0e0e0;
+  --color-bg: #0f0e0d;
+  --color-surface: #161513;
+  --color-surface-2: #1c1a17;
+  --color-border: #3a352e;
+  --color-muted: #7a6f5f;
+  --color-text: #e8e3d8;
+  --color-link: #d4a574;
+  --color-accent: #c9956b;
 
   /* shadcn-compatible semantic colors */
   --background: 0 0% 4%;
@@ -31,7 +32,7 @@
   --ring: 0 0% 35%;
 
   /* Brand accents */
-  --accent-weak: #a0a0a0;
+  --accent-weak: #b8a690;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -86,13 +87,14 @@
 
 /* Manual theme overrides using data-theme switcher */
 [data-theme="dark"] {
-  --color-bg: #0a0a0a;
-  --color-surface: #141414;
-  --color-surface-2: #1a1a1a;
-  --color-border: #303030;
-  --color-muted: #606060;
-  --color-text: #e0e0e0;
-  --color-link: #e0e0e0;
+  --color-bg: #0f0e0d;
+  --color-surface: #161513;
+  --color-surface-2: #1c1a17;
+  --color-border: #3a352e;
+  --color-muted: #7a6f5f;
+  --color-text: #e8e3d8;
+  --color-link: #d4a574;
+  --color-accent: #c9956b;
 
   --background: 0 0% 4%;
   --foreground: 0 0% 88%;

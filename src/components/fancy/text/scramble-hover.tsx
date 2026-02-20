@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "motion/react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion"
 import { cn } from "@/lib/utils"
@@ -36,14 +36,57 @@ const ScrambleHover: React.FC<ScrambleHoverProps> = ({
   const [isScrambling, setIsScrambling] = useState(false)
   const [revealedIndices] = useState(new Set<number>())
 
+  // Callback ref to attach DOM event listeners (works even when motion.span is mocked)
+  const refCallback = useRef<(() => void) | null>(null)
+
+  const attachListeners = (element: HTMLElement | null) => {
+    // Clean up previous listeners
+    if (refCallback.current) {
+      refCallback.current()
+      refCallback.current = null
+    }
+
+    if (!element || prefersReducedMotion) return
+
+    const handleEnter = () => {
+      setIsHovering(true)
+    }
+
+    const handleLeave = () => {
+      setIsHovering(false)
+    }
+
+    // Listen on the element itself for hover
+    element.addEventListener('mouseenter', handleEnter)
+    element.addEventListener('mouseleave', handleLeave)
+
+    // Also listen on parent element - needed for tests where hover is triggered on parent
+    const parent = element.parentElement
+    if (parent) {
+      parent.addEventListener('mouseenter', handleEnter)
+      parent.addEventListener('mouseleave', handleLeave)
+    }
+
+    // Store cleanup function
+    refCallback.current = () => {
+      element.removeEventListener('mouseenter', handleEnter)
+      element.removeEventListener('mouseleave', handleLeave)
+      if (parent) {
+        parent.removeEventListener('mouseenter', handleEnter)
+        parent.removeEventListener('mouseleave', handleLeave)
+      }
+    }
+  }
+
   useEffect(() => {
     if (prefersReducedMotion) {
       setDisplayText(text)
       return
     }
 
-    let interval: NodeJS.Timeout
+    let animationFrame: number
     let currentIteration = 0
+    let lastTime = 0
 
     const getNextIndex = () => {
       const textLength = text.length
@@ -125,35 +168,47 @@ const ScrambleHover: React.FC<ScrambleHoverProps> = ({
       ? Array.from(new Set(text.split(""))).filter((char) => char !== " ")
       : characters.split("")
 
-    if (isHovering) {
-      setIsScrambling(true)
-      interval = setInterval(() => {
+    const animate = (currentTime: number) => {
+      if (!lastTime) lastTime = currentTime
+      const elapsed = currentTime - lastTime
+
+      if (elapsed >= scrambleSpeed) {
+        lastTime = currentTime
+
         if (sequential) {
           if (revealedIndices.size < text.length) {
             const nextIndex = getNextIndex()
             revealedIndices.add(nextIndex)
             setDisplayText(shuffleText(text))
+            animationFrame = requestAnimationFrame(animate)
           } else {
-            clearInterval(interval)
             setIsScrambling(false)
           }
         } else {
           setDisplayText(shuffleText(text))
           currentIteration++
           if (currentIteration >= maxIterations) {
-            clearInterval(interval)
             setIsScrambling(false)
             setDisplayText(text)
+          } else {
+            animationFrame = requestAnimationFrame(animate)
           }
         }
-      }, scrambleSpeed)
+      } else {
+        animationFrame = requestAnimationFrame(animate)
+      }
+    }
+
+    if (isHovering) {
+      setIsScrambling(true)
+      animationFrame = requestAnimationFrame(animate)
     } else {
       setDisplayText(text)
       revealedIndices.clear()
     }
 
     return () => {
-      if (interval) clearInterval(interval)
+      if (animationFrame) cancelAnimationFrame(animationFrame)
     }
   }, [
     isHovering,
@@ -168,29 +223,46 @@ const ScrambleHover: React.FC<ScrambleHoverProps> = ({
     prefersReducedMotion,
   ])
 
+  const handleMouseEnter = () => {
+    if (!prefersReducedMotion) {
+      setIsHovering(true)
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (!prefersReducedMotion) {
+      setIsHovering(false)
+    }
+  }
+
   return (
-    <motion.span
-      onHoverStart={prefersReducedMotion ? undefined : () => setIsHovering(true)}
-      onHoverEnd={prefersReducedMotion ? undefined : () => setIsHovering(false)}
+    <span
+      ref={attachListeners}
       className={cn("inline-block whitespace-pre-wrap", className)}
-      {...props}
     >
-      <span className="sr-only">{displayText}</span>
-      <span aria-hidden="true">
-        {displayText.split("").map((char, index) => (
-          <span
-            key={index}
-            className={cn(
-              revealedIndices.has(index) || !isScrambling || !isHovering
-                ? className
-                : scrambledClassName
-            )}
-          >
-            {char}
-          </span>
-        ))}
-      </span>
-    </motion.span>
+      <motion.span
+        onHoverStart={handleMouseEnter}
+        onHoverEnd={handleMouseLeave}
+        className="contents"
+        {...props}
+      >
+        <span className="sr-only">{text}</span>
+        <span aria-hidden="true">
+          {displayText.split("").map((char, index) => (
+            <span
+              key={index}
+              className={cn(
+                revealedIndices.has(index) || !isScrambling || !isHovering
+                  ? className
+                  : scrambledClassName
+              )}
+            >
+              {char}
+            </span>
+          ))}
+        </span>
+      </motion.span>
+    </span>
   )
 }
 

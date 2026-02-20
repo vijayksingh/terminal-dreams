@@ -47,9 +47,12 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
   const [isBuilding, setIsBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMonacoLoaded, setIsMonacoLoaded] = useState(false);
+  const [splitPercent, setSplitPercent] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
   const blobUrlsRef = useRef<string[]>([]);
   const pendingRevocationRef = useRef<string[]>([]);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const activeFile =
     workspace.files.find((f) => f.id === activeFileId) ?? workspace.files[0];
@@ -113,8 +116,52 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
     [activeFileId]
   );
 
+  const handleMouseDown = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const tabBarHeight = 40; // Approximate height of the tab bar
+      const availableHeight = rect.height - tabBarHeight;
+      const mouseY = e.clientY - rect.top - tabBarHeight;
+
+      // Calculate new split percentage
+      let newPercent = (mouseY / availableHeight) * 100;
+
+      // Enforce minimum sizes (80px for each pane)
+      const minPixels = 80;
+      const minPercent = (minPixels / availableHeight) * 100;
+      const maxPercent = 100 - minPercent;
+
+      newPercent = Math.max(minPercent, Math.min(maxPercent, newPercent));
+      setSplitPercent(newPercent);
+    },
+    [isDragging]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   return (
     <div
+      ref={containerRef}
       className="flex flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
       style={{ height: `${height}px` }}
     >
@@ -138,7 +185,7 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
       </div>
 
       {/* Editor pane */}
-      <div className="min-h-0 relative" style={{ flex: 1 }}>
+      <div className="min-h-0 relative" style={{ height: `${splitPercent}%` }}>
         {!isMonacoLoaded && activeFile && (
           <ShikiCodeViewer
             code={activeFile.content}
@@ -171,8 +218,25 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
         </div>
       </div>
 
+      {/* Resize handle */}
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        aria-valuenow={splitPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        onMouseDown={handleMouseDown}
+        className="group flex h-[6px] cursor-row-resize items-center justify-center border-y border-[var(--color-border)] bg-[var(--color-bg)]/55 hover:bg-[var(--color-surface-2)]"
+        style={{
+          flexShrink: 0,
+          userSelect: "none",
+        }}
+      >
+        <div className="h-[2px] w-8 rounded-full bg-[var(--color-border)] group-hover:bg-[var(--color-text)]/50" />
+      </div>
+
       {/* Preview pane */}
-      <div className="flex min-h-0 flex-col" style={{ flex: 1 }}>
+      <div className="flex min-h-0 flex-col" style={{ height: `${100 - splitPercent}%` }}>
         <div className="flex flex-none items-center border-t border-b border-[var(--color-border)] bg-[var(--color-bg)]/55 px-3 py-1 text-xs text-[var(--color-muted)]">
           {isBuilding ? "Building\u2026" : error ? "Build Failed" : "Preview"}
         </div>
@@ -187,16 +251,16 @@ export function EmbeddedPlayground({ preset, height, initialWorkspace }: Props) 
               </pre>
             </div>
           </div>
-        ) : (
+        ) : buildResult ? (
           <iframe
             ref={iframeRef}
             title="Playground preview"
             sandbox="allow-scripts allow-same-origin"
-            srcDoc={buildResult?.srcDoc ?? ""}
+            srcDoc={buildResult.srcDoc}
             onLoad={handleIframeLoad}
             className="min-h-0 flex-1 w-full bg-[var(--color-bg)]"
           />
-        )}
+        ) : null}
       </div>
     </div>
   );

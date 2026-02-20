@@ -5,6 +5,7 @@ import React, { useState, useCallback, useRef, useLayoutEffect } from "react";
 import type { editor as MonacoEditorApi } from "monaco-editor";
 import { setupMonaco } from "@/lib/monaco-setup";
 import { VESPER_THEME_NAME } from "@/lib/monaco-vesper";
+import { FlowchartBlock } from "./FlowchartBlock";
 
 const MonacoEditor = dynamic(
   () => import("@monaco-editor/react").then((mod) => mod.default),
@@ -25,6 +26,9 @@ type Props = {
   children?: React.ReactNode;
   [key: string]: unknown;
 };
+
+// Box-drawing and diagram characters used in flowcharts
+const FLOWCHART_CHARS = /[│┌┐└┘├┤┬┴┼╔╗╚╝║═▼►◆①②③④⑤⑥⑦⑧⑨]/;
 
 export function MonacoCodeBlock({ children }: Props) {
   // children is the <code> element from the MDX pipeline
@@ -64,6 +68,13 @@ export function MonacoCodeBlock({ children }: Props) {
     });
   }, [code]);
 
+  // Detect flowcharts: no explicit language and contains box-drawing characters
+  const isFlowchart = rawLanguage === "text" && FLOWCHART_CHARS.test(code);
+
+  if (isFlowchart) {
+    return <FlowchartBlock content={code} />;
+  }
+
   return (
     <div
       style={{
@@ -95,6 +106,7 @@ export function MonacoCodeBlock({ children }: Props) {
           scrollbar: { vertical: "hidden", horizontal: "hidden", alwaysConsumeMouseWheel: false },
           overviewRulerLanes: 0,
           folding: false,
+          guides: { indentation: false },
         }}
       />
       <button
