@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 
 import type { CookbookStep } from "@/lib/cookbook-types";
 import { useCookbookTimer } from "@/hooks/use-cookbook-timer";
+import { useSound } from "@/hooks/use-sound";
 
 type StepCardProps = {
   step: CookbookStep;
@@ -20,10 +22,25 @@ type StepCardProps = {
  * Shows step details and timer controls
  */
 export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, canGoNext = true, canGoPrevious = true }: StepCardProps) {
-  const { addTimer } = useCookbookTimer();
+  const { play: playSound } = useSound();
+  const { addTimer, setCallbacks } = useCookbookTimer();
+
+  // Set up callbacks for timer events
+  useEffect(() => {
+    setCallbacks({
+      onComplete: () => {
+        playSound("bell-ding", 0.8);
+      },
+      onWarning: () => {
+        // Subtle warning sound when timer enters last 20%
+        playSound("ceramic-clink", 0.5);
+      },
+    });
+  }, [playSound, setCallbacks]);
 
   const handleStartTimer = (label: string, duration: number, type: "active" | "passive", alert?: string) => {
     addTimer(label, duration, type, alert);
+    playSound("match-strike", 0.7);
   };
 
   return (

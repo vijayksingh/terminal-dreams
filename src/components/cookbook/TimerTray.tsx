@@ -9,6 +9,7 @@ import { Timer } from "./Timer";
 /**
  * Floating timer tray that displays all active timers
  * Visible from any step, anchored to bottom-right
+ * Positioned at bottom-right on desktop, bottom bar on mobile
  */
 export function TimerTray() {
   const { timers, pause, resume, reset, adjust, dismiss } = useCookbookTimer();
@@ -19,7 +20,7 @@ export function TimerTray() {
 
   return (
     <motion.div
-      className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)]"
+      className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-3rem)] lg:bottom-6 lg:right-6"
       initial={{ opacity: 0, x: 100 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 100 }}
@@ -58,15 +59,3 @@ export function TimerTray() {
   );
 }
 
-/**
- * Timer tray provider that wraps the app
- * Ensures timer state is available globally
- */
-export function TimerTrayProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {children}
-      <TimerTray />
-    </>
-  );
-}

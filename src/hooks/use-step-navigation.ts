@@ -5,10 +5,42 @@ import { useCallback, useEffect, useState } from "react";
 interface UseStepNavigationOptions {
   totalSteps: number;
   onStepChange?: (stepIndex: number) => void;
+  recipeSlug?: string;
 }
 
-export function useStepNavigation({ totalSteps, onStepChange }: UseStepNavigationOptions) {
-  const [currentStep, setCurrentStep] = useState(0);
+const STORAGE_KEY_PREFIX = "cookbook-step-";
+
+export function useStepNavigation({ totalSteps, onStepChange, recipeSlug }: UseStepNavigationOptions) {
+  const storageKey = recipeSlug ? `${STORAGE_KEY_PREFIX}${recipeSlug}` : null;
+
+  // Initialize currentStep from localStorage if available
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (storageKey) {
+      try {
+        const stored = localStorage.getItem(storageKey);
+        if (stored) {
+          const step = parseInt(stored, 10);
+          if (!isNaN(step) && step >= 0 && step < totalSteps) {
+            return step;
+          }
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+    return 0;
+  });
+
+  // Save currentStep to localStorage whenever it changes
+  useEffect(() => {
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, currentStep.toString());
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+  }, [currentStep, storageKey]);
 
   const goToStep = useCallback(
     (index: number) => {

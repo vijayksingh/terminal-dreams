@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 interface Particle {
   x: number;
@@ -14,6 +15,7 @@ interface Particle {
 
 export function AmbientCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -21,6 +23,11 @@ export function AmbientCanvas() {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // Skip animation if user prefers reduced motion
+    if (prefersReducedMotion) {
+      return;
+    }
 
     // Set canvas size
     const resize = () => {
@@ -152,7 +159,7 @@ export function AmbientCanvas() {
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <canvas

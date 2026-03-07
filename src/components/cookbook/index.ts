@@ -2,4 +2,5 @@
 export { StepCard } from "./StepCard";
 export { Timer } from "./Timer";
 export { TimerRing } from "./TimerRing";
-export { TimerTray, TimerTrayProvider } from "./TimerTray";
+export { TimerTray } from "./TimerTray";
+export { CookbookTimerProvider } from "./CookbookTimerProvider";

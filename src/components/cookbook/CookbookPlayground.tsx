@@ -5,6 +5,7 @@ import type { CookbookRecipe } from "@/lib/cookbook-types";
 import { useIngredientTracking } from "@/hooks/use-ingredient-tracking";
 import { useStepNavigation } from "@/hooks/use-step-navigation";
 import { useSound } from "@/hooks/use-sound";
+import { CookbookTimerProvider } from "./CookbookTimerProvider";
 import { RecipeHeader } from "./RecipeHeader";
 import { StepCard } from "./StepCard";
 import { StepTimeline } from "./StepTimeline";
@@ -12,6 +13,7 @@ import { IngredientPanel } from "./IngredientPanel";
 import { ProgressBar } from "./ProgressBar";
 import { CompletionCelebration } from "./CompletionCelebration";
 import { SoundToggle } from "./SoundToggle";
+import { TimerTray } from "./TimerTray";
 
 interface CookbookPlaygroundProps {
   recipe: CookbookRecipe;
@@ -33,6 +35,7 @@ export function CookbookPlayground({ recipe }: CookbookPlaygroundProps) {
     useStepNavigation({
       totalSteps: steps.length,
       onStepChange: handleStepChange,
+      recipeSlug: recipe.slug,
     });
 
   // Ingredient tracking hook with sound
@@ -61,7 +64,8 @@ export function CookbookPlayground({ recipe }: CookbookPlaygroundProps) {
   }, [isComplete, showCelebration, playSound]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--cookbook-bg)]">
+    <CookbookTimerProvider>
+      <div className="flex min-h-screen flex-col bg-[var(--cookbook-bg)]">
       {/* Progress Bar */}
       <ProgressBar progress={progress} />
 
@@ -116,6 +120,10 @@ export function CookbookPlayground({ recipe }: CookbookPlaygroundProps) {
       <div className="sticky bottom-0 z-10">
         <StepTimeline steps={steps} currentStepIndex={currentStep} onStepClick={goToStep} />
       </div>
+
+      {/* Timer Tray - floating, global across all steps */}
+      <TimerTray />
     </div>
+    </CookbookTimerProvider>
   );
 }

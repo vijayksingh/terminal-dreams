@@ -4,9 +4,10 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RecipeCard } from "./RecipeCard";
 import type { CategoryInfo, CookbookRecipe } from "@/lib/cookbook-types";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 
 // SVG Illustrations for each category
-function CurriesIllustration({ accentColor }: { accentColor: string }) {
+function CurriesIllustration({ accentColor, reducedMotion }: { accentColor: string; reducedMotion: boolean }) {
   return (
     <svg viewBox="0 0 200 200" className="h-32 w-32" fill="none">
       {/* Spice mandala with steam wisps */}
@@ -18,8 +19,8 @@ function CurriesIllustration({ accentColor }: { accentColor: string }) {
         strokeWidth="2"
         fill="none"
         initial={{ rotate: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={reducedMotion ? {} : { duration: 20, repeat: Infinity, ease: "linear" }}
       />
       {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
         <motion.path
@@ -33,8 +34,8 @@ function CurriesIllustration({ accentColor }: { accentColor: string }) {
           strokeWidth="3"
           strokeLinecap="round"
           initial={{ opacity: 0.3 }}
-          animate={{ opacity: [0.3, 0.8, 0.3] }}
-          transition={{ duration: 2, delay: i * 0.2, repeat: Infinity }}
+          animate={reducedMotion ? { opacity: 0.6 } : { opacity: [0.3, 0.8, 0.3] }}
+          transition={reducedMotion ? {} : { duration: 2, delay: i * 0.2, repeat: Infinity }}
         />
       ))}
       {/* Steam wisps */}
@@ -47,15 +48,15 @@ function CurriesIllustration({ accentColor }: { accentColor: string }) {
           fill="none"
           opacity="0.4"
           initial={{ y: 0 }}
-          animate={{ y: [-10, 10, -10] }}
-          transition={{ duration: 3, delay: i * 0.5, repeat: Infinity }}
+          animate={reducedMotion ? {} : { y: [-10, 10, -10] }}
+          transition={reducedMotion ? {} : { duration: 3, delay: i * 0.5, repeat: Infinity }}
         />
       ))}
     </svg>
   );
 }
 
-function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
+function StreetFoodIllustration({ accentColor, reducedMotion }: { accentColor: string; reducedMotion: boolean }) {
   return (
     <svg viewBox="0 0 200 200" className="h-32 w-32" fill="none">
       {/* Street food cart */}
@@ -66,8 +67,8 @@ function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
         r="15"
         fill={accentColor}
         initial={{ rotate: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={reducedMotion ? {} : { duration: 4, repeat: Infinity, ease: "linear" }}
       />
       <motion.circle
         cx="130"
@@ -75,8 +76,8 @@ function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
         r="15"
         fill={accentColor}
         initial={{ rotate: 0 }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={reducedMotion ? {} : { duration: 4, repeat: Infinity, ease: "linear" }}
       />
       {/* Chaat elements */}
       <motion.circle
@@ -85,8 +86,8 @@ function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
         r="20"
         fill={accentColor}
         opacity="0.6"
-        animate={{ scale: [1, 1.1, 1] }}
-        transition={{ duration: 2, repeat: Infinity }}
+        animate={reducedMotion ? {} : { scale: [1, 1.1, 1] }}
+        transition={reducedMotion ? {} : { duration: 2, repeat: Infinity }}
       />
       <motion.circle
         cx="120"
@@ -94,8 +95,8 @@ function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
         r="25"
         fill={accentColor}
         opacity="0.4"
-        animate={{ scale: [1, 1.15, 1] }}
-        transition={{ duration: 2.5, delay: 0.3, repeat: Infinity }}
+        animate={reducedMotion ? {} : { scale: [1, 1.15, 1] }}
+        transition={reducedMotion ? {} : { duration: 2.5, delay: 0.3, repeat: Infinity }}
       />
       <motion.circle
         cx="100"
@@ -103,14 +104,14 @@ function StreetFoodIllustration({ accentColor }: { accentColor: string }) {
         r="15"
         fill={accentColor}
         opacity="0.7"
-        animate={{ scale: [1, 1.2, 1] }}
-        transition={{ duration: 1.8, delay: 0.6, repeat: Infinity }}
+        animate={reducedMotion ? {} : { scale: [1, 1.2, 1] }}
+        transition={reducedMotion ? {} : { duration: 1.8, delay: 0.6, repeat: Infinity }}
       />
     </svg>
   );
 }
 
-function DrinksIllustration({ accentColor }: { accentColor: string }) {
+function DrinksIllustration({ accentColor, reducedMotion }: { accentColor: string; reducedMotion: boolean }) {
   return (
     <svg viewBox="0 0 200 200" className="h-32 w-32" fill="none">
       {/* Cocktail glass with liquid pour */}
@@ -120,8 +121,8 @@ function DrinksIllustration({ accentColor }: { accentColor: string }) {
         strokeWidth="3"
         fill="none"
         initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 2, repeat: Infinity }}
+        animate={reducedMotion ? { pathLength: 1 } : { pathLength: 1 }}
+        transition={reducedMotion ? {} : { duration: 2, repeat: Infinity }}
       />
       <rect x="95" y="140" width="10" height="40" fill={accentColor} opacity="0.6" />
       {/* Bubbles */}
@@ -134,8 +135,8 @@ function DrinksIllustration({ accentColor }: { accentColor: string }) {
           fill={accentColor}
           opacity="0.5"
           initial={{ y: 0, opacity: 0.5 }}
-          animate={{ y: [-20, -40, -60], opacity: [0.5, 0.3, 0] }}
-          transition={{
+          animate={reducedMotion ? {} : { y: [-20, -40, -60], opacity: [0.5, 0.3, 0] }}
+          transition={reducedMotion ? {} : {
             duration: 3,
             delay: i * 0.4,
             repeat: Infinity,
@@ -149,15 +150,15 @@ function DrinksIllustration({ accentColor }: { accentColor: string }) {
         fill={accentColor}
         opacity="0.3"
         initial={{ scaleY: 0 }}
-        animate={{ scaleY: 1 }}
-        transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+        animate={reducedMotion ? { scaleY: 1 } : { scaleY: 1 }}
+        transition={reducedMotion ? {} : { duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
         style={{ transformOrigin: "100px 130px" }}
       />
     </svg>
   );
 }
 
-function SweetsIllustration({ accentColor }: { accentColor: string }) {
+function SweetsIllustration({ accentColor, reducedMotion }: { accentColor: string; reducedMotion: boolean }) {
   return (
     <svg viewBox="0 0 200 200" className="h-32 w-32" fill="none">
       {/* Mithai/sweet with sugar dust particles */}
@@ -167,8 +168,8 @@ function SweetsIllustration({ accentColor }: { accentColor: string }) {
         r="50"
         fill={accentColor}
         opacity="0.3"
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ duration: 2, repeat: Infinity }}
+        animate={reducedMotion ? {} : { scale: [1, 1.05, 1] }}
+        transition={reducedMotion ? {} : { duration: 2, repeat: Infinity }}
       />
       <circle cx="100" cy="100" r="40" fill={accentColor} opacity="0.5" />
       <circle cx="100" cy="100" r="30" fill={accentColor} opacity="0.7" />
@@ -185,11 +186,11 @@ function SweetsIllustration({ accentColor }: { accentColor: string }) {
             fill={accentColor}
             opacity="0.6"
             initial={{ scale: 0, opacity: 0 }}
-            animate={{
+            animate={reducedMotion ? { scale: 1, opacity: 0.6 } : {
               scale: [0, 1, 0],
               opacity: [0, 0.6, 0],
             }}
-            transition={{
+            transition={reducedMotion ? {} : {
               duration: 2,
               delay: i * 0.15,
               repeat: Infinity,
@@ -201,7 +202,7 @@ function SweetsIllustration({ accentColor }: { accentColor: string }) {
   );
 }
 
-function QuickMealsIllustration({ accentColor }: { accentColor: string }) {
+function QuickMealsIllustration({ accentColor, reducedMotion }: { accentColor: string; reducedMotion: boolean }) {
   return (
     <svg viewBox="0 0 200 200" className="h-32 w-32" fill="none">
       {/* Clock with speed lines */}
@@ -214,8 +215,8 @@ function QuickMealsIllustration({ accentColor }: { accentColor: string }) {
         stroke={accentColor}
         strokeWidth="3"
         strokeLinecap="round"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={reducedMotion ? {} : { duration: 4, repeat: Infinity, ease: "linear" }}
         style={{ transformOrigin: "100px 100px" }}
       />
       <motion.line
@@ -226,8 +227,8 @@ function QuickMealsIllustration({ accentColor }: { accentColor: string }) {
         stroke={accentColor}
         strokeWidth="2"
         strokeLinecap="round"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+        animate={reducedMotion ? {} : { rotate: 360 }}
+        transition={reducedMotion ? {} : { duration: 60, repeat: Infinity, ease: "linear" }}
         style={{ transformOrigin: "100px 100px" }}
       />
       {/* Speed lines */}
@@ -243,8 +244,8 @@ function QuickMealsIllustration({ accentColor }: { accentColor: string }) {
           strokeLinecap="round"
           opacity="0.6"
           initial={{ x: 0 }}
-          animate={{ x: [0, 10, 0] }}
-          transition={{
+          animate={reducedMotion ? {} : { x: [0, 10, 0] }}
+          transition={reducedMotion ? {} : {
             duration: 1.5,
             delay: i * 0.2,
             repeat: Infinity,
@@ -255,18 +256,18 @@ function QuickMealsIllustration({ accentColor }: { accentColor: string }) {
   );
 }
 
-function getCategoryIllustration(categorySlug: string, accentColor: string) {
+function getCategoryIllustration(categorySlug: string, accentColor: string, reducedMotion: boolean) {
   switch (categorySlug) {
     case "curries":
-      return <CurriesIllustration accentColor={accentColor} />;
+      return <CurriesIllustration accentColor={accentColor} reducedMotion={reducedMotion} />;
     case "street-food":
-      return <StreetFoodIllustration accentColor={accentColor} />;
+      return <StreetFoodIllustration accentColor={accentColor} reducedMotion={reducedMotion} />;
     case "drinks":
-      return <DrinksIllustration accentColor={accentColor} />;
+      return <DrinksIllustration accentColor={accentColor} reducedMotion={reducedMotion} />;
     case "sweets":
-      return <SweetsIllustration accentColor={accentColor} />;
+      return <SweetsIllustration accentColor={accentColor} reducedMotion={reducedMotion} />;
     case "quick-meals":
-      return <QuickMealsIllustration accentColor={accentColor} />;
+      return <QuickMealsIllustration accentColor={accentColor} reducedMotion={reducedMotion} />;
     default:
       return null;
   }
@@ -280,6 +281,7 @@ interface CategoryCardProps {
 
 export function CategoryCard({ category, recipeCount, recipes }: CategoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
     <motion.div
@@ -321,7 +323,7 @@ export function CategoryCard({ category, recipeCount, recipes }: CategoryCardPro
           </div>
 
           <div className="transition-transform group-hover:scale-110">
-            {getCategoryIllustration(category.slug, category.accentColor)}
+            {getCategoryIllustration(category.slug, category.accentColor, prefersReducedMotion)}
           </div>
         </div>
 

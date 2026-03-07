@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import type { Timer as TimerType } from "@/lib/timer-engine";
 import { formatTime } from "@/lib/timer-engine";
+import { useSound } from "@/hooks/use-sound";
 
 import { TimerRing } from "./TimerRing";
 
@@ -21,9 +22,30 @@ type TimerProps = {
  * Shows timer state, countdown, and interactive controls
  */
 export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }: TimerProps) {
+  const { play: playSound } = useSound();
   const isActive = timer.state === "running" || timer.state === "warning";
   const isPaused = timer.state === "paused";
   const isDone = timer.state === "done";
+
+  const handlePause = () => {
+    onPause();
+    playSound("ceramic-clink", 0.5);
+  };
+
+  const handleResume = () => {
+    onResume();
+    playSound("match-strike", 0.6);
+  };
+
+  const handleAdjust = (delta: number) => {
+    onAdjust(delta);
+    playSound("ceramic-clink", 0.4);
+  };
+
+  const handleDismiss = () => {
+    onDismiss();
+    playSound("whoosh", 0.5);
+  };
 
   // State-specific styles
   const getCardStyles = () => {
@@ -100,7 +122,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
             {/* Play/Pause button */}
             {!isDone && (
               <button
-                onClick={isActive ? onPause : onResume}
+                onClick={isActive ? handlePause : handleResume}
                 className="px-3 py-1.5 text-sm rounded-lg transition-colors hover:bg-[var(--color-muted)]"
                 aria-label={isActive ? "Pause timer" : "Resume timer"}
               >
@@ -112,7 +134,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
             {!isDone && (
               <>
                 <button
-                  onClick={() => onAdjust(-30)}
+                  onClick={() => handleAdjust(-30)}
                   className="px-2 py-1.5 text-xs rounded-lg transition-colors hover:bg-[var(--color-muted)]"
                   aria-label="Subtract 30 seconds"
                   disabled={timer.remainingTime <= 30}
@@ -120,7 +142,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
                   -30s
                 </button>
                 <button
-                  onClick={() => onAdjust(30)}
+                  onClick={() => handleAdjust(30)}
                   className="px-2 py-1.5 text-xs rounded-lg transition-colors hover:bg-[var(--color-muted)]"
                   aria-label="Add 30 seconds"
                 >
@@ -143,7 +165,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
             {/* Dismiss button (done state) */}
             {isDone && (
               <button
-                onClick={onDismiss}
+                onClick={handleDismiss}
                 className="ml-auto px-3 py-1.5 text-sm rounded-lg transition-colors hover:bg-[var(--color-muted)]"
                 aria-label="Dismiss timer"
               >
