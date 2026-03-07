@@ -1,7 +1,7 @@
 import CommandPalette from "@/components/CommandPalette/CommandPalette";
 import { getCommandPalettePosts } from "@/lib/posts";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,6 +20,12 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "TERMINAL_DREAMS",
   description: "Nostalgic bytes from the digital underground",
@@ -34,7 +40,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${fraunces.variable} antialiased`}
       >
         <CommandPalette posts={posts} />
         {children}
