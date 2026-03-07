@@ -14,15 +14,15 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
   };
 
   return (
-    <header className="border-b border-[var(--color-border)] bg-[var(--cookbook-bg)] px-6 py-6 md:px-8">
+    <header className="border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-6 md:px-8">
       <div className="mx-auto max-w-7xl">
         <h1
-          className="font-display text-3xl font-bold text-[var(--cookbook-text)] md:text-4xl lg:text-5xl"
+          className="font-display text-3xl font-bold text-[var(--color-text)] md:text-4xl lg:text-5xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {title}
         </h1>
-        <p className="mt-2 text-base text-[var(--cookbook-text-muted)] md:text-lg">{description}</p>
+        <p className="mt-2 text-base text-[var(--color-muted)] md:text-lg">{description}</p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           {/* Difficulty badge */}
@@ -34,11 +34,11 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
 
           {/* Cuisine */}
           {meta.cuisine && (
-            <span className="text-[var(--cookbook-text-muted)]">{meta.cuisine}</span>
+            <span className="text-[var(--color-muted)]">{meta.cuisine}</span>
           )}
 
           {/* Time */}
-          <span className="flex items-center gap-1 text-[var(--cookbook-text-muted)]">
+          <span className="flex items-center gap-1 text-[var(--color-muted)]">
             <svg
               className="h-4 w-4"
               fill="none"
@@ -56,7 +56,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
           </span>
 
           {/* Servings */}
-          <span className="flex items-center gap-1 text-[var(--cookbook-text-muted)]">
+          <span className="flex items-center gap-1 text-[var(--color-muted)]">
             <svg
               className="h-4 w-4"
               fill="none"
@@ -79,7 +79,7 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
               {meta.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded bg-[var(--cookbook-accent)]/10 px-2 py-0.5 text-xs text-[var(--cookbook-accent)]"
+                  className="rounded bg-[var(--color-accent)]/10 px-2 py-0.5 text-xs text-[var(--color-accent)]"
                 >
                   {tag}
                 </span>

@@ -19,7 +19,7 @@ export default function AboutPage() {
             <p>Welcome to the About page. Content coming soon.</p>
 
             {/* This Guy Cooks Section */}
-            <div className="mt-16 rounded-2xl border border-[var(--cookbook-accent)]/20 bg-gradient-to-br from-[var(--cookbook-accent)]/5 to-[var(--cookbook-accent-secondary)]/5 p-8 backdrop-blur-sm transition-all hover:border-[var(--cookbook-accent)]/40 hover:shadow-lg">
+            <div className="mt-16 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-8 backdrop-blur-sm transition-all hover:border-[var(--color-accent)]/40 hover:shadow-lg">
               <div className="flex flex-col items-center gap-6 text-center md:flex-row md:text-left">
                 {/* Food illustration */}
                 <div className="flex-shrink-0">
@@ -32,30 +32,30 @@ export default function AboutPage() {
                     className="transition-transform hover:scale-110"
                   >
                     {/* Cooking pot */}
-                    <circle cx="40" cy="45" r="20" fill="var(--cookbook-accent)" opacity="0.2" />
+                    <circle cx="40" cy="45" r="20" fill="var(--color-accent)" opacity="0.2" />
                     <path
                       d="M25 40 L25 55 Q25 60 30 60 L50 60 Q55 60 55 55 L55 40 Z"
-                      fill="var(--cookbook-accent)"
+                      fill="var(--color-accent)"
                       opacity="0.8"
                     />
                     {/* Steam wisps */}
                     <path
                       d="M35 35 Q33 30 35 25"
-                      stroke="var(--cookbook-accent-secondary)"
+                      stroke="var(--color-link)"
                       strokeWidth="2"
                       strokeLinecap="round"
                       opacity="0.6"
                     />
                     <path
                       d="M40 33 Q38 28 40 23"
-                      stroke="var(--cookbook-accent-secondary)"
+                      stroke="var(--color-link)"
                       strokeWidth="2"
                       strokeLinecap="round"
                       opacity="0.6"
                     />
                     <path
                       d="M45 35 Q47 30 45 25"
-                      stroke="var(--cookbook-accent-secondary)"
+                      stroke="var(--color-link)"
                       strokeWidth="2"
                       strokeLinecap="round"
                       opacity="0.6"
@@ -63,7 +63,7 @@ export default function AboutPage() {
                     {/* Handle */}
                     <path
                       d="M20 45 Q18 45 18 43 L18 40 Q18 38 20 38"
-                      stroke="var(--cookbook-accent)"
+                      stroke="var(--color-accent)"
                       strokeWidth="2"
                       fill="none"
                     />
@@ -72,17 +72,17 @@ export default function AboutPage() {
 
                 {/* Content */}
                 <div className="flex-1">
-                  <h2 className="mb-2 text-2xl font-bold text-[var(--cookbook-accent)]">
+                  <h2 className="mb-2 text-2xl font-bold text-[var(--color-accent)]">
                     this guy cooks
                   </h2>
-                  <p className="mb-4 text-[var(--cookbook-text-muted)]">
+                  <p className="mb-4 text-[var(--color-muted)]">
                     An interactive kitchen recipe playground with timers, step-by-step guidance, and
                     delightful micro-interactions. From chai to curries, explore recipes designed for the
                     joy of cooking.
                   </p>
                   <Link
                     href="/cookbook"
-                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--cookbook-accent)] px-6 py-3 font-medium text-white transition-all hover:bg-[var(--cookbook-accent-secondary)] hover:shadow-md"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-6 py-3 font-medium text-white transition-all hover:bg-[var(--color-link)] hover:shadow-md"
                   >
                     <span>Explore the Cookbook</span>
                     <svg

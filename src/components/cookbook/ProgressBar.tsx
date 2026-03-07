@@ -12,7 +12,7 @@ export function ProgressBar({ progress }: ProgressBarProps) {
   return (
     <div className="fixed left-0 right-0 top-0 z-50 h-1">
       <div
-        className={`h-full bg-gradient-to-r from-[var(--cookbook-accent)] via-[var(--cookbook-timer-warning)] to-[var(--cookbook-timer-done)]`}
+        className={`h-full bg-gradient-to-r from-[var(--color-accent)] via-[var(--cookbook-timer-warning)] to-[var(--cookbook-timer-done)]`}
         style={{
           width: `${progress}%`,
           transition: prefersReducedMotion ? 'width 0.1s linear' : 'width 0.3s ease-out',

@@ -26,7 +26,7 @@ export function IngredientPanel({
         <label
           className={`flex cursor-pointer items-start gap-3 rounded-md px-3 py-2 transition-all ${
             isCurrent
-              ? "bg-[var(--cookbook-accent)]/10 ring-2 ring-[var(--cookbook-accent)]/30"
+              ? "bg-[var(--color-accent)]/10 ring-2 ring-[var(--color-accent)]/30"
               : "hover:bg-[var(--color-muted)]/20"
           }`}
         >
@@ -35,35 +35,35 @@ export function IngredientPanel({
             type="checkbox"
             checked={isPrepared}
             onChange={() => onToggleIngredient(ingredient.id)}
-            className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--color-border)] text-[var(--cookbook-accent)] focus:ring-2 focus:ring-[var(--cookbook-accent)]/50"
+            className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/50"
           />
 
           {/* Ingredient details */}
           <div className="flex-1">
             <div
               className={`flex items-baseline gap-2 text-sm ${
-                isPrepared ? "text-[var(--cookbook-text-muted)] line-through" : "text-[var(--cookbook-text)]"
+                isPrepared ? "text-[var(--color-muted)] line-through" : "text-[var(--color-text)]"
               }`}
             >
               <span className="font-medium">{ingredient.name}</span>
-              <span className="text-xs text-[var(--cookbook-text-muted)]">
+              <span className="text-xs text-[var(--color-muted)]">
                 {ingredient.amount} {ingredient.unit}
               </span>
             </div>
             {ingredient.notes && (
-              <span className="mt-0.5 block text-xs italic text-[var(--cookbook-text-muted)]">
+              <span className="mt-0.5 block text-xs italic text-[var(--color-muted)]">
                 {ingredient.notes}
               </span>
             )}
             {ingredient.optional && (
-              <span className="mt-0.5 block text-xs text-[var(--cookbook-accent)]">Optional</span>
+              <span className="mt-0.5 block text-xs text-[var(--color-accent)]">Optional</span>
             )}
           </div>
 
           {/* Current step indicator */}
           {isCurrent && (
             <svg
-              className="mt-1 h-4 w-4 flex-shrink-0 text-[var(--cookbook-accent)]"
+              className="mt-1 h-4 w-4 flex-shrink-0 text-[var(--color-accent)]"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -80,10 +80,10 @@ export function IngredientPanel({
   };
 
   return (
-    <aside className="h-full overflow-y-auto bg-[var(--cookbook-surface)] p-6">
-      <div className="sticky top-0 mb-4 bg-[var(--cookbook-surface)] pb-2">
-        <h2 className="text-lg font-bold text-[var(--cookbook-text)]">Ingredients</h2>
-        <p className="mt-1 text-xs text-[var(--cookbook-text-muted)]">
+    <aside className="h-full overflow-y-auto bg-[var(--color-surface)] p-6">
+      <div className="sticky top-0 mb-4 bg-[var(--color-surface)] pb-2">
+        <h2 className="text-lg font-bold text-[var(--color-text)]">Ingredients</h2>
+        <p className="mt-1 text-xs text-[var(--color-muted)]">
           Check off as you prep each ingredient
         </p>
       </div>
@@ -92,7 +92,7 @@ export function IngredientPanel({
         {ingredientGroups.map((group, groupIndex) => (
           <div key={groupIndex}>
             {group.group && (
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--cookbook-accent)]">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-accent)]">
                 {group.group}
               </h3>
             )}
@@ -103,9 +103,9 @@ export function IngredientPanel({
 
       {/* Legend */}
       <div className="mt-6 border-t border-[var(--color-border)] pt-4">
-        <div className="space-y-2 text-xs text-[var(--cookbook-text-muted)]">
+        <div className="space-y-2 text-xs text-[var(--color-muted)]">
           <div className="flex items-center gap-2">
-            <span className="flex h-4 w-4 items-center justify-center rounded bg-[var(--cookbook-accent)]/10 ring-2 ring-[var(--cookbook-accent)]/30">
+            <span className="flex h-4 w-4 items-center justify-center rounded bg-[var(--color-accent)]/10 ring-2 ring-[var(--color-accent)]/30">
               ●
             </span>
             <span>Current step ingredient</span>

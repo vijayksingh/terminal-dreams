@@ -65,7 +65,7 @@ export function CookbookPlayground({ recipe }: CookbookPlaygroundProps) {
 
   return (
     <CookbookTimerProvider>
-      <div className="flex min-h-screen flex-col bg-[var(--cookbook-bg)]">
+      <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
       {/* Progress Bar */}
       <ProgressBar progress={progress} />
 

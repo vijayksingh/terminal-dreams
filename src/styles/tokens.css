@@ -85,12 +85,6 @@
   --kbd-padding-x: var(--space-1);
 
   /* Cookbook tokens */
-  --cookbook-bg: #FDF6EC;              /* Warm cream background */
-  --cookbook-surface: #FFFAF3;         /* Soft white for cards */
-  --cookbook-text: #3D2B1F;            /* Rich brown text */
-  --cookbook-text-muted: #8B7B6B;      /* Dusty rose-brown */
-  --cookbook-accent: #C4663A;          /* Terracotta primary */
-  --cookbook-accent-secondary: #5B7D4A; /* Herb green */
   --cookbook-timer-warning: #E8A838;   /* Warm amber */
   --cookbook-timer-done: #7FA87F;      /* Sage green */
   --font-display: var(--font-fraunces, Georgia, serif); /* Display serif for recipe titles */
@@ -128,12 +122,6 @@
   --ring: 0 0% 35%;
 
   /* Cookbook dark mode */
-  --cookbook-bg: #1A1512;              /* Warm charcoal */
-  --cookbook-surface: #2A2320;         /* Deep brown cards */
-  --cookbook-text: #E8E3D8;            /* Warm light text */
-  --cookbook-text-muted: #A39A8E;      /* Lighter muted */
-  --cookbook-accent: #D4763F;          /* Brighter terracotta */
-  --cookbook-accent-secondary: #6B8D5A; /* Brighter herb green */
   --cookbook-timer-warning: #EDB442;   /* Brighter amber */
   --cookbook-timer-done: #8FB88F;      /* Brighter sage */
 }
@@ -168,12 +156,6 @@
   --ring: 0 0% 55%;
 
   /* Cookbook light mode */
-  --cookbook-bg: #FDF6EC;
-  --cookbook-surface: #FFFAF3;
-  --cookbook-text: #3D2B1F;
-  --cookbook-text-muted: #8B7B6B;
-  --cookbook-accent: #C4663A;
-  --cookbook-accent-secondary: #5B7D4A;
   --cookbook-timer-warning: #E8A838;
   --cookbook-timer-done: #7FA87F;
 }
@@ -214,12 +196,6 @@
     --panel-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04) inset, 0 20px 60px rgba(0, 0, 0, 0.2);
 
     /* Cookbook light mode */
-    --cookbook-bg: #FDF6EC;
-    --cookbook-surface: #FFFAF3;
-    --cookbook-text: #3D2B1F;
-    --cookbook-text-muted: #8B7B6B;
-    --cookbook-accent: #C4663A;
-    --cookbook-accent-secondary: #5B7D4A;
     --cookbook-timer-warning: #E8A838;
     --cookbook-timer-done: #7FA87F;
   }

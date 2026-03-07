@@ -10,9 +10,9 @@ interface StepTimelineProps {
 
 export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimelineProps) {
   return (
-    <div className="border-t border-[var(--color-border)] bg-[var(--cookbook-surface)] px-4 py-4">
+    <div className="border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4">
       <div className="mx-auto max-w-7xl">
-        <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--cookbook-text-muted)]">
+        <h3 className="mb-3 text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
           Recipe Progress
         </h3>
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -26,10 +26,10 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
                 onClick={() => onStepClick(index)}
                 className={`group relative flex min-w-[3rem] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 transition-all ${
                   isCurrent
-                    ? "bg-[var(--cookbook-accent)] text-white shadow-md"
+                    ? "bg-[var(--color-accent)] text-white shadow-md"
                     : isCompleted
-                      ? "bg-[var(--cookbook-accent-secondary)]/20 text-[var(--cookbook-accent-secondary)] hover:bg-[var(--cookbook-accent-secondary)]/30"
-                      : "bg-[var(--color-muted)]/20 text-[var(--cookbook-text-muted)] hover:bg-[var(--color-muted)]/30"
+                      ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/30"
+                      : "bg-[var(--color-muted)]/20 text-[var(--color-muted)] hover:bg-[var(--color-muted)]/30"
                 }`}
                 aria-label={`Go to step ${index + 1}: ${step.title}`}
                 aria-current={isCurrent ? "step" : undefined}
@@ -40,7 +40,7 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
                     isCurrent
                       ? "bg-white/20"
                       : isCompleted
-                        ? "bg-[var(--cookbook-accent-secondary)]/30"
+                        ? "bg-[var(--color-accent)]/30"
                         : "bg-[var(--color-muted)]/30"
                   }`}
                 >
@@ -62,7 +62,7 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
 
                 {/* Active indicator */}
                 {isCurrent && (
-                  <span className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--cookbook-accent)]" />
+                  <span className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
                 )}
               </button>
             );

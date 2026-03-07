@@ -47,12 +47,12 @@ export function CompletionCelebration({ totalTime, recipeName, onClose }: Comple
   }, [prefersReducedMotion]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--cookbook-bg)]/95 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-bg)]/95 backdrop-blur-sm">
       {/* Close button */}
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-full bg-[var(--cookbook-surface)] p-2 text-[var(--cookbook-text)] transition-all hover:bg-[var(--cookbook-accent)] hover:text-white"
+          className="absolute right-4 top-4 rounded-full bg-[var(--color-surface)] p-2 text-[var(--color-text)] transition-all hover:bg-[var(--color-accent)] hover:text-white"
           aria-label="Close celebration"
         >
           <svg
@@ -104,17 +104,17 @@ export function CompletionCelebration({ totalTime, recipeName, onClose }: Comple
         >
           {/* Front of card - Recipe name */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-[var(--cookbook-surface)] p-8 shadow-2xl"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-[var(--color-surface)] p-8 shadow-2xl"
             style={{
               backfaceVisibility: "hidden",
             }}
           >
             <div className="text-center">
               <div className="mb-4 text-6xl">🍳</div>
-              <h2 className="text-2xl font-bold text-[var(--cookbook-text)]">
+              <h2 className="text-2xl font-bold text-[var(--color-text)]">
                 {recipeName}
               </h2>
-              <p className="mt-2 text-[var(--cookbook-text-muted)]">
+              <p className="mt-2 text-[var(--color-muted)]">
                 Recipe Complete
               </p>
             </div>
@@ -122,7 +122,7 @@ export function CompletionCelebration({ totalTime, recipeName, onClose }: Comple
 
           {/* Back of card - Bon Appétit! */}
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--cookbook-accent)] to-[var(--cookbook-accent-secondary)] p-8 shadow-2xl"
+            className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-link)] p-8 shadow-2xl"
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",

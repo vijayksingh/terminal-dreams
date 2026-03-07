@@ -42,7 +42,7 @@ export function SoundToggle() {
       ) : (
         // Unmuted icon (speaker with waves)
         <motion.svg
-          className="w-5 h-5 text-[var(--cookbook-accent)]"
+          className="w-5 h-5 text-[var(--color-accent)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
