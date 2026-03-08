@@ -23,7 +23,7 @@ type StepCardProps = {
  */
 export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, canGoNext = true, canGoPrevious = true }: StepCardProps) {
   const { play: playSound } = useSound();
-  const { addTimer, setCallbacks } = useCookbookTimer();
+  const { addTimer, setCallbacks, timers } = useCookbookTimer();
 
   // Set up callbacks for timer events
   useEffect(() => {
@@ -39,8 +39,19 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
   }, [playSound, setCallbacks]);
 
   const handleStartTimer = (label: string, duration: number, type: "active" | "passive", alert?: string) => {
-    addTimer(label, duration, type, alert);
-    playSound("match-strike", 0.7);
+    const timerId = addTimer(label, duration, type, alert);
+    // Only play sound if a new timer was created (not if returning existing timer)
+    const existingTimer = timers.find((t) => t.id === timerId);
+    if (!existingTimer || existingTimer.state === "running") {
+      playSound("match-strike", 0.7);
+    }
+  };
+
+  // Helper function to check if a timer for a specific label is already active
+  const isTimerActive = (label: string): boolean => {
+    return timers.some(
+      (t) => t.label === label && (t.state === "running" || t.state === "paused" || t.state === "warning")
+    );
   };
 
   return (
@@ -91,26 +102,30 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
           <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
             Timers
           </h3>
-          {step.timers.map((timer, idx) => (
-            <div
-              key={idx}
-              className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-muted)]/30 border border-[var(--color-border)]"
-            >
-              <div className="flex-1">
-                <div className="font-medium">{timer.label}</div>
-                <div className="text-sm text-[var(--color-text-secondary)]">
-                  {Math.floor(timer.duration / 60)}:{(timer.duration % 60).toString().padStart(2, "0")} •{" "}
-                  <span className="capitalize">{timer.type}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => handleStartTimer(timer.label, timer.duration, timer.type, timer.alert)}
-                className="px-4 py-2 rounded-lg bg-[var(--color-primary)] text-white font-medium hover:opacity-90 transition-opacity"
+          {step.timers.map((timer, idx) => {
+            const timerIsActive = isTimerActive(timer.label);
+            return (
+              <div
+                key={idx}
+                className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-muted)]/30 border border-[var(--color-border)]"
               >
-                Start Timer
-              </button>
-            </div>
-          ))}
+                <div className="flex-1">
+                  <div className="font-medium">{timer.label}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)]">
+                    {Math.floor(timer.duration / 60)}:{(timer.duration % 60).toString().padStart(2, "0")} •{" "}
+                    <span className="capitalize">{timer.type}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleStartTimer(timer.label, timer.duration, timer.type, timer.alert)}
+                  disabled={timerIsActive}
+                  className="px-4 py-2 rounded-lg bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                >
+                  {timerIsActive ? "Timer Running" : "Start Timer"}
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

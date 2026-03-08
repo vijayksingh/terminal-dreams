@@ -109,15 +109,26 @@ export function CookbookTimerProvider({ children }: { children: React.ReactNode 
 
   /**
    * Add and start a new timer
+   * Prevents duplicate timers with the same label if one is already running/paused
    */
   const addTimer = useCallback(
     (label: string, duration: number, type: "active" | "passive" = "active", alert?: string) => {
+      // Check if a timer with this label already exists in an active state
+      const existingTimer = timers.find(
+        (t) => t.label === label && (t.state === "running" || t.state === "paused" || t.state === "warning")
+      );
+
+      if (existingTimer) {
+        // Return existing timer ID instead of creating a new one
+        return existingTimer.id;
+      }
+
       const timer = createTimer(label, duration, type, alert);
       const started = startTimer(timer);
       setTimers((current) => [...current, started]);
       return started.id;
     },
-    []
+    [timers]
   );
 
   /**
