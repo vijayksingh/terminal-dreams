@@ -29,31 +29,26 @@ export function TimerTray() {
       {/* Glassmorphic container */}
       <div className="rounded-2xl backdrop-blur-xl bg-[var(--color-surface)]/80 border border-[var(--color-border)] shadow-2xl p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 px-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-            Active Timers
+        <div className="mb-3 px-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+            Active Timer
           </h2>
-          <span className="text-xs px-2 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)]">
-            {timers.length}
-          </span>
         </div>
 
-        {/* Timer list with animations */}
-        <div className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {timers.map((timer) => (
-              <Timer
-                key={timer.id}
-                timer={timer}
-                onPause={() => pause(timer.id)}
-                onResume={() => resume(timer.id)}
-                onReset={() => reset(timer.id)}
-                onAdjust={(delta) => adjust(timer.id, delta)}
-                onDismiss={() => dismiss(timer.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+        {/* Single timer display */}
+        <AnimatePresence mode="popLayout">
+          {timers[0] && (
+            <Timer
+              key={timers[0].id}
+              timer={timers[0]}
+              onPause={() => pause(timers[0].id)}
+              onResume={() => resume(timers[0].id)}
+              onReset={() => reset(timers[0].id)}
+              onAdjust={(delta) => adjust(timers[0].id, delta)}
+              onDismiss={() => dismiss(timers[0].id)}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

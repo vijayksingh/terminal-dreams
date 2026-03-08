@@ -23,7 +23,7 @@ type StepCardProps = {
  */
 export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, canGoNext = true, canGoPrevious = true }: StepCardProps) {
   const { play: playSound } = useSound();
-  const { addTimer, setCallbacks, timers } = useCookbookTimer();
+  const { addTimer, setCallbacks } = useCookbookTimer();
 
   // Set up callbacks for timer events
   useEffect(() => {
@@ -39,19 +39,8 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
   }, [playSound, setCallbacks]);
 
   const handleStartTimer = (label: string, duration: number, type: "active" | "passive", alert?: string) => {
-    const timerId = addTimer(label, duration, type, alert);
-    // Only play sound if a new timer was created (not if returning existing timer)
-    const existingTimer = timers.find((t) => t.id === timerId);
-    if (!existingTimer || existingTimer.state === "running") {
-      playSound("match-strike", 0.7);
-    }
-  };
-
-  // Helper function to check if a timer for a specific label is already active
-  const isTimerActive = (label: string): boolean => {
-    return timers.some(
-      (t) => t.label === label && (t.state === "running" || t.state === "paused" || t.state === "warning")
-    );
+    addTimer(label, duration, type, alert);
+    playSound("match-strike", 0.7);
   };
 
   return (
@@ -65,12 +54,12 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
       {/* Step progress */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-[var(--color-text-secondary)]">
+          <span className="text-sm font-medium text-[var(--color-muted)]">
             Step {stepNumber} of {totalSteps}
           </span>
           <div className="flex-1 mx-4 h-1 bg-[var(--color-muted)] rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-[var(--color-primary)]"
+              className="h-full bg-[var(--color-accent)]"
               initial={{ width: 0 }}
               animate={{ width: `${(stepNumber / totalSteps) * 100}%` }}
               transition={{ duration: 0.5, ease: "easeOut" as const }}
@@ -89,9 +78,9 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
 
       {/* Chef's tip */}
       {step.tip && (
-        <div className="mb-6 p-4 rounded-lg bg-[#E8B339]/10 border border-[#E8B339]/30">
-          <p className="text-sm text-[var(--color-text-secondary)]">
-            <span className="font-semibold text-[#E8B339]">💡 Chef&apos;s Tip:</span> {step.tip}
+        <div className="mb-6 p-4 rounded-lg bg-[var(--accent-weak)]/10 border border-[var(--accent-weak)]/30">
+          <p className="text-sm text-[var(--color-muted)]">
+            <span className="font-semibold text-[var(--accent-weak)]">💡 Chef&apos;s Tip:</span> {step.tip}
           </p>
         </div>
       )}
@@ -99,33 +88,29 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
       {/* Timers */}
       {step.timers && step.timers.length > 0 && (
         <div className="mb-6 space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-muted)]">
             Timers
           </h3>
-          {step.timers.map((timer, idx) => {
-            const timerIsActive = isTimerActive(timer.label);
-            return (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-muted)]/30 border border-[var(--color-border)]"
-              >
-                <div className="flex-1">
-                  <div className="font-medium">{timer.label}</div>
-                  <div className="text-sm text-[var(--color-text-secondary)]">
-                    {Math.floor(timer.duration / 60)}:{(timer.duration % 60).toString().padStart(2, "0")} •{" "}
-                    <span className="capitalize">{timer.type}</span>
-                  </div>
+          {step.timers.map((timer, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-between p-4 rounded-lg bg-[var(--color-muted)]/30 border border-[var(--color-border)]"
+            >
+              <div className="flex-1">
+                <div className="font-medium">{timer.label}</div>
+                <div className="text-sm text-[var(--color-muted)]">
+                  {Math.floor(timer.duration / 60)}:{(timer.duration % 60).toString().padStart(2, "0")} •{" "}
+                  <span className="capitalize">{timer.type}</span>
                 </div>
-                <button
-                  onClick={() => handleStartTimer(timer.label, timer.duration, timer.type, timer.alert)}
-                  disabled={timerIsActive}
-                  className="px-4 py-2 rounded-lg bg-[var(--color-primary)] text-white font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                >
-                  {timerIsActive ? "Timer Running" : "Start Timer"}
-                </button>
               </div>
-            );
-          })}
+              <button
+                onClick={() => handleStartTimer(timer.label, timer.duration, timer.type, timer.alert)}
+                className="px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white font-medium hover:opacity-90 transition-opacity"
+              >
+                Start Timer
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -141,7 +126,7 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
         <button
           onClick={onNext}
           disabled={!canGoNext}
-          className="ml-auto px-6 py-3 rounded-lg bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          className="ml-auto px-6 py-3 rounded-lg bg-[var(--color-accent)] text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
         >
           {stepNumber === totalSteps ? "Complete Recipe" : "Next Step →"}
         </button>
