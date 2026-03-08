@@ -55,11 +55,11 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
       case "idle":
         return `${base} bg-[var(--color-surface)]/80 border border-[var(--color-border)]`;
       case "running":
-        return `${base} bg-[var(--color-surface)]/90 border border-[#5B7D4A]/30`;
+        return `${base} bg-[var(--color-surface)]/90 border border-[var(--cookbook-timer-done)]/30`;
       case "warning":
-        return `${base} bg-[#E8A838]/10 border border-[#E8A838]/50 shadow-lg shadow-[#E8A838]/20`;
+        return `${base} bg-[var(--cookbook-timer-warning)]/10 border border-[var(--cookbook-timer-warning)]/50 shadow-lg shadow-[var(--cookbook-timer-warning)]/20`;
       case "done":
-        return `${base} bg-[#7FA87F]/20 border border-[#7FA87F]/50 shadow-lg shadow-[#7FA87F]/20`;
+        return `${base} bg-[var(--cookbook-timer-done)]/20 border border-[var(--cookbook-timer-done)]/50 shadow-lg shadow-[var(--cookbook-timer-done)]/20`;
       case "paused":
         return `${base} bg-[var(--color-surface)]/70 border border-[var(--color-border)] opacity-80`;
       default:
@@ -105,7 +105,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
               className="text-xs px-2 py-0.5 rounded-full"
               style={{
                 backgroundColor: "var(--color-muted)",
-                color: "var(--color-text-secondary)",
+                color: "var(--color-bg)",
               }}
             >
               {timer.type}
@@ -177,7 +177,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
           {/* Alert message for done state */}
           {isDone && timer.alert && (
             <motion.p
-              className="mt-2 text-xs text-[var(--color-text-secondary)]"
+              className="mt-2 text-xs text-[var(--color-muted)]"
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}

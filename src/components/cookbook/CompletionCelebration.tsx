@@ -28,7 +28,7 @@ export function CompletionCelebration({ totalTime, recipeName, onClose }: Comple
         id: i,
         x: 50, // center
         y: 50, // center
-        color: ["#C4663A", "#5B7D4A", "#E8A838", "#7FA87F", "#D4763F"][Math.floor(Math.random() * 5)],
+        color: ["#c9956b", "#d4a574", "#b8a690", "#a89379", "#9d8b72"][Math.floor(Math.random() * 5)],
         rotation: Math.random() * 360,
         velocity: {
           x: (Math.random() - 0.5) * 10,
