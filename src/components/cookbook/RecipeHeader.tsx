@@ -1,4 +1,5 @@
 import type { CookbookRecipe } from "@/lib/cookbook-types";
+import { Breadcrumb } from "@/components/retro/Breadcrumb";
 
 interface RecipeHeaderProps {
   recipe: CookbookRecipe;
@@ -16,6 +17,9 @@ export function RecipeHeader({ recipe }: RecipeHeaderProps) {
   return (
     <header className="border-b border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-6 md:px-8">
       <div className="mx-auto max-w-7xl">
+        <div className="mb-4">
+          <Breadcrumb items={[{ label: "cookbook", href: "/cookbook" }, { label: title }]} />
+        </div>
         <h1
           className="font-display text-3xl font-bold text-[var(--color-text)] md:text-4xl lg:text-5xl"
           style={{ fontFamily: "var(--font-display)" }}

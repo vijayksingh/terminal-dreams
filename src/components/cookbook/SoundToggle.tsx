@@ -21,7 +21,7 @@ export function SoundToggle() {
       {isMuted ? (
         // Muted icon (speaker with X)
         <svg
-          className="w-5 h-5 text-[var(--color-text-secondary)]"
+          className="w-5 h-5 text-[var(--color-muted)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

@@ -27,26 +27,26 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
       case "idle":
         return {
           track: "var(--color-muted)",
-          progress: "var(--color-primary)",
-          glow: "var(--color-primary)",
+          progress: "var(--color-accent)",
+          glow: "var(--color-accent)",
         };
       case "running":
         return {
           track: "var(--color-muted)",
-          progress: "#5B7D4A", // Herb green
-          glow: "#5B7D4A",
+          progress: "var(--cookbook-timer-done)", // Herb green
+          glow: "var(--cookbook-timer-done)",
         };
       case "warning":
         return {
           track: "var(--color-muted)",
-          progress: "#E8A838", // Warm amber
-          glow: "#E8A838",
+          progress: "var(--cookbook-timer-warning)", // Warm amber
+          glow: "var(--cookbook-timer-warning)",
         };
       case "done":
         return {
           track: "var(--color-muted)",
-          progress: "#7FA87F", // Sage green
-          glow: "#7FA87F",
+          progress: "var(--cookbook-timer-done)", // Sage green
+          glow: "var(--cookbook-timer-done)",
         };
       case "paused":
         return {
@@ -57,8 +57,8 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
       default:
         return {
           track: "var(--color-muted)",
-          progress: "var(--color-primary)",
-          glow: "var(--color-primary)",
+          progress: "var(--color-accent)",
+          glow: "var(--color-accent)",
         };
     }
   };
@@ -190,7 +190,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
           <svg width={size * 0.4} height={size * 0.4} viewBox="0 0 24 24" fill="none">
             <motion.path
               d="M5 13l4 4L19 7"
-              stroke="#7FA87F"
+              stroke="var(--cookbook-timer-done)"
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"

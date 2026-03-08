@@ -82,7 +82,7 @@ export default function AboutPage() {
                   </p>
                   <Link
                     href="/cookbook"
-                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-6 py-3 font-medium text-white transition-all hover:bg-[var(--color-link)] hover:shadow-md"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-6 py-3 font-medium text-[var(--color-bg)] transition-all hover:bg-[var(--color-link)] hover:shadow-md"
                   >
                     <span>Explore the Cookbook</span>
                     <svg
