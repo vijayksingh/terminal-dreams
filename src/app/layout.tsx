@@ -1,6 +1,7 @@
 import CommandPalette from "@/components/CommandPalette/CommandPalette";
 import { getCommandPalettePosts } from "@/lib/posts";
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Fraunces, Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -42,6 +43,13 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${fraunces.variable} antialiased`}
       >
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
         <CommandPalette posts={posts} />
         {children}
       </body>

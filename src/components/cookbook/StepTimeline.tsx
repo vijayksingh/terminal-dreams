@@ -26,10 +26,10 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
                 onClick={() => onStepClick(index)}
                 className={`group relative flex min-w-[3rem] flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 transition-all ${
                   isCurrent
-                    ? "bg-[var(--color-accent)] text-white shadow-md"
+                    ? "bg-[var(--color-surface-2)] text-[var(--color-text)] shadow-md ring-1 ring-[var(--color-border)]"
                     : isCompleted
-                      ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)] hover:bg-[var(--color-accent)]/30"
-                      : "bg-[var(--color-muted)]/20 text-[var(--color-muted)] hover:bg-[var(--color-muted)]/30"
+                      ? "bg-[var(--color-muted)]/20 text-[var(--accent-weak)] hover:bg-[var(--color-muted)]/30"
+                      : "bg-[var(--color-muted)]/10 text-[var(--color-muted)] hover:bg-[var(--color-muted)]/20"
                 }`}
                 aria-label={`Go to step ${index + 1}: ${step.title}`}
                 aria-current={isCurrent ? "step" : undefined}
@@ -38,10 +38,10 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
                 <span
                   className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                     isCurrent
-                      ? "bg-white/20"
+                      ? "bg-[var(--color-border)]"
                       : isCompleted
-                        ? "bg-[var(--color-accent)]/30"
-                        : "bg-[var(--color-muted)]/30"
+                        ? "bg-[var(--accent-weak)]/30"
+                        : "bg-[var(--color-muted)]/20"
                   }`}
                 >
                   {isCompleted ? (
@@ -62,7 +62,7 @@ export function StepTimeline({ steps, currentStepIndex, onStepClick }: StepTimel
 
                 {/* Active indicator */}
                 {isCurrent && (
-                  <span className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--color-accent)]" />
+                  <span className="absolute -bottom-1 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-[var(--accent-weak)]" />
                 )}
               </button>
             );

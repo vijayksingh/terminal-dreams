@@ -11,9 +11,9 @@ interface RecipeCardProps {
 
 export function RecipeCard({ recipe, accentColor }: RecipeCardProps) {
   const difficultyColors = {
-    beginner: "#7FA548",
-    intermediate: "#E8B339",
-    advanced: "#D64933",
+    beginner: "#a89379",
+    intermediate: "#b8a690",
+    advanced: "#9d8b72",
   };
 
   return (
@@ -26,13 +26,13 @@ export function RecipeCard({ recipe, accentColor }: RecipeCardProps) {
     >
       <Link
         href={`/cookbook/${recipe.slug}`}
-        className="block rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--color-border-hover)] hover:shadow-md"
+        className="block rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 transition-all hover:border-[var(--accent-weak)] hover:shadow-md"
       >
         <h3 className="mb-2 font-semibold text-[var(--color-text)]">
           {recipe.title}
         </h3>
 
-        <p className="mb-3 line-clamp-2 text-sm text-[var(--color-text-secondary)]">
+        <p className="mb-3 line-clamp-2 text-sm text-[var(--color-muted)]">
           {recipe.description}
         </p>
 
@@ -61,13 +61,13 @@ export function RecipeCard({ recipe, accentColor }: RecipeCardProps) {
 
           {/* Cuisine badge */}
           {recipe.meta.cuisine && (
-            <span className="rounded-full bg-[var(--color-surface-secondary)] px-2 py-1 text-[var(--color-text-secondary)]">
+            <span className="rounded-full bg-[var(--color-surface-2)] px-2 py-1 text-[var(--color-muted)]">
               {recipe.meta.cuisine}
             </span>
           )}
 
           {/* Servings */}
-          <span className="text-[var(--color-text-secondary)]">
+          <span className="text-[var(--color-muted)]">
             👥 {recipe.meta.servings}
           </span>
         </div>
@@ -78,7 +78,7 @@ export function RecipeCard({ recipe, accentColor }: RecipeCardProps) {
             {recipe.meta.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="text-xs text-[var(--color-text-secondary)]"
+                className="text-xs text-[var(--color-muted)]"
               >
                 #{tag}
               </span>

@@ -286,10 +286,10 @@ export function CategoryCard({ category, recipeCount, recipes }: CategoryCardPro
   return (
     <motion.div
       layout
-      className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-secondary)] shadow-sm transition-shadow hover:shadow-lg"
+      className="group relative overflow-hidden rounded-2xl border bg-[var(--color-surface-2)] shadow-sm transition-shadow hover:shadow-lg"
       style={{
         borderColor: category.accentColor,
-        borderWidth: "2px",
+        borderWidth: "1px",
       }}
     >
       <motion.button
@@ -306,10 +306,10 @@ export function CategoryCard({ category, recipeCount, recipes }: CategoryCardPro
             >
               {category.name}
             </h2>
-            <p className="mb-3 text-sm text-[var(--color-text-secondary)]">
+            <p className="mb-3 text-sm text-[var(--color-muted)]">
               {category.description}
             </p>
-            <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+            <div className="flex items-center gap-2 text-xs text-[var(--color-muted)]">
               <span
                 className="rounded-full px-3 py-1 font-medium"
                 style={{

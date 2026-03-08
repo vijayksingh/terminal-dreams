@@ -9,36 +9,36 @@ export const CATEGORIES: CategoryInfo[] = [
     slug: "curries",
     name: "Curries & Gravies",
     description: "The heart of Indian cooking — rich, aromatic, soul-warming gravies",
-    accentColor: "#E8B339", // Saffron/turmeric yellow
-    textColor: "#1A1512",
+    accentColor: "#c9956b", // Warm caramel (matches app accent)
+    textColor: "#e8e3d8",
   },
   {
     slug: "street-food",
     name: "Street Food & Snacks",
     description: "Bold, quick, soul-satisfying bites from the streets of India",
-    accentColor: "#D64933", // Chaat masala orange/red
-    textColor: "#FDF6EC",
+    accentColor: "#d4a574", // Golden tan (matches app link color)
+    textColor: "#e8e3d8",
   },
   {
     slug: "drinks",
     name: "Cocktails & Drinks",
     description: "From masala chai to craft cocktails — beverages with character",
-    accentColor: "#5B4A87", // Deep jewel amethyst
-    textColor: "#FDF6EC",
+    accentColor: "#9d8b72", // Muted taupe
+    textColor: "#e8e3d8",
   },
   {
     slug: "sweets",
     name: "Sweets & Baking",
     description: "Mithai meets modern baking — indulgent, aromatic, celebration-worthy",
-    accentColor: "#D896A0", // Rose pink
-    textColor: "#1A1512",
+    accentColor: "#b8a690", // Muted tan (matches accent-weak)
+    textColor: "#e8e3d8",
   },
   {
     slug: "quick-meals",
     name: "Quick Meals",
     description: "Weeknight staples under 30 minutes — when you need comfort fast",
-    accentColor: "#7FA548", // Bright lime/cilantro green
-    textColor: "#1A1512",
+    accentColor: "#a89379", // Muted sage brown
+    textColor: "#e8e3d8",
   },
 ];
 

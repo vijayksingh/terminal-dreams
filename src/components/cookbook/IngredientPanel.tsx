@@ -26,8 +26,8 @@ export function IngredientPanel({
         <label
           className={`flex cursor-pointer items-start gap-3 rounded-md px-3 py-2 transition-all ${
             isCurrent
-              ? "bg-[var(--color-accent)]/10 ring-2 ring-[var(--color-accent)]/30"
-              : "hover:bg-[var(--color-muted)]/20"
+              ? "bg-[var(--color-surface-2)] ring-1 ring-[var(--color-border)]"
+              : "hover:bg-[var(--color-muted)]/10"
           }`}
         >
           {/* Checkbox */}
@@ -35,7 +35,7 @@ export function IngredientPanel({
             type="checkbox"
             checked={isPrepared}
             onChange={() => onToggleIngredient(ingredient.id)}
-            className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/50"
+            className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--color-border)] text-[var(--accent-weak)] focus:ring-2 focus:ring-[var(--color-border)]"
           />
 
           {/* Ingredient details */}
@@ -56,14 +56,14 @@ export function IngredientPanel({
               </span>
             )}
             {ingredient.optional && (
-              <span className="mt-0.5 block text-xs text-[var(--color-accent)]">Optional</span>
+              <span className="mt-0.5 block text-xs text-[var(--accent-weak)]">Optional</span>
             )}
           </div>
 
           {/* Current step indicator */}
           {isCurrent && (
             <svg
-              className="mt-1 h-4 w-4 flex-shrink-0 text-[var(--color-accent)]"
+              className="mt-1 h-4 w-4 flex-shrink-0 text-[var(--accent-weak)]"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -92,7 +92,7 @@ export function IngredientPanel({
         {ingredientGroups.map((group, groupIndex) => (
           <div key={groupIndex}>
             {group.group && (
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-accent)]">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--accent-weak)]">
                 {group.group}
               </h3>
             )}
@@ -105,7 +105,7 @@ export function IngredientPanel({
       <div className="mt-6 border-t border-[var(--color-border)] pt-4">
         <div className="space-y-2 text-xs text-[var(--color-muted)]">
           <div className="flex items-center gap-2">
-            <span className="flex h-4 w-4 items-center justify-center rounded bg-[var(--color-accent)]/10 ring-2 ring-[var(--color-accent)]/30">
+            <span className="flex h-4 w-4 items-center justify-center rounded bg-[var(--color-surface-2)] ring-1 ring-[var(--color-border)]">
               ●
             </span>
             <span>Current step ingredient</span>
