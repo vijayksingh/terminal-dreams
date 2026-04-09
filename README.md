@@ -1,84 +1,104 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Terminal Dreams
+
+> Nostalgic bytes from the digital underground.
+
+A personal blog, cookbook, and interactive playground — built as a space to write, tinker, and share things I care about. Part portfolio, part workshop, part kitchen.
+
+**Live:** [terminal-dreams](https://github.com/vijayksingh/terminal-dreams)
+
+---
+
+## What's Inside
+
+### Blog
+Long-form writing rendered from MDX with syntax highlighting (Shiki), interactive components, and embedded code playgrounds. Posts live in `content/blog/` and support React components inline.
+
+### Playground
+A browser-native React/TypeScript IDE — no backend required. Babel transpiles in the browser, imports resolve via import maps and blob URLs, and a multi-file editor (Monaco) with live preview lets you prototype ideas without leaving the site.
+
+### Cookbook
+25+ Indian and Southeast Asian recipes with an interactive step-by-step player. Features include:
+- Timers with sound effects and circular progress rings
+- Ingredient checklists with completion tracking
+- Step-by-step navigation with ambient canvas effects
+- A small celebration when you finish cooking
+
+Categories: Curries, Street Food, Drinks, Sweets, Quick Meals.
+
+### Recipe Walkthroughs
+Scroll-driven code tutorials that pair explanation with a live playground. A different kind of recipe — for building UI.
+
+---
+
+## Stack
+
+- **Next.js 15** (App Router, Turbopack)
+- **React 19**
+- **TypeScript**
+- **Tailwind CSS v4** + shadcn/ui components
+- **MDX** via next-mdx-remote
+- **Monaco Editor** for code editing
+- **Babel Standalone** for browser-native transpilation
+- **Framer Motion** for animations
+- **D3** for flowchart visualizations
+- **Shiki / rehype-pretty-code** for syntax highlighting
+
+---
+
+## Aesthetic
+
+Retro-terminal meets warm minimalism. Dark mode by default with a crosshair cursor, scanline overlays, and a cursor glow that follows your mouse. The palette is built around warm neutrals (`#0f0e0d`, `#e8e3d8`) with a copper accent (`#c9956b`). Light mode is available too.
+
+Typography: Geist Sans, Geist Mono, JetBrains Mono, and Fraunces for display headings in the cookbook.
+
+---
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-
-## MDX Blogging
-
-Author posts as MDX in `content/blog`. Example: `content/blog/sample-interactive.mdx` demonstrates code highlighting and an interactive React component.
-
-- Frontmatter:
-```
----
-title: "Title"
-date: "2025-09-01"
-category: "Cyberspace"
-summary: "Short summary"
-tags: ["mdx", "nextjs"]
----
-```
-
-- Use React components in MDX. The post route maps `<InteractiveCounter />` as an allowed component.
-- Code fences are highlighted via `rehype-pretty-code` (Shiki themes).
-
-Routes:
-- `/blog` lists posts
-- `/blog/[slug]` renders a post
-
-Home also shows the latest posts using the same renderer.
-
-## Testing
+### Testing
 
 ```bash
 npm run test
 ```
 
-## TODO 
-- [ ] Fix the file architecture to have the css and components in a folder so that they don't all go into same folder.
-- [ ] Implement the timeline component for blogs posts
-- [ ] Implement different styles of cards for the different blog types
-  - [ ] Blog Card
-  - [ ] TIL Card
-  - [ ] Project Card
-  - [ ] Notes Card
-  - [ ] Essays 
-- [ ] Implement the guestbook component
-- [ ] Implement the webring component
-- [ ] Implement the system status component
-- [ ] Implement the recent posts component
-- [ ] Implement the categories component
-- [ ] Implement the stats grid component
-- [ ] The TOC component is not sticking to bottom and is moving along with the article, it should be detached from the article and should be sticky to the bottom of the page.
+---
+
+## Project Structure
+
+```
+content/
+  blog/          # MDX blog posts
+  cookbook/       # Recipe data (JSON-style TS)
+  recipes/       # Code walkthrough definitions
+src/
+  app/           # Next.js routes (blog, cookbook, playground, recipes)
+  components/    # UI components, playground, cookbook player
+  lib/           # Utilities, MDX pipeline, content loaders
+  styles/        # Tailwind config, CSS modules
+public/          # Static assets, sounds, images
+```
+
+---
+
+## Roadmap
+
+- [ ] File architecture cleanup — co-locate CSS and components
+- [ ] Timeline component for blog posts
+- [ ] Differentiated card styles per content type (Blog, TIL, Project, Notes, Essays)
+- [ ] Guestbook
+- [ ] Webring
+- [ ] System status widget
+- [ ] Sticky table of contents
+
+---
+
+## License
+
+This is a personal project. Feel free to look around and take inspiration, but please don't clone it wholesale as your own.
