@@ -1,0 +1,224 @@
+---
+title: Building a Live Search Filter
+summary: Walk through building an interactive search filter in React — from a static list to a fully functional live search with highlight, empty-state handling, and a reusable custom hook.
+date: 2026-02-18
+tags:
+  - react
+  - hooks
+  - beginner
+format: lab
+demo: live-search
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Start with a static list
+
+You have five items. You need a search box. The instinct is to wire everything up at once — state, events, filtering — and see if it works.
+
+Resist that instinct. If something looks wrong after wiring up three layers simultaneously, which layer broke? You'd have no idea. Starting with a static list that does *nothing* gives you something invaluable: a foundation you can trust. Does the data show up? Right order? Correct markup? Verify that first.
+
+```tsx
+const items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
+
+function App() {
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+Look at the state inspector on the right — `items` is the only data. No `query`, no `results`, no filtering logic. The component is a pure function from data to markup, and that's a property worth preserving as we build up.
+
+This isn't a teaching trick. In production codebases, the components easiest to test and debug are the ones where you can point at the data layer and the render layer independently.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Wire up a controlled input
+
+We're about to add a text input, but we're *not* going to let the browser own its value.
+
+In vanilla HTML, an `<input>` manages its own state — you type, the DOM updates, JavaScript reads whenever. React inverts that: the component tells the input what to display, and the input reports every keystroke back. React is the source of truth, not the DOM.
+
+```tsx
+import { useState } from "react";
+
+export default function App() {
+  const [query, setQuery] = useState("");
+
+  return (
+    <div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search..."
+      />
+      {/* list unchanged — still shows all items */}
+    </div>
+  );
+}
+```
+
+Try it — type something in the search box and watch `query` update in the state inspector on every keystroke. The input and the state are perfectly synchronized — not because the browser is managing them, but because React re-renders the component on every change and passes the new value back to the input.
+
+React developers call this a *controlled component*. The name sounds formal, but the idea is simple: React gets the last word on what the input displays. The payoff comes next — because `query` lives in state, we can use it to compute anything. Like a filtered list.
+
+Right now, the list ignores the input completely. You can type "Cherry" and all five items still show. That disconnect is intentional. We've built two independent pieces (a list and an input) and verified each works alone. Now we'll connect them.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Filter the list on every keystroke
+
+The obvious approach: a `useState` for the query, another `useState` for results, and a `useEffect` to keep them in sync.
+
+```tsx
+// ⚠️ The naive approach — don't do this
+const [query, setQuery] = useState("");
+const [results, setResults] = useState(items);
+
+useEffect(() => {
+  setResults(items.filter(item =>
+    item.toLowerCase().includes(query.toLowerCase())
+  ));
+}, [query]);
+```
+
+This works. But between the moment `query` updates and the effect fires, `results` is stale — it holds the *previous* filter output. One unnecessary render with mismatched data. With five fruit names, invisible. With a thousand products and a loading spinner tied to result count, you'd see it flash.
+
+The fix is to not store `results` at all:
+
+```tsx
+const results = items.filter((item) =>
+  item.toLowerCase().includes(query.toLowerCase())
+);
+```
+
+This is *derived state*. Instead of maintaining two pieces of state that can drift apart, we compute `results` directly from `query` on every render. No effect, no sync bug, no stale frame.
+
+Type **"a"** in the demo — Apple, Banana, and Date remain. Cherry and Elderberry disappear because neither contains the letter "a". The `.toLowerCase()` calls make the match case-insensitive, so typing "A" or "a" gives the same result.
+
+Now try **"an"** — only Banana survives. The filter checks whether the full query appears as a contiguous substring, not whether each letter appears somewhere. That's a design choice worth noticing: `includes()` gives you substring matching. If you wanted fuzzy matching (where "apl" finds "Apple"), you'd need a different algorithm entirely — something like Fuse.js or a custom scoring function.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Highlight the matching text
+
+Filtering tells users *which* results survived. Highlighting tells them *why*.
+
+Without highlighting, a filtered list is a black box — the user types "an" and sees "Banana" but has to mentally scan the word to confirm the match. With highlighting, the connection between query and result is instant and visual: B**an**ana.
+
+The trick is string surgery: split each result into the part before the match, the match itself, and the part after. Wrap the match in a `<mark>` tag — which is semantically correct here, since `<mark>` means "text highlighted for reference." Most tutorials use a `<span>` with a class; `<mark>` is what the tag was designed for.
+
+```tsx
+// highlight.ts
+export type Segment = { text: string; match: boolean };
+
+export function highlight(text: string, query: string): Segment[] {
+  if (!query.trim()) return [{ text, match: false }];
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return [{ text, match: false }];
+  return [
+    { text: text.slice(0, idx), match: false },
+    { text: text.slice(idx, idx + query.length), match: true },
+    { text: text.slice(idx + query.length), match: false },
+  ].filter((s) => s.text.length > 0);
+}
+```
+
+In the component, we map over the segments:
+
+```tsx
+{highlight(item, query).map((seg, i) =>
+  seg.match
+    ? <mark key={i}>{seg.text}</mark>
+    : <span key={i}>{seg.text}</span>
+)}
+```
+
+The state inspector shows the segment breakdown for the first result — you can see exactly how the string was sliced.
+
+Try typing "a" and look at "Banana" — only the first "a" lights up, even though there are three. `indexOf` returns the first match and stops. Highlighting every occurrence would need a global regex or `String.split` with a capture group — a worthwhile extension after this lesson.
+
+One safety note: `indexOf` does literal string matching, so typing "(" or "." won't crash anything. But if you swap to regex-based highlighting later, those characters become metacharacters that need escaping — a trap that bites people who upgrade the pattern without thinking about the edge cases.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Handle the empty state
+
+Type **"xyz"** into the demo's search box.
+
+What happens? Toggle the "Empty State" feature off in the demo panel and type it again. The list simply vanishes — a blank void where five items used to be. As a user, this is disorienting. Did the app crash? Is the data gone? Did my query fail to send? A blank space communicates *nothing*, and in UI design, communicating nothing is worse than communicating bad news.
+
+```tsx
+{results.length > 0 ? (
+  <ul>
+    {results.map((item) => (
+      <li key={item}>{renderItem(item)}</li>
+    ))}
+  </ul>
+) : (
+  <p>No results for "{query}".</p>
+)}
+```
+
+Three lines of new code. The ternary replaces the unconditional `<ul>` — if results exist, render them; otherwise, render a message. Notice the message echoes the query back: *"No results for 'xyz'."* That's doing two things at once. It confirms the system received the input (not broken), and it frames zero results as a valid outcome (not a bug).
+
+Watch `isEmpty` flip to `true` in the state inspector. Now clear the field — the full list returns instantly. This instant recovery matters: it tells the user the data isn't gone, just hidden. The search is a lens, not a filter that destroys.
+
+In production, you'd go further — a "clear search" button, alternative query suggestions, maybe an illustration. But the principle holds: every state of your UI should communicate something deliberate.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Extract to a reusable hook
+
+Everything works. So why change anything?
+
+Because you'll build this again. A product catalog with search. A user directory with search. An API explorer with search. Each one copies the same `useState` + `filter` logic. Then someone discovers that queries with trailing spaces return zero results — you add a `.trim()` in the catalog and forget the other two.
+
+Duplication isn't a problem because of the typing. It's a problem because of the *divergence* — three copies that start identical and slowly drift as each gets patched independently.
+
+```tsx
+// useSearch.ts
+import { useState } from "react";
+
+export function useSearch(items: string[]) {
+  const [query, setQuery] = useState("");
+  const results = items.filter((item) =>
+    item.toLowerCase().includes(query.toLowerCase())
+  );
+  return { query, setQuery, results };
+}
+```
+
+Seven lines. The component collapses to a single destructure:
+
+```tsx
+import { useSearch } from "./useSearch";
+
+function App() {
+  const { query, setQuery, results } = useSearch(items);
+  // rendering only — no filtering logic
+}
+```
+
+Custom hooks are React's composition primitive — any function that starts with `use` and calls other hooks. The `use` prefix isn't just convention; it's how React's linter knows to enforce the rules of hooks.
+
+The component is now purely about rendering. The search logic lives in a module that's independently testable — you can write unit tests for `useSearch` without mounting any components. And because hooks compose, `useSearch` could later wrap `useDeferredValue` for large lists, add `useTransition` for smoother updates, accept a custom comparator for fuzzy matching, or debounce the query with a `useEffect` and a timeout.
+
+The pattern scales because it separates *what to compute* from *how to render it*. That's the real lesson here — not the API of custom hooks, but the architectural instinct to extract behavior the moment it has a name.
+
+</section>
