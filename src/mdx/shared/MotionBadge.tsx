@@ -3,6 +3,7 @@
 import styles from "@/components/retro/retro.module.css";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { motion } from "framer-motion";
+import { SPRING } from "@/lib/motion";
 
 export function MotionBadge({ label = "motion" }: { label?: string }) {
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -25,7 +26,7 @@ export function MotionBadge({ label = "motion" }: { label?: string }) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.05, boxShadow: "0 0 0 1px var(--color-border)" }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      transition={SPRING.gentle}
     >
       {label}
     </motion.span>

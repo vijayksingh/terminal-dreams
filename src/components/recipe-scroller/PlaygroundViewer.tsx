@@ -3,8 +3,7 @@
 import dynamic from "next/dynamic";
 import type { Monaco } from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 
 import {
@@ -14,7 +13,6 @@ import {
 } from "@/components/playground/runtime";
 import { createRecipeId, upsertRecipe } from "@/components/playground/storage";
 import type { PlaygroundWorkspace } from "@/components/playground/types";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { VESPER_THEME_DATA, VESPER_THEME_NAME } from "@/lib/monaco-vesper";
 
 const MonacoEditor = dynamic(
@@ -43,13 +41,15 @@ type PlaygroundViewerProps = {
 
 export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps) {
   const router = useRouter();
-  const prefersReducedMotion = usePrefersReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const [buildResult, setBuildResult] = useState<PlaygroundBuildResult | null>(null);
   const [isBuilding, setIsBuilding] = useState(true);
+  const [buildError, setBuildError] = useState<string | null>(null);
   const [splitRatio, setSplitRatio] = useState(0.55);
   const blobUrlsRef = useRef<string[]>([]);
+  const pendingRevocationRef = useRef<string[]>([]);
 
   const resolvedFocusPath = focusFile ?? workspace.entry;
   const defaultFile =
@@ -70,6 +70,7 @@ export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps
   // Build on workspace change
   useEffect(() => {
     setIsBuilding(true);
+    setBuildError(null);
     let cancelled = false;
 
     buildPlaygroundSource(workspace)
@@ -78,13 +79,19 @@ export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps
           revokeBlobUrls(result.blobUrls);
           return;
         }
-        revokeBlobUrls(blobUrlsRef.current);
+        // Queue old blob URLs for revocation after iframe loads
+        if (blobUrlsRef.current.length > 0) {
+          pendingRevocationRef.current.push(...blobUrlsRef.current);
+        }
         blobUrlsRef.current = result.blobUrls;
         setBuildResult(result);
         setIsBuilding(false);
       })
-      .catch(() => {
-        if (!cancelled) setIsBuilding(false);
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setBuildError(err instanceof Error ? err.message : String(err));
+          setIsBuilding(false);
+        }
       });
 
     return () => {
@@ -92,10 +99,19 @@ export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps
     };
   }, [workspace]);
 
+  // Revoke pending blob URLs once the iframe has loaded the new document
+  const handleIframeLoad = useCallback(() => {
+    if (pendingRevocationRef.current.length > 0) {
+      revokeBlobUrls(pendingRevocationRef.current);
+      pendingRevocationRef.current = [];
+    }
+  }, []);
+
   // Cleanup blob URLs on unmount
   useEffect(() => {
     return () => {
       revokeBlobUrls(blobUrlsRef.current);
+      revokeBlobUrls(pendingRevocationRef.current);
     };
   }, []);
 
@@ -135,7 +151,6 @@ export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps
     window.addEventListener("pointerup", onUp);
   }
 
-  const workspaceKey = `${workspace.entry}:${workspace.files[0]?.id ?? ""}`;
   const pct = Math.round(splitRatio * 100);
 
   return (
@@ -153,25 +168,28 @@ export function PlaygroundViewer({ workspace, focusFile }: PlaygroundViewerProps
         className="relative min-h-0 overflow-hidden"
         style={{ borderBottom: "1px solid var(--color-border)" }}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={workspaceKey}
-            className="absolute inset-0"
-            initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: prefersReducedMotion ? 1 : 0 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
+        {buildError ? (
+          <div
+            className="absolute inset-0 flex items-center justify-center p-4 overflow-auto"
+            style={{ background: "var(--color-bg)" }}
           >
-            {buildResult?.srcDoc ? (
-              <iframe
-                srcDoc={buildResult.srcDoc}
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full border-0 bg-white"
-                title="Live preview"
-              />
-            ) : null}
-          </motion.div>
-        </AnimatePresence>
+            <pre
+              className="text-xs font-mono whitespace-pre-wrap max-w-full"
+              style={{ color: "var(--color-app-accent, #e06)" }}
+            >
+              {buildError}
+            </pre>
+          </div>
+        ) : buildResult?.srcDoc ? (
+          <iframe
+            ref={iframeRef}
+            srcDoc={buildResult.srcDoc}
+            onLoad={handleIframeLoad}
+            sandbox="allow-scripts allow-same-origin"
+            className="absolute inset-0 w-full h-full border-0 bg-white"
+            title="Live preview"
+          />
+        ) : null}
         {isBuilding && (
           <div
             className="absolute inset-0 flex items-center justify-center"

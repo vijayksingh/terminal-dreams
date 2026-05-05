@@ -4,41 +4,45 @@
 import type { CategoryInfo, CookbookCategory, CookbookRecipe } from "./cookbook-types";
 
 // Category metadata with visual identity information
+// All categories share the site's accent color — illustrations provide identity.
+const ACCENT = "var(--color-accent)";
+const TEXT = "var(--color-text)";
+
 export const CATEGORIES: CategoryInfo[] = [
   {
     slug: "curries",
     name: "Curries & Gravies",
     description: "The heart of Indian cooking — rich, aromatic, soul-warming gravies",
-    accentColor: "#c9956b", // Warm caramel (matches app accent)
-    textColor: "#e8e3d8",
+    accentColor: ACCENT,
+    textColor: TEXT,
   },
   {
     slug: "street-food",
     name: "Street Food & Snacks",
     description: "Bold, quick, soul-satisfying bites from the streets of India",
-    accentColor: "#d4a574", // Golden tan (matches app link color)
-    textColor: "#e8e3d8",
+    accentColor: ACCENT,
+    textColor: TEXT,
   },
   {
     slug: "drinks",
     name: "Cocktails & Drinks",
     description: "From masala chai to craft cocktails — beverages with character",
-    accentColor: "#9d8b72", // Muted taupe
-    textColor: "#e8e3d8",
+    accentColor: ACCENT,
+    textColor: TEXT,
   },
   {
     slug: "sweets",
     name: "Sweets & Baking",
     description: "Mithai meets modern baking — indulgent, aromatic, celebration-worthy",
-    accentColor: "#b8a690", // Muted tan (matches accent-weak)
-    textColor: "#e8e3d8",
+    accentColor: ACCENT,
+    textColor: TEXT,
   },
   {
     slug: "quick-meals",
     name: "Quick Meals",
     description: "Weeknight staples under 30 minutes — when you need comfort fast",
-    accentColor: "#a89379", // Muted sage brown
-    textColor: "#e8e3d8",
+    accentColor: ACCENT,
+    textColor: TEXT,
   },
 ];
 

@@ -2,6 +2,9 @@
 // - Shared components available everywhere
 // - Per-post components can be registered in postComponentLoaders
 
+import { RichParagraph } from "@/components/ui/RichParagraph";
+import { RichText } from "@/components/ui/RichText";
+import { CodeAnnotator } from "@/mdx/shared/CodeAnnotator";
 import { EmbeddablePlayground } from "@/mdx/shared/EmbeddablePlayground";
 import { InteractiveCounter } from "@/mdx/shared/InteractiveCounter";
 import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
@@ -17,17 +20,20 @@ type PostComponentLoader = () => Promise<MdxComponentModule>;
 export type MdxComponentMap = Record<string, MdxComponent>;
 
 export const sharedComponents: MdxComponentMap = {
+  CodeAnnotator: CodeAnnotator as unknown as MdxComponent,
   EmbeddablePlayground,
   InteractiveCounter,
   MonacoCodeBlock,
   MotionBadge,
   Playground,
+  RichText: RichText as unknown as MdxComponent,
+  p: RichParagraph as unknown as MdxComponent,
   pre: MonacoCodeBlock,
 };
 
 const postComponentLoaders: Record<string, PostComponentLoader> = {
-  // Example:
-  // "my-post-slug": () => import("@/mdx/posts/my-post-slug"),
+  "anatomy-of-an-agent-harness": () =>
+    import("@/mdx/posts/anatomy-of-an-agent-harness"),
 };
 
 function isMdxComponent(value: unknown): value is MdxComponent {

@@ -5,6 +5,7 @@ import { PixelTrail } from "@/components/interactions/PixelTrail";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import Link from "next/link";
 import { RetroAboutCard } from "./RetroAboutCard";
+import { ThemeToggle } from "./ThemeToggle";
 import styles from "./retro.module.css";
 
 type RetroHeaderProps = {
@@ -28,7 +29,7 @@ export function RetroHeader({ showAboutCard = false }: RetroHeaderProps) {
     <header className={styles.header}>
       <div className={styles.headerOverlay}>
         {!prefersReducedMotion ? (
-          <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-white/20" />
+          <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-[var(--color-border)]" />
         ) : null}
       </div>
       <div className={headerInnerClassName}>
@@ -47,6 +48,9 @@ export function RetroHeader({ showAboutCard = false }: RetroHeaderProps) {
                   </Link>
                 </li>
               ))}
+              <li>
+                <ThemeToggle />
+              </li>
             </ul>
           </nav>
         </div>

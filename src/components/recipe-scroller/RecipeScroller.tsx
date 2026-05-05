@@ -1,24 +1,37 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useActiveSection } from "@/hooks/useActiveSection";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import type { RecipeStep } from "@/lib/recipe-types";
 import { PlaygroundViewer } from "./PlaygroundViewer";
 import { RecipeStepBlock } from "./RecipeStepBlock";
 import { RecipeStepProgress } from "./RecipeStepProgress";
+
+/** True on lg+ screens (1024px), null until measured on the client. */
+function useIsLg() {
+  const [isLg, setIsLg] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    setIsLg(mql.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsLg(e.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return isLg;
+}
 
 type RecipeScrollerProps = {
   steps: RecipeStep[];
 };
 
 export function RecipeScroller({ steps }: RecipeScrollerProps) {
-  const prefersReducedMotion = usePrefersReducedMotion();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stepIds = useMemo(() => steps.map((s) => s.id), [steps]);
   const activeId = useActiveSection(stepIds, scrollContainerRef);
+  const isLg = useIsLg();
 
   const activeStep = steps.find((s) => s.id === activeId) ?? steps[0];
 
@@ -43,15 +56,17 @@ export function RecipeScroller({ steps }: RecipeScrollerProps) {
                   stepNumber={i + 1}
                   isActive={step.id === activeId}
                 />
-                {/* Mobile viewer: inline after each step */}
+                {/* Mobile viewer: reserve space, but only mount PlaygroundViewer on small screens */}
                 <div
                   className="lg:hidden mx-4 mb-8"
                   style={{ height: "480px" }}
                 >
-                  <PlaygroundViewer
-                    workspace={step.workspace}
-                    focusFile={step.focusFile}
-                  />
+                  {isLg === false && (
+                    <PlaygroundViewer
+                      workspace={step.workspace}
+                      focusFile={step.focusFile}
+                    />
+                  )}
                 </div>
               </div>
             ))}
@@ -66,23 +81,12 @@ export function RecipeScroller({ steps }: RecipeScrollerProps) {
         className="hidden lg:block lg:sticky lg:top-0 lg:h-screen"
         style={{ borderLeft: "1px solid var(--color-border)" }}
       >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeStep?.id ?? "empty"}
-            className="h-full"
-            initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: prefersReducedMotion ? 1 : 0 }}
-            transition={{ duration: prefersReducedMotion ? 0 : 0.15 }}
-          >
-            {activeStep && (
-              <PlaygroundViewer
-                workspace={activeStep.workspace}
-                focusFile={activeStep.focusFile}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        {isLg && activeStep && (
+          <PlaygroundViewer
+            workspace={activeStep.workspace}
+            focusFile={activeStep.focusFile}
+          />
+        )}
       </div>
     </div>
   );

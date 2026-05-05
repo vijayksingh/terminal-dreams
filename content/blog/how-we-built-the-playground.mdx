@@ -1,9 +1,9 @@
 ---
-title: "How We Built a Browser-Native React Playground"
+title: "How I Built a Browser-Native React Playground"
 date: "2026-02-18"
 category: "engineering"
 tags: ["react", "babel", "browser", "architecture", "typescript"]
-summary: "A deep dive into assembling four browser primitives — Babel standalone, import maps, blob URLs, and srcdoc iframes — into a zero-backend TypeScript/React playground. The single reference for anyone building this themselves."
+summary: "Four browser primitives — Babel, import maps, blob URLs, srcdoc iframes — assembled into a zero-backend React/TypeScript playground."
 interactive: true
 ---
 
@@ -15,21 +15,21 @@ brain starts to feel like it is talking directly to the machine.
 That feeling is what a playground is actually selling. The visible feature is the editor
 and the preview pane. The real product is the latency collapse.
 
-We built ours with no backend, no cloud sandbox service, and no build daemon. Every
+I built mine with no backend, no cloud sandbox service, and no build daemon. Every
 transformation — from the TypeScript you type to the React component you see — happens
 inside the browser tab. When you close the page, nothing persists on a server anywhere.
 
 The interesting engineering problem is that browsers are not Node.js. Running arbitrary
 TypeScript/React code in a browser requires assembling four low-level browser primitives
 that almost never appear together in tutorials. This post is the reference I wish had
-existed before we started. It documents exactly what each primitive does, why it exists,
+existed before I started. It documents exactly what each primitive does, why it exists,
 and how the four of them interlock.
 
 ---
 
-## Why Your Browser Can't Run Your Code
+## Three Reasons Browsers Reject Your JSX
 
-Before we describe the solution, it is worth being precise about what the problem
+Before I describe the solution, it is worth being precise about what the problem
 actually is. There are three separate failures, not one. Conflating them leads you to
 grab the wrong tool.
 
@@ -121,7 +121,7 @@ test each one in isolation. The coupling between stages flows in exactly one dir
 later stages consume the output of earlier ones.
 
 The only async work is a one-time initialization call for the lexer WASM binary, which
-we fire at module load time. Every subsequent build is synchronous.
+I fire at module load time. Every subsequent build is synchronous.
 
 ---
 
@@ -137,7 +137,7 @@ needs React and TypeScript transforms, you pay that cost once on first load, and
 Babel lives in memory. Transforms for typical playground-sized files (a few hundred
 lines each) complete in single-digit milliseconds.
 
-We configure two presets:
+I configure two presets:
 
 ```ts
 const presets: Array<string | [string, Record<string, unknown>]> = [];
@@ -173,7 +173,7 @@ the array produces `["react", "typescript"]` which means TypeScript runs first.
 classical runtime, `<App />` becomes `React.createElement(App, null)` — which requires
 `React` to be in scope. With the automatic runtime it becomes
 `import { jsx } from "react/jsx-runtime"` at the top of the file. This matters because
-those auto-generated imports (`react/jsx-runtime`) flow through our import rewriting
+those auto-generated imports (`react/jsx-runtime`) flow through my import rewriting
 pipeline just like any other import. Users don't need to manually `import React` at the
 top of every file.
 
@@ -188,7 +188,8 @@ CSS and JSON files skip Babel entirely. CSS becomes a JavaScript module that inj
 `<style>` tag (keyed by a deterministic ID so re-runs don't accumulate duplicate
 sheets). JSON becomes `export default <parsed value>`.
 
-Here is a React/TypeScript component you can experiment with right now:
+Here is a React/TypeScript component you can experiment with right now — try editing
+the code and watch the preview update live:
 
 <EmbeddablePlayground
   preset="react-ts"
@@ -223,13 +224,13 @@ relative paths. They are bare specifiers, and bare specifiers produce an immedia
 `TypeError` with no fallback.
 
 The relative import problem is subtler. `"./App"` looks like a relative path. In a real
-file system it would resolve correctly. But our transpiled files are not real files on
-disk. They are strings. We are going to put them into blob URLs in a moment, and a blob
+file system it would resolve correctly. But my transpiled files are not real files on
+disk. They are strings. I am going to put them into blob URLs in a moment, and a blob
 URL looks like `blob:null/8a3f1b2c-...`. There is no meaningful "directory" for a
 relative path to be relative to. The browser cannot traverse a virtual file tree by
 following `../utils/helpers` from a blob URL.
 
-So we cannot use bare specifiers, and we cannot use relative paths. What can we use?
+So I cannot use bare specifiers, and I cannot use relative paths. What can I use?
 
 ---
 
@@ -258,31 +259,31 @@ bare specifier TypeError disappears.
 There is one hard constraint: **the import map must appear before any `<script type="module">` that uses the specifiers it covers.** The browser builds the import map
 registry before any module scripts execute. If a module script starts loading before the
 map is parsed, specifiers that should be in the map will fail to resolve. The ordering
-in our generated HTML is therefore: importmap first, then the entry module script.
+in the generated HTML is therefore: importmap first, then the entry module script.
 
-Import maps handle our npm packages (via esm.sh) and our local files (via blob URLs).
+Import maps handle the npm packages (via esm.sh) and the local files (via blob URLs).
 But there is a gap: the transpiled files still contain the original import specifiers —
-`"./App"`, `"react"`. We need to rewrite them to the form the import map expects
-before we create the blob URLs. That is what the next two tools handle.
+`"./App"`, `"react"`. I need to rewrite them to the form the import map expects
+before I create the blob URLs. That is what the next two tools handle.
 
 ---
 
 ## The Virtual Namespace
 
-Here is the key insight of the architecture. We need a stable, unambiguous way to refer
-to each file in the workspace from any other file. The specifier we use in the rewritten
+Here is the key insight of the architecture. I need a stable, unambiguous way to refer
+to each file in the workspace from any other file. The specifier I use in the rewritten
 import must match the key in the import map.
 
-We cannot use the file's actual path (`/src/App.tsx`) as an import specifier, because
+I cannot use the file's actual path (`/src/App.tsx`) as an import specifier, because
 import maps require specifiers to be either URLs or valid module specifier strings. A
 bare `/src/App.tsx` would be treated as a URL-relative-path from the page's origin —
-not what we want.
+not what I want.
 
-We cannot use a data URL or pre-computed blob URL as the specifier, because we need to
-rewrite the import specifiers before we create the blob URLs (the creation order must be
+I cannot use a data URL or pre-computed blob URL as the specifier, because I need to
+rewrite the import specifiers before I create the blob URLs (the creation order must be
 reversed).
 
-The solution is a virtual namespace: a made-up bare specifier prefix that we own.
+The solution is a virtual namespace: a made-up bare specifier prefix that I own.
 
 ```ts
 const PLAYGROUND_LOCAL_PREFIX = "td-playground";
@@ -293,8 +294,8 @@ function toVirtualSpecifier(path: string): string {
 // "/src/App.tsx" → "td-playground/src/App.tsx"
 ```
 
-When we rewrite imports, every local file reference becomes a `td-playground/...`
-specifier. When we build the import map, every `td-playground/...` key maps to the blob
+When I rewrite imports, every local file reference becomes a `td-playground/...`
+specifier. When I build the import map, every `td-playground/...` key maps to the blob
 URL for that file. The map entry is constructed last, after all blob URLs exist.
 
 The virtual prefix also solves a secondary problem: it is unambiguous. A specifier
@@ -333,7 +334,7 @@ workspace has exactly one entry in the import map.
 
 ## es-module-lexer
 
-We need to find every import specifier in a file and replace it. The temptation is to
+I need to find every import specifier in a file and replace it. The temptation is to
 use a regular expression. Resist it.
 
 Import specifiers appear in patterns like:
@@ -374,18 +375,18 @@ const [imports] = parse(code);
 
 `s` and `e` are character offsets into the source string, pointing to the content of
 the specifier (the text inside the quotes). `n` is the resolved specifier string. With
-these offsets we can replace any specifier surgically — without touching any other
+these offsets I can replace any specifier surgically — without touching any other
 character in the source — using magic-string.
 
 The WASM binary is small (~36 KB) and parses faster than any JavaScript alternative
-because the main loop is native machine code. We initialize it once at module load time
+because the main loop is native machine code. I initialize it once at module load time
 so the async `init` promise is settled before the first build request arrives.
 
 ---
 
 ## magic-string
 
-Once we have character offsets, we need a tool that can replace substrings at specific
+Once I have character offsets, I need a tool that can replace substrings at specific
 positions in a string without invalidating the positions of subsequent replacements.
 
 You could do this with a naive string substitution, but you have to be careful: if you
@@ -416,7 +417,7 @@ const rewritten = magicString.toString();
 
 magic-string tracks all mutations internally and applies them correctly when you call
 `toString()`. It also maintains a source map of every character rewrite, which is useful
-if you ever want to generate proper source maps. We do not emit source maps (we use
+if you ever want to generate proper source maps. I do not emit source maps (I use
 `retainLines` instead, which is simpler), but magic-string's origin in the Rollup
 ecosystem means the source map capability comes for free.
 
@@ -424,8 +425,8 @@ ecosystem means the source map capability comes for free.
 
 ## Blob URLs
 
-With each file transpiled and its imports rewritten to virtual specifiers, we have a
-collection of JavaScript strings. We need to turn them into something the browser can
+With each file transpiled and its imports rewritten to virtual specifiers, I have a
+collection of JavaScript strings. I need to turn them into something the browser can
 load as a module.
 
 `URL.createObjectURL` converts an in-memory `Blob` into a `blob:` URL:
@@ -439,9 +440,9 @@ const blobUrl = URL.createObjectURL(
 The browser treats this URL as a real resource. You can use it anywhere you would use
 an HTTP URL: in an import map, in a `<script src>`, in a fetch request. Blob URLs are
 same-origin with the page that created them (or null-origin for opaque origins, which
-is what we have in our srcdoc iframe).
+is what I have in the srcdoc iframe).
 
-Each file in the workspace gets its own blob URL. We collect them all into the import
+Each file in the workspace gets its own blob URL. I collect them all into the import
 map alongside the esm.sh URLs for npm packages:
 
 ```ts
@@ -453,7 +454,7 @@ importMap["react"] = "https://esm.sh/react@19.1.0?bundle";
 **Memory management.** Blob URLs are reference-counted. The browser will not garbage
 collect the underlying data until you call `URL.revokeObjectURL(url)`. A playground
 that rebuilds on every keystroke can create dozens of blob URLs per minute if it leaks
-them. We track every blob URL we create in a ref, and before each new build we revoke
+them. I track every blob URL I create in a ref, and before each new build I revoke
 the previous set:
 
 ```ts
@@ -480,10 +481,10 @@ leak blob URLs into the browser's memory.
 ## The iframe Sandbox
 
 The transpiled, import-rewritten, blob-URL-resolved workspace is now ready to render.
-We inject it into an `<iframe srcdoc="...">` element.
+I inject it into an `<iframe srcdoc="...">` element.
 
-`srcdoc` lets us set the entire HTML document of the iframe as a string attribute. No
-network request, no URL, no server. The iframe loads its document from the string we
+`srcdoc` lets you set the entire HTML document of the iframe as a string attribute. No
+network request, no URL, no server. The iframe loads its document from the string I
 provide. The generated HTML looks like:
 
 ```html
@@ -519,19 +520,19 @@ There are several non-obvious constraints in this structure.
 
 **Import map ordering.** The `<script type="importmap">` must come before any
 `<script type="module">` that references the mapped specifiers. If the module script
-begins executing before the import map is parsed, bare specifiers will fail. We always
+begins executing before the import map is parsed, bare specifiers will fail. I always
 emit the importmap first.
 
 **The `sandbox` attribute trap.** Your first instinct might be to add
 `sandbox="allow-scripts"` to the iframe for security. Do not do this. The `sandbox`
 attribute, without `allow-same-origin`, strips the iframe of its origin and gives it a
-unique opaque origin. Blob URLs created outside the iframe — which is where we create
+unique opaque origin. Blob URLs created outside the iframe — which is where I create
 them — are same-origin with the outer page. An opaque-origin iframe cannot load
 same-origin blob URLs. They fail silently with a CORS-like error. If you want to use
 `sandbox`, you must also include `allow-same-origin`, which largely defeats the purpose
 of sandboxing.
 
-We do not set `sandbox` at all. Instead, we rely on the fact that `srcdoc` iframes
+I do not set `sandbox` at all. Instead, I rely on the fact that `srcdoc` iframes
 have a null origin by default — they are not same-origin with the host page. User
 scripts inside the iframe cannot access `window.parent`'s DOM, localStorage, or cookies
 via the same-origin policy. The isolation is automatic and free.
@@ -539,7 +540,7 @@ via the same-origin policy. The isolation is automatic and free.
 **The `</script>` escaping trick.** The import map and error handler JavaScript are
 embedded directly in the srcdoc HTML string. If that JavaScript contains the literal
 string `</script>`, the HTML parser will think the script element has ended prematurely.
-We escape it:
+I escape it:
 
 ```ts
 function escapeScriptEnd(value: string): string {
@@ -576,7 +577,7 @@ Click "Attempt escape." The access to `window.parent.document` throws a
 
 ## Error Handling
 
-A playground that silently fails on user errors is frustrating. We need the iframe to
+A playground that silently fails on user errors is frustrating. I need the iframe to
 communicate errors back to the host page.
 
 The entry module script is wrapped in a try/catch, and two event listeners capture
@@ -609,11 +610,11 @@ window.addEventListener("unhandledrejection", function(event) {
 });
 ```
 
-The `channel: "td-playground"` field namespaces our messages from any other postMessage
+The `channel: "td-playground"` field namespaces the messages from any other postMessage
 traffic on the page. The host listens on `window.addEventListener("message", ...)` and
 filters by channel before dispatching.
 
-We also post a `"ready"` message after the entry module successfully imports. This
+I also post a `"ready"` message after the entry module successfully imports. This
 allows the host to clear any previous error state when the user's code transitions from
 broken to working:
 
@@ -640,7 +641,7 @@ corresponds to the same line in the input. Error line numbers are directly usabl
 
 ## Monaco and Multi-File Types
 
-The editor is Monaco — the same engine that powers VS Code. We load it via
+The editor is Monaco — the same engine that powers VS Code. I load it via
 `next/dynamic` with `ssr: false`. Monaco is a substantial bundle and it has no
 server-side rendering path; loading it dynamically keeps it out of the initial
 page payload.
@@ -668,7 +669,7 @@ the model at `file:///src/utils.ts` and provides type checking, autocompletion, 
 go-to-definition across the workspace. No additional configuration — it works by
 convention of the URI scheme.
 
-The Vesper dark theme we apply is an intentional design decision. Playgrounds embedded
+The Vesper dark theme I apply is an intentional design decision. Playgrounds embedded
 in articles are competing with the article text for attention. A neutral dark theme with
 muted syntax highlighting keeps the focus on the structure of the code rather than the
 colors. The theme data is loaded from a static JSON file and registered with Monaco's
@@ -678,7 +679,7 @@ colors. The theme data is loaded from a static JSON file and registered with Mon
 
 ## Storage: Three Layers
 
-The playground's state needs to survive page refreshes. We use three `localStorage`
+The playground's state needs to survive page refreshes. I use three `localStorage`
 layers, each with its own key prefix:
 
 | Layer | Key pattern | Contents |
@@ -688,8 +689,8 @@ layers, each with its own key prefix:
 | Recipe item | `td:playground:recipes:item:{key}:{id}` | Full workspace + snapshots for one recipe |
 
 The recipe layer was added after the original single-workspace storage, not instead of
-it. We chose not to write a one-time migration script because migration scripts are
-brittle — they run once, and if the schema evolves further you need another script. We
+it. I chose not to write a one-time migration script because migration scripts are
+brittle — they run once, and if the schema evolves further you need another script. I
 use opportunistic migration instead: when `ensureRecipeStore` finds no recipe index key,
 it checks for the legacy workspace key and promotes it to a recipe automatically. Users
 who have never opened the playground simply start with an empty recipe store. Users with
@@ -716,7 +717,7 @@ function coerceWorkspace(raw: unknown): PlaygroundWorkspace {
 This function validates and normalizes the stored JSON against the current schema. If
 a field is missing (because the data was written by an older version of the app), it
 gets a sensible default. If a field has changed shape, it gets coerced to the new shape.
-We do not crash on malformed data; we repair it at read time. This means we can freely
+I do not crash on malformed data; I repair it at read time. This means I can freely
 evolve the shape of stored objects — add fields, rename fields, change types — without
 bumping a schema version key and without writing migration scripts.
 
@@ -724,7 +725,7 @@ Snapshots are stored inline within the recipe object. This keeps each recipe
 self-contained: one `localStorage.getItem` retrieves a recipe and all its named
 checkpoints. The tradeoff is that very large workspaces with many snapshots will
 produce large serialized values. In practice, `localStorage` keys are limited to about
-5 MB per origin. We have not hit this limit with any real-world recipe.
+5 MB per origin. I have not hit this limit with any real-world recipe.
 
 Here is the full IDE experience with multiple files and tabs:
 
@@ -754,31 +755,31 @@ Here is the full IDE experience with multiple files and tabs:
 
 ---
 
-## The Lessons
+## Surprises and Mistakes
 
-**What we got wrong the first time.** Our first implementation used `sandbox="allow-scripts"` on the iframe and spent three hours debugging why import maps
+**What I got wrong the first time.** My first implementation used `sandbox="allow-scripts"` on the iframe and I spent three hours debugging why import maps
 stopped working. The spec is clear on this: without `allow-same-origin`, blob URLs from
-the parent origin are inaccessible. We removed `sandbox` entirely and the isolation we
+the parent origin are inaccessible. I removed `sandbox` entirely and the isolation I
 cared about (null origin) was already there.
 
-**What surprised us.** Monaco's cross-file TypeScript works without any configuration.
-We expected to write glue code to feed cross-file type information to the language
-server. We didn't. The URI convention handles it automatically. This is the kind of
-surprise you only get by trying something rather than reading about it.
+**What surprised me.** Monaco's cross-file TypeScript works without any configuration.
+I expected to write glue code to feed cross-file type information to the language
+server. I didn't need to. The URI convention handles it automatically. This is the kind
+of surprise you only get by trying something rather than reading about it.
 
-**The postMessage naming collision.** The first time we deployed the playground to a
-page that also used an analytics library, we got phantom error messages populating the
-error panel. The analytics library was posting messages to the window. We had not
-namespaced our listener. Adding the `channel: "td-playground"` filter field fixed it
+**The postMessage naming collision.** The first time I deployed the playground to a
+page that also used an analytics library, I got phantom error messages populating the
+error panel. The analytics library was posting messages to the window. I had not
+namespaced my listener. Adding the `channel: "td-playground"` filter field fixed it
 in one line.
 
-**The `retainLines` discovery.** We shipped without `retainLines` for the first two
+**The `retainLines` discovery.** I shipped without `retainLines` for the first two
 weeks. Error line numbers were useless. Users reported that the error panel showed
 "line 2" for errors that were clearly on line 40. Adding `retainLines: true` fixed the
 correspondence immediately. It costs a little output size (more newlines preserved) but
 that cost is irrelevant for in-memory strings.
 
-**The spec as documentation.** Every unintuitive behavior we encountered — import map
+**The spec as documentation.** Every unintuitive behavior I encountered — import map
 ordering, `sandbox` and null origins, blob URL same-origin rules — was explained
 correctly and in detail in the HTML living standard. Browser vendor documentation
 (MDN, Chrome DevTools docs) explained what the APIs do. The spec explained why they
@@ -787,12 +788,12 @@ work, the spec is the fastest path to understanding.
 
 ---
 
-## What's Next
+## Ideas I Haven't Built Yet
 
 **Worker-based transpilation.** Babel runs on the main thread. For playground-sized
 files this is imperceptible, but a single large file (thousands of lines, many
 dependencies) can block the event loop for tens of milliseconds. Moving Babel to a
-Web Worker would keep the editor fully responsive and would allow us to cancel
+Web Worker would keep the editor fully responsive and would let me cancel
 in-flight transpilation when the user types faster than Babel can keep up.
 
 **Shareable links via URL hash.** Encode the workspace as a compressed base64 blob in
@@ -802,7 +803,7 @@ each) under 2000 characters, which fits comfortably in a URL. Longer workspaces 
 need a backend link-shortener or a different encoding strategy.
 
 **Server-side pre-build for recipe articles.** In recipe articles, each step's workspace
-is static and known at Next.js build time. We could pre-transpile every step's files,
+is static and known at Next.js build time. I could pre-transpile every step's files,
 pre-compute the import map, and hydrate the client with already-resolved blob URLs.
 This would eliminate the first-load Babel pass entirely for recipe readers. It is more
 infrastructure to maintain, but it would make the first-render of embedded playgrounds
@@ -811,7 +812,7 @@ instantaneous.
 The architecture has held up well to the recipes feature, which places four to six
 independent playgrounds on a single page. Each playground is a genuine island: separate
 iframe, separate blob URL namespace, blob URLs cleaned up between re-renders. Editing
-one playground's code has no effect on any other. The isolation boundary that we
+one playground's code has no effect on any other. The isolation boundary that I
 designed for security turns out to be equally valuable for correctness.
 
 The core takeaway from building this: the browser platform is more capable than most

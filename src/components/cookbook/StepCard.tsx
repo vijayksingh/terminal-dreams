@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import type { CookbookStep } from "@/lib/cookbook-types";
 import { useCookbookTimer } from "@/hooks/use-cookbook-timer";
 import { useSound } from "@/hooks/use-sound";
+import { TRANSITION } from "@/lib/motion";
 
 type StepCardProps = {
   step: CookbookStep;
@@ -49,7 +50,7 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -50 }}
-      transition={{ duration: 0.3, ease: "easeOut" as const }}
+      transition={TRANSITION.enterCard}
     >
       {/* Step progress */}
       <div className="mb-4">
@@ -62,7 +63,7 @@ export function StepCard({ step, stepNumber, totalSteps, onNext, onPrevious, can
               className="h-full bg-[var(--color-accent)]"
               initial={{ width: 0 }}
               animate={{ width: `${(stepNumber / totalSteps) * 100}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" as const }}
+              transition={TRANSITION.progress}
             />
           </div>
         </div>

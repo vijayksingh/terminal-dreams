@@ -5,6 +5,8 @@ export type TimelinePost = {
   category?: string;
   readTime?: string;
   kind: "post" | "recipe";
+  series?: string;
+  part?: number;
 };
 
 export type TimelineGroup = {

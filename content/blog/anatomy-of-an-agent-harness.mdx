@@ -1,0 +1,480 @@
+---
+title: "Anatomy of an Agent Harness: A Low-Level Design Tour of Flue"
+date: "2026-05-03"
+category: "engineering"
+tags: ["ai", "agents", "architecture", "typescript", "flue"]
+summary: "How withastro/flue's five primitives compose into a framework for building autonomous agents. A senior engineer's tour through the design decisions."
+interactive: true
+---
+
+An LLM is a stateless function. You give it text, it returns text. There is no memory
+between calls, no concept of identity, no ability to delegate, no persistent workspace.
+Every request starts from zero. The model does not know what it said thirty seconds ago
+unless you paste the entire conversation back into the next request.
+
+But an agent needs all of those things. An agent needs persistent memory across turns so
+it can build on what happened five messages ago without the caller manually stitching
+history together. It needs the ability to delegate work to specialized sub-agents when a
+task exceeds its own scope — a code review agent that encounters a security concern should
+be able to hand that concern to a security specialist, not attempt a half-informed answer.
+It needs configurable behavior without code changes, because the people tuning agent
+behavior are not always the people writing the framework. It needs identity and persona
+management so the same underlying model can act as a code reviewer in one context and a
+documentation writer in another. And it needs isolated execution environments so shell
+commands and file operations do not leak across sessions or, worse, across users.
+
+These are five separate concerns. Conflating them — building one monolithic "agent class"
+that handles memory and delegation and configuration and identity and sandboxing — leads
+you to a system that is hard to test, hard to extend, and hard to reason about when
+something goes wrong. And things always go wrong with agents. The model hallucinates a
+file path. A tool call returns an unexpected error. A delegated task recurses infinitely.
+When these failures happen, you need to know which layer broke, and a monolith makes every
+layer opaque.
+
+I have been studying [withastro/flue](https://github.com/withastro/flue), an agent harness
+framework that takes the opposite approach. Instead of one big abstraction, it offers five
+small primitives that compose. This post is my design tour through those primitives — what
+problems they solve, why they are shaped the way they are, and how they fit together into
+a system that is greater than its parts.
+
+Here is the architecture map. Each node is a primitive. Click any node to see what it does
+and how it connects to the others.
+
+<ArchitectureMap />
+
+Spend a moment with this diagram. Notice that the Session is the hub — it connects to
+everything else. That is not an accident. The session is where state lives, and the other
+four primitives are stateless configurations that the session applies at call time. This
+hub-and-spoke topology is one of the most important design decisions in the framework.
+It means there is exactly one stateful object to reason about per agent interaction, and
+everything else is a modifier applied to that object.
+
+---
+
+## The Full Picture First
+
+Before I zoom into any single primitive, I want to show you how a prompt flows through
+the entire system end-to-end. This is what a senior engineer does when onboarding someone
+to a new codebase: show the whole pipeline first, then zoom in. If you understand each
+piece in isolation but never see the flow, you understand the parts but not the system.
+
+The reason top-down works better than bottom-up for framework comprehension is that
+frameworks are defined by their composition, not their components. A session in isolation
+is just a message store. A skill in isolation is just a markdown file. A sandbox in
+isolation is just a bash subprocess. None of these are interesting on their own. The
+framework is what happens when a prompt enters, passes through the session, picks up a
+skill, hits the model, spawns a task, executes tool calls in the sandbox, and produces a
+response. That pipeline is the thing worth understanding. The primitives are in service
+of it, not the other way around.
+
+Step through the execution flow below. Each stage shows what happens, what data moves,
+and which primitive is responsible.
+
+<ExecutionFlow />
+
+What the step-through reveals is that each stage is independent but the flow is
+unidirectional. A prompt enters at the top and a response exits at the bottom. There are
+no cycles in the main pipeline — data flows in exactly one direction. The only recursion
+happens when a task spawns a child, and even that is bounded: depth is capped at four
+levels, and the child runs to completion before the parent continues.
+
+Notice how the session bookends the flow. It is the first thing that activates (loading
+message history, appending the new prompt) and the last thing that fires (persisting the
+response, incrementing the version). Every other primitive operates between those two
+moments. The session is the frame; everything else is the picture inside it.
+
+This pipeline architecture has a practical consequence for testing: you can test each
+stage by mocking its neighbors. You can test skill resolution without an LLM by checking
+that the correct markdown file is loaded and injected. You can test sandbox execution
+without a session by feeding it shell commands directly. You can test the full pipeline
+end-to-end with a mock model that returns predictable responses. The stages are coupled
+by data flow, not by shared mutable state — which is the prerequisite for testability.
+
+<WhyBox question="Why show the full flow before the pieces?">
+Because composition is the design. The primitives exist to serve this pipeline, not the other way around. If you understand each primitive in isolation but never see the flow, you understand the parts but not the system. A senior engineer always starts with the system.
+</WhyBox>
+
+---
+
+## Sessions and Tasks — The Execution Core
+
+These two primitives carry state and enable delegation. I teach them together because
+tasks are children of sessions — you cannot understand tasks without first understanding
+the parent they are born from. And you cannot understand why sessions are designed the way
+they are without seeing the demands that task spawning places on them.
+
+### Sessions
+
+A session is a message log. Not a state machine, not an event store, not an actor — a
+message log. Every interaction with the model is recorded as a message: user prompts,
+assistant responses, tool calls, tool results. The session is this ordered sequence of
+messages plus a small amount of metadata for housekeeping.
+
+This is a deliberate design choice with non-obvious consequences. The most important
+consequence is debuggability. When an agent misbehaves — and they always misbehave — you
+do not need to reverse-engineer what happened from a state snapshot or a set of event
+flags. You read the transcript. Every decision the model made, every tool it called,
+every result it received, is right there in the message array, in chronological order.
+You can replay any session by re-reading its messages. You can diff two sessions to see
+where they diverged. You can truncate a session to an earlier point and re-run from there.
+None of these operations are possible with state-machine architectures where history is
+compressed into a current state.
+
+Compaction is what happens when the message history grows too long for the model's context
+window. This is an inevitable problem: a productive agent session can accumulate hundreds
+of messages with tool call results that are individually large (imagine a `cat` command
+that returns a 500-line file). Instead of truncating old messages (which loses information
+the model might need later) or failing with a context-length error (which loses progress),
+the session summarizes older messages into a condensed form and replaces the originals. The
+conversation continues with the summary in place. The model sees a compressed version of
+the early conversation and full-fidelity recent messages. This is lossy, but the loss is
+controlled and the alternative — stopping mid-task — is worse.
+
+Exclusive operations are the concurrency model. Only one operation can run against a
+session at a time. This is enforced by the version number on the session data: each write
+increments the version, and if two operations try to write simultaneously, one will attempt
+to write with a stale version and fail. This is optimistic concurrency control — the same
+pattern used by databases and collaborative editing systems. It is simpler and more
+reliable than distributed locks. It means you never have two model calls racing to append
+to the same message history, which would produce an interleaved, nonsensical transcript.
+
+<CodeAnnotator variant="session" />
+
+The three methods on the Session interface — `prompt`, `skill`, `task` — are the only
+operations an agent can perform. This is the entire API surface for agent execution. There
+is no `setState`, no `emit`, no `subscribe`. The session is not a general-purpose
+communication channel. It is a structured interface for exactly three things: talking to the
+model, talking to the model with extra instructions, and delegating to a child agent. The
+narrowness is intentional. A narrow API is harder to misuse.
+
+<WhyBox question="Why message-first, not state-first?">
+Messages are append-only and inspectable. State machines hide their history. When an agent goes wrong — and they always go wrong — you need to read the transcript, not reverse-engineer a state snapshot. Message logs give you a complete audit trail for free. And because messages are append-only, the data structure is trivially safe for concurrent reads.
+</WhyBox>
+
+### Tasks
+
+Eventually an agent needs help. A code review agent encounters a security question it is
+not equipped to answer. A refactoring agent needs to run tests after each change but does
+not want to pollute its own conversation history with verbose test output. A documentation
+agent is generating API references but needs to compile and type-check the code first to
+verify accuracy. In each case, the right move is delegation: spawn a child agent that
+handles one specific job and returns the result.
+
+A task is a one-shot child agent. It gets its own fresh message history — it does not see
+the parent's conversation, which means it starts without the cognitive load of the parent's
+accumulated context. But it shares the parent's sandbox, which means it can read and write
+the same files, run commands in the same working directory, and access the same environment
+variables. This sharing is intentional: the child is doing work on behalf of the parent, in
+the parent's workspace. Giving it a separate sandbox would mean duplicating files or
+introducing a synchronization protocol, both of which add complexity without clear benefit.
+
+The depth limit is four levels. A root agent at depth zero can spawn a task at depth one.
+That task can spawn its own child at depth two, which can spawn at depth three. An agent at
+depth three is the deepest that can still create children (at depth four). A task at depth
+four cannot spawn further children — the framework enforces this at task creation time with
+a hard check, not a runtime exception that might fire mid-conversation.
+
+Try spawning tasks in the visualization below. See what happens at depth four.
+
+<DepthDive />
+
+<WhyBox question="Why cap at 4 levels?">
+Unbounded recursion in agents is not a feature, it is a bug. Every level of depth is a level of indirection between the original intent and the execution. Four is enough for practical delegation — main agent, specialist, sub-specialist, worker — without losing the thread. In practice, most agent workflows never exceed depth two.
+</WhyBox>
+
+The relationship between sessions and tasks is strictly parent-child, not peer-to-peer. A
+task does not know about its siblings. It does not communicate laterally. It receives
+instructions from its parent, does work, and returns a result. The parent waits for the
+result before continuing. This constraint simplifies the execution model enormously: there
+is no message passing between agents, no shared mailbox, no coordination protocol, no
+deadlock potential. The parent is the coordinator, and coordination flows top-down.
+
+This is a deliberate rejection of the multi-agent chat pattern, where several agents talk
+to each other in a shared conversation. Multi-agent chat is elegant in demos but creates
+real problems in production: who speaks next? What happens when two agents disagree? How do
+you debug a conversation with five participants? Flue sidesteps all of these questions by
+choosing hierarchy over democracy. One agent is in charge. It delegates downward and
+collects results upward.
+
+```
+┌─────────────┐
+│ Root Agent   │
+│  depth: 0    │
+└──────┬───────┘
+       │ session.task()
+       ▼
+┌─────────────┐
+│ Child Task   │
+│  depth: 1    │──── shared sandbox ────┐
+└──────┬───────┘                        │
+       │ task()                    ┌────▼────┐
+       ▼                           │ Sandbox  │
+┌─────────────┐                    │ (files,  │
+│ Grandchild   │──── shared ──────│  shell)  │
+│  depth: 2    │                   └──────────┘
+└──────────────┘
+```
+
+---
+
+## Skills, Roles, Sandbox — The Lightweight Primitives
+
+These three share a theme: they configure behavior without adding state. Sessions and
+tasks are stateful — they persist messages, they track depth, they maintain version
+numbers. Skills, roles, and sandboxes are stateless modifiers applied at call time and
+discarded afterward. This distinction matters. Stateless things are easy to reason about,
+easy to test, and impossible to corrupt. You cannot have a "stale skill" or a "corrupted
+role" because they do not persist anything that could become stale or corrupted.
+
+### Skills
+
+Most agent behavior is better expressed as prose than as TypeScript. Consider a code
+review workflow. You could write TypeScript that parses diffs, constructs prompts with
+specific formatting instructions, validates that the output matches an expected schema,
+and retries on malformed responses. Or you could write a markdown file that says "you are
+a senior engineer reviewing a pull request" and describes the output format you want. The
+markdown version is twelve lines. The TypeScript version is forty-seven lines, requires
+tests, and breaks when the model's output format drifts.
+
+The insight behind skills is that LLMs consume natural language, so the instructions for
+how an LLM should behave should be written in natural language. There is no impedance
+mismatch. A TypeScript function that constructs a prompt string is an unnecessary layer of
+indirection. The skill file is almost literally the system prompt — just with metadata
+attached in frontmatter.
+
+Skills live in `.agents/skills/` as markdown files. The framework auto-discovers them —
+drop a file in the directory and it becomes available via `session.skill('filename')`. No
+registration, no import statement, no configuration file. The frontmatter contains metadata
+(name, description). The body becomes a system prompt injection for the duration of that
+single call. When the call completes, the skill injection is discarded. The next call
+starts clean.
+
+<CodeAnnotator variant="skill" />
+
+Twelve lines of markdown replaces forty-seven lines of TypeScript for the same behavior
+definition. And the markdown version is editable by anyone who can write prose — no IDE, no
+type checker, no build step. A product manager can refine how the code review agent
+communicates its findings without filing a ticket for engineering.
+
+The auto-discovery mechanism is worth highlighting. The framework does not require a
+manifest file that lists all available skills. It walks the `.agents/skills/` directory at
+build time and indexes every `.md` file it finds. This is convention over configuration:
+the directory structure is the configuration. It reduces boilerplate and eliminates an
+entire class of bugs (skill exists but was not registered, skill was registered but file
+was deleted).
+
+<WhyBox question="Why markdown over TypeScript for agent behavior?">
+Because the person writing agent behavior is often not the person writing the framework. Markdown is the lowest-friction authoring interface that still supports structure. And because prose instructions are what LLMs actually consume — there is no impedance mismatch. A skill file is almost literally the system prompt, just with metadata attached.
+</WhyBox>
+
+### Roles
+
+A role is a character profile applied as a system prompt overlay. Where a skill says "here
+is how to do code review," a role says "you are a security-focused engineer who
+communicates tersely and prioritizes threat modeling." Roles shape personality and focus;
+skills shape methodology and output format. The two compose: you can apply a role and a
+skill to the same call, and they do not conflict because they address different aspects of
+the model's behavior.
+
+```typescript
+const role: Role = {
+  name: "security-auditor",
+  instructions: "You focus exclusively on security concerns...",
+  model: "claude-sonnet-4-6"  // roles can override model selection
+};
+
+// Applied per-call — the session doesn't "become" this role
+await session.prompt("Review this auth module", { role });
+```
+
+The key design decision is that roles are per-call, not persisted. The session does not
+"become" a security auditor permanently. It applies the security auditor overlay for one
+prompt and then reverts. This means you can use different roles for different operations
+within the same session without any cleanup or state management. The role is an argument
+to the function, not a mode on the object.
+
+Roles can also override model selection. A security audit might warrant a more capable (and
+more expensive) model than routine code generation. By putting the model override in the
+role definition, the decision about which model to use lives next to the decision about
+what behavior to exhibit. These two concerns belong together — separating them into
+different configuration surfaces invites inconsistency.
+
+### Sandbox
+
+An agent that can only generate text is limited. Real work — writing code, running tests,
+deploying services, analyzing data — requires executing shell commands, reading files,
+writing files, and interacting with the filesystem. The sandbox is the execution
+environment where these operations happen.
+
+The problem the sandbox solves is not "how do I run a shell command." That is trivial. The
+problem is: how do I run shell commands in a way that is safe, portable, and configurable
+without requiring the agent code to know which execution environment it is running in? An
+agent that works in local development should work in CI without code changes. An agent
+running untrusted code should be isolated from the host without the agent itself knowing
+about the isolation.
+
+Flue defines a single interface and provides three implementations:
+
+```typescript
+interface SessionEnv {
+  exec(command: string, options?: ExecOptions): Promise<ExecResult>;
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+  listFiles(pattern: string): Promise<string[]>;
+  getWorkingDirectory(): string;
+}
+// Virtual: just-bash, millisecond startup, pennies per hour
+// Local: mounts host filesystem, for CI/CD
+// Container: Daytona, full Linux, for untrusted code
+```
+
+The virtual sandbox is the default because it is the cheapest thing that works. It runs
+bash in a lightweight subprocess. Startup is measured in milliseconds. Cost is negligible.
+And it handles the overwhelming majority of agent tasks: running tests, reading logs,
+grepping codebases, writing configuration files. You do not need a full Linux container
+with its own kernel namespace to run `grep -r "TODO" src/`.
+
+The local sandbox mounts the host filesystem directly. This is for CI/CD pipelines where
+the agent needs to interact with real build artifacts, deployment scripts, and environment
+variables that exist on the host machine. The container sandbox uses Daytona to provide
+full Linux isolation — a separate filesystem, separate network stack, separate process
+tree. This is for untrusted code execution where you cannot risk the agent's commands
+affecting the host.
+
+All three implement the same `SessionEnv` interface. Agent code never imports a specific
+sandbox implementation. The choice of sandbox is a deployment configuration decision, not
+an application code concern. You can develop against the virtual sandbox, test in CI with
+the local sandbox, and deploy to production with container sandboxes — without changing a
+single line of agent code.
+
+<WhyBox question="Why default to virtual sandboxes?">
+A bash-only sandbox costs pennies and starts in milliseconds. Full containers are there when you need them, but 90% of agent tasks are text manipulation, file reads, and simple shell commands. The default should be the cheapest thing that works. You scale up to containers when isolation requirements demand it, not as a starting point.
+</WhyBox>
+
+---
+
+## The Monorepo — How the Pieces Ship
+
+Flue ships as three packages in a monorepo. The separation is deliberate: each package has
+a distinct audience, a distinct rate of change, and a distinct stability requirement.
+
+`@flue/sdk` is the core foundation. It contains sessions, tasks, tools, workspace
+discovery, and the build pipeline. This is the package that agent authors depend on
+directly. It changes slowly and carefully because breaking changes affect every agent built
+on the framework. The SDK's API surface is the contract between the framework and its
+users, and contracts should be stable.
+
+`@flue/cli` is a thin wrapper around the SDK. It provides three commands: `flue dev`
+(local development with hot reload), `flue run` (execute an agent from the command line),
+and `flue build` (compile an agent workspace into a deployable artifact). The CLI is the
+entry point for developers but contains almost no business logic of its own — it parses
+arguments, validates input, and calls SDK functions. Thin CLI wrappers are easy to
+maintain and easy to replace.
+
+`@flue/connectors` contains third-party integrations. The Daytona container connector,
+MCP server adapters, and any future platform-specific code lives here. This package
+changes frequently as new integrations are added and existing ones are updated to track
+upstream API changes. Its instability is isolated from the core SDK by the package
+boundary.
+
+```
+┌──────────────────┐
+│   @flue/cli       │
+│  dev · run · build│
+└────────┬─────────┘
+         │ depends on
+         ▼
+┌──────────────────┐     ┌────────────────────┐
+│   @flue/sdk       │◄────│  @flue/connectors   │
+│  sessions · tasks │     │  daytona · mcp      │
+│  tools · build    │     └────────────────────┘
+└──────────────────┘
+```
+
+The dependency arrows point inward. The CLI depends on the SDK. Connectors depend on the
+SDK. The SDK depends on neither. This is the dependency inversion principle applied to
+package architecture: the stable core is depended upon by everything, and it depends on
+nothing. Unstable packages at the edges can change freely without affecting the core.
+
+The build pipeline is the most interesting piece of the SDK from a framework design
+perspective. It takes an agent workspace — a directory tree of agent definitions, skill
+files, and configuration — and compiles it into a deployable artifact. The build process
+has three phases: discovery (find all agents and skills by walking the directory tree),
+validation (check that all references are valid and all required fields are present), and
+bundling (compile to the target platform).
+
+<CodeAnnotator variant="build" />
+
+The convention-over-configuration philosophy runs deep here. You do not register agents in
+a config file. You do not declare skill dependencies in a manifest. You do not maintain a
+list of available tools. You drop files in the right directories and the build system finds
+them. This reduces boilerplate at the cost of implicit behavior — a tradeoff that is worth
+it when the conventions are simple, few in number, and well-documented.
+
+Build-time validation deserves emphasis. An agent that references a skill called
+"code-review" but has no corresponding `.agents/skills/code-review.md` file will fail at
+build time, not at runtime when a user is waiting for a response. An agent with a circular
+task dependency (A delegates to B, B delegates to A) will fail at build time. An agent
+with an invalid role definition will fail at build time. The philosophy is: every error
+that can be caught before deployment should be caught before deployment. Runtime errors
+in agent systems are expensive because the model has already consumed tokens, the user
+has already waited, and the session state may already be partially written.
+
+---
+
+## Design Lessons for Framework Authors
+
+I want to close by extracting the meta-lessons from this design tour. These are not
+specific to agent frameworks. They apply to any system that needs to compose simple
+building blocks into complex behavior. But they are especially sharp in the agent context,
+where the model's inherent unpredictability makes everything else need to be as predictable
+as possible.
+
+**Compose simple primitives.** Five simple things that combine are better than one complex
+thing that does everything. Each Flue primitive has a single responsibility and a clean
+interface. A session stores messages. A task delegates work. A skill configures behavior. A
+role shapes personality. A sandbox executes commands. The framework is the composition, not
+any single primitive. When something goes wrong — and with agents, something always goes
+wrong — you know which primitive to investigate because the responsibilities do not overlap.
+A message ordering bug is a session bug. A runaway recursion is a task bug. A malformed
+output is a skill bug. You never have to search the entire system.
+
+**Markdown for behavior, code for plumbing.** The separation of concerns in an agent
+framework is not frontend and backend. It is "what the agent does" versus "how the agent
+runs." Skills and roles are behavior — they change frequently, they are authored by domain
+experts who may not write TypeScript, and they are expressed in natural language because
+that is what the model consumes. Sessions, tasks, and sandboxes are plumbing — they change
+rarely, they are authored by framework engineers, and they are expressed in TypeScript
+because type safety matters for infrastructure. Mixing these two concerns in the same
+abstraction guarantees that every behavioral change requires an engineer and every
+infrastructure change risks breaking behavior.
+
+**Runtime-agnostic by default.** If your framework only runs on one platform, you have
+coupled your abstractions to an implementation detail. Flue's sandbox interface proves
+this: the same `exec()` call works in a bash subprocess, a mounted host filesystem, and a
+Daytona container. The same build pipeline compiles to Node.js and Cloudflare Workers. The
+agent code is identical across all of these targets because the abstraction boundary is
+clean: agents talk to interfaces, not implementations. Runtime specifics are pushed to the
+edges — connectors and deployment configuration — where they can change without rippling
+through agent code.
+
+**Fail fast, fail loud.** Build-time validation catches missing skill references before an
+agent is deployed. The version number on sessions catches concurrent writes before messages
+are corrupted. The depth limit on tasks catches unbounded recursion before the system runs
+out of memory. Every constraint in Flue exists to surface bugs early rather than letting
+agents drift into undefined states. This matters more for agent systems than for
+traditional software, because agents are already unpredictable due to the model's
+nondeterminism. The framework's job is to make everything outside the model as predictable
+and as constrained as possible. The model provides the creativity. The harness provides the
+guardrails.
+
+These four principles are not revolutionary. They are well-understood software engineering
+applied to a domain that is new enough that many teams are still learning the hard way
+which lessons transfer. The contribution of a framework like Flue is not inventing new
+ideas — it is demonstrating that the old ideas work here too, and that you do not need to
+abandon decades of engineering wisdom just because the execution engine is a neural network
+instead of a deterministic program.
+
+An agent framework does not make agents smarter. It makes the gap between intention and
+execution smaller. Flue's contribution is showing how few primitives you need to close
+that gap.

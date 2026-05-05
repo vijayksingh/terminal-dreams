@@ -1,7 +1,7 @@
 import { getCategories, getRecipesByCategory } from "@/lib/cookbook";
 import { CategoryGrid } from "@/components/cookbook/CategoryGrid";
 import { AmbientCanvas } from "@/components/cookbook/AmbientCanvas";
-import { Breadcrumb } from "@/components/retro/Breadcrumb";
+import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,18 +25,16 @@ export default async function CookbookIndexPage() {
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--color-surface)]">
+    <div className="relative min-h-screen overflow-hidden bg-[var(--color-bg)]">
+      {/* Breadcrumb Navigation */}
+      <BreadcrumbBar items={[{ label: "cookbook" }]} className="relative z-20" />
+
       {/* Ambient canvas effects (progressive enhancement) */}
       <AmbientCanvas />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        {/* Breadcrumb Navigation */}
-        <div className="mb-6">
-          <Breadcrumb items={[{ label: "cookbook" }]} />
-        </div>
-
         {/* Header */}
-        <header className="mb-12 text-center">
+        <div className="mb-12 text-center">
           <h1 className="mb-4 font-serif text-5xl font-bold tracking-tight text-[var(--color-text)] sm:text-6xl lg:text-7xl">
             The Kitchen Cookbook
           </h1>
@@ -44,7 +42,7 @@ export default async function CookbookIndexPage() {
             Indian-forward recipes that sing. From curries to cocktails, street food to sweets —
             cooking as a performance, not a chore.
           </p>
-        </header>
+        </div>
 
         {/* Category Grid */}
         <CategoryGrid categories={categories} recipeCounts={recipeCounts} />

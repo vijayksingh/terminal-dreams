@@ -1,11 +1,12 @@
 ---
 title: Building a Live Search Filter
-summary: Walk through building an interactive search filter in React — from a static list to a fully functional live search with highlight, empty-state handling, and a reusable custom hook.
+summary: Build a live search filter in React — from static list to derived state, custom hook, and finally compound components. Watch a simple component grow into a 9-prop monolith, then see composition fix what props can't.
 date: 2026-02-18
 tags:
   - react
   - hooks
-  - beginner
+  - compound-components
+  - composition
 format: lab
 demo: live-search
 ---
@@ -220,5 +221,170 @@ Custom hooks are React's composition primitive — any function that starts with
 The component is now purely about rendering. The search logic lives in a module that's independently testable — you can write unit tests for `useSearch` without mounting any components. And because hooks compose, `useSearch` could later wrap `useDeferredValue` for large lists, add `useTransition` for smoother updates, accept a custom comparator for fuzzy matching, or debounce the query with a `useEffect` and a timeout.
 
 The pattern scales because it separates *what to compute* from *how to render it*. That's the real lesson here — not the API of custom hooks, but the architectural instinct to extract behavior the moment it has a name.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — The component grows teeth
+
+Your search works. Your boss is happy. Then the requirements start arriving.
+
+"Can we add a clear button?" Sure — one more piece of state, one more conditional. "Can we show the result count?" Easy — a line of JSX. "Can we let users sort results alphabetically?" A `sortOrder` state, a toggle button, a `useMemo` to sort. "Can we show a loading skeleton when the list is empty on first render?" A `showSkeleton` prop, a timeout, another conditional branch.
+
+Each feature is small. Each feature is reasonable. But look at what happened to the component:
+
+```tsx
+function SearchableList({
+  items,
+  placeholder,
+  showClear,
+  showCount,
+  sortable,
+  onSelect,
+  emptyMessage,
+  maxResults,
+  showSkeleton,
+}: SearchableListProps) {
+  const { query, setQuery, results } = useSearch(items);
+  const [sortOrder, setSortOrder] = useState<"asc" | "none">("none");
+
+  const sorted = sortOrder === "asc"
+    ? [...results].sort()
+    : results;
+  const capped = maxResults
+    ? sorted.slice(0, maxResults)
+    : sorted;
+
+  return (
+    <div>
+      <div className="search-header">
+        <input value={query} onChange={...} placeholder={placeholder} />
+        {showClear && query && <button onClick={...}>✕</button>}
+        {showCount && <span>{capped.length} results</span>}
+        {sortable && <button onClick={...}>Sort</button>}
+      </div>
+      {capped.length > 0 ? (
+        <ul>
+          {capped.map(item => (
+            <li key={item} onClick={() => onSelect?.(item)}>
+              <Highlight text={item} query={query} />
+            </li>
+          ))}
+        </ul>
+      ) : showSkeleton ? (
+        <Skeleton />
+      ) : (
+        <p>{emptyMessage ?? `No results for "${query}"`}</p>
+      )}
+    </div>
+  );
+}
+```
+
+Count the props: nine. Count the conditional branches: five. And this is a *search box* — one of the simpler UI patterns you'll build.
+
+The demo panel still shows every feature from steps 1–6, locked on. Now toggle **Clear Button** — a clear button appears next to the input. Toggle **Result Count** — a count badge appears in the header. Toggle **Sort Toggle** — an A→Z button appears. Watch the prop counter climb with each toggle: 5 → 6 → 7 → 9.
+
+Type "a" and click Clear. Click A→Z to sort alphabetically. Every feature works. The *user* sees a better search. The *developer* sees nine props, five conditionals, and a component that knows too much about every possible configuration.
+
+Ant Design's `Select` has 40+ props. MUI's `Autocomplete` has 50+. They work, but they're configured, not composed.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Props aren't architecture
+
+Here's where the monolith breaks.
+
+Your designer says: "On the settings page, I want the result count *above* the search input, and the clear button *inside* the input field." On the dashboard, they want the list items to include a thumbnail. On mobile, they want the sort toggle in a bottom sheet, not inline.
+
+With the current component, each layout variation needs a new prop: `countPosition`, `clearPosition`, `renderItem`, `sortPosition`. The prop list doesn't just grow — it grows *combinatorially*. Every layout dimension multiplies with every feature flag.
+
+```tsx
+// This is where monolithic components end up
+<SearchableList
+  items={products}
+  placeholder="Search products..."
+  showClear
+  clearPosition="inside"    // new prop for clear button placement
+  showCount
+  countPosition="above"     // new prop for count placement
+  sortable
+  sortPosition="bottom-sheet" // new prop for sort placement
+  renderItem={(item) => (    // new prop for custom item rendering
+    <div className="flex gap-2">
+      <img src={item.thumb} />
+      <span>{item.name}</span>
+    </div>
+  )}
+  maxResults={20}
+  emptyMessage="No products found"
+/>
+```
+
+Try it in the demo. Click **"Count above input"** in the layout picker — watch the count badge move from the header to a standalone line above the search input. The panel actually rearranges. Now click **"Sort in footer"** — the sort button drops below the list. Each layout works, but look at the prop counter: it climbed. Each rearrangement cost you a new prop (`countPosition`, `sortPosition`).
+
+The panel did what you asked. But each layout variation multiplied with every feature flag. Want the count above the input AND the clear button inside? That's `countPosition="above"` + `clearPosition="inside"` — two new props that interact in ways you'll have to test.
+
+This is the fundamental problem: **props describe what a component does, not how it's structured**. When the structure itself needs to vary, props become the wrong abstraction. You need something that describes *composition*, not *configuration*.
+
+React already has an abstraction for this: context for shared state, and `children` for structure.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Compound components
+
+In step 8, rearranging the layout cost you a new prop each time. Here's the same search, rebuilt so rearranging costs nothing:
+
+```tsx
+<Search.Root items={items}>
+  <Search.Input placeholder="Search..." />
+  <Search.Count />
+  <Search.List>
+    {(item) => <Search.Highlight text={item} />}
+  </Search.List>
+  <Search.Empty>No results found.</Search.Empty>
+</Search.Root>
+```
+
+No configuration props. No boolean flags. No position enums. The *JSX tree itself* is the layout. Want the count above the input? Move the line. Want custom item rendering? Pass a different function to `List`. Want a clear button inside the input? Wrap them in a div.
+
+The trick that makes this work: **context**. `Search.Root` holds all the state — query, results, features — in a React context. Every child component pulls what it needs via `useContext`. No prop drilling, no forwarding, no coupling between siblings.
+
+```tsx
+const SearchContext = createContext<SearchState>(null);
+
+function Root({ items, children }) {
+  const [query, setQuery] = useState("");
+  const results = items.filter(item =>
+    item.toLowerCase().includes(query.toLowerCase())
+  );
+  return (
+    <SearchContext.Provider value={{ query, setQuery, results }}>
+      {children}
+    </SearchContext.Provider>
+  );
+}
+
+function Input({ placeholder }) {
+  const { query, setQuery } = useContext(SearchContext);
+  return <input value={query} onChange={e => setQuery(e.target.value)} />;
+}
+
+function Count() {
+  const { results } = useContext(SearchContext);
+  return <span>{results.length} results</span>;
+}
+```
+
+Each component is **self-contained** — it knows how to render itself and which slice of context it needs. Nothing else. `Input` doesn't know about `Count`. `Count` doesn't know about `List`. They're siblings that share state through a parent provider, not props through a chain.
+
+Try rearranging the components in the demo panel. Move the count above the input — the same layout change that cost a `countPosition` prop in step 8. Watch the JSX preview update in real-time: `<Search.Count />` moves above `<Search.Input />` in the code, and the live demo below reflects the change instantly. No new props. No prop counter climbing. Every arrangement works because no component assumes where it lives in the tree. The structure is in the consumer's hands, not the library's.
+
+This is the pattern behind Radix UI, Headless UI, and most component libraries worth studying. The dot-notation (`Search.Root`, `Search.Input`) is convention, not magic — it's a plain object with component values. But the architecture is real: **state lives in context, structure lives in JSX, and no component knows about both**.
 
 </section>

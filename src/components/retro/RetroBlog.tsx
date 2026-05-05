@@ -5,6 +5,7 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import type { TimelinePost } from "@/lib/timeline";
 import styles from "./retro.module.css";
 import { CursorGlow, ScanlineOverlay } from "./RetroDecor";
+import { CraftSection } from "./CraftSection";
 import { RetroFooter } from "./RetroFooter";
 import { RetroHeader } from "./RetroHeader";
 import { RetroSidebar } from "./RetroSidebar";
@@ -25,6 +26,7 @@ export function RetroBlog({ posts }: { posts: TimelinePost[] }) {
       <div className={styles.main}>
         <main>
           <RetroTimeline posts={posts} />
+          <CraftSection />
           <RetroSidebar postsCount={posts.length} />
         </main>
       </div>

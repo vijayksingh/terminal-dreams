@@ -1,0 +1,194 @@
+---
+title: "Anatomy of a Code Primitive — Wrapping the Primitive"
+summary: "Three components wrap the same CodeTrace for different interaction patterns — step-synced display, exploration gating, and fill-in-the-blank templates."
+date: 2026-05-03
+tags:
+  - react
+  - composition
+  - compound-components
+  - patterns
+format: lab
+demo: code-primitive-3-wrappers
+series: code-primitive
+part: 3
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The wrapper spectrum
+
+Before we build anything, here's a framework for evaluating every wrapper in this phase — and for deciding whether to wrap or rebuild in your own projects.
+
+Composition sits on a spectrum:
+
+**Thin wrapper** → computes a prop and passes it down. No internal state. If the wrapped component changes its API, you update the wrapper in 5 minutes. *Example: a function that maps "step 3" to "highlight line 7".*
+
+**State wrapper** → manages state that drives the wrapped component. Has `useState` or `useReducer`, tracks user actions, computes props from that state. It's still a wrapper — it doesn't touch the rendering. *Example: tracking which sections a user has explored.*
+
+**Divergent wrapper** → can't express what it needs through the wrapped component's API. Reaches for the wrapped component's *dependencies* directly (in our case, Shiki) and builds rendering the original doesn't support. *Example: replacing parts of Shiki tokens with interactive dropdowns.*
+
+**Full rebuild** → the wrapper is gone. You build a new component that shares concepts but not code with the original. *Example: InlineCodeBridge in Phase 4.*
+
+As you read the next five steps, ask: **where does each wrapper sit on this spectrum?** And **what would push it further right?**
+
+Toggle **LiveCodePanel** in the demo. You'll see a BFS code viewer with a step slider above it — the first wrapper pattern.
+
+```
+CodeTrace (275 LOC) ← display + interactivity
+  ├─ LiveCodePanel  (70 LOC) ← step → line mapping
+  ├─ GatedCodeBridge (100 LOC) ← viewed-sections tracking
+  └─ CodeFill (135 LOC) ← placeholder tokenization + answer state
+```
+
+Each wrapper is small because CodeTrace does the heavy lifting. The wrappers add *coordination* — state management, interaction patterns, progression logic — not rendering. But one of these three is already starting to diverge from CodeTrace. By Step 5, you'll be able to identify which one and why.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — LiveCodePanel: step-synced code
+
+Drag the step slider in the demo. Watch the highlight bar — it doesn't slide one line at a time. It jumps from line 1 to line 2, then to line 5, then to line 6. The mapping isn't sequential.
+
+This is the core insight behind LiveCodePanel: a **step index** and a **line number** are different things. In an algorithm lesson, step 3 might explain the loop condition on line 5, while step 4 explains the `shift()` call on line 6. Step 5 might jump backwards to line 2 to revisit the visited set. The relationship between "where am I in the lesson" and "which line matters" is arbitrary — it depends on the teaching narrative, not the code order.
+
+The `lineMap` array encodes this relationship:
+
+<CodeAnnotator blockId="p3-live-code-props" />
+
+The entire render logic of LiveCodePanel is derivation — pure computation, no state:
+
+<CodeAnnotator blockId="p3-live-code-render" />
+
+No `useState`. No `useEffect`. No event handlers inside the component. The parent controls `step`, and LiveCodePanel translates that into CodeTrace props through pure computation. On the composition spectrum, this is all the way to the left — the **thinnest possible wrapper**.
+
+Toggle **Step Sync** on. Now annotations appear below the active line as you drag the slider — "Define the function", "Initialize visited set", "Enter the loop." Watch the state inspector: `activeLine`, `annotation`, and `step` all update, but only `step` is actual state. The other two are derived from it.
+
+This is what makes thin wrappers powerful: they have no opinions about how `step` changes. A slider drives it here. In production, an animation timeline drives it. A quiz completion drives it. LiveCodePanel doesn't know or care — it just maps `step` → `line` → CodeTrace props.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Delayed reveal with codeDelay
+
+Toggle **Code Delay** on. Set the codeDelay value to **2**, then drag the step slider to **0**. The code viewer disappears, replaced by a "Hidden until step ≥ 2" message. Now drag past step 2 — the code viewer slides back in from the right.
+
+Why would you ever *hide* a code viewer? Because showing code too early anchors the student in syntax before they understand the concept.
+
+In AlgoFlashcards, some lessons start with visual explanations — array diagrams rearranging, tree nodes lighting up, a graph being traversed step by step. If the code panel is visible from the start, the student's eye is drawn to `queue.shift()` before they even understand what a queue *is*. The code becomes noise, not signal.
+
+`codeDelay` tells LiveCodePanel: "don't show the code until the student has reached this step." The implementation is one derived boolean:
+
+<CodeAnnotator blockId="p3-code-delay" />
+
+The entrance slides from right (`x: 12 → 0`) rather than fading in place. This is a deliberate choice: a **slide** says "new content arrived." A **fade** says "content was here but hidden." The cognitive difference matters — the slide sets the expectation that the code panel is a new addition to the screen, not something that was always there but invisible.
+
+Try different `codeDelay` values and scrub the slider. The state inspector shows the `visible` flag toggling. Notice that LiveCodePanel is still stateless — `isVisible` is derived from `step >= codeDelay`, not tracked with `useState`. The wrapper added a feature (delayed visibility) without adding a single piece of internal state. That's the advantage of thin wrappers: features compose because they're all derived from the same input.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — GatedCodeBridge: exploration gating
+
+Toggle **GatedCodeBridge** in the demo. The code viewer shows the same BFS algorithm, but below it you'll see four section buttons: **Init**, **Loop**, **Visit**, **Explore**. Click "Init" — the highlight bar jumps to line 2, and an annotation appears: "Set up visited tracking and queue with start node."
+
+Now look at the "Complete" button at the bottom. It says "Explore all 4 sections first" and it's grayed out. Click through all four section buttons. Once you've visited every section, the Complete button lights up.
+
+This is **exploration gating**: the student must examine every section of the algorithm before they can proceed. It's not a quiz — there are no wrong answers. It's a guarantee that the student at least *looked at* each part before claiming they understood it.
+
+The state model has a subtle design choice. Let's walk through it:
+
+<CodeAnnotator blockId="p3-gated-state" />
+
+Why this split? Because the *set* and the *count* serve different purposes:
+
+<CodeAnnotator blockId="p3-gated-toggle" />
+
+The ref absorbs repeated visits without re-rendering. The state updates only when the progress actually changes. This is a micro-optimization that matters in teaching apps where students repeatedly click back and forth between sections — each revisit would be a wasted re-render without the ref guard.
+
+On the composition spectrum, GatedCodeBridge is a **state wrapper**: it manages `bridgeLine` and `viewedCount` state that drives CodeTrace through its existing API. It doesn't touch CodeTrace's internals. The annotation slot from Phase 1 now powers interactive narration:
+
+<CodeAnnotator blockId="p3-gated-render" />
+
+Watch the state inspector as you click sections: `viewed` shows the progress counter, and `allViewed` flips when you've explored everything. Click a section you already visited — notice that `viewed` doesn't change. The ref absorbed the duplicate.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — CodeFill: where composition starts to strain
+
+Toggle **CodeFill** in the demo. You'll see three dashed blanks: `___data structure___`, `___queue operation___`, and `___visited check___`. Click each blank to open a dropdown of options. Pick answers and hit **Check**.
+
+Try getting one wrong on purpose — select "Array" instead of "Set" for the data structure, then click Check. The blank turns red. In the real AlgoFlashcards CodeFill, wrong answers include explanations: "Array works but `.includes()` is O(n) — Set gives O(1) with `.has()`." The WHY behind the wrong answer is the teaching moment.
+
+Now, here's where things get architecturally interesting. The demo shows a simplified version with manually assembled layout — hardcoded `<span>` elements and `<FillBlank>` components. The *real* CodeFill does something more sophisticated that we can't fully demonstrate here: **placeholder tokenization**.
+
+The template code contains markers embedded in real code:
+
+```ts
+const templateCode = `const visited = new ___ds___();
+const node = queue___op___;
+if (visited___check___) continue;`;
+```
+
+When Shiki tokenizes this string, it treats the markers as code. The string `new ___ds___()` becomes tokens like:
+
+```ts
+[
+  { content: "new",       color: "#bb9af7" },  // keyword
+  { content: " ",         color: "#a9b1d6" },  // space
+  { content: "___ds___",  color: "#c0caf5" },  // (Shiki thinks it's a variable)
+  { content: "(",         color: "#a9b1d6" },  // punctuation
+  { content: ")",         color: "#a9b1d6" },  // punctuation
+]
+```
+
+The `splitTokensAroundPlaceholders` function walks this token stream, finds the `___id___` markers, and replaces them with interactive `<BlankSlot>` components — while preserving syntax highlighting on everything around them:
+
+<CodeAnnotator blockId="p3-split-tokens" />
+
+This is where CodeFill sits on the composition spectrum: it's a **divergent wrapper**. It doesn't use CodeTrace at all — it calls Shiki directly and builds its own rendering. Why? Because CodeTrace renders *whole lines*. CodeFill needs to render *parts of a line* differently — replace a substring inside a syntax token with an interactive dropdown. That's not something you can express through CodeTrace's API.
+
+The compound component pattern uses React Context to share state between the root and the blanks:
+
+<CodeAnnotator blockId="p3-codefill-context" />
+
+Each `BlankSlot` reads the shared answer state from context, renders a dropdown when clicked, and writes back the selected option. The root component handles submission, validation, and the completed-code reveal. No prop drilling — every blank reads from the same context.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — When to wrap, when to rebuild
+
+Toggle **Pattern Matrix** in the demo. The comparison table crystallizes the three patterns side by side.
+
+Let's map each wrapper back to the spectrum from Step 1:
+
+**LiveCodePanel → Thin wrapper (leftmost)**. Zero internal state. Pure computation: `step → activeLine → CodeTrace props`. If CodeTrace changes its API, LiveCodePanel updates in minutes. It could be a plain function instead of a component.
+
+**GatedCodeBridge → State wrapper (center-left)**. Manages `bridgeLine`, `viewedRef`, and `viewedCount`. Drives CodeTrace through its public API. Uses the annotation slot for section narration. Still wrapping — it doesn't reach into CodeTrace's internals.
+
+**CodeFill → Divergent wrapper (center-right)**. Bypasses CodeTrace entirely. Calls Shiki directly to tokenize code, then splits tokens around placeholders. It needs sub-line-level control — replacing a substring inside a token with a dropdown. CodeTrace's API doesn't offer this, so CodeFill goes around it.
+
+The pattern:
+
+| | LiveCodePanel | GatedCodeBridge | CodeFill |
+|---|---|---|---|
+| **Wraps CodeTrace?** | Yes | Yes | No — uses Shiki directly |
+| **State model** | Stateless | Viewed-set + completion | Answers map + submitted |
+| **Uses annotation slot** | Yes | Yes | No |
+| **Shiki integration** | Via CodeTrace | Via CodeTrace | Direct |
+
+Notice the diagonal: as wrappers move right on the spectrum, they stop using more of CodeTrace's features. LiveCodePanel uses everything. GatedCodeBridge uses most things. CodeFill uses nothing — it rebuilt from Shiki up.
+
+**When is this okay?** When the wrapper needs to *render differently* than the wrapped component. CodeFill needs inline dropdowns inside syntax tokens. Extending CodeTrace to support this would mean adding token-splitting logic, blank state management, and dropdown rendering to a component whose job is "display code with a highlight bar." Every other consumer of CodeTrace (LiveCodePanel, GatedCodeBridge, standalone uses) would pay the complexity cost of features they don't use.
+
+The divergent wrapper pays a different cost: code duplication. CodeFill re-implements some of CodeTrace's rendering (line layout, Shiki theming). But this duplication is *bounded* — it only exists in CodeFill, not in every CodeTrace consumer. It's better to duplicate 40 lines in one wrapper than to add 40 lines of optional complexity to a component used everywhere.
+
+In Phase 4, we'll see what happens when even divergence isn't enough. InlineCodeBridge needs annotations *between* arbitrary lines, chunk-based reveal with replacement, and a 5-beat animation choreography. It's a full rebuild — the rightmost point on the spectrum. The question isn't whether rebuilding is wasteful. It's whether the contortion of *not* rebuilding would be worse.
+
+</section>

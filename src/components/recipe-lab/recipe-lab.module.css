@@ -1,0 +1,162 @@
+/* Recipe Lab — document column prose styles */
+
+.prose {
+  color: var(--color-text);
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+
+.prose p {
+  margin-bottom: 1rem;
+  color: var(--color-text);
+}
+
+.prose h2 {
+  color: var(--color-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 var(--space-3);
+  letter-spacing: -0.01em;
+  font-family: var(--font-mono);
+}
+
+.prose h3 {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+  font-size: 0.85em;
+}
+
+.prose strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.prose em {
+  color: var(--color-text);
+}
+
+.prose a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+/* Step sections — global class so MDX <section className="recipe-step"> works */
+.prose :global(.recipe-step) {
+  padding: var(--space-6) 0;
+  border-bottom: 1px solid var(--color-surface-2);
+}
+
+.prose :global(.recipe-step):last-of-type {
+  border-bottom: none;
+}
+
+.prose :global(.recipe-step) h2 {
+  padding-top: var(--space-2);
+}
+
+/* ── Demo panels ──────────────────────────────────────────────── */
+
+/* Desktop: sticky right column. Hidden below 1024px. */
+.demoDesktop {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .demoDesktop {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--color-bg);
+    border-left: 1px solid var(--color-border);
+  }
+}
+
+/* ── Phase dividers (series pages) ────────────────────────── */
+
+.phaseDivider {
+  padding: var(--space-8) 0 var(--space-4);
+  position: relative;
+}
+
+.phaseDivider::before {
+  content: "";
+  display: block;
+  height: 1px;
+  background: var(--color-border);
+  margin-bottom: var(--space-6);
+}
+
+/* No top rule on the very first phase */
+.phaseDivider:first-child::before {
+  display: none;
+}
+
+.phaseDivider:first-child {
+  padding-top: 0;
+}
+
+.phaseLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-accent);
+  margin-bottom: var(--space-1);
+}
+
+.phaseHeading {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ── Phase indicator (demo panel top bar) ────────────────── */
+
+.phaseIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.phaseIndicatorDot {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  transition: all 200ms ease;
+}
+
+.phaseIndicatorDot[data-active] {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+/* Mobile: demo hidden for now — desktop-first experience */

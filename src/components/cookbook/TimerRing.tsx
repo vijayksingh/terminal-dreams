@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import type { Timer } from "@/lib/timer-engine";
 import { getTimerProgress } from "@/lib/timer-engine";
+import { DURATION, EASE, LOOP, DELAY } from "@/lib/motion";
 
 type TimerRingProps = {
   timer: Timer;
@@ -51,8 +52,8 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
       case "paused":
         return {
           track: "var(--color-muted)",
-          progress: "#8B7B6B", // Muted
-          glow: "#8B7B6B",
+          progress: "var(--color-muted)",
+          glow: "var(--color-muted)",
         };
       default:
         return {
@@ -69,19 +70,13 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
   const getPulseAnimation = () => {
     switch (timer.state) {
       case "idle":
-        return {
-          scale: [1, 1.02, 1],
-          transition: { duration: 2, repeat: Infinity, ease: "easeInOut" as const },
-        };
+        return { scale: [1, 1.02, 1], transition: LOOP.breathe };
       case "warning":
-        return {
-          scale: [1, 1.03, 1],
-          transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" as const },
-        };
+        return { scale: [1, 1.03, 1], transition: LOOP.pulse };
       case "done":
         return {
           scale: [1, 1.1, 1],
-          transition: { duration: 0.6, ease: "easeOut" as const },
+          transition: { duration: DURATION.ring * 0.75, ease: EASE.out },
         };
       default:
         return { scale: 1 };
@@ -91,17 +86,11 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
   const getGlowAnimation = () => {
     switch (timer.state) {
       case "idle":
-        return {
-          opacity: [0.3, 0.5, 0.3],
-          transition: { duration: 2, repeat: Infinity, ease: "easeInOut" as const },
-        };
+        return { opacity: [0.3, 0.5, 0.3], transition: LOOP.breathe };
       case "running":
         return { opacity: 0.4 };
       case "warning":
-        return {
-          opacity: [0.4, 0.8, 0.4],
-          transition: { duration: 1, repeat: Infinity, ease: "easeInOut" as const },
-        };
+        return { opacity: [0.4, 0.8, 0.4], transition: LOOP.glow };
       case "done":
         return { opacity: 0.8 };
       case "paused":
@@ -159,7 +148,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
           filter={`url(#glow-${timer.id})`}
           animate={getGlowAnimation()}
           transition={{
-            strokeDashoffset: { duration: 0.3, ease: "easeOut" as const },
+            strokeDashoffset: { duration: DURATION.normal, ease: EASE.out },
           }}
         />
 
@@ -174,7 +163,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
             strokeWidth={strokeWidth / 2}
             initial={{ scale: 1, opacity: 0.8 }}
             animate={{ scale: 1.3, opacity: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" as const }}
+            transition={{ duration: DURATION.ring, ease: EASE.out }}
           />
         )}
       </svg>
@@ -185,7 +174,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
           className="absolute inset-0 flex items-center justify-center"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.4, ease: "easeOut" as const }}
+          transition={{ delay: DELAY.short, duration: DURATION.normal, ease: EASE.out }}
         >
           <svg width={size * 0.4} height={size * 0.4} viewBox="0 0 24 24" fill="none">
             <motion.path
@@ -196,7 +185,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
               strokeLinejoin="round"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" as const }}
+              transition={{ delay: DELAY.medium, duration: DURATION.slow, ease: EASE.out }}
             />
           </svg>
         </motion.div>

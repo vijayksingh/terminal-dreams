@@ -90,6 +90,17 @@
 
 .readingView .scanline { display: none; }
 
+/* Light mode: invert scanline and glow to dark-on-light */
+:global([data-theme="light"]) .scanline {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.02) 2px,
+    rgba(0, 0, 0, 0.02) 4px
+  );
+}
+
 .cursorGlow {
   position: fixed;
   width: 400px;
@@ -98,6 +109,10 @@
   pointer-events: none;
   z-index: 2;
   transition: opacity 0.3s;
+}
+
+:global([data-theme="light"]) .cursorGlow {
+  background: radial-gradient(circle, rgba(0,0,0,0.015) 0%, transparent 70%);
 }
 
 .header {
@@ -250,7 +265,7 @@
 }
 
 .content {
-  color: var(--accent-weak);
+  color: var(--color-text);
   line-height: 1.9;
   margin-bottom: 1.5rem;
   font-size: 1.05rem;
@@ -294,6 +309,14 @@
   border: 1px solid var(--color-border);
   padding: var(--space-4);
   overflow: auto;
+}
+
+/* Flowchart blocks manage their own pre styling via inline styles;
+   reset the .content pre overrides so inline values win cleanly. */
+.content figure[data-flowchart] > pre {
+  background: none;
+  border: none;
+  padding: 0;
 }
 
 .content code{
@@ -373,7 +396,7 @@
 .statusNumberSm {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #d0d0d0;
+  color: var(--color-text);
 }
 
 .statusLabelSm {
@@ -386,7 +409,7 @@
 /* Reduce heading emphasis for compact sidebar */
 .sidebarCompact .widgetTitle {
   font-size: 0.75rem;
-  color: #808080;
+  color: var(--color-muted);
 }
 
 .widget {
@@ -484,7 +507,7 @@
 
 /* About card */
 .aboutCard {
-  background: linear-gradient(180deg, var(--color-surface) 0%, #0c0c0c 100%);
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
   border: 1px solid var(--panel-border);
   border-radius: var(--panel-radius);
   padding: var(--space-4) var(--space-4) var(--space-3);
@@ -506,7 +529,7 @@
   border: 1px solid var(--color-border);
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.06), rgba(0,0,0,0) 60%);
+  background: radial-gradient(circle at 30% 30%, var(--color-border), transparent 60%);
   color: var(--color-text);
   font-weight: 700;
 }
@@ -549,7 +572,7 @@
 
 .aboutMono {
   font-family: var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
-  color: #c0c0c0;
+  color: var(--color-muted);
 }
 
 .backLink {

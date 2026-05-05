@@ -55,7 +55,7 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react").then((mod) => 
   ssr: false,
   loading: () => (
     <div className="grid h-full min-h-[260px] place-items-center text-sm text-[var(--color-muted)]">
-      Loading editor...
+      Setting up the editor...
     </div>
   ),
 });
@@ -84,7 +84,7 @@ const DEFAULT_PREVIEW_DOC = `<!doctype html>
     </style>
   </head>
   <body>
-    <div class="hint">Press Run to execute this workspace.</div>
+    <div class="hint">Press Run to see your code in action.</div>
   </body>
 </html>`;
 
@@ -94,7 +94,7 @@ const NPM_SEARCH_DEBOUNCE_MS = 260;
 const NPM_SEARCH_LIMIT = 7;
 
 const statusLabelMap: Record<PlaygroundRunStatus, string> = {
-  idle: "Idle",
+  idle: "Ready",
   building: "Building...",
   running: "Running...",
   error: "Error",
@@ -258,9 +258,9 @@ function getStarterContent(path: string): string {
   if (path.endsWith(".json")) return JSON.stringify({ note: "Scratch data" }, null, 2);
   if (path.endsWith(".css")) return "body {\n  font-family: Inter, system-ui, sans-serif;\n}\n";
   if (path.endsWith(".js") || path.endsWith(".jsx")) {
-    return "export function jotIdea(label) {\n  return `Idea: ${label}`;\n}\n";
+    return "export function greet(name) {\n  return `Hello, ${name}!`;\n}\n";
   }
-  return "export function jotIdea(label: string) {\n  return `Idea: ${label}`;\n}\n";
+  return "export function greet(name: string) {\n  return `Hello, ${name}!`;\n}\n";
 }
 
 function readableError(value: RuntimePayload | undefined): string {
@@ -1417,7 +1417,7 @@ export function CraftPlayground({
             <span>Explorer</span>
             <div className="flex items-center gap-2">
               <span className="truncate text-[10px] normal-case text-[var(--color-muted)]">
-                {selectedNodeName || "right-click for actions"}
+                {selectedNodeName || "right-click for options"}
               </span>
               <button
                 type="button"
@@ -1560,7 +1560,7 @@ export function CraftPlayground({
                             <span className="max-w-[10rem] truncate">{name}@{version}</span>
                             {isCoreDependency ? (
                               <span className="px-1 py-0 text-[9px] text-[var(--color-muted)]">
-                                core
+                                preset
                               </span>
                             ) : null}
                             {!isCoreDependency ? (
@@ -1576,7 +1576,7 @@ export function CraftPlayground({
                             {canResetCore ? (
                               <button
                                 type="button"
-                                aria-label={`Reset dependency ${name} to core version`}
+                                aria-label={`Reset dependency ${name} to preset version`}
                                 onClick={() => removeDependency(name)}
                                 className="rounded px-1 text-[10px] text-[var(--color-muted)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-text)]/40"
                               >
@@ -1587,7 +1587,7 @@ export function CraftPlayground({
                         );
                       })
                     ) : (
-                      <span className="text-[11px] text-[var(--color-muted)]">No dependencies installed yet.</span>
+                      <span className="text-[11px] text-[var(--color-muted)]">No dependencies yet. Search above to add npm packages.</span>
                     )}
                   </div>
                 </div>
@@ -1763,7 +1763,7 @@ export function CraftPlayground({
         )}
       >
         <div className="flex items-center gap-2">
-          <span>Cmd/Ctrl + Enter to run</span>
+          <span>{typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘ Enter" : "Ctrl+Enter"} to run</span>
           <button
             type="button"
             onClick={() => setLearningOpen((open) => !open)}
@@ -1862,7 +1862,7 @@ export function CraftPlayground({
               ? "Report copied"
               : copyFeedbackState === "failed"
                 ? "Copy failed"
-                : "Copy report"}
+                : "Copy errors"}
           </button>
           <button
             type="button"
@@ -1881,7 +1881,7 @@ export function CraftPlayground({
         )}
       >
         <pre className="max-h-64 overflow-auto whitespace-pre-wrap px-3 py-3 text-xs text-red-300">
-          {diagnosticsText || "No diagnostics yet."}
+          {diagnosticsText || "No errors or warnings."}
         </pre>
       </div>
 
@@ -1965,7 +1965,7 @@ export function CraftPlayground({
               Restore snapshot
             </button>
             <div className="rounded border border-[var(--color-border)] bg-[var(--color-bg)]/30 p-2 text-xs text-[var(--color-muted)]">
-              <p>Snapshots let you preserve working recipe states as you iterate on design experiments.</p>
+              <p>Snapshots save your code at a point in time, so you can experiment freely and roll back.</p>
             </div>
           </div>
         </div>

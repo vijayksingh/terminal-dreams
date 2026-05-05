@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Timer as TimerType } from "@/lib/timer-engine";
 import { formatTime } from "@/lib/timer-engine";
 import { useSound } from "@/hooks/use-sound";
+import { TRANSITION, LOOP, DELAY } from "@/lib/motion";
 
 import { TimerRing } from "./TimerRing";
 
@@ -71,11 +72,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
   const wobbleVariants = {
     warning: {
       rotate: [0, -1, 1, -1, 0],
-      transition: {
-        duration: 0.5,
-        repeat: Infinity,
-        repeatDelay: 3,
-      },
+      transition: LOOP.wobble,
     },
   };
 
@@ -90,7 +87,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
         ...wobbleVariants[timer.state as keyof typeof wobbleVariants],
       }}
       exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.3 }}
+      transition={TRANSITION.enterCard}
     >
       <div className="flex items-start gap-4">
         {/* Timer ring */}
@@ -180,7 +177,7 @@ export function Timer({ timer, onPause, onResume, onReset, onAdjust, onDismiss }
               className="mt-2 text-xs text-[var(--color-muted)]"
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: DELAY.long }}
             >
               {timer.alert}
             </motion.p>

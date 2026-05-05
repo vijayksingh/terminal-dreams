@@ -1,20 +1,20 @@
 /* Design tokens: colors, spacing, radii, typography */
 :root {
-  /* Palette */
-  --color-bg: #0f0e0d;
-  --color-surface: #161513;
-  --color-surface-2: #1c1a17;
-  --color-border: #3a352e;
-  --color-muted: #7a6f5f;
-  --color-text: #e8e3d8;
-  --color-link: #d4a574;
+  /* Palette — neutral monochromatic dark */
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1a1a1a;
+  --color-border: #303030;
+  --color-muted: #8a8a8a;
+  --color-text: #e0e0e0;
+  --color-link: #e0e0e0;
   --color-accent: #c9956b;
 
   /* shadcn-compatible semantic colors */
   --background: 0 0% 4%;
   --foreground: 0 0% 88%;
-  --muted: 0 0% 20%;
-  --muted-foreground: 0 0% 60%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 54%;
   --popover: 0 0% 8%;
   --popover-foreground: 0 0% 88%;
   --card: 0 0% 8%;
@@ -23,16 +23,16 @@
   --input: 0 0% 19%;
   --primary: 0 0% 88%;
   --primary-foreground: 0 0% 4%;
-  --secondary: 0 0% 14%;
+  --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 88%;
-  --accent: 0 0% 14%;
+  --accent: 0 0% 10%;
   --accent-foreground: 0 0% 88%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --ring: 0 0% 35%;
 
   /* Brand accents */
-  --accent-weak: #b8a690;
+  --accent-weak: #a0a0a0;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -68,7 +68,7 @@
   --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.02) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
   --shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
 
-  /* Semantic component tokens (edit here to restyle app-wide) */
+  /* Semantic component tokens */
   --overlay-bg: rgba(0, 0, 0, 0.55);
 
   --panel-bg: var(--color-surface);
@@ -85,26 +85,27 @@
   --kbd-padding-x: var(--space-1);
 
   /* Cookbook tokens */
-  --cookbook-timer-warning: #E8A838;   /* Warm amber */
-  --cookbook-timer-done: #7FA87F;      /* Sage green */
-  --font-display: var(--font-fraunces, Georgia, serif); /* Display serif for recipe titles */
+  --cookbook-timer-warning: #E8A838;
+  --cookbook-timer-done: #7FA87F;
+  --font-display: var(--font-fraunces, Georgia, serif);
 }
 
-/* Manual theme overrides using data-theme switcher */
+/* ── Dark theme (explicit) ─────────────────────────────────────── */
 [data-theme="dark"] {
-  --color-bg: #0f0e0d;
-  --color-surface: #161513;
-  --color-surface-2: #1c1a17;
-  --color-border: #3a352e;
-  --color-muted: #7a6f5f;
-  --color-text: #e8e3d8;
-  --color-link: #d4a574;
+  --color-bg: #0a0a0a;
+  --color-surface: #141414;
+  --color-surface-2: #1a1a1a;
+  --color-border: #303030;
+  --color-muted: #8a8a8a;
+  --color-text: #e0e0e0;
+  --color-link: #e0e0e0;
   --color-accent: #c9956b;
+  --accent-weak: #a0a0a0;
 
   --background: 0 0% 4%;
   --foreground: 0 0% 88%;
-  --muted: 0 0% 20%;
-  --muted-foreground: 0 0% 60%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 54%;
   --popover: 0 0% 8%;
   --popover-foreground: 0 0% 88%;
   --card: 0 0% 8%;
@@ -113,92 +114,103 @@
   --input: 0 0% 19%;
   --primary: 0 0% 88%;
   --primary-foreground: 0 0% 4%;
-  --secondary: 0 0% 14%;
+  --secondary: 0 0% 10%;
   --secondary-foreground: 0 0% 88%;
-  --accent: 0 0% 14%;
+  --accent: 0 0% 10%;
   --accent-foreground: 0 0% 88%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   --ring: 0 0% 35%;
 
-  /* Cookbook dark mode */
-  --cookbook-timer-warning: #EDB442;   /* Brighter amber */
-  --cookbook-timer-done: #8FB88F;      /* Brighter sage */
+  --shadow-1: 0 0 0 1px rgba(255, 255, 255, 0.02) inset, 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 0 0 1px rgba(255, 255, 255, 0.03) inset, 0 20px 60px rgba(0, 0, 0, 0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.55);
+  --panel-shadow: var(--shadow-2);
+
+  --cookbook-timer-warning: #EDB442;
+  --cookbook-timer-done: #8FB88F;
 }
 
+/* ── Light theme ─────────────────────────────────────────────── */
 [data-theme="light"] {
-  --color-bg: #f8f8f8;
-  --color-surface: #ffffff;
-  --color-surface-2: #f1f1f1;
-  --color-border: #e6e6e6;
-  --color-muted: #737373;
-  --color-text: #1a1a1a;
-  --color-link: #1a1a1a;
+  --color-bg: #f4f4f4;
+  --color-surface: #fafafa;
+  --color-surface-2: #eeeeee;
+  --color-border: #d4d4d4;
+  --color-muted: #5a5a5a;
+  --color-text: #1c1c1c;
+  --color-link: #1c1c1c;
+  --color-accent: #8b6c3e;
+  --accent-weak: #8a8a8a;
 
-  --background: 0 0% 98%;
-  --foreground: 0 0% 10%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 12%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 12%;
-  --border: 0 0% 85%;
-  --input: 0 0% 85%;
-  --primary: 0 0% 12%;
-  --primary-foreground: 0 0% 98%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 12%;
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 12%;
-  --destructive: 0 84% 60%;
+  --background: 0 0% 96%;
+  --foreground: 0 0% 11%;
+  --muted: 0 0% 93%;
+  --muted-foreground: 0 0% 35%;
+  --popover: 0 0% 98%;
+  --popover-foreground: 0 0% 11%;
+  --card: 0 0% 98%;
+  --card-foreground: 0 0% 11%;
+  --border: 0 0% 83%;
+  --input: 0 0% 83%;
+  --primary: 0 0% 11%;
+  --primary-foreground: 0 0% 96%;
+  --secondary: 0 0% 93%;
+  --secondary-foreground: 0 0% 11%;
+  --accent: 0 0% 93%;
+  --accent-foreground: 0 0% 11%;
+  --destructive: 0 84% 55%;
   --destructive-foreground: 0 0% 100%;
   --ring: 0 0% 55%;
 
-  /* Cookbook light mode */
-  --cookbook-timer-warning: #E8A838;
-  --cookbook-timer-done: #7FA87F;
+  --shadow-1: 0 0 0 1px rgba(0, 0, 0, 0.04) inset, 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-2: 0 0 0 1px rgba(0, 0, 0, 0.05) inset, 0 8px 24px rgba(0, 0, 0, 0.08);
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+  --panel-shadow: var(--shadow-2);
+
+  --cookbook-timer-warning: #C48E28;
+  --cookbook-timer-done: #5E8A5E;
 }
 
+/* ── System preference fallback ──────────────────────────────── */
 @media (prefers-color-scheme: light) {
-  :root {
-    --color-bg: #f8f8f8;
-    --color-surface: #ffffff;
-    --color-surface-2: #f1f1f1;
-    --color-border: #e6e6e6;
-    --color-muted: #737373;
-    --color-text: #1a1a1a;
-    --color-link: #1a1a1a;
+  :root:not([data-theme]) {
+    --color-bg: #f4f4f4;
+    --color-surface: #fafafa;
+    --color-surface-2: #eeeeee;
+    --color-border: #d4d4d4;
+    --color-muted: #5a5a5a;
+    --color-text: #1c1c1c;
+    --color-link: #1c1c1c;
+    --color-accent: #8b6c3e;
+    --accent-weak: #8a8a8a;
 
-    /* shadcn-compatible light tokens */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
-    --border: 0 0% 85%;
-    --input: 0 0% 85%;
-    --primary: 0 0% 12%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 12%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 12%;
-    --destructive: 0 84% 60%;
+    --background: 0 0% 96%;
+    --foreground: 0 0% 11%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 35%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 11%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 11%;
+    --border: 0 0% 83%;
+    --input: 0 0% 83%;
+    --primary: 0 0% 11%;
+    --primary-foreground: 0 0% 96%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 11%;
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 11%;
+    --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
     --ring: 0 0% 55%;
 
-    /* Light mode component tokens */
-    --overlay-bg: rgba(0, 0, 0, 0.35);
-    --panel-shadow: 0 0 0 1px rgba(0, 0, 0, 0.04) inset, 0 20px 60px rgba(0, 0, 0, 0.2);
+    --shadow-1: 0 0 0 1px rgba(0, 0, 0, 0.04) inset, 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-2: 0 0 0 1px rgba(0, 0, 0, 0.05) inset, 0 8px 24px rgba(0, 0, 0, 0.08);
+    --overlay-bg: rgba(0, 0, 0, 0.3);
+    --panel-shadow: var(--shadow-2);
 
-    /* Cookbook light mode */
-    --cookbook-timer-warning: #E8A838;
-    --cookbook-timer-done: #7FA87F;
+    --cookbook-timer-warning: #C48E28;
+    --cookbook-timer-done: #5E8A5E;
   }
 }
-
-

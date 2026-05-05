@@ -1,0 +1,182 @@
+---
+title: "Anatomy of a Code Primitive — Breaking Free"
+summary: "When composition fails and you rebuild from scratch — the architecture of a 1000-line motion-choreographed component that outgrew its primitive."
+date: 2026-05-03
+tags:
+  - react
+  - architecture
+  - animation
+  - useReducer
+format: lab
+demo: code-primitive-4-inline-bridge
+series: code-primitive
+part: 4
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Why not wrap CodeTrace?
+
+Toggle **Unified Model** on. Look at the kind badges on the right edge of each line: `signature`, `pending`, `active-label`, `close`.
+
+In Phase 3, every wrapper used CodeTrace's rendering. LiveCodePanel passed props down. GatedCodeBridge orchestrated from outside. Even CodeFill, which bypassed CodeTrace, still rendered "code line → code line → code line" — a linear sequence of syntax-highlighted text.
+
+InlineCodeBridge needs something different. It renders **one continuous code body** where line numbers flow from 1 to N like a real editor — but annotations, step panels, and reveal notes are *interleaved between arbitrary lines*. Not below the active line. Not in a sidebar. **Between** lines 6 and 7. Between lines 12 and 13. At multiple positions simultaneously.
+
+CodeTrace's annotation slot puts content below `activeLine`. That's one slot, one position, one piece of content. InlineCodeBridge needs:
+
+- **Active step panels** — a question card between lines 6 and 7 asking the student to solve the next chunk
+- **Reveal notes** — `"— The move: ..."` appearing between the last line of chunk 1 and the first line of chunk 2, explaining the insight
+- **Pending placeholders** — dimmed `// step 2 — pending` lines that show where future code will appear, then get replaced when the student solves them
+- **Replacement labels** — `"REPLACING STEP 3"` when a later chunk upgrades earlier code in place
+
+None of these fit the "one slot below active line" model. You could try to hack it — use `activeLine` to point at the insertion point, render a giant children blob that contains all the interleaved content. But then you lose independent animation for each piece. You can't have the reveal note slide in from the left while the step panel slides up simultaneously.
+
+The solution is a **unified line model** where annotations are first-class lines in the render order:
+
+<CodeAnnotator blockId="p4-line-kind" />
+
+The renderer doesn't distinguish between "real code" and "interleaved UI" at the layout level. They're all `UnifiedLine` entries in a flat array. Each gets a line number, a code display, and a kind badge. The kind determines styling — committed lines are at 85% opacity, pending lines at 25%, active labels in the track color.
+
+Click "Resolve Step 1" in the demo (if Chunk Reveal is enabled) and watch the kind badges change. `pending` lines become `committed`. The `active-label` moves to the next chunk. The unified model recalculates, and the renderer just iterates the new array.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — The reducer
+
+Toggle **Reducer** on. Click "Resolve Step 1" and watch the state inspector. Three values update simultaneously: `revealed` goes from `0/3` to `1/3`, `activeIdx` advances from `0` to `1`, and `correct` increments to `1`.
+
+One click, three coordinated state changes. This is why InlineCodeBridge uses `useReducer` instead of `useState`.
+
+With `useState`, resolving a chunk would look like this:
+
+```ts
+// THREE separate state updates:
+setRevealed(prev => new Set([...prev, idx]));
+setActiveIdx(idx + 1 < total ? idx + 1 : null);
+setCorrect(prev => prev + 1);
+```
+
+With `useReducer`, the entire state transition is one atomic operation:
+
+<CodeAnnotator blockId="p4-state-event" />
+
+The reducer function processes events and returns the **entire next state**:
+
+<CodeAnnotator blockId="p4-reducer" />
+
+Why does this matter for a code viewer? Because the **rendering depends on ALL three fields simultaneously**. The `buildUnifiedCode` function (Step 3) reads `revealed` to know which chunks to show as code, reads `activeIdx` to know which chunk gets the step panel, and the completion display reads `correct` to know when to show "All chunks resolved." If these values are ever inconsistent — even for one frame — the UI glitches.
+
+Click "Resolve" three times in the demo to complete the function. Watch all three values change atomically each time. Then click "Reset" — they all return to initial values from a single dispatch.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Chunk-based reveal
+
+Toggle **Chunk Reveal** on. Click "Resolve Step 1" — watch the pending placeholder on the left disappear and five lines of real code appear in its place.
+
+The code body isn't a static string. It's **rebuilt from scratch** every time the reducer state changes. Here's the function that constructs it:
+
+<CodeAnnotator blockId="p4-build-unified" />
+
+The function reads top-to-bottom as: signature → chunk slots → close brace. Each chunk slot renders one of three ways depending on state:
+
+- **Pending** → one dim placeholder line (`// step 2 — pending` at 25% opacity)
+- **Active** → a step label + question panel (`// 1 — count frequencies` with a purple card below)
+- **Committed** → all code lines from `revealCode` + a reveal note at the bottom
+
+The function body **grows** as the student resolves chunks. Initially it's about 5 lines (signature, 3 placeholders, close brace). After resolving chunk 1, it jumps to ~9 lines (signature, 5 committed lines, 2 placeholders, close brace). After all three chunks, it's 22+ lines of real code.
+
+Check `totalLines` in the state inspector as you resolve chunks — watch it grow.
+
+This is a fundamentally different rendering model than CodeTrace. CodeTrace takes a static code string and highlights a line within it. The code exists from the start. InlineCodeBridge takes a set of chunks and *constructs* the code from them. The function body doesn't exist until the student builds it, step by step.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Motion choreography
+
+Toggle **Motion** on. Click **Reset** first so all chunks are pending. Now click "Resolve Step 1" — watch the animation.
+
+It happens fast. Now toggle the **0.25×** slow-motion button (top right of the controls) and click "Resolve Step 2." At quarter speed, you can see every beat of the animation sequence.
+
+The resolve animation follows a **5-beat storyboard**:
+
+```
+t = 0ms    SHELL   — active panel repositions (CSS layout animation)
+t = 0ms    CARD    — old step content slides up, new slides in from below
+t = 80ms   CODE    — new code lines begin height-expanding, one by one
+t = 320ms  NOTE    — reveal note slides in from the left margin
+t ≈ 600ms  settled — all animations complete
+```
+
+Beat 3 (CODE) is the signature move. Each committed code line starts at `height: 0` and springs open to `LINE_H`, with a staggered delay:
+
+<CodeAnnotator blockId="p4-choreo" />
+
+Each committed line uses these values to compute its animation:
+
+<CodeAnnotator blockId="p4-motion-line" />
+
+At full speed, this cascade is a subtle "unfurl" — you perceive the code appearing all at once, but with a pleasant directional flow. At 0.25× slow motion, you can see each line individually spring open, with the characteristic overshoot-and-settle of spring physics.
+
+**Direction discipline**: all vertical content enters by growing downward (height expansion). Horizontal content slides from the left margin. Exiting content fades in place. These constraints prevent "where did that come from?" confusion — the answer is always the same direction.
+
+The slow-motion toggle multiplies all delays by 4×. It's the most useful tool for debugging animation choreography — timing bugs that are invisible at full speed become obvious at quarter speed. Try resolving each chunk at 0.25× and studying the beat sequence.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The replaces mechanism
+
+Toggle **Replaces** on. Click **Reset** to start fresh. Now resolve steps 1, 2, and 3 normally — the function builds up as before.
+
+After step 3 ("Sweep Top-K") commits, something new happens. A **fourth** step appears — but it looks different. The active label is amber instead of purple. The resolve button says **"Replace Step 3"** instead of "Resolve Step 4."
+
+This is the `replaces` mechanism. Some chunks don't add new code to the function — they **upgrade earlier code in place**:
+
+<CodeAnnotator blockId="p4-chunk-interface" />
+
+Here's what's happening. The original Step 3 sweeps buckets with `result.push(...buckets[i])`. This has a subtle bug: if a bucket has 3 elements and you only need 1 more to reach `k`, you overshoot — `result.length` ends up as `k + 2`. The `replaces` chunk fixes this with an inner loop and early return that stops at exactly `k`.
+
+The `buildUnifiedCode` function handles this with a **replacer map**:
+
+<CodeAnnotator blockId="p4-replacer-map" />
+
+Click "Replace Step 3" now. Watch the code swap. Step 3's five lines disappear and step 4's seven lines appear in the same position. The reveal note changes from purple *"— The move:"* to amber *"— The upgrade:"* — a visual signal that this was a refinement, not an addition.
+
+This powers a real educational pattern in AlgoFlashcards: the student first writes a working-but-naive solution, then upgrades specific parts. The code viewer reflects this — the function's structure stays stable while individual implementations get refined. The student **sees refactoring happen visually**, not as a diff in a PR review.
+
+Check the state inspector — the `replaces` field tracks the replacement status. After replacing, `revealed` shows `4/4` chunks complete even though the function only has 3 slots — because the replacer took over an existing slot.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Lessons for your own primitives
+
+Toggle **Full Demo** on. All features are active. Resolve all four chunks — including the replacement — to see the complete upgraded function.
+
+This series traced a component through four architectural phases. Let's map the journey:
+
+**Phase 1 — The Atom.** CodeTrace: 275 lines of pure rendering. Split code into lines, highlight with Shiki, track one active line, animate a bar with spring physics, thread color through all elements, provide a composable annotation slot. The smallest useful unit — it does one thing well.
+
+**Phase 2 — Extension Points.** Instead of forking CodeTrace when new use cases appeared, we added extension points: `getLineAction` for clickable lines, `lineRules` for pattern-matched decorations, `variant` for different visual contexts. One component grew to serve three use cases without forking.
+
+**Phase 3 — Composition.** Three wrappers added state management on top of CodeTrace. LiveCodePanel: thin wrapper, zero state. GatedCodeBridge: state wrapper, tracks exploration progress. CodeFill: divergent wrapper, bypasses CodeTrace to work directly with Shiki tokens. Each wrapper is small because CodeTrace handles the rendering.
+
+**Phase 4 — The Rebuild.** InlineCodeBridge: 1000+ lines. A new component that shares concepts with CodeTrace (per-line rendering, spring animation, Shiki tokens) but not code. New architecture: unified line model, reducer for atomic state transitions, chunk-based reveal with dynamic code construction, 5-beat motion choreography, and in-place code replacement.
+
+The pattern across all four phases: **compose for as long as you can, then rebuild when the architecture hits its limits.**
+
+The signal isn't complexity — it's **contortion**. When you're writing workarounds to force content into a slot that wasn't designed for it, the workaround cost exceeds the rebuild cost. InlineCodeBridge needed annotations between arbitrary lines. CodeTrace's slot model only supports one annotation below one active line. You *could* hack it — use a virtual scroll with invisible insertion points, or override the render loop with a custom line factory — but each hack fights the component's design. At some point, a clean rebuild is cheaper than accumulated hacks.
+
+CodeTrace survived intact through all four phases. It still powers LiveCodePanel and GatedCodeBridge in production today. InlineCodeBridge didn't replace it — it went around it. Both coexist in the same codebase, used in different contexts. The lesson isn't "rebuild everything." It's "know when composition has reached its ceiling, and have the courage to build a new floor."
+
+</section>

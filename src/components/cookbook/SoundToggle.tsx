@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useSound } from "@/hooks/use-sound";
+import { TRANSITION } from "@/lib/motion";
 
 /**
  * Sound toggle button for cookbook
@@ -48,7 +49,7 @@ export function SoundToggle() {
           viewBox="0 0 24 24"
           initial={{ scale: 1 }}
           animate={{ scale: [1, 1.1, 1] }}
-          transition={{ duration: 0.3 }}
+          transition={TRANSITION.feedback}
         >
           <path
             strokeLinecap="round"

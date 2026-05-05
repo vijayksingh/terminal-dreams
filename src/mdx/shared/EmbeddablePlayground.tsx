@@ -13,7 +13,7 @@ const LazyEmbeddedPlayground = dynamic(
     ssr: false,
     loading: () => (
       <div className="my-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-sm text-[var(--color-muted)]">
-        Loading playground...
+        Setting up the editor...
       </div>
     ),
   }

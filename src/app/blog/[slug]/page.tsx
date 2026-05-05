@@ -1,5 +1,5 @@
 import styles from "@/components/retro/retro.module.css";
-import { Breadcrumb } from "@/components/retro/Breadcrumb";
+import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 // import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { ToC } from "@/components/retro/ToC";
@@ -22,21 +22,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className={`${styles.container} readingView`}>
-      <header className={styles.header}>
-        <div className={styles.headerInner}>
-          <h1 className={`${styles.title}`}>{post.frontmatter.title}</h1>
-          <div className={styles.postHeaderMetaRow}>
-            <Breadcrumb items={[{ label: "blog", href: "/blog" }]} />
-            <div className={styles.meta}>
-              <span>{"// "}{post.frontmatter.date}</span>
-              {post.frontmatter.category ? (
-                <span>{"// "}{post.frontmatter.category}</span>
-              ) : null}
-              <span>{"// "}{post.readTime}</span>
-            </div>
-          </div>
+      <BreadcrumbBar items={[{ label: "blog", href: "/blog" }, { label: post.frontmatter.title }]} />
+
+      <div className={styles.headerInner} style={{ paddingTop: "2rem" }}>
+        <h1 className={styles.title}>{post.frontmatter.title}</h1>
+        <div className={styles.meta}>
+          <span>{"// "}{post.frontmatter.date}</span>
+          {post.frontmatter.category ? (
+            <span>{"// "}{post.frontmatter.category}</span>
+          ) : null}
+          <span>{"// "}{post.readTime}</span>
         </div>
-      </header>
+      </div>
 
       <div className={styles.postLayout}>
         <aside className={styles.tocAsideStickyBottom}>

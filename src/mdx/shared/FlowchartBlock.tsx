@@ -21,9 +21,11 @@ export function FlowchartBlock({ content, language }: FlowchartBlockProps) {
 
   return (
     <figure
+      data-flowchart
       style={{
         margin: "2em 0",
         padding: 0,
+        position: "relative",
       }}
     >
       <pre
@@ -32,13 +34,19 @@ export function FlowchartBlock({ content, language }: FlowchartBlockProps) {
           fontSize: "14px",
           lineHeight: "1.6",
           padding: "1.5rem",
-          backgroundColor: "var(--color-surface-1, #1a1a1a)",
+          background: "var(--color-surface, #141414)",
           border: "1px solid var(--color-border, #333)",
           borderRadius: "6px",
           overflow: "auto",
           textAlign: "left",
           whiteSpace: "pre",
           color: "var(--color-text, #e0e0e0)",
+          display: "block",
+          visibility: "visible",
+          opacity: 1,
+          minHeight: "2rem",
+          position: "relative",
+          zIndex: 1,
         }}
       >
         {content}

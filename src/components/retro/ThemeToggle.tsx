@@ -1,55 +1,65 @@
 "use client";
 
-import { LockOpenIcon, LockOpenIconHandle } from "@/components/ui/lock-open";
-import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
-
-function getInitialTheme(): "dark" | "light" {
-  if (typeof window === "undefined") return "dark";
-  const saved = localStorage.getItem("td-theme");
-  if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
+import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">(getInitialTheme);
-  const iconRef = useRef<LockOpenIconHandle | null>(null);
-  const prefersReducedMotion = usePrefersReducedMotion();
+  // Start with null to avoid hydration mismatch — server doesn't know the theme
+  const [theme, setTheme] = useState<"dark" | "light" | null>(null);
+
+  // Read the actual theme from the DOM on mount (set by the blocking script)
+  useEffect(() => {
+    const current = document.documentElement.getAttribute("data-theme");
+    setTheme(current === "light" ? "light" : "dark");
+  }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute("data-theme", theme);
+    if (theme === null) return;
+    document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("td-theme", theme);
   }, [theme]);
 
-  const label = useMemo(() => (theme === "dark" ? "Dark" : "Light"), [theme]);
+  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  // Render a placeholder with the same dimensions during SSR to avoid layout shift
+  if (theme === null) {
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
+        style={{
+          borderColor: "var(--color-surface-2)",
+          color: "var(--color-muted)",
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--text-sm)",
+          lineHeight: 1,
+          letterSpacing: "0.01em",
+          visibility: "hidden",
+        }}
+      >
+        <span aria-hidden>☾</span>
+        <span>dark</span>
+      </span>
+    );
+  }
 
   return (
     <button
       type="button"
-      aria-label="Toggle theme"
-      onClick={() => {
-        const next = theme === "dark" ? "light" : "dark";
-        if (!prefersReducedMotion) {
-          iconRef.current?.startAnimation();
-        }
-        setTheme(next);
-        if (!prefersReducedMotion) {
-          // settle animation back
-          window.setTimeout(() => iconRef.current?.stopAnimation(), 600);
-        }
+      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+      onClick={toggle}
+      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors"
+      style={{
+        borderColor: "var(--color-surface-2)",
+        color: "var(--color-muted)",
+        fontFamily: "var(--font-mono)",
+        fontSize: "var(--text-sm)",
+        lineHeight: 1,
+        letterSpacing: "0.01em",
       }}
-      className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
     >
-      {/* keep pointer events */}
-      <LockOpenIcon ref={iconRef} size={18} className="text-foreground" />
-      <span className="font-medium">{label}</span>
+      <span aria-hidden>{theme === "dark" ? "☾" : "☀"}</span>
+      <span>{theme === "dark" ? "dark" : "light"}</span>
     </button>
   );
 }
 
 export default ThemeToggle;
-
-

@@ -1,0 +1,236 @@
+---
+title: "Anatomy of a Code Primitive — The Highlight Bar"
+summary: "Build a syntax-highlighted code viewer with active-line tracking from scratch — tracing how AlgoFlashcards' CodeTrace was born."
+date: 2026-05-03
+tags:
+  - react
+  - animation
+  - compound-components
+  - shiki
+format: lab
+demo: code-primitive-1-highlight-bar
+series: code-primitive
+part: 1
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Render raw lines
+
+How do you render code in React? The obvious answer is a `<pre>` tag:
+
+```tsx
+<pre>{code}</pre>
+```
+
+That works for display. But now try to highlight line 5. You can't — the browser sees one big text node, not individual lines. You'd have to parse the rendered DOM, find where line 5 starts in the text, wrap it in a `<span>`... it's fragile and slow.
+
+The first decision in CodeTrace is to split the code string on newlines and render each line as its own element. Look at the demo panel — no features are toggled on yet. You're seeing the result of this code:
+
+<CodeAnnotator blockId="p1-render-lines" />
+
+Let's pause on **why fixed heights matter**. Imagine if line heights were dynamic — a long line wraps and becomes 44px while others stay 22px. Now where does line 5 start? You'd have to measure lines 1 through 4 at runtime, summing their actual heights. Every time the container resizes (window resize, panel toggle), those heights change and you'd need to remeasure.
+
+With fixed heights, the answer is always `lineIndex × LINE_H`. No measurement, no layout queries, no resize observers. The position of every line is a pure math computation. This is what makes the animated highlight bar in Step 4 possible — we can tell it exactly where to go without asking the browser.
+
+Two constants are defined here: **`LINE_H = 22`** (line height) and **`PAD_Y = 8`** (vertical padding). They seem trivial, but they're load-bearing. The real CodeTrace exports them so that overlay components (like the highlight bar) can align to the same vertical rhythm without hardcoding magic numbers.
+
+Look at the demo — plain monospace text with line numbers, nothing else. Every feature in the next five steps is layered on top of this per-line rendering. Without it, none of them work.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Add Shiki tokens
+
+Toggle **Syntax Highlighting** on and watch the code transform from flat white text into color-coded syntax. Keywords like `const` and `function` turn blue. Types like `string[]` turn green. String values turn orange.
+
+But what actually happened? The same text is there — the characters didn't change. What changed is that each piece of text now has a **color**. This is what a syntax highlighter does: it reads code, understands the grammar, and assigns colors to each piece based on what it represents in the language.
+
+Shiki (the highlighter we use) calls these pieces **tokens**. When you give Shiki the string `const visited = new Set()`, it breaks it into:
+
+```ts
+// What Shiki returns for one line:
+[
+  { content: "const",   color: "#bb9af7" },  // keyword → purple
+  { content: " ",       color: "#a9b1d6" },  // whitespace
+  { content: "visited", color: "#c0caf5" },  // variable → light blue
+  { content: " = ",     color: "#a9b1d6" },  // operator
+  { content: "new",     color: "#bb9af7" },  // keyword → purple
+  { content: " ",       color: "#a9b1d6" },  // whitespace
+  { content: "Set",     color: "#2ac3de" },  // type → cyan
+  { content: "()",      color: "#a9b1d6" },  // punctuation
+]
+```
+
+Each token knows its `content` (the text) and its `color` (what hex color to render it in). Rendering is straightforward — map over tokens and wrap each in a `<span>`:
+
+```tsx
+{tokens[i].map((token, j) => (
+  <span key={j} style={{ color: token.color }}>
+    {token.content}
+  </span>
+))}
+```
+
+But loading a syntax highlighter is **expensive**. Shiki bundles grammar definitions (rules for every language) and theme files (color mappings). Initializing it can take 50–100ms. If you create a new highlighter every time a component mounts, a page with three code viewers triggers three separate loads — 150–300ms of redundant work.
+
+The solution is a **lazy singleton** — a pattern that creates exactly one instance, only when first needed:
+
+<CodeAnnotator blockId="p1-singleton" />
+
+The `useCodeTokens` hook wraps this singleton. It calls `getHighlighter()`, waits for the instance, then tokenizes the code with the current theme. But here's the important UX detail — what happens *while* the highlighter is loading?
+
+<CodeAnnotator blockId="p1-progressive" />
+
+The component never shows a loading spinner. It shows plain text that silently upgrades to highlighted text when Shiki finishes loading. A brief flash of uncolored code is far less jarring than a spinner replacing the entire block.
+
+Toggle **Syntax Highlighting** off and on again in the demo. Notice the code doesn't jump or reflow — the same characters are there, only the colors change. That's progressive enhancement in action.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Active line tracking
+
+Toggle **Active Line** on. Click any line in the demo. The clicked line stays fully visible while everything else fades to lower opacity.
+
+This is the simplest feature a code viewer can add, and the implementation reveals a principle that recurs throughout the series: **one prop, everything derived**.
+
+Here's the entire API for this feature:
+
+```tsx
+interface CodeTraceProps {
+  code: string;
+  activeLine?: number | null;
+  // That's it. One number. null = "no line active."
+  // 3 = "line index 3 (the 4th line) is active."
+  // No dimmedLines prop. No highlightedLine prop.
+  // Everything else is computed from this single value.
+}
+```
+
+Inside the line rendering loop, two booleans control the entire visual state:
+
+<CodeAnnotator blockId="p1-active-line" />
+
+Why not track dimming as separate state? Because dimming **is** the absence of being active. If `activeLine` is set, every other line is dimmed. One source of truth, zero synchronization bugs.
+
+Think of it like a spotlight in a theater. You don't separately track "which seats are in darkness." You track where the spotlight points; darkness is everything else. If you tracked both — `spotlightPosition = 5` and `darkSeats = [1,2,3,4,6,7,8,9,10]` — they could get out of sync. With one prop, they can't.
+
+Click line 1 in the demo, then line 7, then line 14. Watch the state inspector on the right — `activeLine` changes, and the visual state flows entirely from that one number.
+
+The real CodeTrace also precomputes `lineTops` — the cumulative Y offset of each line:
+
+<CodeAnnotator blockId="p1-prefix-sum" />
+
+With fixed heights, `lineTops` is trivially `[0, 22, 44, 66, ...]`. You might wonder why we compute it at all instead of just multiplying. The answer is Phase 2: when interactive lines grow to 44px, the multiplication breaks. The prefix sum handles mixed heights correctly from day one. CodeTrace builds infrastructure for features it doesn't have yet — the `lineTops` array costs nothing now but saves a rewrite later.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — The floating bar
+
+Toggle **Highlight Bar** on. Click different lines and watch the purple bar glide between positions.
+
+Before you look at the code — **how would you implement this?** The bar needs to sit behind the active line and move when `activeLine` changes. The instinct is `position: absolute; top: ${activeLine * LINE_H}px`. That would work, but it has a performance problem.
+
+When the browser animates `top`, it triggers a **layout recalculation**. Every frame of the animation, the browser recomputes the geometry of the bar and everything around it — "this element moved, does anything overlap? Do siblings need to shift?" For a simple code viewer this is fine, but in AlgoFlashcards where multiple code viewers animate simultaneously, layout thrashing becomes visible jank.
+
+CodeTrace animates `transform: translateY()` instead. Transforms are composited on the GPU — the browser doesn't recalculate layout, it just moves the pixels. Here's the full bar implementation:
+
+<CodeAnnotator blockId="p1-highlight-bar" />
+
+The `barTop` value is simply `lineTops[activeLine]` — one lookup into the array we computed in Step 3. One number, one spring animation.
+
+**Why spring physics instead of CSS transitions?** A CSS `transition: transform 0.3s ease` moves the bar from A to B in exactly 300ms, regardless of distance. Moving 1 line takes the same time as moving 10. A spring has velocity and mass — it overshoots slightly and settles. Moving 10 lines generates more momentum than moving 1, so the bar arrives with more energy and a bigger overshoot.
+
+Try it in the demo: click line 1, then line 14. The bar sweeps with a subtle bounce at the end. Now click line 13. The bar barely moves and settles almost instantly. Same spring, different distance, different feel. This **physicality** is why Framer Motion's springs are worth the library weight.
+
+The background color uses a trick worth knowing:
+
+<CodeAnnotator blockId="p1-highlight-bg" />
+
+Watch `barTop` in the state inspector as you click lines. It's always `activeLine × 22` because all lines are still the same height. That changes in Phase 2 when interactive lines grow to 44px and the prefix sum kicks in.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Track color system
+
+Toggle **Track Color** on. Four colored circles appear above the code viewer. Click each one — purple, blue, green, amber. Watch what changes.
+
+Not just the bar. Not just the left border. The **line number** of the active line also changes color. All three elements update simultaneously from one value.
+
+This is a design decision that seems small but prevents a real class of bugs: **one prop threads through all visual elements**.
+
+<CodeAnnotator blockId="p1-track-color" />
+
+The prop is called `trackHex`, not `highlightColor` or `accentColor`. The naming is intentional — it represents a **track**, a thematic lane that identifies which algorithm's execution you're following. In AlgoFlashcards, BFS is purple, DFS is blue, sorting is green. When a student sees purple, they know they're tracing BFS without reading a label. The color isn't decorative; it's semantic.
+
+Why not separate props for `barColor`, `lineNumberColor`, `annotationColor`? Think about what happens with three props. A new developer adds a GatedCodeBridge view and sets `barColor="#7c3aed"` (purple) but forgets `annotationColor`. The annotation renders in the default gray while everything else is purple. It's a visual inconsistency that's hard to catch in code review because each prop looks reasonable in isolation.
+
+One prop makes divergence **impossible**:
+
+```tsx
+// This is all the consumer writes:
+<CodeTrace trackHex="#7c3aed" ... />
+// The bar, the line number, and the annotation
+// are all purple. They can never disagree.
+```
+
+This is a principle you'll see again in Phase 3: instead of adding knobs for every visual element, add one prop that cascades through all of them. Fewer props, fewer bugs, stronger visual coherence.
+
+Click through the four colors in the demo. Watch how the entire visual identity of the code viewer changes with each click — because it all flows from one value.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Composable annotation slot
+
+Toggle **Annotation Slot** on and click different lines. Some display a text annotation that slides open below — a `└─` line in the track color explaining what that code does.
+
+You've been reading annotations throughout this entire lesson. Every time you clicked a highlighted line in these code blocks and saw a `└─` explanation slide open, you were seeing the same pattern — content revealed below the active line. The demo has been **teaching you about annotations by using annotations**.
+
+Here's how the slot works. It's just **React `children`** rendered below the active line:
+
+<CodeAnnotator blockId="p1-annotation-slot" />
+
+This is the most important architectural decision in CodeTrace. The component provides three things: **positioning** (below the active line), **animation** (enter/exit with height), and **lifecycle** (content only exists when a line is active). The consumer decides what goes inside:
+
+```tsx
+// Simple text annotation
+<CodeTrace code={CODE} activeLine={5} trackHex="#7c3aed">
+  └─ path: [] → [1]
+</CodeTrace>
+
+// Interactive quiz — same slot, completely different content
+<CodeTrace code={CODE} activeLine={5} trackHex="#7c3aed">
+  <InlinePrediction prompt="What does path become?" options={...} />
+</CodeTrace>
+
+// No annotation at all — works fine without it
+<CodeTrace code={CODE} activeLine={5} trackHex="#7c3aed" />
+```
+
+Why `children` instead of a render prop like `renderAnnotation={(lineIndex) => ...}`? Because `children` is the simplest composition pattern in React. Every developer knows how to use it — you just put content between the tags. A render prop adds an API boundary that requires documentation, type definitions, and examples. `children` is self-evident.
+
+Why position annotations **below the active line** instead of in a sidebar? Because the annotation is *about that specific line*. When you click line 5 and see `"└─ Dequeue the front node"`, your eye moves 22px down from `queue.shift()` — the code that does the dequeuing. The spatial proximity creates an instant cognitive connection. A sidebar annotation would force your eyes to jump 400px horizontally, breaking the flow.
+
+Click different lines in the demo. Some have annotations, some don't. In Phase 3, LiveCodePanel will put step-synced explanations into this slot, GatedCodeBridge will put section narration, and CodeFill will leave it empty. Three completely different interaction patterns, all using the same slot. The component accommodates all three because it committed to composability over features.
+
+That's the complete CodeTrace foundation:
+
+- **Per-line rendering** — each line is an addressable element with a fixed height
+- **Lazy singleton highlighting** — one Shiki instance, loaded once, shared everywhere
+- **Derived state** — one `activeLine` prop, everything else computed from it
+- **Transform animation** — GPU-composited spring physics for smooth bar movement
+- **Color threading** — one `trackHex` prop cascading through all visual elements
+- **Composable slot** — `children` rendered below the active line with animated enter/exit
+
+Every decision was made to enable what comes next. In Phase 2, we make these lines clickable.
+
+</section>

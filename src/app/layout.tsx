@@ -43,6 +43,8 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${fraunces.variable} antialiased`}
       >
+        {/* Theme init — must run before first paint to prevent flash */}
+        <Script src="/theme-init.js" strategy="beforeInteractive" />
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"

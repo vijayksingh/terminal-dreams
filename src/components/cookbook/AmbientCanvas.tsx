@@ -37,12 +37,12 @@ export function AmbientCanvas() {
     resize();
     window.addEventListener("resize", resize);
 
-    // Particle colors (spice-inspired)
+    // Particle colors — monochromatic, matching design tokens
     const colors = [
-      "rgba(232, 179, 57, 0.3)", // Turmeric yellow
-      "rgba(214, 73, 51, 0.25)", // Chili red
-      "rgba(127, 165, 72, 0.2)", // Herb green
-      "rgba(216, 150, 160, 0.25)", // Rose pink
+      "rgba(122, 111, 95, 0.25)", // --color-muted warm gray
+      "rgba(184, 166, 144, 0.15)", // --accent-weak soft tan
+      "rgba(58, 53, 46, 0.3)", // --color-border warm dark
+      "rgba(122, 111, 95, 0.2)", // --color-muted variant
     ];
 
     // Create particles
@@ -129,7 +129,7 @@ export function AmbientCanvas() {
       // Draw subtle connecting lines between close particles
       ctx.save();
       ctx.globalAlpha = 0.1;
-      ctx.strokeStyle = "rgba(232, 179, 57, 0.2)";
+      ctx.strokeStyle = "rgba(122, 111, 95, 0.15)";
       ctx.lineWidth = 0.5;
 
       for (let i = 0; i < particles.length; i++) {

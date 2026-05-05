@@ -21,6 +21,24 @@ body {
   --component-panel-padding-y: var(--panel-padding-y);
 }
 
+/* RichText inline enrichment */
+.richtext-root {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1.5em;
+}
+
+.richtext-code-pill {
+  transition: background-color 180ms ease-out;
+  padding: 0.05em 0.28em;
+  margin: -0.05em -0.28em;
+  border-radius: 3px;
+  cursor: default;
+}
+
+.richtext-code-pill:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
 /* Retro blog global touches */
 body {
   cursor: crosshair;

@@ -43,7 +43,7 @@ export function RecipeStepProgress({
   }
 
   return (
-    <div className="hidden lg:flex flex-col items-center gap-2 py-8 px-3">
+    <div className="hidden lg:flex flex-col items-center gap-2 py-8 px-3 lg:sticky lg:top-0 lg:self-start">
       {steps.map((step, i) => {
         const isActive = step.id === activeId;
         const isHovered = step.id === hoveredId;

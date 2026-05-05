@@ -1,0 +1,295 @@
+---
+title: "Anatomy of a Code Primitive — Making Code Clickable"
+summary: "Turn a display-only code viewer into an interactive component with clickable lines, keyboard navigation, line decorations, and a variant system — tracing how CodeTrace grew up."
+date: 2026-05-03
+tags:
+  - react
+  - accessibility
+  - compound-components
+  - animation
+format: lab
+demo: code-primitive-2-clickable-lines
+series: code-primitive
+part: 2
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Line actions
+
+Phase 1 gave us a code viewer that highlights and annotates. But every line was equally clickable — clicking any line moved the highlight. Now AlgoFlashcards needs lines that *do things*: clicking the `sort` phase reveals the sorting step, clicking the `iteration` phase triggers a walkthrough. Some lines are interactive. Most aren't.
+
+How would you design this API? The first instinct is a prop:
+
+```tsx
+<CodeTrace interactiveLines={[1, 5, 7, 10]} />
+```
+
+That tells the component *which* lines are clickable. But what happens *when* they're clicked? You'd need another prop:
+
+```tsx
+<CodeTrace
+  interactiveLines={[1, 5, 7, 10]}
+  onLineClick={(lineIndex) => handleClick(lineIndex)}
+/>
+```
+
+Now you have two props that are conceptually one thing: "what can this line do?" And it gets worse. What if each line needs a different label for screen readers? What if some lines should be clickable but disabled? You'd end up with:
+
+```tsx
+<CodeTrace
+  interactiveLines={[1, 5, 7, 10]}
+  onLineClick={(lineIndex) => handleClick(lineIndex)}
+  lineLabels={{ 1: "Sort phase", 5: "Iteration", ... }}
+  disabledLines={[10]}
+/>
+// └─ Four props that are really one concept: "the action for this line."
+//    They can get out of sync — a line in interactiveLines but missing
+//    from lineLabels, or in disabledLines but not in interactiveLines.
+```
+
+CodeTrace collapses all of this into a single callback:
+
+<CodeAnnotator blockId="p2-line-action-interface" />
+
+Returning `null` means "this line is plain text." Returning an action bundles the click handler, the accessibility label, and the disabled state into one value. No cross-referencing between parallel arrays.
+
+Look at the demo — four lines have badges on their right edge: "Sort phase", "Iteration", "Merge branch", "New interval branch". Click one. The highlight bar jumps to it. Now click a line *without* a badge — nothing happens. The callback returned `null` for that line, so the component ignores the click.
+
+<CodeAnnotator blockId="p2-line-action-usage" />
+
+The state inspector shows `activeLine` and `interactiveLines`. Notice that `interactiveLines` is static here — `[1, 5, 7, 10]`. But in the real AlgoFlashcards, `getLineAction` can return different results based on the current algorithm step. A line might be interactive during the "explore" phase and locked during the "quiz" phase. A callback can express this naturally. A static array can't.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Variable line heights
+
+Before you toggle anything, look at the demo. Every line is 22px tall. Now imagine tapping one of those badge lines on a phone. A 22px touch target is about 5.8mm tall. Apple's Human Interface Guidelines recommend a minimum of 44pt (about 11.6mm). You'd miss half the time on a touchscreen.
+
+Toggle **Variable Heights** on. Watch lines 2, 6, 8, and 11 — the ones with badges — grow to 44px while everything else stays at 22px.
+
+This creates an immediate problem. In Phase 1, computing the highlight bar's position was trivial: `activeLine × LINE_H`. That formula assumes every line is the same height. Now line 2 is 44px, line 3 is 22px, and the formula breaks.
+
+Where does line 8 start? It's not `8 × 22 = 176px` anymore. You have to add up all the heights above it: `22 + 44 + 22 + 22 + 22 + 44 + 22 + 44 = 242px`. This is a **prefix sum** — the same algorithm you'd use for cumulative totals in a spreadsheet:
+
+```ts
+const LINE_H = 22;
+const INTERACTIVE_LINE_H = 44;
+
+const lineHeights = lineActions.map((action) =>
+  action ? INTERACTIVE_LINE_H : LINE_H
+);
+// └─ For each line, check if getLineAction returned an action.
+//    If yes → 44px (big click target). If null → 22px (read-only).
+//    Result: [22, 44, 22, 22, 22, 44, 22, 44, 22, 22, ...]
+
+const lineTops: number[] = [];
+let totalLineHeight = 0;
+// └─ Running sum. Each line's "top" is the sum of all heights above it.
+
+lineHeights.forEach((height) => {
+  lineTops.push(totalLineHeight);
+  // └─ Line 0 starts at 0px.
+  //    Line 1 starts at 22px (one 22px line above).
+  //    Line 2 starts at 66px (22 + 44 = 66). Not 44!
+  //    The 44px line 1 pushed everything below it down.
+
+  totalLineHeight += height;
+});
+// └─ lineTops = [0, 22, 66, 88, 110, 132, 176, 198, 242, ...]
+//    These numbers are NOT evenly spaced anymore.
+```
+
+The highlight bar now animates *both* position and height:
+
+```tsx
+<motion.div
+  initial={{ y: barTop, opacity: 0, height: barHeight }}
+  animate={{ y: barTop, opacity: 1, height: barHeight }}
+  transition={SPRING.snappy}
+/>
+// └─ barTop = lineTops[activeLine] — the line's vertical position.
+//    barHeight = lineHeights[activeLine] — 22px or 44px.
+//    Both are animated by the same spring. When you click from a
+//    22px line to a 44px line, the bar moves AND stretches in one
+//    unified motion.
+```
+
+Click between an interactive line (44px) and a plain line (22px) in the demo. Watch the bar stretch and shrink as it moves. Framer Motion interpolates `height` and `y` simultaneously through the same spring, so the motion feels unified.
+
+Check the state inspector: `lineHeights` shows the mixed array, and `barHeight` changes when you click between types. This is why Phase 1 built the `lineTops` prefix sum even when all lines were 22px — the infrastructure was designed for this moment.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Keyboard navigation
+
+Toggle **Keyboard Nav** on. Press **Tab** to move focus into the code viewer. Focus should land on the first interactive line (line 2, "Sort phase"). Press **Tab** again — focus jumps to line 6, *skipping* the non-interactive lines in between. Press **Enter** or **Space** to activate it.
+
+This is accessibility. A mouse user clicks wherever they want, but a keyboard user navigates sequentially with Tab. If every line in a 15-line code viewer was focusable, you'd press Tab 15 times to reach the last interactive line. By making only interactive lines focusable, Tab takes you directly from one action to the next.
+
+The first question is: why not use `<button>` elements? Each line contains a line number `<span>`, a `<pre>` block with syntax-highlighted tokens, and a badge `<span>`. If you wrap all of that in a `<button>`, you get:
+
+```html
+<button>
+  <span>2</span>
+  <pre>intervals.sort((a, b) => a[0] - b[0]);</pre>
+  <span>Sort phase</span>
+</button>
+<!-- └─ INVALID HTML. <button> can only contain "phrasing content"
+       (inline elements like <span>, <em>, <strong>).
+       <pre> is "flow content" (block-level). Nesting flow content
+       inside phrasing content is invalid. Screen readers might
+       ignore the nested structure or announce it incorrectly. -->
+```
+
+The solution is ARIA roles on the existing `<div>`:
+
+<CodeAnnotator blockId="p2-aria-roles" />
+
+The key handler is deceptively simple, but one line prevents a real bug:
+
+<CodeAnnotator blockId="p2-key-handler" />
+
+The state inspector shows the `tabIndex` and `role` values applied to interactive lines. Try pressing Tab through the demo — focus moves only between the four interactive lines, skipping everything else.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Line decorations and rules
+
+Toggle **Decorations** on. Look at line 2 (`// Sort by start time`) — it now has a subtle background highlight. Look at line 5 (the empty line between the `sort` call and the `for` loop) — it's faded to near-invisible.
+
+This is a different concern than active-line highlighting. Active-line is about *what the user is doing* (which line they clicked). Decorations are about *what kind of line this is* (comment, empty, error). They're static — comment lines are always highlighted, regardless of where the user clicked.
+
+CodeTrace supports two decoration mechanisms. The first is **line rules** — pattern-matched styling applied to every line:
+
+<CodeAnnotator blockId="p2-line-rule-interface" />
+
+Here are the rules applied in the demo:
+
+<CodeAnnotator blockId="p2-line-rules" />
+
+The second mechanism is **per-line decorations** — a callback for fine-grained overrides:
+
+```ts
+getLineDecoration?: (lineIndex: number, line: string) =>
+  CodeTraceLineDecoration | null;
+// └─ Called for each line, like getLineAction. Returns styling
+//    overrides or null. The component checks getLineDecoration FIRST
+//    (specific), then falls back to lineRules (general).
+//    This is the same precedence as CSS: inline styles beat classes.
+```
+
+Why two systems? Because they serve different use cases. Line rules are *declarative* — "all comments should be highlighted" is a global policy. You set it once. Per-line decorations are *imperative* — "highlight line 7 in red because a test just failed" is a specific decision the consumer makes based on runtime state.
+
+The `tokenColor` override is particularly powerful. Normally, Shiki gives each token its own syntax color — `//` is gray, `Sort` is a different gray, etc. With `tokenColor: "#ef4444"`, the entire line turns red. Every token, same color. This lets you override syntax highlighting for emphasis — sometimes "this line is wrong" matters more than "this keyword is blue."
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The variant system
+
+Toggle **Panel Variant** on. Two buttons appear: **default** and **panel**. Click between them and watch the code viewer's visual treatment change.
+
+Think about where CodeTrace appears in AlgoFlashcards. Sometimes it's the main element on screen — inside a lesson page, showing a standalone algorithm. Other times it's embedded inside another component — LiveCodePanel wraps it with a step slider, GatedCodeBridge wraps it with section buttons.
+
+You could create separate components for each context: `CodeTrace`, `CodeTracePanel`, `CodeTraceEmbed`. But now you have three copies of the same rendering logic. When you fix a bug in one, you need to fix it in all three. When you add keyboard navigation, it goes in three places. This is the **fork trap** — copies that start identical and slowly drift apart until they're unmaintainable.
+
+CodeTrace uses a single variant prop instead:
+
+```ts
+type CodeTraceVariant = "default" | "panel";
+// └─ Two visual modes. Same component, same logic, different chrome.
+```
+
+Here's what changes between them:
+
+```tsx
+// Container styling
+<div style={{
+  background: variant === "panel"
+    ? "var(--color-surface-2)"   // darker, recessive
+    : "var(--color-surface)",     // lighter, prominent
+  // └─ Panel variant has a darker background because it's inside
+  //    another component that provides the visual context.
+  //    Default variant has a lighter background because it IS
+  //    the visual context — it stands alone.
+
+  boxShadow: variant === "default"
+    ? "0 0 0 1px var(--color-surface-2)"   // subtle ring
+    : "none",
+  // └─ Default gets a ring shadow — visual weight for a standalone
+  //    element. Panel gets nothing — the wrapper provides borders.
+}}>
+```
+
+```tsx
+// Code font size
+<pre className={
+  variant === "panel" ? "text-xs" : "text-[11px]"
+}>
+// └─ Panel mode: 12px (text-xs). The wrapper provides context,
+//    so the code can be slightly larger and more readable.
+//    Default mode: 11px. Standalone code is smaller because it
+//    needs to share the page with other content.
+```
+
+```tsx
+// Line numbers
+const shouldShowLineNumbers = showLineNumbers ?? (variant !== "panel");
+// └─ Panel mode hides line numbers by default. The wrapping
+//    component often provides its own UI for line references.
+//    But the consumer can override: showLineNumbers={true}
+//    forces them on even in panel mode. The variant sets a
+//    DEFAULT, not a rule.
+```
+
+Switch between the two variants in the demo. Default has a ring shadow and lighter background — it demands attention. Panel has a flat border and darker background — it recedes into its wrapper. Same code, same features, different visual identity.
+
+One component, one renderer, two visual modes. No fork, no drift. When you add a feature to CodeTrace, both variants get it automatically.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — One renderer to rule them all
+
+Before this phase existed, AlgoFlashcards had **three separate code renderers**:
+
+```
+CodeTrace          → standalone code display
+CodeBridgePanel    → exploration UI with its own rendering loop
+MDX inline code    → inline code blocks with separate highlighting
+```
+
+Each had its own line rendering loop, its own Shiki integration, its own handling of active lines. When Shiki was upgraded, three places needed updating. When the highlight bar got spring physics, only CodeTrace got it — CodeBridgePanel still used CSS transitions. When a bug was fixed in one renderer, the fix was manually copied (or forgotten) to the others.
+
+The consolidation refactor deleted `CodeBridgePanel` entirely. Every feature from this phase — `getLineAction`, `lineRules`, `getLineDecoration`, `variant` — was added specifically to make one component serve all three use cases:
+
+```
+Before:                          After:
+
+CodeTrace ───── display          CodeTrace ───── display
+                                          │         (variant: "default")
+CodeBridgePanel ── exploration            ├── exploration
+        (separate render)                 │     (variant: "panel", getLineAction)
+                                          │
+MDX code ── inline display                └── inline display
+        (yet another render)                    (variant: "panel", no line numbers)
+```
+
+The lesson: **resist the urge to fork a component when what you really need is an extension point**. `getLineAction` was the extension point that eliminated the second renderer. `variant` was the extension point that eliminated the third. Together, they reduced three code paths to one.
+
+But extension points have a limit. Each one adds a branch to the component's internal logic — another `if` check, another prop to document, another combination to test. At some point (and you'll see exactly where in Phase 4), the branches multiply until the component is spending more time checking which features are enabled than actually rendering code. That's when composition fails and a rebuild becomes necessary.
+
+Try toggling features off one at a time in the demo. Notice how each feature is independent — you can have decorations without variable heights, or keyboard navigation without decorations. This orthogonality is what makes extension points work: they compose without interfering. When they stop composing cleanly, you've hit the limit.
+
+In Phase 3, we'll see how other components wrap this single renderer — adding state management, step progression, and gating logic *on top of* CodeTrace rather than *inside* it.
+
+</section>

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { SPRING, STAGGER } from "@/lib/motion";
 
 export type BreadcrumbItem = { label: string; href?: string };
 
@@ -28,17 +29,15 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
             initial={prefersReducedMotion ? false : { opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{
-              type: "spring",
-              stiffness: 280,
-              damping: 22,
-              delay: i * 0.06,
+              ...SPRING.snappy,
+              delay: i * STAGGER.fast,
             }}
             style={{ display: "inline-block" }}
           >
             {crumb.href ? (
               <motion.span
                 whileHover={prefersReducedMotion ? undefined : { x: 2 }}
-                transition={{ type: "spring", stiffness: 400 }}
+                transition={SPRING.quick}
                 style={{ display: "inline-block" }}
               >
                 <Link
