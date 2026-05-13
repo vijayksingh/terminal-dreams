@@ -34,6 +34,8 @@ export const sharedComponents: MdxComponentMap = {
 const postComponentLoaders: Record<string, PostComponentLoader> = {
   "anatomy-of-an-agent-harness": () =>
     import("@/mdx/posts/anatomy-of-an-agent-harness"),
+  "frontend-architecture-patterns": () =>
+    import("@/mdx/posts/frontend-architecture-patterns"),
 };
 
 function isMdxComponent(value: unknown): value is MdxComponent {
