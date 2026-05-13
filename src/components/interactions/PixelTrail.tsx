@@ -29,12 +29,14 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useDimensions(containerRef);
   const trailId = useRef(uuidv4());
+  const cachedRect = useRef<DOMRect | null>(null);
 
   const handleMouseMoveWindow = useCallback(
     (e: MouseEvent) => {
       const node = containerRef.current;
       if (!node) return;
-      const rect = node.getBoundingClientRect();
+      if (!cachedRect.current) cachedRect.current = node.getBoundingClientRect();
+      const rect = cachedRect.current;
 
       if (
         e.clientX < rect.left ||
@@ -62,8 +64,13 @@ export const PixelTrail: React.FC<PixelTrailProps> = ({
   useEffect(() => {
     if (prefersReducedMotion) return;
 
+    const invalidateRect = () => { cachedRect.current = null; };
     window.addEventListener("mousemove", handleMouseMoveWindow, { passive: true });
-    return () => window.removeEventListener("mousemove", handleMouseMoveWindow);
+    window.addEventListener("resize", invalidateRect);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMoveWindow);
+      window.removeEventListener("resize", invalidateRect);
+    };
   }, [handleMouseMoveWindow, prefersReducedMotion]);
 
   const columns = useMemo(

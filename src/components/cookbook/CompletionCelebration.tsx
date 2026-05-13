@@ -47,7 +47,7 @@ export function CompletionCelebration({ totalTime, recipeName, onClose }: Comple
   }, [prefersReducedMotion]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-bg)]/95 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-bg)]/95">
       {/* Close button */}
       {onClose && (
         <button

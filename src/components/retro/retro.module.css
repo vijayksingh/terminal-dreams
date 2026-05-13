@@ -103,12 +103,14 @@
 
 .cursorGlow {
   position: fixed;
+  left: 0;
+  top: 0;
   width: 400px;
   height: 400px;
   background: radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 70%);
   pointer-events: none;
   z-index: 2;
-  transition: opacity 0.3s;
+  will-change: transform;
 }
 
 :global([data-theme="light"]) .cursorGlow {
@@ -437,8 +439,7 @@
 .listItem {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-surface-2);
-  transition: padding-left 200ms ease, color 200ms ease;
-  padding-left: 0;
+  transition: transform 200ms ease, color 200ms ease;
   color: var(--accent-weak);
 }
 
@@ -602,7 +603,7 @@
   }
 
   .listItem:hover {
-    padding-left: 1rem;
+    transform: translateX(1rem);
     color: var(--color-text);
   }
 

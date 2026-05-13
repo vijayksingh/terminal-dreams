@@ -13,12 +13,12 @@ import { RetroTimeline } from "./RetroTimeline";
 
 export function RetroBlog({ posts }: { posts: TimelinePost[] }) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  const mousePosition = useRetroEffects(!prefersReducedMotion);
+  useRetroEffects();
 
   return (
     <div className={styles.container}>
       <ScanlineOverlay />
-      {!prefersReducedMotion ? <CursorGlow x={mousePosition.x} y={mousePosition.y} /> : null}
+      {!prefersReducedMotion ? <CursorGlow /> : null}
 
       <RetroHeader showAboutCard />
 

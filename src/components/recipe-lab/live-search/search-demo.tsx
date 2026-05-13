@@ -322,10 +322,9 @@ function Item({
 }) {
   return (
     <motion.li
-      layout
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 8, height: 0 }}
+      exit={{ opacity: 0, x: 8 }}
       transition={{ ...SPRING.snappy, delay: index * STAGGER.fast }}
       className="text-sm py-1.5 px-2 rounded"
       style={{ color: "var(--color-text)" }}
@@ -555,10 +554,9 @@ function ResultListInline() {
           {results.map((item, index) => (
             <motion.li
               key={item}
-              layout
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 8, height: 0 }}
+              exit={{ opacity: 0, x: 8 }}
               transition={{ ...SPRING.snappy, delay: index * STAGGER.fast }}
               className="text-sm py-1.5 px-2 rounded"
               style={{ color: "var(--color-text)" }}

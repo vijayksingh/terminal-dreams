@@ -145,7 +145,7 @@ export function TimerRing({ timer, size = 120, strokeWidth = 8 }: TimerRingProps
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
-          filter={`url(#glow-${timer.id})`}
+          filter={timer.state !== "idle" && timer.state !== "warning" ? `url(#glow-${timer.id})` : undefined}
           animate={getGlowAnimation()}
           transition={{
             strokeDashoffset: { duration: DURATION.normal, ease: EASE.out },

@@ -1,0 +1,14 @@
+@keyframes depthPulse {
+  0%, 100% { border-color: #e5534b; box-shadow: 0 0 0 0 rgba(229, 83, 75, 0); }
+  50% { border-color: #e5534b; box-shadow: 0 0 8px rgba(229, 83, 75, 0.3); }
+}
+
+.pulseBlocked {
+  animation: depthPulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulseBlocked {
+    animation: none;
+  }
+}

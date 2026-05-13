@@ -72,6 +72,8 @@ export function AmbientCanvas() {
 
     // Animation loop
     let animationFrameId: number;
+    let running = true;
+
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -153,10 +155,21 @@ export function AmbientCanvas() {
 
     animate();
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animationFrameId);
+      } else if (running) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
     // Cleanup
     return () => {
+      running = false;
       window.removeEventListener("resize", resize);
       window.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("visibilitychange", handleVisibility);
       cancelAnimationFrame(animationFrameId);
     };
   }, [prefersReducedMotion]);

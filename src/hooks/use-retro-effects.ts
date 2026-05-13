@@ -1,19 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 declare global {
   interface Window {
     hack: () => string;
   }
 }
-
-type PointerPosition = {
-  x: number;
-  y: number;
-};
-
-const INITIAL_POINTER_POSITION: PointerPosition = { x: 0, y: 0 };
 
 function installConsoleEasterEgg() {
   window.hack = () => {
@@ -34,26 +27,8 @@ function installConsoleEasterEgg() {
   );
 }
 
-export function useRetroEffects(enabled = true): PointerPosition {
-  const [mousePosition, setMousePosition] = useState<PointerPosition>(INITIAL_POINTER_POSITION);
-
+export function useRetroEffects(): void {
   useEffect(() => {
     installConsoleEasterEgg();
   }, []);
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleMouseMove = (event: MouseEvent) => {
-      setMousePosition({ x: event.clientX, y: event.clientY });
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [enabled]);
-
-  return mousePosition;
 }

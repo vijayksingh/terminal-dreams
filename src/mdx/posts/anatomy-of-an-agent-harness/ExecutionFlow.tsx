@@ -644,12 +644,14 @@ export function ExecutionFlow() {
               r={6}
               fill="var(--color-accent)"
               opacity={0.15}
+              initial={{ cx: tokenPos.x, cy: tokenPos.y }}
               animate={{ cx: tokenPos.x, cy: tokenPos.y }}
               transition={SPRING.snappy}
             />
             <motion.circle
               r={3}
               fill="var(--color-accent)"
+              initial={{ cx: tokenPos.x, cy: tokenPos.y }}
               animate={{ cx: tokenPos.x, cy: tokenPos.y }}
               transition={SPRING.snappy}
             />

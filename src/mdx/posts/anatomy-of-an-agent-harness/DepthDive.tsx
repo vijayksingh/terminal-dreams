@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { SPRING, TRANSITION, DURATION, EASE } from "@/lib/motion";
+import ddStyles from "./depth-dive.module.css";
 
 const MAX_DEPTH = 4;
 const INDENT_PX = 24;
@@ -256,7 +257,7 @@ function PredictPhase({
                 lineHeight: 1.5,
                 color: "var(--color-text)",
                 opacity: revealed && !isThis && !showCorrect ? 0.4 : 1,
-                transition: "all 0.15s ease",
+                transition: "background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease",
               }}
             >
               <span
@@ -487,7 +488,7 @@ export function DepthDive() {
                 ? { scale: 1.02 }
                 : undefined
             }
-            className="cursor-pointer rounded px-3 py-1.5 text-xs font-medium"
+            className={`cursor-pointer rounded px-3 py-1.5 text-xs font-medium ${isBlocked && !reducedMotion ? ddStyles.pulseBlocked : ""}`}
             style={{
               background: isBlocked
                 ? "#e5534b"
@@ -499,10 +500,6 @@ export function DepthDive() {
               fontFamily: "var(--font-mono)",
               opacity: phase !== "spawn" ? 0.5 : 1,
               cursor: phase !== "spawn" ? "default" : "pointer",
-              animation:
-                isBlocked && !reducedMotion
-                  ? "depth-pulse 1.5s ease-in-out infinite"
-                  : "none",
             }}
           >
             {isBlocked ? "MAX DEPTH — blocked" : "+ Spawn Task"}
@@ -524,13 +521,6 @@ export function DepthDive() {
             </button>
           )}
         </div>
-
-        <style>{`
-          @keyframes depth-pulse {
-            0%, 100% { border-color: #e5534b; box-shadow: 0 0 0 0 rgba(229, 83, 75, 0); }
-            50% { border-color: #e5534b; box-shadow: 0 0 8px rgba(229, 83, 75, 0.3); }
-          }
-        `}</style>
 
         <AnimatePresence mode="wait">
           {phase === "predict" && (
