@@ -63,7 +63,7 @@
 }
 
 .container {
-  font-family: var(--font-jetbrains-mono), monospace;
+  font-family: var(--font-mono);
   background: var(--color-bg);
   color: var(--color-text);
   min-height: 100vh;
@@ -118,19 +118,20 @@
 }
 
 .header {
-  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-bg) 100%);
+  background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   padding: 2rem 0;
   position: relative;
   z-index: 10;
+  overflow: hidden;
 }
 
 .headerOverlay {
   position: absolute;
   inset: 0;
   z-index: 0;
-  pointer-events: none;
 }
+
 
 .headerInner {
   max-width: 1200px;
@@ -184,14 +185,46 @@
   font-size: var(--text-sm);
   font-family: var(--font-mono);
   text-transform: none;
-  background: transparent;
-  border: 1px solid var(--color-surface-2);
+  background: color-mix(in srgb, var(--color-surface) 65%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
   border-radius: 999px;
   padding: 0.45rem 0.9rem;
   display: inline-block;
   line-height: 1;
   letter-spacing: 0.01em;
-  transition: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.navLink:hover {
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  border-color: var(--color-accent);
+}
+
+:global([data-theme="light"]) .navLink {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:global([data-theme="light"]) .navLink:hover {
+  background: var(--color-surface-2);
+  border-color: var(--color-accent);
+}
+
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme])) .navLink {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :global(:root:not([data-theme])) .navLink:hover {
+    background: var(--color-surface-2);
+    border-color: var(--color-accent);
+  }
 }
 
 .navLink:focus-visible {
@@ -572,7 +605,7 @@
 }
 
 .aboutMono {
-  font-family: var(--font-jetbrains-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+  font-family: var(--font-mono);
   color: var(--color-muted);
 }
 

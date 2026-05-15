@@ -2,21 +2,17 @@ import CommandPalette from "@/components/CommandPalette/CommandPalette";
 import { getCommandPalettePosts } from "@/lib/posts";
 import type { Metadata } from "next";
 import Script from "next/script";
-import { Fraunces, Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+import { Fraunces, Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
   subsets: ["latin"],
   display: "swap",
 });
@@ -41,7 +37,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable} ${fraunces.variable} antialiased`}
+        className={`${inter.variable} ${firaCode.variable} ${fraunces.variable} antialiased`}
       >
         {/* Theme init — must run before first paint to prevent flash */}
         <Script src="/theme-init.js" strategy="beforeInteractive" />

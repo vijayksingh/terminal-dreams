@@ -26,7 +26,8 @@ export function ThemeToggle() {
       <span
         className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium"
         style={{
-          borderColor: "var(--color-surface-2)",
+          borderColor: "oklch(24.84% 0.018 var(--base-hue) / 0.5)",
+          background: "oklch(16.75% 0.011 var(--base-hue) / 0.65)",
           color: "var(--color-muted)",
           fontFamily: "var(--font-mono)",
           fontSize: "var(--text-sm)",
@@ -46,14 +47,18 @@ export function ThemeToggle() {
       type="button"
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       onClick={toggle}
-      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors"
+      className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium cursor-pointer"
       style={{
-        borderColor: "var(--color-surface-2)",
+        borderColor: "color-mix(in srgb, var(--color-border) 50%, transparent)",
+        background: "color-mix(in srgb, var(--color-surface) 65%, transparent)",
+        backdropFilter: "blur(12px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(12px) saturate(1.4)",
         color: "var(--color-muted)",
         fontFamily: "var(--font-mono)",
         fontSize: "var(--text-sm)",
         lineHeight: 1,
         letterSpacing: "0.01em",
+        transition: "background 0.15s, border-color 0.15s",
       }}
     >
       <span aria-hidden>{theme === "dark" ? "☾" : "☀"}</span>
