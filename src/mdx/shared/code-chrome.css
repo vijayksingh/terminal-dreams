@@ -1,0 +1,169 @@
+/* ── Code Chrome: terminal-style editor window ─────────────── */
+
+.code-chrome {
+  --chrome-bar-h: 36px;
+  --chrome-radius: 10px;
+  --chrome-bg: var(--color-surface);
+  --chrome-bar-bg: var(--color-bg);
+  --chrome-border: var(--color-border);
+
+  position: relative;
+  border-radius: var(--chrome-radius);
+  border: 1px solid var(--chrome-border);
+  background: var(--chrome-bg);
+  box-shadow:
+    0 1px 2px hsl(var(--shadow-color) / 0.08),
+    0 4px 12px hsl(var(--shadow-color) / 0.12),
+    0 8px 24px hsl(var(--shadow-color) / 0.06);
+  overflow: hidden;
+}
+
+/* Subtle inner glow — dark mode only */
+:root:not([data-theme="light"]) .code-chrome::after,
+[data-theme="dark"] .code-chrome::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--chrome-radius);
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── Title bar ─────────────────────────────────────────────── */
+
+.code-chrome-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--chrome-bar-h);
+  padding: 0 12px;
+  background: var(--chrome-bar-bg);
+  border-bottom: 1px solid var(--chrome-border);
+  user-select: none;
+  position: relative;
+}
+
+/* Noise texture on bar — very subtle */
+.code-chrome-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+}
+
+/* ── Traffic-light dots ────────────────────────────────────── */
+
+.code-chrome-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.code-chrome-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.code-chrome-dot--red { background: #ff5f57; }
+.code-chrome-dot--yellow { background: #febc2e; }
+.code-chrome-dot--green { background: #28c840; }
+
+/* In light mode, soften the dots slightly */
+[data-theme="light"] .code-chrome-dot--red { background: #ff6961; }
+[data-theme="light"] .code-chrome-dot--yellow { background: #f5c542; }
+[data-theme="light"] .code-chrome-dot--green { background: #4cd964; }
+
+/* ── Filename ──────────────────────────────────────────────── */
+
+.code-chrome-filename {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Annotation hint ──────────────────────────────────────── */
+
+.code-chrome-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+}
+
+.code-chrome-hint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* ── Spacer ────────────────────────────────────────────────── */
+
+.code-chrome-spacer {
+  flex: 1;
+}
+
+/* ── Language badge ────────────────────────────────────────── */
+
+.code-chrome-lang {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-surface-2);
+  border: 1px solid var(--chrome-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.6;
+}
+
+/* ── Copy button ───────────────────────────────────────────── */
+
+.code-chrome-copy {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  line-height: 1.5;
+}
+
+.code-chrome-copy:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border-color: var(--chrome-border);
+}
+
+/* ── Body (wraps Monaco or any code content) ───────────────── */
+
+.code-chrome-body {
+  position: relative;
+}
+
+/* Override Monaco's own border-radius and border since chrome handles it */
+.code-chrome-body > div {
+  border-radius: 0 !important;
+  border: none !important;
+  margin: 0 !important;
+}

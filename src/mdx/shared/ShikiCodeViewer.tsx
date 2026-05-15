@@ -3,6 +3,21 @@
 import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
 
+function useShikiTheme() {
+  const [theme, setTheme] = useState<"github-dark" | "github-light">("github-dark");
+  useEffect(() => {
+    const read = () => {
+      const val = document.documentElement.getAttribute("data-theme");
+      setTheme(val === "light" ? "github-light" : "github-dark");
+    };
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
+
 type ShikiCodeViewerProps = {
   code: string;
   language: string;
@@ -13,13 +28,15 @@ type ShikiCodeViewerProps = {
 export function ShikiCodeViewer({ code, language, height, className = "" }: ShikiCodeViewerProps) {
   const [html, setHtml] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const shikiTheme = useShikiTheme();
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
     codeToHtml(code, {
       lang: language,
-      theme: "github-dark",
+      theme: shikiTheme,
       transformers: [],
     })
       .then((renderedHtml) => {
@@ -38,13 +55,13 @@ export function ShikiCodeViewer({ code, language, height, className = "" }: Shik
     return () => {
       cancelled = true;
     };
-  }, [code, language]);
+  }, [code, language, shikiTheme]);
 
   if (isLoading) {
     return (
       <div
-        className={`flex items-center justify-center bg-[#101010] ${className}`}
-        style={{ height }}
+        className={`flex items-center justify-center ${className}`}
+        style={{ height, background: "var(--color-surface-2)" }}
       >
         <div className="text-xs text-[var(--color-muted)]">Loading...</div>
       </div>

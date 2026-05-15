@@ -20,6 +20,7 @@ jest.mock('next/dynamic', () => {
 
 jest.mock('@/lib/monaco-setup', () => ({
   setupMonaco: jest.fn(),
+  useMonacoTheme: () => 'vesper',
 }));
 
 jest.mock('@/lib/monaco-vesper', () => ({

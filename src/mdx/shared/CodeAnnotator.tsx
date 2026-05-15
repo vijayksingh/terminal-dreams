@@ -6,6 +6,8 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { SPRING, TRANSITION } from "@/lib/motion";
 import type { ThemedToken, BundledLanguage, BundledTheme } from "shiki";
 import { ANNOTATED_BLOCKS } from "./annotated-blocks";
+import { CodeChrome } from "./CodeChrome";
+import "./code-chrome.css";
 
 type Annotation = {
   match: string;
@@ -99,7 +101,6 @@ export function CodeAnnotator({
   const annotations = annotProp ?? block?.annotations ?? [];
   const [tokens, setTokens] = useState<ThemedToken[][] | null>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const isDark = useIsDark();
@@ -143,13 +144,6 @@ export function CodeAnnotator({
     [lineToAnnotation],
   );
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [code]);
-
   const activeAnnotation =
     activeIndex !== null ? resolved[activeIndex] : null;
   const activeLineIdx = activeAnnotation?.lineIndex ?? null;
@@ -157,66 +151,11 @@ export function CodeAnnotator({
   const annotatedCount = resolved.length;
   const hint =
     activeIndex === null && annotatedCount > 0
-      ? `Click a highlighted line to explore (${annotatedCount} annotations)`
+      ? `${annotatedCount} annotations`
       : null;
 
   return (
-    <div
-      className="my-6 overflow-hidden rounded-lg"
-      style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        position: "relative",
-      }}
-    >
-      {hint && (
-        <div
-          style={{
-            padding: "6px 12px",
-            fontSize: 11,
-            fontFamily: "var(--font-mono)",
-            color: "var(--color-muted)",
-            borderBottom: "1px solid var(--color-border)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "var(--color-accent)",
-              flexShrink: 0,
-            }}
-          />
-          {hint}
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={handleCopy}
-        style={{
-          position: "absolute",
-          top: hint ? 38 : 8,
-          right: 8,
-          zIndex: 20,
-          background: "var(--color-surface-2)",
-          border: "1px solid var(--color-border)",
-          borderRadius: 4,
-          padding: "3px 8px",
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          color: copied ? "var(--color-accent)" : "var(--color-muted)",
-          cursor: "pointer",
-          transition: "color 0.15s ease",
-        }}
-      >
-        {copied ? "Copied!" : "Copy"}
-      </button>
-
+    <CodeChrome language={language} code={code} hint={hint}>
       <div
         className="relative overflow-x-auto"
         style={{ padding: `${PAD_Y}px 0` }}
@@ -347,7 +286,7 @@ export function CodeAnnotator({
           );
         })}
       </div>
-    </div>
+    </CodeChrome>
   );
 }
 
@@ -367,7 +306,7 @@ function HighlightBar({
     top: PAD_Y,
     height: LINE_H,
     borderLeft: "3px solid var(--color-accent)",
-    background: "color-mix(in srgb, var(--color-accent) 8%, transparent)",
+    background: "color-mix(in oklch, var(--color-accent) 20%, transparent)",
     pointerEvents: "none" as const,
   };
 
