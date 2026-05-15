@@ -1,0 +1,488 @@
+---
+title: "Frontend Architecture Patterns: A Field Guide with Real-World War Stories"
+date: "2026-05-13"
+category: "engineering"
+tags: ["architecture", "frontend", "patterns", "react", "vue", "typescript"]
+summary: "MVC to Vertical Slices — what each pattern actually looks like in production, who used it, and when it breaks. Interactive diagrams, real company stories, and a scenario quiz to test your instincts."
+interactive: true
+---
+
+When developers hear "architecture," most of them picture a file tree. Folders named
+`components/`, `utils/`, `hooks/`, `services/`. That's organization, not architecture.
+Architecture is about how the layers of your app talk to each other — which layer knows about
+which, where data flows, and what happens when you need to change something six months from now.
+
+You can rename a folder in five minutes. You can't swap an architecture without rewriting the
+app. File structure is a reversible decision. Architecture is a one-way door. That asymmetry
+is why so many teams get architecture wrong — they pick a pattern based on what's popular
+rather than what fits their constraints, and by the time they realize the mismatch, the
+codebase is too large to migrate.
+
+---
+
+## MVC — The Grandfather
+
+**Model–View–Controller** was introduced in 1979 at Xerox PARC. Nearly half a century old,
+and it was the first pattern most frontend developers encountered when SPAs arrived — because
+Backbone.js, Ember.js, and Angular 1.x all brought it to the browser.
+
+Three layers. **Model** holds data and business logic. **View** renders UI. **Controller**
+sits between them, handling user input and coordinating updates.
+
+<PatternDiagram variant="mvc" />
+
+That dashed red arrow from Model to View is the seed of every problem MVC has at scale. It's
+the observer pattern — the View subscribes to Model changes and updates itself automatically.
+Sounds elegant, but it means the View isn't purely passive. It contains observation logic,
+which tangles UI rendering with data awareness. Keep that red arrow in mind as you read about
+the patterns that came after. Every one of them exists partly to eliminate it.
+
+Here's what MVC looks like in practice — a Backbone-style component for a product listing:
+
+```typescript
+// Model — syncs with server, fires change events
+const Product = Backbone.Model.extend({
+  urlRoot: '/api/products',
+  defaults: { title: '', price: 0, inStock: true }
+});
+
+// View — observes Model, renders on change
+const ProductView = Backbone.View.extend({
+  initialize() {
+    this.listenTo(this.model, 'change', this.render);
+  },
+  events: { 'click .buy-btn': 'handleBuy' },
+  handleBuy() { this.model.set('inCart', true); },
+  render() {
+    this.$el.html(this.template(this.model.toJSON()));
+    return this;
+  }
+});
+```
+
+Clean, focused, easy to follow. One model, one view, one responsibility each. This is MVC
+at its best — the reason Backbone apps shipped fast. Now watch what happens as the product grows.
+
+### The God Component Problem
+
+MVC's Achilles heel isn't the pattern itself — it's what happens to components over time.
+Every new feature tends to land in the component because "it needs access to the data and
+the UI, so it must go here." Auth checks? Component. Search state? Component. WebSocket
+management? Component. Analytics tracking? Component.
+
+Add features below and watch the component grow. Pay attention to the code on the left and
+the test complexity on the right.
+
+<FatControllerDemo />
+
+When Trello was built on Backbone in 2011, their Views were as clean as the example above.
+But as the app grew — activity feeds, power-ups, multi-board views, real-time collaboration
+— Views accumulated responsibility. They became tangled with observation logic, lifecycle
+management, and coordination between unrelated concerns. The kanban View that started as
+50 lines eventually managed card rendering, drag-and-drop, keyboard shortcuts, real-time
+sync, and permission checks.
+
+Angular 1.x hit the same wall differently. Google had hundreds of internal AngularJS apps,
+and the two-way binding between Model and View created cascading re-render bugs: one scope
+change could trigger updates across seemingly unrelated controllers. Facebook's frustration
+with similar MVC data-flow issues in their chat system is literally what motivated the
+creation of Flux — and eventually React itself.
+
+<WhyBox question="If MVC breaks at scale, why did frameworks default to it?">
+Because MVC is the fastest path from zero to working app. Backbone, Ember, and Angular 1.x were optimized for developer velocity at the start of a project, not for maintainability at year five. For a team that needs to ship in weeks, MVC's simplicity is a feature. The god component problem only emerges after you've already validated the product — which is exactly when you have the resources to refactor. The pattern isn't wrong. It's just not the last pattern you'll need.
+</WhyBox>
+
+---
+
+## MVP — The View Goes Passive
+
+Look back at the MVC diagram. That red dashed arrow from Model to View — the observer
+coupling — means the View isn't just rendering UI. It's subscribing to data changes,
+processing updates, managing observation logic. **Model–View–Presenter** exists to cut
+that arrow.
+
+<PatternDiagram variant="mvp" />
+
+No arrow between View and Model. The Presenter is the sole mediator. The View becomes a
+passive interface — a contract that the Presenter calls into:
+
+```tsx
+// View (Presentational component) — zero logic, pure rendering
+function ProductCard({ title, price, onAddToCart }: ProductCardProps) {
+  return (
+    <div className="product-card">
+      <h3>{title}</h3>
+      <span>{price}</span>
+      <button onClick={onAddToCart}>Add to cart</button>
+    </div>
+  );
+}
+
+// Presenter (Container component) — owns all logic
+function ProductCardContainer({ productId }: { productId: string }) {
+  const product = useProduct(productId);
+  const { addToCart } = useCart();
+
+  if (!product) return <ProductCardSkeleton />;
+  return (
+    <ProductCard
+      title={product.name}
+      price={formatPrice(product.price)}
+      onAddToCart={() => addToCart(product.id)}
+    />
+  );
+}
+```
+
+Testing the View requires zero logic setup — render `ProductCard` with props and verify the
+output. Testing the Container means mocking `useProduct` and `useCart`, but no DOM rendering
+needed. Storybook becomes trivial: every presentational component works in isolation.
+
+### Dan Abramov's Influential Pattern
+
+The most famous MVP adoption in frontend was Dan Abramov's 2015 blog post "Presentational
+and Container Components." The pattern dominated React architecture for years. Presentational
+components (Views) received data via props and rendered UI — zero state, zero effects, zero
+data fetching. Container components (Presenters) handled all logic and passed formatted data
+down.
+
+This made Storybook possible as a serious development tool. If your Views are truly passive —
+no hooks, no context, no side effects — you can render every visual state in isolation. Design
+systems like Shopify's Polaris and GitHub's Primer were built on this foundation: passive
+components that accept props and render, nothing more.
+
+<WhyBox question="Dan Abramov later said he doesn't recommend the pattern anymore. What changed?">
+Hooks happened. Before hooks, Container components were the only way to add logic to function components — you needed a class or a HOC. After hooks, you could put logic directly in any component with useEffect and useState. Dan's updated take: "I don't suggest splitting your components like this anymore... hooks let you do the same thing without arbitrary division." But the principle survived — custom hooks ARE presenters. useProducts() is a Presenter that any View can consume. The implementation changed; the architecture didn't.
+</WhyBox>
+
+---
+
+## MVVM — Two-Way Binding Magic
+
+**Model–View–ViewModel** was invented at Microsoft in 2005 for their WPF framework. The
+breakthrough idea: what if the View and its state were automatically synchronized? Change
+the data, the UI updates. Change the UI, the data updates. No manual wiring, no event
+listeners, no explicit `setState` calls. Declare the binding and the framework handles the
+rest.
+
+<PatternDiagram variant="mvvm" />
+
+The double arrow between View and ViewModel is the defining feature. In MVC, you manually
+push data from Controller to View. In MVP, the Presenter explicitly calls View methods. In
+MVVM, the binding is declarative and automatic.
+
+### Evan You's Frustration That Built Vue.js
+
+In 2013, Evan You was working at Google on AngularJS projects. He loved Angular's two-way
+binding but hated everything around it — the complexity, the boilerplate, the steep learning
+curve. His thought: take just the reactive data binding and build the simplest possible
+framework around it.
+
+That side project became Vue.js. Vue is pure MVVM.
+
+```vue
+<template>
+  <!-- View: binds reactively to ViewModel -->
+  <input v-model="username" />
+  <p>Hello, {{ displayName }}</p>
+</template>
+
+<script setup>
+// ViewModel: reactive state + derived state
+const username = ref('')
+const displayName = computed(() =>
+  username.value || 'stranger'
+)
+</script>
+```
+
+This isn't syntactic sugar. It's an architectural decision. The View never imperatively
+updates the DOM. The ViewModel never reaches into the View. The binding layer is the contract
+between them, and the framework enforces it. Vue apps tend to be more consistently structured
+than React apps — the framework nudges you toward MVVM whether you know the term or not.
+
+Svelte took this further in 2019 — same MVVM reactivity model but compiled away at build
+time. Declare a variable and it's reactive. Bind it to an input with `bind:value` and it's
+two-way. The compiler generates the subscription wiring that Vue handles at runtime.
+KnockoutJS pioneered this approach for the browser back in 2010, years before any of these
+frameworks existed. Steve Sanderson built it as a pure MVVM JavaScript library — the first
+time web developers experienced declarative two-way binding.
+
+<WhyBox question="React doesn't use two-way binding. Does that mean React isn't MVVM?">
+Correct. React explicitly rejected two-way binding. The React team chose one-way data flow — data flows down via props, events flow up via callbacks. React's mental model is closer to a functional rendering pipeline than MVVM. That's why React doesn't have a built-in equivalent of v-model. You can build MVVM-like patterns in React (with state management libraries), but the framework doesn't push you toward it. React is architecturally opinionated about rendering but agnostic about state management — which is both its strength and the source of its "too many ways to do things" reputation.
+</WhyBox>
+
+---
+
+## Clean Architecture — Dependencies Point Inward
+
+Robert Martin (Uncle Bob) published Clean Architecture in 2012, synthesizing ideas from
+Hexagonal Architecture, Onion Architecture, and DCI into a single model. The core principle:
+**dependencies must point inward.** Outer layers depend on inner layers. Inner layers know
+nothing about what's outside them.
+
+<PatternDiagram variant="clean" />
+
+This creates a powerful guarantee: swap your entire UI framework without touching business
+logic. Swap your storage layer without changing your domain rules. Each layer is a ring of
+protection around the core — and the core (Entities) has zero external dependencies.
+
+Here's what that looks like in a frontend TypeScript project:
+
+```
+src/
+  domain/              ← Pure business rules. Zero imports from React or browser APIs.
+    spreadsheet.ts     ← class Cell { resolveFormula() { ... } }
+    validation.ts      ← circular reference detection, type coercion rules
+
+  use-cases/           ← Application logic. Imports from domain only.
+    paste-range.ts     ← Orchestrates: validate → check bounds → format → recalculate
+    export-csv.ts
+
+  adapters/            ← Translators. Imports from use-cases.
+    useSpreadsheet.ts  ← React hook bridging components and use cases
+    storage-adapter.ts ← use case port → IndexedDB or REST API
+
+  ui/                  ← Replaceable. Imports from adapters.
+    SpreadsheetGrid.tsx  ← React rendering layer
+    Toolbar.tsx          ← UI framework components
+```
+
+The dependency arrows always point inward. `SpreadsheetGrid.tsx` imports from `useSpreadsheet.ts`,
+which imports from `paste-range.ts`, which imports from `spreadsheet.ts`. Never the reverse.
+If you swap React for Solid, only `ui/` changes. If you swap IndexedDB for a REST API, only
+`adapters/storage-adapter.ts` changes.
+
+### When Frontend Apps Get Thick Enough
+
+Clean Architecture is often dismissed as backend-only, but it becomes essential when frontend
+apps have significant domain logic. Figma's rendering engine is a constraint solver and vector
+math library compiled to WebAssembly — pure domain logic with zero browser dependencies. The
+React UI is the outermost framework layer. The WebGL renderer is another adapter. Business rules
+about snapping, alignment, and auto-layout live in the innermost layer, testable without a
+browser.
+
+The same applies to offline-first PWAs, collaborative editors, complex form builders, and
+spreadsheet apps. Whenever your frontend has business rules that exist independently of your
+UI framework — validation logic, data transformation, conflict resolution — those rules
+deserve their own layer. If your entire "business logic" is "fetch data and display it,"
+Clean Architecture adds ceremony without value.
+
+<WhyBox question="Is Clean Architecture overkill for most frontend apps?">
+Usually, yes — if your frontend is a thin client that mostly renders server data. But for thick clients with significant business logic — offline-first apps, collaborative editors, complex form workflows, anything with undo/redo — the layer separation earns its keep. The test: if you have business rules that exist independently of your UI framework (validation logic, data transformation, domain rules), those rules deserve their own layer. If your entire "business logic" is "fetch data and display it," Clean Architecture adds ceremony without value.
+</WhyBox>
+
+---
+
+## How the Same Action Flows Differently
+
+Now that you've seen MVC, MVVM, and Clean Architecture, watch the same user action flow
+through all three step by step. The differences are subtle but consequential — which layer
+does what, and when.
+
+<DependencyFlow patterns={["mvc", "mvvm", "clean"]} />
+
+Switch between patterns for the same action and notice: MVVM updates the UI before the API
+responds (optimistic update). Clean Architecture passes the request through four layers of
+transformation. MVC's component observes the store directly, coupling UI to data. These aren't
+theoretical distinctions — they determine how your app feels to users and how your code feels
+to developers.
+
+---
+
+## Hexagonal Architecture — Ports and Adapters
+
+Alistair Cockburn published Hexagonal Architecture in 2005. While Clean Architecture focuses
+on layers within an application, Hexagonal focuses on the boundaries between your application
+and the outside world.
+
+The metaphor: your application is a hexagon. On the left, things drive your application
+(user clicks, route changes, keyboard shortcuts). On the right, your application drives things
+(API calls, storage, analytics). Between them, **ports** define the contracts and
+**adapters** implement them.
+
+<PatternDiagram variant="hexagonal" />
+
+```typescript
+// Output port — the core defines WHAT it needs, not HOW
+interface StoragePort {
+  save(doc: Document): Promise<void>;
+  load(id: string): Promise<Document>;
+}
+
+// Adapter for production — IndexedDB
+class IndexedDBStorage implements StoragePort {
+  async save(doc: Document) { /* IndexedDB write */ }
+  async load(id: string) { /* IndexedDB read */ }
+}
+
+// Adapter for tests — in-memory, no browser needed
+class InMemoryStorage implements StoragePort {
+  private docs = new Map<string, Document>();
+  async save(doc: Document) { this.docs.set(doc.id, doc); }
+  async load(id: string) { return this.docs.get(id)!; }
+}
+```
+
+The core logic calls `storage.save(doc)` without knowing if it's writing to IndexedDB,
+localStorage, or a REST API. Swap the adapter, the core stays untouched.
+
+### Ports and Adapters in Frontend Practice
+
+The most widespread frontend adoption of hexagonal thinking is in rich text editors.
+ProseMirror — the engine behind TipTap, Notion's editor, and others — defines a core
+document model with transformation rules that have zero DOM dependency. Input adapters
+handle keyboard events, toolbar clicks, and collaborative edits from other users. Output
+adapters render to DOM, export to HTML/Markdown, or persist to any backend. You can swap
+the rendering layer without touching the document model.
+
+Mock Service Worker (MSW) is another example of hexagonal thinking applied to frontend
+testing. Your components talk through ports (API calls). MSW plugs in as a driven-side
+adapter that intercepts network requests and returns mock data. Same components, same code
+paths, different adapter. No code changes needed — just swap the network layer.
+
+<WhyBox question="How is Hexagonal different from Clean Architecture?">
+They share the same DNA — both isolate core logic from external concerns. The key difference is emphasis. Clean Architecture focuses on **layers within** an application: entities, use cases, adapters, frameworks. Hexagonal focuses on **boundaries between** your application and external systems: input ports, output ports, driving adapters, driven adapters. Clean Architecture tells you how to organize internally. Hexagonal tells you how to connect externally. In practice, many teams use both — Clean Architecture inside the hexagon, port/adapter boundaries at the edges.
+</WhyBox>
+
+---
+
+## Vertical Slices — Forget Layers, Think Features
+
+Vertical Slice Architecture is the newest pattern on this list, popularized by Jimmy Bogard
+around 2018. It flips the traditional model on its head. Instead of organizing by technical
+layer (all components in one folder, all hooks in another, all API calls in a third), you
+organize by **feature**. Each feature is a self-contained slice that owns its UI, logic, and
+data access.
+
+<PatternDiagram variant="vertical-slices" />
+
+Three independent columns, each owning everything from UI to data. A developer working on
+Search never touches Cart's code. A developer working on Auth never coordinates with the
+Search team. Each slice is a team boundary.
+
+### Feature-Sliced Design at Scale
+
+In the Russian and European frontend community, Vertical Slices crystallized into a formal
+methodology called **Feature-Sliced Design (FSD)**. Companies like Tinkoff Bank (one of
+Europe's largest digital banks), Yandex, and VK adopted it for large React and Vue codebases.
+
+FSD defines a strict hierarchy: `app/` → `pages/` → `features/` → `entities/` → `shared/`.
+Within each feature, you own everything — components, hooks, API calls, types, tests.
+Cross-feature imports are forbidden except through well-defined public APIs.
+
+The result at Tinkoff: 200+ frontend engineers working on a single monorepo with minimal
+merge conflicts. Each squad owns their features. Code review is fast because reviewers only
+need to understand one slice, not the entire application.
+
+### Next.js App Router: Slices by Default
+
+If you're using Next.js 13+ with the App Router, you're already doing vertical slices. Each
+route segment is a natural slice with its own `page.tsx`, `layout.tsx`, `loading.tsx`, and
+`error.tsx`. Co-locate your components, hooks, and API calls next to the route that uses them:
+
+```
+app/
+  dashboard/
+    page.tsx          ← Dashboard slice: UI
+    use-analytics.ts  ← Dashboard slice: Logic
+    analytics-api.ts  ← Dashboard slice: Data
+  billing/
+    page.tsx          ← Billing slice: UI
+    use-subscription.ts
+    billing-api.ts
+  settings/
+    page.tsx          ← Settings slice: UI
+    use-preferences.ts
+    preferences-api.ts
+```
+
+<WhyBox question="When do vertical slices break down?">
+When features need to share significant state or logic. A slice-per-feature model works beautifully when features are independent, but many real applications have cross-cutting concerns: authentication state that every feature needs, a shopping cart that the product page and checkout page both modify, a notification system that listens to events from every feature. The standard solution is a "shared" layer, but if too much logic migrates there, you've recreated a layered architecture inside your sliced one. Rule of thumb: if more than 30% of your code is in the shared layer, your slices aren't as independent as you think.
+</WhyBox>
+
+---
+
+## Patterns Combine
+
+Real applications rarely use a single pattern in isolation. The patterns we've covered aren't
+mutually exclusive — they operate at different scales and address different concerns.
+
+**MVC inside Vertical Slices.** Each slice can use MVC internally. The Search slice has its
+own model (search state), view (search UI), and controller (search handlers). The slice
+boundary is Vertical Slices; the internal structure is MVC. Shopify's Hydrogen framework
+works this way — each route is a slice, each route's internals follow an MVC-ish pattern.
+
+**Clean Architecture inside Hexagonal boundaries.** Rich text editors like TipTap define
+hexagonal port/adapter boundaries at the edges (keyboard input, DOM rendering, persistence),
+while using Clean Architecture's layered approach internally. Ports define how the editor
+connects to the outside world; the document model and transformation rules organize the logic
+within.
+
+**MVVM for the UI layer, Clean Architecture for business logic.** Vue.js's MVVM handles the
+reactive UI layer. Below that, you can structure your business logic following Clean
+Architecture — entities for domain rules, use cases for application logic, adapters for API
+calls. The ViewModel becomes the bridge between Clean Architecture's adapters and the
+reactive View.
+
+The hardest architectural decisions aren't "which pattern?" — they're "which patterns, and
+at which layers?" Keep that in mind for the scenario quiz later.
+
+---
+
+## Compare Any Two Patterns
+
+Every pattern makes trade-offs. Use the comparison tool below to see how any two patterns
+stack up across five dimensions. Click any dimension to see *why* each pattern scores the
+way it does.
+
+<TradeoffCompare />
+
+These scores are directional, not absolute. A 9/10 in testability for Clean Architecture
+doesn't mean MVC code is untestable — it means Clean Architecture's structure makes testing
+structurally easier by default. Your team, your codebase, your constraints will shift these
+numbers.
+
+---
+
+## Test Your Instincts
+
+You've seen six patterns, their trade-offs, and their real-world stories. Each scenario below
+is based on a real company or situation at a specific point in time. The constraints are what
+they actually faced, and the answer is what they actually chose. Think about what you'd pick
+before clicking.
+
+<ScenarioQuiz />
+
+---
+
+## What Stays With You
+
+If you added three features to the FatControllerDemo and felt the test complexity ratchet up,
+you experienced why a single component can't hold everything — and why every subsequent pattern
+exists to distribute that concentrated responsibility.
+
+If you stepped through the DependencyFlow and noticed MVVM updating the UI before the API
+responded, you saw the architectural decision that makes Vue apps feel instant — and the
+trade-off (rollback complexity) that comes with it.
+
+If you got a ScenarioQuiz question wrong and the feedback explained *why your specific choice
+didn't fit the constraints*, you learned something harder to get from prose: architecture
+decisions are about matching patterns to contexts, not ranking patterns on a universal scale.
+
+Three principles that hold across every pattern:
+
+**One-way doors deserve more thought than reversible decisions.** Renaming a folder takes
+minutes. Changing which layer owns state, how data flows between layers, what depends on what
+— those decisions compound over time and cost months to undo. Spend your architecture energy
+there.
+
+**Start simpler than you think you need.** Trello shipped to millions of users on Backbone
+MVC with a small team. Vue.js proved MVVM could be radically simple. You can add layers later.
+You cannot easily remove them.
+
+**The architecture should match the team, not just the code.** Vertical Slices exist because
+large teams need isolation. Hexagonal Architecture exists because complex apps need stable
+contracts. MVC exists because small teams need velocity. The best architecture is the one
+that lets your specific team ship reliably at your specific scale — even if it's not the
+pattern you'd choose for a greenfield project with unlimited time.
