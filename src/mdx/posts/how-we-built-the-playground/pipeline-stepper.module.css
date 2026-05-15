@@ -1,0 +1,652 @@
+/* PipelineStepper v3 — input→output transforms with data threads */
+
+.wrapper {
+  --stepper-done: oklch(65% 0.12 155);
+  --stepper-active: var(--color-accent);
+  --stepper-pending: var(--color-muted);
+  --chrome-radius: 10px;
+
+  /* Thread colors — persistent across all stages */
+  --thread-blue: oklch(65% 0.15 250);
+  --thread-amber: oklch(70% 0.14 80);
+  --thread-teal: oklch(65% 0.12 180);
+
+  position: relative;
+  border-radius: var(--chrome-radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px hsl(var(--shadow-color) / 0.08),
+    0 4px 12px hsl(var(--shadow-color) / 0.12),
+    0 8px 24px hsl(var(--shadow-color) / 0.06);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  margin: 2rem 0;
+}
+
+.wrapper:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+:root:not([data-theme="light"]) .wrapper::after,
+[data-theme="dark"] .wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--chrome-radius);
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  z-index: 1;
+}
+
+/* ── Chrome header bar ────────────────────────── */
+
+.chromeBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  user-select: none;
+  position: relative;
+}
+
+.chromeBar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+  pointer-events: none;
+}
+
+.chromeDots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.chromeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chromeDotRed { background: #ff5f57; }
+.chromeDotYellow { background: #febc2e; }
+.chromeDotGreen { background: #28c840; }
+
+[data-theme="light"] .chromeDotRed { background: #ff6961; }
+[data-theme="light"] .chromeDotYellow { background: #f5c542; }
+[data-theme="light"] .chromeDotGreen { background: #4cd964; }
+
+.chromeTitle {
+  font-size: 11px;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.chromeSpacer {
+  flex: 1;
+}
+
+.chromeStep {
+  font-size: 11px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chromeControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.chromeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.chromeBtn:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.chromeBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+/* ── Stage strip container + progress rail ────── */
+
+.stripContainer {
+  position: relative;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.progressRail {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: calc(var(--progress) * 100%);
+  background: linear-gradient(
+    90deg,
+    var(--stepper-done),
+    var(--stepper-active)
+  );
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 2;
+}
+
+.progressRail::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--stepper-active);
+  box-shadow: 0 0 8px color-mix(in oklch, var(--stepper-active) 50%, transparent);
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  padding: 14px 10px 16px;
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--stepper-done) 3%, transparent),
+    color-mix(in oklch, var(--stepper-active) 3%, transparent)
+  );
+}
+
+/* ── Stage cell ───────────────────────────────── */
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 4px;
+  cursor: pointer;
+  border-radius: var(--radius-1);
+  border: 1px solid transparent;
+  position: relative;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    opacity 0.25s,
+    box-shadow 0.3s,
+    transform 0.2s;
+  min-width: 0;
+  gap: 4px;
+}
+
+.cell:hover {
+  transform: translateY(-1px);
+  background: color-mix(in oklch, var(--color-text) 3%, transparent);
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ── Cell badge ───────────────────────────────── */
+
+.cellBadge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.3s;
+  position: relative;
+}
+
+.badgeCheck {
+  font-size: 9px;
+}
+
+.cellLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  transition: color 0.2s;
+}
+
+/* ── Thread dots on done badges ───────────────── */
+
+.threadDots {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+}
+
+.threadDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+
+.threadDotBlue { background: var(--thread-blue); }
+.threadDotAmber { background: var(--thread-amber); }
+.threadDotTeal { background: var(--thread-teal); }
+
+/* ── Cell states ──────────────────────────────── */
+
+/* Done */
+.cellDone {
+  border-color: color-mix(in oklch, var(--stepper-done) 30%, transparent);
+}
+
+.cellDone .cellBadge {
+  background: var(--stepper-done);
+  color: var(--color-bg);
+  box-shadow: 0 0 8px color-mix(in oklch, var(--stepper-done) 35%, transparent);
+}
+
+.cellDone .cellLabel {
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+/* Active */
+.cellActive {
+  border-color: var(--stepper-active);
+  background: color-mix(in oklch, var(--stepper-active) 6%, var(--color-surface));
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--stepper-active) 20%, transparent),
+    0 0 15px color-mix(in oklch, var(--stepper-active) 12%, transparent),
+    0 0 35px color-mix(in oklch, var(--stepper-active) 6%, transparent);
+  animation: activeBreath 2.7s ease-in-out infinite;
+}
+
+.cellActive .cellBadge {
+  background: var(--stepper-active);
+  color: var(--color-bg);
+  box-shadow: 0 0 12px color-mix(in oklch, var(--stepper-active) 50%, transparent);
+  animation: badgePulse 2.7s ease-in-out infinite;
+}
+
+.cellActive .cellLabel {
+  color: var(--color-text);
+}
+
+@keyframes activeBreath {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--stepper-active) 20%, transparent),
+      0 0 15px color-mix(in oklch, var(--stepper-active) 12%, transparent),
+      0 0 35px color-mix(in oklch, var(--stepper-active) 6%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--stepper-active) 30%, transparent),
+      0 0 20px color-mix(in oklch, var(--stepper-active) 18%, transparent),
+      0 0 45px color-mix(in oklch, var(--stepper-active) 10%, transparent);
+  }
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 0 0 12px color-mix(in oklch, var(--stepper-active) 50%, transparent);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 18px color-mix(in oklch, var(--stepper-active) 65%, transparent);
+    transform: scale(1.05);
+  }
+}
+
+/* Pending */
+.cellPending {
+  border-style: dashed;
+  border-color: color-mix(in oklch, var(--stepper-pending) 25%, transparent);
+  opacity: 0.4;
+}
+
+.cellPending:hover {
+  opacity: 0.6;
+}
+
+.cellPending .cellBadge {
+  border: 1px dashed var(--stepper-pending);
+  color: var(--stepper-pending);
+  background: transparent;
+}
+
+.cellPending .cellLabel {
+  color: var(--stepper-pending);
+}
+
+/* ── Detail panel ─────────────────────────────── */
+
+.detail {
+  padding: 16px;
+  background: var(--color-bg);
+  position: relative;
+  min-height: 120px;
+}
+
+.detail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--stepper-active) 4%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  position: relative;
+}
+
+.detailBadge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--stepper-active);
+  color: var(--color-bg);
+  flex-shrink: 0;
+  box-shadow: 0 0 10px color-mix(in oklch, var(--stepper-active) 30%, transparent);
+}
+
+.detailName {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── Transform view ───────────────────────────── */
+
+.transformView {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Input toggle (collapsible) */
+.transformInput {
+  margin-bottom: 8px;
+}
+
+.inputToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px dashed color-mix(in oklch, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-1);
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.inputToggle:hover {
+  background: color-mix(in oklch, var(--color-text) 3%, transparent);
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.inputToggleChevron {
+  display: inline-block;
+  transition: transform 0.2s;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.inputToggleOpen .inputToggleChevron {
+  transform: rotate(90deg);
+}
+
+.inputToggleLabel {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.inputToggleHint {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* Transform label bar */
+.transformLabelBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.transformArrowDown {
+  color: var(--stepper-active);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.transformFn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-1);
+  background: color-mix(in oklch, var(--stepper-active) 8%, transparent);
+  color: var(--stepper-active);
+  border: 1px solid color-mix(in oklch, var(--stepper-active) 15%, transparent);
+}
+
+/* ── Code panel ───────────────────────────────── */
+
+.codePanel {
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
+  padding: 8px 0;
+  box-shadow: inset 0 2px 4px color-mix(in oklch, var(--color-bg) 60%, transparent);
+}
+
+.codePanelLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  padding: 2px 12px 6px;
+  font-weight: 600;
+}
+
+.codeLine {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 12px;
+  white-space: pre;
+  font-size: 12.5px;
+  line-height: 22px;
+  font-family: var(--font-mono);
+  transition: background 0.15s;
+}
+
+.lineNum {
+  display: inline-block;
+  width: 2.5ch;
+  text-align: right;
+  margin-right: 1ch;
+  color: var(--color-muted);
+  opacity: 0.4;
+  user-select: none;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
+
+.lineText {
+  flex: 1;
+  color: var(--color-text);
+}
+
+/* ── Thread highlight colors ──────────────────── */
+
+.threadBlue {
+  background: color-mix(in oklch, var(--thread-blue) 20%, transparent);
+  border-left: 2px solid var(--thread-blue);
+  padding-left: 10px;
+}
+
+.threadAmber {
+  background: color-mix(in oklch, var(--thread-amber) 20%, transparent);
+  border-left: 2px solid var(--thread-amber);
+  padding-left: 10px;
+}
+
+.threadTeal {
+  background: color-mix(in oklch, var(--thread-teal) 20%, transparent);
+  border-left: 2px solid var(--thread-teal);
+  padding-left: 10px;
+}
+
+/* ── Narration ────────────────────────────────── */
+
+.narration {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--color-border);
+  font-size: 13px;
+  line-height: 1.6;
+  min-height: 48px;
+  align-items: flex-start;
+  font-family: var(--font-sans);
+  background: color-mix(in oklch, var(--stepper-active) 2%, transparent);
+}
+
+.narrationAccent {
+  width: 3px;
+  min-height: 20px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--stepper-active), var(--stepper-done));
+  flex-shrink: 0;
+}
+
+.narrationText {
+  color: var(--color-text);
+}
+
+.narrationStep {
+  font-weight: 700;
+  color: var(--stepper-active);
+}
+
+/* ── Mobile responsive ────────────────────────── */
+
+@media (max-width: 640px) {
+  .strip {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 8px 14px;
+    gap: 0;
+  }
+
+  .cell {
+    min-width: 72px;
+    flex-shrink: 0;
+    scroll-snap-align: center;
+  }
+
+  .chromeTitle {
+    font-size: 10px;
+  }
+
+  .chromeStep {
+    font-size: 10px;
+  }
+
+  .detail {
+    padding: 12px;
+  }
+
+  .narration {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+}
+
+/* ── Reduced motion ───────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .cell,
+  .chromeBtn,
+  .codeLine,
+  .progressRail,
+  .inputToggleChevron {
+    transition: none;
+  }
+
+  .cellActive {
+    animation: none;
+  }
+
+  .cellActive .cellBadge {
+    animation: none;
+  }
+}
