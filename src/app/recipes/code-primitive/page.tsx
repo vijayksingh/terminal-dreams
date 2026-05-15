@@ -4,10 +4,11 @@ import remarkGfm from "remark-gfm";
 
 import { RichParagraph } from "@/components/ui/RichParagraph";
 import { RichText } from "@/components/ui/RichText";
+import { richTextOverrides } from "@/components/ui/RichElements";
 import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { CodeAnnotator } from "@/mdx/shared/CodeAnnotator";
-import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
+import { CodeBlock } from "@/mdx/shared/CodeBlock";
 import { SeriesLabPage } from "@/components/recipe-lab/SeriesLabPage";
 import { getRecipeMdx } from "@/lib/recipes";
 import styles from "@/components/recipe-lab/recipe-lab.module.css";
@@ -21,10 +22,11 @@ const PHASE_SLUGS = [
 
 export default async function CodePrimitiveSeriesPage() {
   const recipeComponents = {
-    pre: MonacoCodeBlock,
+    pre: CodeBlock,
     p: RichParagraph,
     RichText,
     CodeAnnotator,
+    ...richTextOverrides,
   };
 
   const phaseData = await Promise.all(

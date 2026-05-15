@@ -10,6 +10,8 @@ body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
+  line-height: 1.75;
+  letter-spacing: 0.3px;
 }
 
 /* Component defaults using semantic tokens */
@@ -37,6 +39,64 @@ body {
 
 .richtext-code-pill:hover {
   background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+/* ─── Rich link: hover-to-wavy underline ─────── */
+.rich-link {
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition:
+    text-decoration-color 200ms ease-out,
+    text-underline-offset 200ms ease-out,
+    text-decoration-thickness 200ms ease-out;
+}
+
+.rich-link:hover {
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+/* ─── Rich blockquote: pull-quote with accent ─── */
+.rich-blockquote {
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-5) 0;
+  background: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
+  border-radius: 0 var(--radius-1) var(--radius-1) 0;
+}
+
+.rich-blockquote p {
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* ─── Rich lists: accent markers ─────────────── */
+.rich-list,
+.rich-ordered-list {
+  padding-left: 1.5em;
+  margin: var(--space-3) 0;
+}
+
+.rich-list li::marker {
+  color: var(--color-accent);
+}
+
+.rich-ordered-list {
+  list-style-type: decimal;
+}
+
+.rich-ordered-list li::marker {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.rich-list-item {
+  padding-left: 0.25em;
+  margin-bottom: 0.35em;
 }
 
 /* Retro blog global touches */

@@ -4,12 +4,13 @@ import remarkGfm from "remark-gfm";
 
 import { RichParagraph } from "@/components/ui/RichParagraph";
 import { RichText } from "@/components/ui/RichText";
+import { richTextOverrides } from "@/components/ui/RichElements";
 import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { RecipeScroller } from "@/components/recipe-scroller/RecipeScroller";
 import { RecipeLabPage } from "@/components/recipe-lab/RecipeLabPage";
 import { CodeAnnotator } from "@/mdx/shared/CodeAnnotator";
-import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
+import { CodeBlock } from "@/mdx/shared/CodeBlock";
 import { getAllRecipeSlugs, getRecipeBySlug, getRecipeMdx } from "@/lib/recipes";
 import { sharedComponents } from "@/mdx/registry";
 
@@ -29,10 +30,11 @@ export default async function RecipeArticlePage({
   if (mdxData) {
     // Recipe MDX uses lightweight components — no Monaco, no Playground
     const recipeComponents = {
-      pre: MonacoCodeBlock,
+      pre: CodeBlock,
       p: RichParagraph,
       RichText,
       CodeAnnotator,
+      ...richTextOverrides,
     };
 
     const mdxContent = (

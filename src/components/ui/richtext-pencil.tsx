@@ -63,7 +63,7 @@ export function PencilEmphasis({
 
   return (
     <span
-      className="relative inline-block font-semibold whitespace-nowrap"
+      className="relative inline-block whitespace-nowrap"
       style={{ color: "var(--color-accent)" }}
     >
       {children}

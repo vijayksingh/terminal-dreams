@@ -4,10 +4,21 @@
 
 import { RichParagraph } from "@/components/ui/RichParagraph";
 import { RichText } from "@/components/ui/RichText";
+import {
+  RichStrong,
+  RichEmphasis,
+  RichLink,
+  RichBlockquote,
+  RichDivider,
+  RichList,
+  RichOrderedList,
+  RichListItem,
+} from "@/components/ui/RichElements";
 import { CodeAnnotator } from "@/mdx/shared/CodeAnnotator";
 import { EmbeddablePlayground } from "@/mdx/shared/EmbeddablePlayground";
+import { FlowDiagram } from "@/mdx/shared/FlowDiagram";
 import { InteractiveCounter } from "@/mdx/shared/InteractiveCounter";
-import { MonacoCodeBlock } from "@/mdx/shared/MonacoCodeBlock";
+import { CodeBlock } from "@/mdx/shared/CodeBlock";
 import { MotionBadge } from "@/mdx/shared/MotionBadge";
 import { Playground } from "@/mdx/shared/Playground";
 import type { ComponentType } from "react";
@@ -22,13 +33,22 @@ export type MdxComponentMap = Record<string, MdxComponent>;
 export const sharedComponents: MdxComponentMap = {
   CodeAnnotator: CodeAnnotator as unknown as MdxComponent,
   EmbeddablePlayground,
+  FlowDiagram: FlowDiagram as unknown as MdxComponent,
   InteractiveCounter,
-  MonacoCodeBlock,
+  CodeBlock,
   MotionBadge,
   Playground,
   RichText: RichText as unknown as MdxComponent,
   p: RichParagraph as unknown as MdxComponent,
-  pre: MonacoCodeBlock,
+  pre: CodeBlock,
+  strong: RichStrong as unknown as MdxComponent,
+  em: RichEmphasis as unknown as MdxComponent,
+  a: RichLink as unknown as MdxComponent,
+  blockquote: RichBlockquote as unknown as MdxComponent,
+  hr: RichDivider as unknown as MdxComponent,
+  ul: RichList as unknown as MdxComponent,
+  ol: RichOrderedList as unknown as MdxComponent,
+  li: RichListItem as unknown as MdxComponent,
 };
 
 const postComponentLoaders: Record<string, PostComponentLoader> = {
@@ -36,6 +56,8 @@ const postComponentLoaders: Record<string, PostComponentLoader> = {
     import("@/mdx/posts/anatomy-of-an-agent-harness"),
   "frontend-architecture-patterns": () =>
     import("@/mdx/posts/frontend-architecture-patterns"),
+  "how-we-built-the-playground": () =>
+    import("@/mdx/posts/how-we-built-the-playground"),
 };
 
 function isMdxComponent(value: unknown): value is MdxComponent {
