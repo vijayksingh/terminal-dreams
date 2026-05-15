@@ -67,13 +67,13 @@ export const LAYOUT_PRESETS: LayoutPreset[] = [
 
 // ── Layout slots for step 9 (composition-driven) ─────────────────
 
-export type SlotId = "input" | "count" | "list" | "inspector";
+export type SlotId = "input" | "count" | "list" | "empty";
 
 export const DEFAULT_SLOT_ORDER: SlotId[] = [
   "input",
   "count",
   "list",
-  "inspector",
+  "empty",
 ];
 
 // ── Phase helpers ──────────────────────────────────────────────────
@@ -167,14 +167,14 @@ function useNaiveFilter(items: string[], query: string, active: boolean) {
 
   useEffect(() => {
     if (!active) return;
-    const id = requestAnimationFrame(() => {
+    const id = setTimeout(() => {
       setStaleResults(
         items.filter((item) =>
           item.toLowerCase().includes(query.toLowerCase())
         )
       );
-    });
-    return () => cancelAnimationFrame(id);
+    }, 80);
+    return () => clearTimeout(id);
   }, [items, query, active]);
 
   useEffect(() => {

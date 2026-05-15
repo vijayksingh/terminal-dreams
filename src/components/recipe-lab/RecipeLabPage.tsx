@@ -7,6 +7,10 @@ import { CodeTraceLab } from "./code-primitive-1/CodeTraceLab";
 import { ClickableCodeLab } from "./code-primitive-2/ClickableCodeLab";
 import { WrappersLab } from "./code-primitive-3/WrappersLab";
 import { InlineBridgeLab } from "./code-primitive-4/InlineBridgeLab";
+import { EvolutionLab } from "./from-bespoke-to-semantic-1/EvolutionLab";
+import { CompoundLab } from "./from-bespoke-to-semantic-2/CompoundLab";
+import { SemanticLab } from "./from-bespoke-to-semantic-3/SemanticLab";
+import { AssemblyLab } from "./from-bespoke-to-semantic-4/AssemblyLab";
 
 // ── Demo registry ──────────────────────────────────────────────────
 // Maps demo IDs (from MDX frontmatter) to their render functions.
@@ -79,6 +83,66 @@ const DEMO_REGISTRY: Record<
     ],
     render: (activeStep: number) => (
       <InlineBridgeLab activeStep={activeStep} />
+    ),
+  },
+  "from-bespoke-to-semantic-1": {
+    steps: [
+      { id: "step-1", stepNumber: 1 },
+      { id: "step-2", stepNumber: 2 },
+      { id: "step-3", stepNumber: 3 },
+      { id: "step-4", stepNumber: 4 },
+      { id: "step-5", stepNumber: 5 },
+      { id: "step-6", stepNumber: 6 },
+      { id: "step-7", stepNumber: 7 },
+      { id: "step-8", stepNumber: 8 },
+    ],
+    render: (activeStep: number) => (
+      <EvolutionLab activeStep={activeStep} />
+    ),
+  },
+  "from-bespoke-to-semantic-2": {
+    steps: [
+      { id: "step-1", stepNumber: 1 },
+      { id: "step-2", stepNumber: 2 },
+      { id: "step-3", stepNumber: 3 },
+      { id: "step-4", stepNumber: 4 },
+      { id: "step-5", stepNumber: 5 },
+      { id: "step-6", stepNumber: 6 },
+      { id: "step-7", stepNumber: 7 },
+      { id: "step-8", stepNumber: 8 },
+    ],
+    render: (activeStep: number) => (
+      <CompoundLab activeStep={activeStep} />
+    ),
+  },
+  "from-bespoke-to-semantic-3": {
+    steps: [
+      { id: "step-1", stepNumber: 1 },
+      { id: "step-2", stepNumber: 2 },
+      { id: "step-3", stepNumber: 3 },
+      { id: "step-4", stepNumber: 4 },
+      { id: "step-5", stepNumber: 5 },
+      { id: "step-6", stepNumber: 6 },
+      { id: "step-7", stepNumber: 7 },
+      { id: "step-8", stepNumber: 8 },
+    ],
+    render: (activeStep: number) => (
+      <SemanticLab activeStep={activeStep} />
+    ),
+  },
+  "from-bespoke-to-semantic-4": {
+    steps: [
+      { id: "step-1", stepNumber: 1 },
+      { id: "step-2", stepNumber: 2 },
+      { id: "step-3", stepNumber: 3 },
+      { id: "step-4", stepNumber: 4 },
+      { id: "step-5", stepNumber: 5 },
+      { id: "step-6", stepNumber: 6 },
+      { id: "step-7", stepNumber: 7 },
+      { id: "step-8", stepNumber: 8 },
+    ],
+    render: (activeStep: number) => (
+      <AssemblyLab activeStep={activeStep} />
     ),
   },
 };

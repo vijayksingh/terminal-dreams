@@ -15,9 +15,7 @@ demo: live-search
 
 ## 01 — Start with a static list
 
-You have five items. You need a search box. The instinct is to wire everything up at once — state, events, filtering — and see if it works.
-
-Resist that instinct. If something looks wrong after wiring up three layers simultaneously, which layer broke? You'd have no idea. Starting with a static list that does *nothing* gives you something invaluable: a foundation you can trust. Does the data show up? Right order? Correct markup? Verify that first.
+Look at the panel on the right. Five fruit names, a `<ul>`, nothing else. No state, no events, no interactivity. Check the state inspector at the bottom — `items` is the only piece of data in the entire component.
 
 ```tsx
 const items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
@@ -33,9 +31,11 @@ function App() {
 }
 ```
 
-Look at the state inspector on the right — `items` is the only data. No `query`, no `results`, no filtering logic. The component is a pure function from data to markup, and that's a property worth preserving as we build up.
+This is deliberate emptiness. The instinct is to wire everything up at once — state, events, filtering — and see if it works. But if something looks wrong after wiring three layers simultaneously, which layer broke? You'd have no idea.
 
-This isn't a teaching trick. In production codebases, the components easiest to test and debug are the ones where you can point at the data layer and the render layer independently.
+Starting static gives you a foundation you can trust. Does the data show up? Right order? Correct markup? Each question has exactly one place to look. In production codebases, the components easiest to debug are the ones where you can point at the data layer and the render layer independently.
+
+We're about to add interactivity. Everything that follows builds on this list working correctly.
 
 </section>
 
@@ -43,34 +43,23 @@ This isn't a teaching trick. In production codebases, the components easiest to 
 
 ## 02 — Wire up a controlled input
 
-We're about to add a text input, but we're *not* going to let the browser own its value.
+A text input just appeared in the demo. Type something — anything — and watch the state inspector. See `query` update on every keystroke?
 
-In vanilla HTML, an `<input>` manages its own state — you type, the DOM updates, JavaScript reads whenever. React inverts that: the component tells the input what to display, and the input reports every keystroke back. React is the source of truth, not the DOM.
+That live synchronization is not the browser's doing. In vanilla HTML, an `<input>` manages its own state — you type, the DOM updates, and JavaScript reads whenever it feels like it. React flips that: the component tells the input what to display, and the input reports every keystroke back.
 
 ```tsx
-import { useState } from "react";
+const [query, setQuery] = useState("");
 
-export default function App() {
-  const [query, setQuery] = useState("");
-
-  return (
-    <div>
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search..."
-      />
-      {/* list unchanged — still shows all items */}
-    </div>
-  );
-}
+<input
+  value={query}
+  onChange={(e) => setQuery(e.target.value)}
+  placeholder="Search..."
+/>
 ```
 
-Try it — type something in the search box and watch `query` update in the state inspector on every keystroke. The input and the state are perfectly synchronized — not because the browser is managing them, but because React re-renders the component on every change and passes the new value back to the input.
+This is a *controlled component*. React gets the last word on what the input displays. The `value` prop locks the input to the state, and `onChange` is the only way to change it. Remove either half and the input breaks — try mentally deleting `onChange` and the input becomes read-only, because React keeps resetting it to the unchanged `query`.
 
-React developers call this a *controlled component*. The name sounds formal, but the idea is simple: React gets the last word on what the input displays. The payoff comes next — because `query` lives in state, we can use it to compute anything. Like a filtered list.
-
-Right now, the list ignores the input completely. You can type "Cherry" and all five items still show. That disconnect is intentional. We've built two independent pieces (a list and an input) and verified each works alone. Now we'll connect them.
+The list still ignores your typing. Type "Cherry" and all five items remain. That disconnect is intentional — we've built two independent pieces (a list and an input) and verified each works alone. The payoff of controlling `query` in state comes next: because it's a React value, we can use it to compute anything. Like a filtered list.
 
 </section>
 
@@ -78,7 +67,11 @@ Right now, the list ignores the input completely. You can type "Cherry" and all 
 
 ## 03 — Filter the list on every keystroke
 
-The obvious approach: a `useState` for the query, another `useState` for results, and a `useEffect` to keep them in sync.
+Type **"a"** — Apple, Banana, and Date survive. Cherry and Elderberry disappear. Clear the input and they're back. The filter runs on every keystroke, with zero delay.
+
+Now toggle the **"Try the naive useEffect approach"** checkbox above the panel. Type a few characters quickly. See the flash? The stale indicator fires with specific numbers: *"results show 5 items but query already matches 3."* For a brief moment, the list and the query are out of sync.
+
+Here's the naive approach that causes this:
 
 ```tsx
 // ⚠️ The naive approach — don't do this
@@ -92,9 +85,9 @@ useEffect(() => {
 }, [query]);
 ```
 
-This works. But between the moment `query` updates and the effect fires, `results` is stale — it holds the *previous* filter output. One unnecessary render with mismatched data. With five fruit names, invisible. With a thousand products and a loading spinner tied to result count, you'd see it flash.
+Between the moment `query` updates and the effect fires, `results` holds the *previous* filter output. With five items, the demo amplifies this gap to make it visible — in production, the gap is one render frame, but with a thousand products and a loading spinner tied to result count, users would see a flash of wrong data.
 
-The fix is to not store `results` at all:
+Toggle the checkbox off. The stale indicator vanishes. The fix is to not store `results` at all:
 
 ```tsx
 const results = items.filter((item) =>
@@ -102,11 +95,9 @@ const results = items.filter((item) =>
 );
 ```
 
-This is *derived state*. Instead of maintaining two pieces of state that can drift apart, we compute `results` directly from `query` on every render. No effect, no sync bug, no stale frame.
+This is *derived state*. Instead of maintaining two pieces of state that can drift apart, we compute `results` directly from `query` on every render. No effect, no sync bug, no stale frame. One piece of state, one computation, one truth.
 
-Type **"a"** in the demo — Apple, Banana, and Date remain. Cherry and Elderberry disappear because neither contains the letter "a". The `.toLowerCase()` calls make the match case-insensitive, so typing "A" or "a" gives the same result.
-
-Now try **"an"** — only Banana survives. The filter checks whether the full query appears as a contiguous substring, not whether each letter appears somewhere. That's a design choice worth noticing: `includes()` gives you substring matching. If you wanted fuzzy matching (where "apl" finds "Apple"), you'd need a different algorithm entirely — something like Fuse.js or a custom scoring function.
+**When derived state is the wrong call:** if filtering 10,000 items or running an expensive computation, you'd wrap this in `useMemo` to avoid recalculating on unrelated re-renders. For cheap, synchronous transformations like this — derive, don't sync.
 
 </section>
 
@@ -114,16 +105,13 @@ Now try **"an"** — only Banana survives. The filter checks whether the full qu
 
 ## 04 — Highlight the matching text
 
-Filtering tells users *which* results survived. Highlighting tells them *why*.
+Type **"an"** and look at the results. See how B**an**ana has the matching substring highlighted? Filtering tells users *which* results survived. Highlighting tells them *why*.
 
-Without highlighting, a filtered list is a black box — the user types "an" and sees "Banana" but has to mentally scan the word to confirm the match. With highlighting, the connection between query and result is instant and visual: B**an**ana.
+Without it, a filtered list is a black box — the user types "an" and sees "Banana" but has to mentally scan the word to confirm the match. With highlighting, the connection between query and result is instant and visual.
 
-The trick is string surgery: split each result into the part before the match, the match itself, and the part after. Wrap the match in a `<mark>` tag — which is semantically correct here, since `<mark>` means "text highlighted for reference." Most tutorials use a `<span>` with a class; `<mark>` is what the tag was designed for.
+Look at the state inspector — it shows the segment breakdown: `segments("Banana"): B[an]ana`. That's the exact output of the highlight function:
 
 ```tsx
-// highlight.ts
-export type Segment = { text: string; match: boolean };
-
 export function highlight(text: string, query: string): Segment[] {
   if (!query.trim()) return [{ text, match: false }];
   const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -136,21 +124,9 @@ export function highlight(text: string, query: string): Segment[] {
 }
 ```
 
-In the component, we map over the segments:
+String surgery: find the match position with `indexOf`, slice the string into before/match/after, tag each piece. In the component, matched segments get a `<mark>` tag — semantically correct here, since `<mark>` means "text highlighted for reference."
 
-```tsx
-{highlight(item, query).map((seg, i) =>
-  seg.match
-    ? <mark key={i}>{seg.text}</mark>
-    : <span key={i}>{seg.text}</span>
-)}
-```
-
-The state inspector shows the segment breakdown for the first result — you can see exactly how the string was sliced.
-
-Try typing "a" and look at "Banana" — only the first "a" lights up, even though there are three. `indexOf` returns the first match and stops. Highlighting every occurrence would need a global regex or `String.split` with a capture group — a worthwhile extension after this lesson.
-
-One safety note: `indexOf` does literal string matching, so typing "(" or "." won't crash anything. But if you swap to regex-based highlighting later, those characters become metacharacters that need escaping — a trap that bites people who upgrade the pattern without thinking about the edge cases.
+Now try typing **"a"** and look at "Banana" — only the first "a" lights up, even though there are three. `indexOf` returns the first match and stops. Highlighting every occurrence would need a different approach: `String.split` with a regex capture group, or a loop that finds all indices. That's a worthwhile extension — a single `text.split(new RegExp(`(${escaped})`, 'gi'))` gives you all occurrences, but you'd need to escape regex metacharacters in the query first (characters like `(`, `.`, `*` are special in regex). The `indexOf` approach sidesteps that entire class of bugs.
 
 </section>
 
@@ -158,9 +134,11 @@ One safety note: `indexOf` does literal string matching, so typing "(" or "." wo
 
 ## 05 — Handle the empty state
 
-Type **"xyz"** into the demo's search box.
+Type **"xyz"** into the search box.
 
-What happens? Toggle the "Empty State" feature off in the demo panel and type it again. The list simply vanishes — a blank void where five items used to be. As a user, this is disorienting. Did the app crash? Is the data gone? Did my query fail to send? A blank space communicates *nothing*, and in UI design, communicating nothing is worse than communicating bad news.
+The list shows a message: *"No results for 'xyz'."* Now toggle the **"Empty State"** feature off in the toolbar and type "xyz" again. The list simply vanishes — a blank void where five items used to be. As a user, this is disorienting. Did the app crash? Is the data gone? Did my query fail to send?
+
+A blank space communicates *nothing*, and in UI design, communicating nothing is worse than communicating bad news.
 
 ```tsx
 {results.length > 0 ? (
@@ -174,11 +152,9 @@ What happens? Toggle the "Empty State" feature off in the demo panel and type it
 )}
 ```
 
-Three lines of new code. The ternary replaces the unconditional `<ul>` — if results exist, render them; otherwise, render a message. Notice the message echoes the query back: *"No results for 'xyz'."* That's doing two things at once. It confirms the system received the input (not broken), and it frames zero results as a valid outcome (not a bug).
+Three lines of new code. The ternary does two things at once. It confirms the system received the input (not broken), and it frames zero results as a valid outcome (not a bug). Watch `isEmpty` flip to `true` in the state inspector, then clear the field — the full list returns instantly. This instant recovery tells the user the data isn't gone, just hidden. The search is a lens, not a destructive filter.
 
-Watch `isEmpty` flip to `true` in the state inspector. Now clear the field — the full list returns instantly. This instant recovery matters: it tells the user the data isn't gone, just hidden. The search is a lens, not a filter that destroys.
-
-In production, you'd go further — a "clear search" button, alternative query suggestions, maybe an illustration. But the principle holds: every state of your UI should communicate something deliberate.
+Toggle the feature back on and try progressively narrowing: type "a" (3 results), "an" (1 result), "anx" (0 results, empty state). Each transition is smooth and communicative. Every state of your UI should say something deliberate — even "I found nothing."
 
 </section>
 
@@ -186,11 +162,11 @@ In production, you'd go further — a "clear search" button, alternative query s
 
 ## 06 — Extract to a reusable hook
 
-Everything works. So why change anything?
+Last month you built this search for a fruit list. Next month you'll build it for a product catalog. The month after, a user directory. Each one starts as a copy-paste of the same `useState` + `filter` logic.
 
-Because you'll build this again. A product catalog with search. A user directory with search. An API explorer with search. Each one copies the same `useState` + `filter` logic. Then someone discovers that queries with trailing spaces return zero results — you add a `.trim()` in the catalog and forget the other two.
+That's fine at first. Then someone discovers that queries with trailing spaces return zero results. You add a `.trim()` in the catalog. The user directory still has the bug. The fruit list has a *different* fix — someone lowercased the items at import time instead. Three copies that started identical have silently diverged, and no amount of grep will find all the places where "search filtering" lives because none of them are labeled.
 
-Duplication isn't a problem because of the typing. It's a problem because of the *divergence* — three copies that start identical and slowly drift as each gets patched independently.
+Duplication isn't a problem because of the typing. It's a problem because of the *drift*.
 
 ```tsx
 // useSearch.ts
@@ -208,19 +184,62 @@ export function useSearch(items: string[]) {
 Seven lines. The component collapses to a single destructure:
 
 ```tsx
-import { useSearch } from "./useSearch";
+const { query, setQuery, results } = useSearch(items);
+// rendering only — no filtering logic in the component
+```
 
-function App() {
+Look at the state inspector title — it now says **"useSearch()"** instead of "State." The demo looks identical because the *behavior* hasn't changed. What changed is where the behavior lives, and that changes everything about how you work with it.
+
+### What custom hooks actually are
+
+A custom hook is any function that starts with `use` and calls other hooks. That's the entire contract. The `use` prefix isn't a naming convention you could ignore — it's how React's linter knows to enforce the rules of hooks inside that function (no conditional calls, no calls outside components or other hooks). Remove the prefix and the linter goes silent, which means you lose the safety net.
+
+What you get back is composition. `useSearch` is a building block that other hooks can wrap:
+
+```tsx
+// Later: add debouncing without touching useSearch
+function useDebouncedSearch(items: string[], delay = 300) {
   const { query, setQuery, results } = useSearch(items);
-  // rendering only — no filtering logic
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query), delay);
+    return () => clearTimeout(id);
+  }, [query, delay]);
+
+  const debouncedResults = items.filter((item) =>
+    item.toLowerCase().includes(debouncedQuery.toLowerCase())
+  );
+
+  return { query, setQuery, results: debouncedResults };
 }
 ```
 
-Custom hooks are React's composition primitive — any function that starts with `use` and calls other hooks. The `use` prefix isn't just convention; it's how React's linter knows to enforce the rules of hooks.
+Notice what happened: we added debouncing *without modifying `useSearch`*. The original hook still works for cases where debouncing isn't needed. And any bug fix to the core filtering logic — like that `.trim()` — automatically propagates to both hooks.
 
-The component is now purely about rendering. The search logic lives in a module that's independently testable — you can write unit tests for `useSearch` without mounting any components. And because hooks compose, `useSearch` could later wrap `useDeferredValue` for large lists, add `useTransition` for smoother updates, accept a custom comparator for fuzzy matching, or debounce the query with a `useEffect` and a timeout.
+### The testing shift
 
-The pattern scales because it separates *what to compute* from *how to render it*. That's the real lesson here — not the API of custom hooks, but the architectural instinct to extract behavior the moment it has a name.
+Before extraction, testing the filter logic required mounting the entire component:
+
+```tsx
+render(<App />);
+fireEvent.change(screen.getByRole("textbox"), { target: { value: "an" } });
+expect(screen.getAllByRole("listitem")).toHaveLength(1);
+```
+
+This works, but it tests filtering *through* the UI. If the test fails, is it the filter logic or the rendering? After extraction, you can test the logic directly:
+
+```tsx
+const { result } = renderHook(() => useSearch(["Apple", "Banana", "Cherry"]));
+act(() => result.current.setQuery("an"));
+expect(result.current.results).toEqual(["Banana"]);
+```
+
+No DOM, no selectors, no ambiguity about what broke. The component's own tests can now focus purely on rendering — does it show the right number of `<li>` elements given the results it receives?
+
+This separation — *what to compute* vs *how to render it* — is the real lesson. Not the API of custom hooks, but the architectural instinct to extract behavior the moment it has a name.
+
+**When NOT to extract:** if the logic is used in exactly one component and is tightly coupled to that component's rendering, extraction adds a file and an import without reducing complexity. Extract when the behavior has a name AND you can picture it being reused — even if that reuse hasn't happened yet. "Search filtering" clearly has a name. "The specific way this dialog calculates its z-index" probably doesn't.
 
 </section>
 
@@ -230,9 +249,13 @@ The pattern scales because it separates *what to compute* from *how to render it
 
 Your search works. Your boss is happy. Then the requirements start arriving.
 
-"Can we add a clear button?" Sure — one more piece of state, one more conditional. "Can we show the result count?" Easy — a line of JSX. "Can we let users sort results alphabetically?" A `sortOrder` state, a toggle button, a `useMemo` to sort. "Can we show a loading skeleton when the list is empty on first render?" A `showSkeleton` prop, a timeout, another conditional branch.
+Toggle **Clear Button** in the demo panel — a clear button appears next to the input. Watch the prop counter in the corner: **5 → 6**. One prop, one feature. Reasonable.
 
-Each feature is small. Each feature is reasonable. But look at what happened to the component:
+Toggle **Result Count** — a count badge appears in the header. **6 → 7**. Still fine.
+
+Toggle **Sort Toggle** — an A→Z button appears. **7 → 9**. Wait — that jumped by two. Sorting needs both a `sortable` boolean *and* a `sortOrder` state prop, because the parent needs to control whether sorting is active and in which direction.
+
+Now type "a" in the search, click Clear, click A→Z. Every feature works. But look at the code that makes this work:
 
 ```tsx
 function SearchableList({
@@ -282,13 +305,13 @@ function SearchableList({
 }
 ```
 
-Count the props: nine. Count the conditional branches: five. And this is a *search box* — one of the simpler UI patterns you'll build.
+Count the conditional branches: `showClear && query`, `showCount`, `sortable`, `capped.length > 0`, `showSkeleton`. Five `if`s hiding inside JSX. Each one is a fork in the render path, and each fork interacts with the others. What happens when `showSkeleton` is true but `showCount` is also true? Does the count show "0 results" while the skeleton animates? The component author has to decide, and the consumer has to discover that decision by reading the source.
 
-The demo panel still shows every feature from steps 1–6, locked on. Now toggle **Clear Button** — a clear button appears next to the input. Toggle **Result Count** — a count badge appears in the header. Toggle **Sort Toggle** — an A→Z button appears. Watch the prop counter climb with each toggle: 5 → 6 → 7 → 9.
+This is what nine props *costs*. Not just the lines of code — the mental model. A developer using this component has to understand nine parameters and their interactions. The TypeScript types help, but they only tell you what's *valid*, not what's *wise*. `showSkeleton={true} showCount={true} emptyMessage="Gone fishing"` all type-check fine, but the visual result is probably not what anyone intended.
 
-Type "a" and click Clear. Click A→Z to sort alphabetically. Every feature works. The *user* sees a better search. The *developer* sees nine props, five conditionals, and a component that knows too much about every possible configuration.
+The *user* sees a better search. The *developer* sees a component that knows too much about every possible configuration.
 
-Ant Design's `Select` has 40+ props. MUI's `Autocomplete` has 50+. They work, but they're configured, not composed.
+This is the trajectory of every "flexible" component. Ant Design's `Select` has 40+ props. MUI's `Autocomplete` has 50+. They work — millions of apps use them — but adding the 51st prop means understanding how it interacts with the other 50. The component is configured, not composed. And that distinction is about to matter, because the next requirement isn't a feature — it's a layout change.
 
 </section>
 
@@ -296,41 +319,79 @@ Ant Design's `Select` has 40+ props. MUI's `Autocomplete` has 50+. They work, bu
 
 ## 08 — Props aren't architecture
 
-Here's where the monolith breaks.
+Here's where the monolith actually breaks. Not because of a bug, but because of a *category of request* that props can't handle gracefully.
 
-Your designer says: "On the settings page, I want the result count *above* the search input, and the clear button *inside* the input field." On the dashboard, they want the list items to include a thumbnail. On mobile, they want the sort toggle in a bottom sheet, not inline.
+Click **"Count above input"** in the layout picker below the panel. Watch the count badge move from the header to a standalone line above the search input — the panel *actually rearranges*. Now click **"Sort in footer"** — the sort button drops below the list.
 
-With the current component, each layout variation needs a new prop: `countPosition`, `clearPosition`, `renderItem`, `sortPosition`. The prop list doesn't just grow — it grows *combinatorially*. Every layout dimension multiplies with every feature flag.
+Each layout works. But look at the message that appeared: *"The layout changed — but it cost you a new prop."* The prop counter keeps climbing. Each spatial rearrangement — moving an element from one place to another in the DOM — required a new configuration prop.
+
+### Why this is different from adding features
+
+Steps 1-7 added *behaviors*: filtering, highlighting, clearing, sorting. Each behavior is a question with a yes/no answer: "Should this component sort?" That maps cleanly to a boolean prop.
+
+But "where should the count badge appear?" isn't yes/no — it's a spatial relationship. And spatial relationships multiply combinatorially with every other element:
+
+- Count can be: in the header, above the input, below the list, hidden
+- Clear button can be: beside the input, inside the input, in the header, hidden
+- Sort toggle can be: beside the input, in the header, in a footer, in a dropdown, hidden
+
+That's 4 × 4 × 5 = 80 possible layouts from *three* elements. Each combination that a consumer requests, the component author must anticipate, implement, and test. And the 81st request — "put the count *inside* the input field, right-aligned" — requires modifying the component's internals, because the component owns the DOM structure.
+
+Here's what it looks like *inside* the component when you start supporting position props. This is what the component author writes so the consumer can pass `countPosition="above"`:
 
 ```tsx
-// This is where monolithic components end up
+{showCount && countPosition === "above" && (
+  <div className="count-above">
+    <span>{results.length} results</span>
+  </div>
+)}
+<div className="search-header">
+  <input value={query} onChange={...} />
+  {showClear && clearPosition === "inside" && (
+    <button className="clear-inside" onClick={...}>✕</button>
+  )}
+  {showCount && countPosition === "header" && (
+    <span>{results.length} results</span>
+  )}
+  {showClear && clearPosition !== "inside" && (
+    <button onClick={...}>✕</button>
+  )}
+</div>
+```
+
+The same element — a result count — appears in *two different places* in the JSX, guarded by the same prop (`countPosition`) checked against different values. The clear button has *three* render sites. Each position variant is a new conditional branch that the component author must maintain, and every branch interacts with every other branch. Adding `clearPosition="header"` changes the spacing around the input, which changes how `countPosition="header"` looks, which means the component author needs to test every combination they claim to support.
+
+This is the consumer's view of the same component:
+
+```tsx
 <SearchableList
   items={products}
   placeholder="Search products..."
   showClear
-  clearPosition="inside"    // new prop for clear button placement
+  clearPosition="inside"
   showCount
-  countPosition="above"     // new prop for count placement
+  countPosition="above"
   sortable
-  sortPosition="bottom-sheet" // new prop for sort placement
-  renderItem={(item) => (    // new prop for custom item rendering
-    <div className="flex gap-2">
-      <img src={item.thumb} />
-      <span>{item.name}</span>
-    </div>
-  )}
+  sortPosition="bottom-sheet"
+  renderItem={(item) => <ProductCard product={item} />}
   maxResults={20}
   emptyMessage="No products found"
 />
 ```
 
-Try it in the demo. Click **"Count above input"** in the layout picker — watch the count badge move from the header to a standalone line above the search input. The panel actually rearranges. Now click **"Sort in footer"** — the sort button drops below the list. Each layout works, but look at the prop counter: it climbed. Each rearrangement cost you a new prop (`countPosition`, `sortPosition`).
+Twelve props to describe a search box. And the consumer can't tell, from the props alone, whether `clearPosition="inside"` + `countPosition="header"` produces a sensible layout or a visual collision. The only way to know is to try it and look.
 
-The panel did what you asked. But each layout variation multiplied with every feature flag. Want the count above the input AND the clear button inside? That's `countPosition="above"` + `clearPosition="inside"` — two new props that interact in ways you'll have to test.
+### The render prop escape hatch (and why it's not enough)
 
-This is the fundamental problem: **props describe what a component does, not how it's structured**. When the structure itself needs to vary, props become the wrong abstraction. You need something that describes *composition*, not *configuration*.
+You might think: "just add a `renderItem` prop and let the consumer customize the rendering." This is the render prop pattern, and it genuinely helps for *content* customization — the consumer controls what each list item looks like.
 
-React already has an abstraction for this: context for shared state, and `children` for structure.
+But render props don't solve the *structural* problem. `renderItem` lets you customize what's *inside* a list item, not *where the list lives relative to the input*. For that, you'd need `renderHeader`, `renderFooter`, `renderInputArea`... and now you're back to the same problem, just with functions instead of booleans.
+
+The fundamental mismatch: **props describe what a component does, not how it's arranged.** Feature props (`showClear`, `sortable`) work because they toggle behavior. Layout props (`clearPosition`, `countPosition`) fail because they try to express *structure* through *configuration*, and structure has too many dimensions to enumerate.
+
+Your designer says: "On the settings page, put the count above the input. On the dashboard, put the sort toggle in a bottom sheet. On mobile, hide the clear button but show a floating action button instead." Each request is reasonable. Each request costs a new prop. And each prop interacts with every other prop in ways that are increasingly hard to predict.
+
+There's a different abstraction that handles this — one where layout is expressed as *structure*, not *configuration*. React already has it: `children` for structure, and context for shared state.
 
 </section>
 
@@ -338,7 +399,9 @@ React already has an abstraction for this: context for shared state, and `childr
 
 ## 09 — Compound components
 
-In step 8, rearranging the layout cost you a new prop each time. Here's the same search, rebuilt so rearranging costs nothing:
+Drag the components in the **"Rearrange components"** panel on the right. Move `<Search.Count />` above `<Search.Input />`. Watch two things happen simultaneously: the **JSX preview** updates (the code lines animate to their new positions), and the **live panel below** rearranges to match.
+
+No new props. No prop counter. No component library code was modified. The JSX tree *is* the layout.
 
 ```tsx
 <Search.Root items={items}>
@@ -351,13 +414,27 @@ In step 8, rearranging the layout cost you a new prop each time. Here's the same
 </Search.Root>
 ```
 
-No configuration props. No boolean flags. No position enums. The *JSX tree itself* is the layout. Want the count above the input? Move the line. Want custom item rendering? Pass a different function to `List`. Want a clear button inside the input? Wrap them in a div.
+Compare this to step 8. The same layout change that cost a `countPosition` prop now costs nothing — you move a line of JSX. Want the count in a sidebar? Move it to a different `<div>`. Want custom item rendering? Pass a different function to `List`. Want a completely novel layout no one anticipated? Go ahead — the components don't care where they sit in the tree.
 
-The trick that makes this work: **context**. `Search.Root` holds all the state — query, results, features — in a React context. Every child component pulls what it needs via `useContext`. No prop drilling, no forwarding, no coupling between siblings.
+### How context makes this work
+
+The trick is that `Search.Root` holds all shared state in a React context, and every child component pulls only what it needs:
 
 ```tsx
-const SearchContext = createContext<SearchState>(null);
+const SearchContext = createContext<SearchState | null>(null);
 
+function useSearch() {
+  const ctx = useContext(SearchContext);
+  if (!ctx) throw new Error("Search components must be inside <Search.Root>");
+  return ctx;
+}
+```
+
+That `if (!ctx)` guard is important — it turns a silent `undefined` into a clear error message. Without it, a `<Search.Input />` rendered outside a `<Search.Root>` would fail with "Cannot read properties of null," and the developer would have to trace back to figure out why.
+
+Now each sub-component becomes self-contained:
+
+```tsx
 function Root({ items, children }) {
   const [query, setQuery] = useState("");
   const results = items.filter(item =>
@@ -371,20 +448,100 @@ function Root({ items, children }) {
 }
 
 function Input({ placeholder }) {
-  const { query, setQuery } = useContext(SearchContext);
-  return <input value={query} onChange={e => setQuery(e.target.value)} />;
+  const { query, setQuery } = useSearch();
+  return (
+    <input
+      value={query}
+      onChange={e => setQuery(e.target.value)}
+      placeholder={placeholder}
+    />
+  );
 }
 
 function Count() {
-  const { results } = useContext(SearchContext);
+  const { results } = useSearch();
   return <span>{results.length} results</span>;
+}
+
+function List({ children: renderItem }) {
+  const { results } = useSearch();
+  return (
+    <ul>
+      {results.map(item => (
+        <li key={item}>{renderItem(item)}</li>
+      ))}
+    </ul>
+  );
 }
 ```
 
-Each component is **self-contained** — it knows how to render itself and which slice of context it needs. Nothing else. `Input` doesn't know about `Count`. `Count` doesn't know about `List`. They're siblings that share state through a parent provider, not props through a chain.
+`Input` doesn't know about `Count`. `Count` doesn't know about `List`. They're siblings that share state through a parent provider, not props passed through a chain. Each one answers a single question: "Given the current search state, what do I render?"
 
-Try rearranging the components in the demo panel. Move the count above the input — the same layout change that cost a `countPosition` prop in step 8. Watch the JSX preview update in real-time: `<Search.Count />` moves above `<Search.Input />` in the code, and the live demo below reflects the change instantly. No new props. No prop counter climbing. Every arrangement works because no component assumes where it lives in the tree. The structure is in the consumer's hands, not the library's.
+### Why this solves what props couldn't
 
-This is the pattern behind Radix UI, Headless UI, and most component libraries worth studying. The dot-notation (`Search.Root`, `Search.Input`) is convention, not magic — it's a plain object with component values. But the architecture is real: **state lives in context, structure lives in JSX, and no component knows about both**.
+Go back to the 80-layout problem from step 8. With compound components, the consumer expresses each layout directly in JSX:
+
+```tsx
+// Settings page: count above input
+<Search.Root items={items}>
+  <Search.Count />
+  <Search.Input />
+  <Search.List>{(item) => <Item item={item} />}</Search.List>
+</Search.Root>
+
+// Dashboard: sort in a footer
+<Search.Root items={items}>
+  <Search.Input />
+  <Search.List>{(item) => <Item item={item} />}</Search.List>
+  <footer>
+    <Search.SortToggle />
+  </footer>
+</Search.Root>
+
+// Mobile: completely custom layout
+<Search.Root items={items}>
+  <MobileSearchHeader>
+    <Search.Input />
+    <Search.Count />
+  </MobileSearchHeader>
+  <Search.List>{(item) => <CompactItem item={item} />}</Search.List>
+  <BottomSheet>
+    <Search.SortToggle />
+    <Search.ClearButton />
+  </BottomSheet>
+</Search.Root>
+```
+
+The library author didn't anticipate `<MobileSearchHeader>` or `<BottomSheet>`. They didn't need to — those are the consumer's components. The search sub-components work inside any wrapper because they don't know or care about their parent DOM structure. They only know about the context.
+
+### The dot-notation convention
+
+`Search.Root`, `Search.Input`, `Search.Count` — the dot syntax looks like magic but it's a plain object:
+
+```tsx
+export const Search = {
+  Root,
+  Input,
+  Count,
+  List,
+  Empty,
+} as const;
+```
+
+This is purely organizational — it namespaces related components so you don't pollute the import scope with `SearchRoot`, `SearchInput`, `SearchCount`. The `as const` ensures TypeScript treats the object as readonly, which gives you autocomplete on `Search.` in your editor. You type `Search.` and see all available sub-components. That partially offsets the main tradeoff of this pattern.
+
+### The tradeoff: discoverability
+
+With a monolithic component, you type `<SearchableList` and your editor shows you every prop — every capability is visible in one autocomplete popup. With compound components, you have to *know* that `<Search.Count />` exists. The type system helps (`Search.` shows available components), but it can't show you *example compositions* — you need documentation or examples to understand which combinations make sense.
+
+This is a real cost. Teams that adopt compound components without good documentation end up with developers who don't realize `<Search.Empty>` exists and hand-roll their own empty state. The pattern shifts complexity from the library author (who no longer maintains position props) to the documentation (which must now show composition examples).
+
+### The architecture insight
+
+The deep principle is: **state lives in context, structure lives in JSX, and no component knows about both.** `Root` knows about state but accepts `children` without inspecting them. `Input` knows about structure (it renders an `<input>`) but gets its data from context. This separation is what makes the pattern flexible — the two concerns can vary independently.
+
+This is the pattern behind Radix UI, Headless UI, Reach UI, and most component libraries worth studying. It's also the pattern behind HTML's own `<select>` and `<option>` — a parent that holds state, children that render options, and the browser's internal context connecting them.
+
+**When NOT to use compound components:** when your component has a fixed layout that never needs to vary. A `<Button>` is always an icon, a label, and a container — compound components would add ceremony without flexibility. A `<DatePicker>` might benefit — if different teams need different calendar layouts, input formats, or popup positions. The trigger is not complexity or prop count, but *structural variation*. If nobody has ever asked "can I move X to a different position?", you probably don't need this pattern yet.
 
 </section>

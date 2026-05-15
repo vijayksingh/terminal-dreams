@@ -65,6 +65,7 @@ function CompositionView() {
         <SearchDemo.SlotArranger />
         <SearchDemo.JsxPreview />
         <SearchDemo.ComposedPanel />
+        <SearchDemo.Inspector />
       </SearchDemo.ScrollArea>
     </>
   );

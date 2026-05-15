@@ -3,6 +3,7 @@
 import { type ReactNode, Fragment } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SPRING, TRANSITION, STAGGER } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import {
   SearchDemoRoot,
   useSearchDemo,
@@ -13,6 +14,8 @@ import {
   type SlotId,
 } from "./search-context";
 import { StateInspector } from "../StateInspector";
+
+const INSTANT = { duration: 0 };
 
 // ── Root ───────────────────────────────────────────────────────────
 // Provides all state to children via context.
@@ -79,6 +82,7 @@ function FeatureToggle({
   return (
     <button
       onClick={onToggle}
+      aria-pressed={isOn}
       className="px-2.5 py-1 text-xs font-mono rounded transition-all"
       style={{
         background: isOn ? "var(--color-surface-2)" : "transparent",
@@ -109,6 +113,7 @@ function FeatureToggle({
 
 function NaiveToggle() {
   const { activeStep, naiveMode, setNaiveMode } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
     <AnimatePresence>
@@ -118,7 +123,7 @@ function NaiveToggle() {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          transition={TRANSITION.collapse}
+          transition={prefersReducedMotion ? INSTANT : TRANSITION.collapse}
         className="shrink-0 px-4 py-2 flex items-center gap-2"
         style={{
           borderBottom: "1px solid var(--color-border)",
@@ -129,6 +134,7 @@ function NaiveToggle() {
       >
         <button
           onClick={() => setNaiveMode((p: boolean) => !p)}
+          aria-pressed={naiveMode}
           className="flex items-center gap-2 text-xs font-mono transition-colors"
           style={{
             color: naiveMode ? "var(--color-accent)" : "var(--color-muted)",
@@ -139,7 +145,7 @@ function NaiveToggle() {
         </button>
         {naiveMode && (
           <motion.span
-            initial={{ opacity: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-[10px]"
             style={{ color: "var(--color-muted)" }}
@@ -177,15 +183,17 @@ function Checkbox({ checked }: { checked: boolean }) {
 
 function StaleIndicator() {
   const { isStale, naiveResults, derivedResults } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
     <AnimatePresence>
       {isStale && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          role="alert"
+          initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
-          transition={TRANSITION.enterItem}
+          transition={prefersReducedMotion ? INSTANT : TRANSITION.enterItem}
           className="px-3 py-2 rounded text-xs font-mono"
           style={{
             background:
@@ -241,6 +249,7 @@ function Panel({
 
 function Input({ placeholder = "Type to search..." }: { placeholder?: string }) {
   const { hasInput, query, setQuery } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
     <AnimatePresence mode="popLayout">
@@ -250,25 +259,20 @@ function Input({ placeholder = "Type to search..." }: { placeholder?: string }) 
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
-          transition={TRANSITION.collapse}
+          transition={prefersReducedMotion ? INSTANT : TRANSITION.collapse}
           className="mb-3"
+          role="search"
         >
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={placeholder}
-            className="w-full px-3 py-2 text-sm rounded font-mono"
+            aria-label="Search items"
+            className="w-full px-3 py-2 text-sm rounded font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:border-[var(--color-accent)]"
             style={{
               background: "var(--color-bg)",
               border: "1px solid var(--color-border)",
               color: "var(--color-text)",
-              outline: "none",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-accent)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--color-border)";
             }}
           />
         </motion.div>
@@ -295,6 +299,9 @@ function List({ children: renderItem }: ListProps) {
       ) : (
         <motion.ul
           key="result-list"
+          role="listbox"
+          aria-label="Search results"
+          aria-live="polite"
           className="flex flex-col gap-0.5 list-none p-0 m-0"
         >
           <AnimatePresence mode="popLayout">
@@ -320,12 +327,15 @@ function Item({
   index: number;
   children: ReactNode;
 }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   return (
     <motion.li
-      initial={{ opacity: 0, x: -8 }}
+      role="option"
+      initial={prefersReducedMotion ? false : { opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 8 }}
-      transition={{ ...SPRING.snappy, delay: index * STAGGER.fast }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
+      transition={prefersReducedMotion ? INSTANT : { ...SPRING.snappy, delay: index * STAGGER.fast }}
       className="text-sm py-1.5 px-2 rounded"
       style={{ color: "var(--color-text)" }}
     >
@@ -481,6 +491,7 @@ function ExtraToolbar() {
           <button
             key={ef.id}
             onClick={() => toggleExtra(ef.id)}
+            aria-pressed={isOn}
             className="px-2.5 py-1 text-xs font-mono rounded transition-all"
             style={{
               background: isOn ? "var(--color-surface-2)" : "transparent",
@@ -511,12 +522,14 @@ function ExtraToolbar() {
 }
 
 function PropCounter({ count }: { count: number }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   return (
     <motion.div
       key={count}
-      initial={{ scale: 1.3 }}
+      initial={prefersReducedMotion ? false : { scale: 1.3 }}
       animate={{ scale: 1 }}
-      transition={SPRING.snappy}
+      transition={prefersReducedMotion ? INSTANT : SPRING.snappy}
       className="ml-auto px-2 py-0.5 rounded text-[10px] font-mono"
       style={{
         background: count > 5
@@ -535,6 +548,7 @@ function PropCounter({ count }: { count: number }) {
 
 function ResultListInline() {
   const { results, isEmpty, hasHighlight, highlightText, query } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   if (isEmpty) {
     return (
@@ -545,53 +559,55 @@ function ResultListInline() {
   }
 
   return (
-    <AnimatePresence mode="popLayout">
-      <motion.ul
-        key="result-list"
-        className="flex flex-col gap-0.5 list-none p-0 m-0"
-      >
-        <AnimatePresence mode="popLayout">
-          {results.map((item, index) => (
-            <motion.li
-              key={item}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 8 }}
-              transition={{ ...SPRING.snappy, delay: index * STAGGER.fast }}
-              className="text-sm py-1.5 px-2 rounded"
-              style={{ color: "var(--color-text)" }}
-            >
-              {hasHighlight
-                ? highlightText(item).map((seg, i) =>
-                    seg.match ? (
-                      <mark
-                        key={i}
-                        className="px-0.5 rounded-sm"
-                        style={{
-                          background: "var(--color-accent)",
-                          color: "var(--color-bg)",
-                        }}
-                      >
-                        {seg.text}
-                      </mark>
-                    ) : (
-                      <span key={i}>{seg.text}</span>
-                    )
+    <ul
+      role="listbox"
+      aria-label="Search results"
+      aria-live="polite"
+      className="flex flex-col gap-0.5 list-none p-0 m-0"
+    >
+      <AnimatePresence mode="popLayout">
+        {results.map((item, index) => (
+          <motion.li
+            key={item}
+            role="option"
+            initial={prefersReducedMotion ? false : { opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
+            transition={prefersReducedMotion ? INSTANT : { ...SPRING.snappy, delay: index * STAGGER.fast }}
+            className="text-sm py-1.5 px-2 rounded"
+            style={{ color: "var(--color-text)" }}
+          >
+            {hasHighlight
+              ? highlightText(item).map((seg, i) =>
+                  seg.match ? (
+                    <mark
+                      key={i}
+                      className="px-0.5 rounded-sm"
+                      style={{
+                        background: "var(--color-accent)",
+                        color: "var(--color-bg)",
+                      }}
+                    >
+                      {seg.text}
+                    </mark>
+                  ) : (
+                    <span key={i}>{seg.text}</span>
                   )
-                : item}
-            </motion.li>
-          ))}
-        </AnimatePresence>
-      </motion.ul>
-    </AnimatePresence>
+                )
+              : item}
+          </motion.li>
+        ))}
+      </AnimatePresence>
+    </ul>
   );
 }
 
 function CountBadge() {
   const { results } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       className="text-[10px] font-mono px-2 py-0.5 rounded"
       style={{
@@ -606,13 +622,14 @@ function CountBadge() {
 
 function ClearButton() {
   const { query, setQuery } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
   if (query.length === 0) return null;
   return (
     <motion.button
-      initial={{ opacity: 0, width: 0 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, width: 0 }}
       animate={{ opacity: 1, width: "auto" }}
       exit={{ opacity: 0, width: 0 }}
-      transition={SPRING.snappy}
+      transition={prefersReducedMotion ? INSTANT : SPRING.snappy}
       onClick={() => setQuery("")}
       className="px-2 text-xs font-mono rounded shrink-0"
       style={{
@@ -628,12 +645,13 @@ function ClearButton() {
 
 function SortButton() {
   const { sortOrder, toggleSort } = useSearchDemo();
+  const prefersReducedMotion = usePrefersReducedMotion();
   return (
     <motion.button
-      initial={{ opacity: 0, width: 0 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, width: 0 }}
       animate={{ opacity: 1, width: "auto" }}
       exit={{ opacity: 0, width: 0 }}
-      transition={SPRING.snappy}
+      transition={prefersReducedMotion ? INSTANT : SPRING.snappy}
       onClick={toggleSort}
       className="px-2 text-xs font-mono rounded shrink-0"
       style={{
@@ -660,17 +678,17 @@ function GrowingPanel() {
   } = useSearchDemo();
 
   const inputRow = (
-    <div className="flex gap-2 mb-3">
+    <div className="flex gap-2 mb-3" role="search">
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Type to search..."
-        className="flex-1 px-3 py-2 text-sm rounded font-mono"
+        aria-label="Search items"
+        className="flex-1 px-3 py-2 text-sm rounded font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:border-[var(--color-accent)]"
         style={{
           background: "var(--color-bg)",
           border: "1px solid var(--color-border)",
           color: "var(--color-text)",
-          outline: "none",
         }}
       />
       <AnimatePresence>
@@ -854,7 +872,7 @@ const SLOT_LABELS: Record<SlotId, string> = {
   input: "Search.Input",
   count: "Search.Count",
   list: "Search.List",
-  inspector: "Search.Inspector",
+  empty: "Search.Empty",
 };
 
 function SlotArranger() {
@@ -899,6 +917,7 @@ function SlotArranger() {
               <button
                 onClick={() => moveSlot(id, "up")}
                 disabled={idx === 0}
+                aria-label={`Move ${SLOT_LABELS[id]} up`}
                 className="px-1.5 py-0.5 rounded text-[10px] font-mono transition-opacity"
                 style={{
                   background: "var(--color-surface-2)",
@@ -911,6 +930,7 @@ function SlotArranger() {
               <button
                 onClick={() => moveSlot(id, "down")}
                 disabled={idx === slotOrder.length - 1}
+                aria-label={`Move ${SLOT_LABELS[id]} down`}
                 className="px-1.5 py-0.5 rounded text-[10px] font-mono transition-opacity"
                 style={{
                   background: "var(--color-surface-2)",
@@ -940,7 +960,7 @@ function JsxPreview() {
     input: '  <Search.Input placeholder="Search..." />',
     count: "  <Search.Count />",
     list: "  <Search.List>{(item) => <Search.Highlight text={item} />}</Search.List>",
-    inspector: "  <Search.Empty>No results found.</Search.Empty>",
+    empty: "  <Search.Empty>No results found.</Search.Empty>",
   };
 
   return (
@@ -996,17 +1016,17 @@ function ComposedPanel() {
 
   const slotRenderers: Record<SlotId, () => ReactNode> = {
     input: () => (
-      <div className="mb-2">
+      <div className="mb-2" role="search">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Type to search..."
-          className="w-full px-3 py-2 text-sm rounded font-mono"
+          aria-label="Search items"
+          className="w-full px-3 py-2 text-sm rounded font-mono outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:border-[var(--color-accent)]"
           style={{
             background: "var(--color-bg)",
             border: "1px solid var(--color-border)",
             color: "var(--color-text)",
-            outline: "none",
           }}
         />
       </div>
@@ -1021,18 +1041,12 @@ function ComposedPanel() {
     ),
     list: () => (
       <div className="mb-2">
-        {isEmpty ? (
-          <p
-            className="text-sm italic py-2"
-            style={{ color: "var(--color-muted)" }}
-          >
-            No results for &ldquo;{query}&rdquo;.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-0.5 list-none p-0 m-0">
+        {results.length > 0 && (
+          <ul className="flex flex-col gap-0.5 list-none p-0 m-0" role="listbox" aria-label="Search results">
             {results.map((item) => (
               <li
                 key={item}
+                role="option"
                 className="text-sm py-1.5 px-2 rounded"
                 style={{ color: "var(--color-text)" }}
               >
@@ -1060,9 +1074,16 @@ function ComposedPanel() {
         )}
       </div>
     ),
-    inspector: () => (
+    empty: () => (
       <div>
-        <Inspector />
+        {isEmpty ? (
+          <p
+            className="text-sm italic py-2"
+            style={{ color: "var(--color-muted)" }}
+          >
+            No results for &ldquo;{query}&rdquo;.
+          </p>
+        ) : null}
       </div>
     ),
   };
