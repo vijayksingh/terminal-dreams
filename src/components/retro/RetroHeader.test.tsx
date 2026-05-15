@@ -29,9 +29,10 @@ jest.mock('next/image', () => ({
   ),
 }));
 
-// Mock PixelTrail — non-essential visual component
-jest.mock('@/components/interactions/PixelTrail', () => ({
-  PixelTrail: () => null,
+// Mock FaultyTerminal — WebGL component, not testable in jsdom
+jest.mock('@/components/interactions/FaultyTerminal', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 // Mock RetroAboutCard

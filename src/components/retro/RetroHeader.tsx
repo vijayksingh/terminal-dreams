@@ -1,12 +1,28 @@
 "use client";
 
 import ScrambleHover from "@/components/fancy/text/scramble-hover";
-import { PixelTrail } from "@/components/interactions/PixelTrail";
+import FaultyTerminal from "@/components/interactions/FaultyTerminal";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { RetroAboutCard } from "./RetroAboutCard";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./retro.module.css";
+
+function useTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    const read = () => {
+      const val = document.documentElement.getAttribute("data-theme");
+      setTheme(val === "light" ? "light" : "dark");
+    };
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
 
 type RetroHeaderProps = {
   showAboutCard?: boolean;
@@ -14,6 +30,7 @@ type RetroHeaderProps = {
 
 export function RetroHeader({ showAboutCard = false }: RetroHeaderProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const theme = useTheme();
   const items = [
     { label: "~/archive", href: "/blog" },
     { label: "~/playground", href: "/playground" },
@@ -29,7 +46,24 @@ export function RetroHeader({ showAboutCard = false }: RetroHeaderProps) {
     <header className={styles.header}>
       <div className={styles.headerOverlay}>
         {!prefersReducedMotion ? (
-          <PixelTrail pixelSize={8} fadeDuration={300} delay={0} pixelClassName="bg-[var(--color-border)]" />
+          <FaultyTerminal
+            key={theme}
+            scale={1.5}
+            gridMul={[2, 1]}
+            digitSize={1.2}
+            timeScale={theme === "dark" ? 0.5 : 0.3}
+            scanlineIntensity={theme === "dark" ? 0.8 : 0.4}
+            glitchAmount={theme === "dark" ? 0.5 : 0.2}
+            flickerAmount={theme === "dark" ? 0.5 : 0.2}
+            noiseAmp={1}
+            curvature={0}
+            mouseReact
+            mouseStrength={0.3}
+            brightness={theme === "dark" ? 0.7 : 0.7}
+            tint={theme === "dark" ? "#4a7ce8" : "#2855d6"}
+            tintEnd={theme === "dark" ? "#2ec8a0" : "#0fa878"}
+            pageLoadAnimation
+          />
         ) : null}
       </div>
       <div className={headerInnerClassName}>
