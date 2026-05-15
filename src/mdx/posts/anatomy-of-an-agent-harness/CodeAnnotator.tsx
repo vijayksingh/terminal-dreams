@@ -234,7 +234,7 @@ export function CodeAnnotator({
                   cursor: isAnnotated ? "pointer" : "default",
                   opacity: isDimmed ? 0.35 : 1,
                   background: isHovered
-                    ? "rgba(201, 149, 107, 0.04)"
+                    ? "color-mix(in srgb, var(--color-accent) 4%, transparent)"
                     : "transparent",
                   transition: "opacity 0.2s ease, background 0.15s ease",
                 }}
@@ -278,7 +278,7 @@ export function CodeAnnotator({
                         background: "var(--color-accent)",
                         boxShadow:
                           isHovered || isActive
-                            ? "0 0 8px rgba(201, 149, 107, 0.5)"
+                            ? "0 0 8px color-mix(in srgb, var(--color-accent) 50%, transparent)"
                             : "none",
                         transition: "all 0.15s ease",
                       }}
@@ -337,8 +337,8 @@ function HighlightBar({
           top: PAD_Y + y,
           height: LINE_H,
           borderLeft: "3px solid var(--color-accent)",
-          background: "rgba(201, 149, 107, 0.12)",
-          boxShadow: "0 0 12px rgba(201, 149, 107, 0.1)",
+          background: "color-mix(in oklch, var(--color-accent) 20%, transparent)",
+          boxShadow: "0 0 12px color-mix(in oklch, var(--color-accent) 10%, transparent)",
           pointerEvents: "none",
         }}
       />
@@ -354,8 +354,8 @@ function HighlightBar({
         top: PAD_Y,
         height: LINE_H,
         borderLeft: "3px solid var(--color-accent)",
-        background: "rgba(201, 149, 107, 0.12)",
-        boxShadow: "0 0 12px rgba(201, 149, 107, 0.1)",
+        background: "color-mix(in oklch, var(--color-accent) 20%, transparent)",
+        boxShadow: "0 0 12px color-mix(in oklch, var(--color-accent) 10%, transparent)",
         pointerEvents: "none",
       }}
       initial={{ y, opacity: 0 }}

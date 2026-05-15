@@ -17,9 +17,9 @@ const labels = ["Root Agent", "Task", "Task", "Task", "Task"] as const;
 
 const DEPTH_COLORS = [
   "var(--color-accent)",
-  "rgba(201, 149, 107, 0.7)",
-  "rgba(201, 149, 107, 0.5)",
-  "rgba(201, 149, 107, 0.35)",
+  "color-mix(in srgb, var(--color-accent) 70%, transparent)",
+  "color-mix(in srgb, var(--color-accent) 50%, transparent)",
+  "color-mix(in srgb, var(--color-accent) 35%, transparent)",
   "var(--color-accent)",
 ];
 
@@ -231,7 +231,7 @@ function PredictPhase({
               disabled={revealed}
               whileHover={
                 !revealed && !reducedMotion
-                  ? { scale: 1.01, backgroundColor: "rgba(201, 149, 107, 0.06)" }
+                  ? { scale: 1.01, backgroundColor: "color-mix(in srgb, var(--color-accent) 6%, transparent)" }
                   : undefined
               }
               style={{
@@ -246,7 +246,7 @@ function PredictPhase({
                     ? "1px solid #e5534b"
                     : "1px solid var(--color-border)",
                 background: showCorrect
-                  ? "rgba(201, 149, 107, 0.08)"
+                  ? "color-mix(in srgb, var(--color-accent) 8%, transparent)"
                   : showWrong
                     ? "rgba(229, 83, 75, 0.06)"
                     : "var(--color-surface)",

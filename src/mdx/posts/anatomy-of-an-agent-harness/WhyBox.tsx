@@ -82,7 +82,7 @@ export function WhyBox({ question, children }: WhyBoxProps) {
         style={{
           fontFamily: "var(--font-mono)",
           color: "var(--color-accent)",
-          background: "rgba(201, 149, 107, 0.1)",
+          background: "color-mix(in srgb, var(--color-accent) 10%, transparent)",
           border: "1px solid var(--color-accent)",
           letterSpacing: "0.08em",
           fontSize: 11,

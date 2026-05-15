@@ -196,24 +196,7 @@ you debug a conversation with five participants? Flue sidesteps all of these que
 choosing hierarchy over democracy. One agent is in charge. It delegates downward and
 collects results upward.
 
-```
-┌─────────────┐
-│ Root Agent   │
-│  depth: 0    │
-└──────┬───────┘
-       │ session.task()
-       ▼
-┌─────────────┐
-│ Child Task   │
-│  depth: 1    │──── shared sandbox ────┐
-└──────┬───────┘                        │
-       │ task()                    ┌────▼────┐
-       ▼                           │ Sandbox  │
-┌─────────────┐                    │ (files,  │
-│ Grandchild   │──── shared ──────│  shell)  │
-│  depth: 2    │                   └──────────┘
-└──────────────┘
-```
+<HierarchyDiagram />
 
 ---
 
@@ -377,19 +360,7 @@ changes frequently as new integrations are added and existing ones are updated t
 upstream API changes. Its instability is isolated from the core SDK by the package
 boundary.
 
-```
-┌──────────────────┐
-│   @flue/cli       │
-│  dev · run · build│
-└────────┬─────────┘
-         │ depends on
-         ▼
-┌──────────────────┐     ┌────────────────────┐
-│   @flue/sdk       │◄────│  @flue/connectors   │
-│  sessions · tasks │     │  daytona · mcp      │
-│  tools · build    │     └────────────────────┘
-└──────────────────┘
-```
+<PackageGraph />
 
 The dependency arrows point inward. The CLI depends on the SDK. Connectors depend on the
 SDK. The SDK depends on neither. This is the dependency inversion principle applied to
