@@ -1,0 +1,202 @@
+/* MonolithExplorer — layout and structural styles */
+
+.wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+}
+
+/* ── Header bar ────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ── Prop counter badge ────────────────────────────────────────── */
+.propCounter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.propCounterValue {
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5ch;
+  text-align: right;
+}
+
+/* ── Reset button ──────────────────────────────────────────────── */
+.resetBtn {
+  padding: 3px 10px;
+  border-radius: var(--radius-1);
+  font-size: 11px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.resetBtn:hover {
+  color: var(--color-text);
+  border-color: var(--color-muted);
+}
+
+/* ── Tree area ─────────────────────────────────────────────────── */
+.treeArea {
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  overflow-x: auto;
+  min-height: 200px;
+}
+
+/* ── Tree node row ─────────────────────────────────────────────── */
+.nodeRow {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  padding: 2px 0;
+  user-select: none;
+}
+
+.nodeRow:hover .nodeKey {
+  color: var(--color-text);
+}
+
+/* ── Guide lines ───────────────────────────────────────────────── */
+.guideLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+  pointer-events: none;
+}
+
+/* ── Expand/collapse toggle ────────────────────────────────────── */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-muted);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.toggle[data-expanded="true"] {
+  color: var(--color-accent);
+}
+
+/* ── Key/value text ────────────────────────────────────────────── */
+.nodeKey {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 20px;
+  transition: color 0.15s ease;
+}
+
+.nodeValue {
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.nodeValue.string {
+  color: oklch(70% 0.14 160);
+}
+
+.nodeValue.number {
+  color: oklch(72% 0.14 60);
+}
+
+.nodeValue.boolean {
+  color: oklch(68% 0.16 310);
+}
+
+.nodeValue.bracket {
+  color: var(--color-muted);
+}
+
+/* ── Left border highlight for expanded sections ───────────────── */
+.expandedBorder {
+  position: absolute;
+  top: 22px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  pointer-events: none;
+}
+
+/* ── Target glow ───────────────────────────────────────────────── */
+@keyframes targetGlow {
+  0%, 100% {
+    box-shadow: 0 0 4px color-mix(in srgb, var(--color-accent) 20%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--color-accent) 50%, transparent);
+  }
+}
+
+.targetHighlight {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border-radius: var(--radius-1);
+  animation: targetGlow 2s ease-in-out infinite;
+}
+
+/* ── Toast banner ──────────────────────────────────────────────── */
+.toast {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: var(--radius-2);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .targetHighlight {
+    animation: none;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  }
+}

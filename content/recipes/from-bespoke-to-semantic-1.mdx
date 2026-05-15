@@ -1,0 +1,244 @@
+---
+title: "From Bespoke to Semantic — The Debt and the Monolith"
+summary: "How scattered one-off SVG diagrams across four articles created compounding visual debt, and why the first attempt to standardize — a monolithic component — made things worse."
+date: 2026-05-14
+tags:
+  - design-systems
+  - component-architecture
+  - svg
+  - compound-components
+format: lab
+demo: from-bespoke-to-semantic-1
+series: from-bespoke-to-semantic
+part: 1
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Three articles, three bugs
+
+Every interactive article on this blog has a diagram. An architecture map. An execution
+flow. A dependency graph. Each started as a hand-crafted SVG component built specifically
+for the article it lived in — thrown together under deadline pressure, abandoned the moment
+the article shipped.
+
+Look at the demo panel. Three diagrams from three different articles, all attempting the
+same thing: show a system architecture with labeled nodes and directed edges.
+
+Before you toggle anything — just look. What's wrong? Not the visual inconsistency. Ignore
+the different radii, font stacks, color palettes. That's surface. Look deeper. Find the
+text that doesn't fit its box. Find the edge that lies about the topology. Find the node
+that promises interaction and delivers nothing.
+
+Got your guesses? Toggle **Highlight Issues** in the demo panel.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — The text clipping problem
+
+The first diagram clips its "Configuration Manager" label. The text is longer than the node
+box, and instead of wrapping, abbreviating, or expanding the box, it just vanishes mid-word.
+
+Toggle **Fix clipping** in the Bug Fix Lab panel. Watch the node expand to fit the full label — the rect auto-sizes based on text length. Toggle it off to see the clipping return. That fix costs 15 lines of code.
+
+This happens because of how SVG text measurement works. In HTML, a `<div>` grows to fit its
+content by default. In SVG, a `<rect>` has a fixed `width` and `height`. Text inside it
+does not cause the rect to resize. If the text is wider than the rect, it overflows — and
+if you have a `clipPath` (which you do, because overlapping text on neighboring nodes looks
+worse than clipped text), the overflow is silently amputated.
+
+<CodeAnnotator blockId="bespoke-text-clip" />
+
+The fix is straightforward: measure the text before rendering the box, or set the box
+width based on the label length. But when you are building a one-off SVG for an article
+about agent architecture, you are thinking about agent architecture, not about text
+measurement. The SVG is a means to an end. You hardcode a width that looks right for
+"Session" and "Sandbox" and forget that "Configuration Manager" exists until the article
+is live and someone screenshots the bug on Twitter.
+
+This is the first pattern of bespoke component debt: **the fix is known, but the incentive
+to apply it is misaligned.** The article is the product. The diagram is infrastructure. And
+infrastructure built under article deadlines inherits article-quality engineering.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — The edge routing problem
+
+The second diagram has an edge from Client to Notify that passes directly through the Auth
+node. The line connects the right endpoints — it starts at Client and ends at Notify — but
+the path is a straight line, and Auth sits between them.
+
+<CodeAnnotator blockId="bespoke-edge-overlap" />
+
+A straight line from `(x1, y1)` to `(x2, y2)` is the simplest edge implementation. And
+for most diagrams it works — nodes are positioned so edges don't collide. But the moment
+a third node sits between two connected nodes, straight lines fail. You need either
+orthogonal routing (edges that make right-angle turns to avoid obstacles) or curved paths
+that arc around intermediate nodes.
+
+Both are solved problems. ELK handles full edge routing; Dagre and d3-dag provide node layout
+with basic edge support. But including a layout library for a one-off SVG in a blog article
+feels like bringing a cannon to a knife fight. So you manually adjust node positions until the overlap is "acceptable" — which
+means "not visible at the default viewport width." Resize the window and the overlap
+reappears.
+
+This is the second pattern: **the solution exists but the cost of integration exceeds the
+perceived value of the fix.** A layout library is worth it for a reusable component. It is
+not worth it for a throwaway SVG that ships once.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — The interaction gap
+
+The third diagram uses `cursor: pointer` on every node. It looks interactive — the cursor
+changes when you hover. But nothing happens when you click. No detail panel. No highlight.
+No state change. On mobile, there is no hover at all, so the nodes appear completely
+static.
+
+The problem is that interaction requires state management. A "click to select" feature
+needs `selectedId` state, a click handler, visual differentiation between selected and
+unselected nodes, and an accessibility layer (keyboard navigation, focus management, ARIA
+attributes). For a single diagram, that's 40-60 lines of boilerplate that has nothing to
+do with the content of the article.
+
+<CodeAnnotator blockId="bespoke-interaction-gap" />
+
+Compare that to what the real FlowDiagram component does: `FlowNodeHitArea` wraps each
+node with a 44×44px minimum touch target, keyboard handlers for Enter and Space, focus
+management, and variant-driven styling. The consumer writes zero interaction code — they
+declare nodes, and the system handles selection, hover, dimming, and detail panels.
+
+But this system did not exist when these articles were written. Each article's SVG was its
+own island. The interaction gap between "looks interactive" and "is interactive" was 60
+lines of code that nobody wrote because the article was about something else.
+
+This is the third pattern: **interaction is infrastructure, and infrastructure is invisible
+until it breaks.** The diagram in Article 3 "works" in the sense that it renders. It fails
+silently because nobody clicks it in review — they read the labels and move on. The missing
+interaction is discovered by readers who try to engage with something that visually promises
+engagement but doesn't deliver.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The standardization instinct
+
+Four articles shipped. Four SVG components abandoned the moment their article went live.
+
+The third time I manually calculated SVG text bounding boxes, I stopped mid-function and
+counted the damage: text measurement — solved wrong in 2 out of 4 articles. Edge routing —
+solved wrong in 1, hacked around in 2. Touch targets — missing in 3 out of 4. Interaction
+state — implemented in 1, missing in 3. Four color palettes, three font stacks, two node
+shapes.
+
+The same bugs, reincarnated across articles. _We keep solving the same problem badly. Let's
+solve it once, well._
+
+The instinct was to standardize. Build one component that handles everything: node shapes,
+edge routing, layout, interaction, animation, detail panels. Pass in definitions, get a
+diagram out. One component to rule them all.
+
+Look at the demo panel — this is the configuration object for that monolith. Expand the
+`nodes` section, then `edges`, then `layout`. Watch the **prop counter** in the top
+corner. Each section you expand reveals more properties. The counter climbs.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — The configuration maze
+
+Define nodes. Define edges. Define styles. The monolith renders a correct diagram. Text
+measurement — solved once. Edge routing — proper path computation. Touch targets — enforced.
+All four bespoke bugs, fixed by centralizing the rendering logic.
+
+It works. Until you try to customize something.
+
+**Try this:** In the demo panel, your goal is to change how the Session node animates.
+Expand the config tree and count how many levels deep you need to navigate to find the
+animation override. Keep count.
+
+The path is `nodeStyles → overrides → session → animationOverrides`. Four levels deep.
+
+<CodeAnnotator blockId="monolith-config-path" />
+
+The cognitive cost of customization scales with the total surface area of the API, not with
+the size of your change. You wanted to tweak one node's entrance animation — now you are
+reading documentation about the global transition system to make sure your override doesn't
+conflict with `transitionConfig.defaultEasing`.
+
+This is the core problem with monolithic component APIs: **configurable is not composable.**
+Configuration means "choose from the options I anticipated." Composition means "combine
+pieces in ways I didn't anticipate."
+
+Think of it as the difference between a vending machine and a kitchen. A vending machine
+offers thirty choices. You press B7 and get exactly what the manufacturer put in slot B7.
+If you want something that's not in the machine, you are out of luck. A kitchen offers
+ingredients. You can make anything — including things the architect of the kitchen never
+imagined.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — The prop surface grows
+
+Every time a consumer needed something the monolith didn't foresee, the answer was the
+same: add another prop.
+
+- Custom node shape? Add `nodeStyles.overrides[id].shape` with a union of supported shapes.
+- Animation on scroll instead of mount? Add `nodeStyles.overrides[id].triggerMode: "scroll" | "mount"`.
+- Detail panel slides from the side? Add `detailPanelPosition: "inline" | "side"`.
+- Different edge colors per connection? Add `edgeStyles.overrides[edgeId].stroke`.
+
+Twenty props became thirty. Thirty became fifty. The TypeScript definition became a wall of
+optional properties, each interacting with three others in undocumented ways:
+
+<CodeAnnotator blockId="monolith-type-explosion" />
+
+**Predict:** you set `interaction.detailPanelPosition: "side"`, which moves the detail panel
+into a sidebar. This changes the available width for the SVG. But `layout.nodeSeparation`
+was tuned for inline panels. What happens?
+
+The answer: "it depends." And the documentation doesn't cover it. The props are organized
+by visual concern (nodes, edges, layout, interaction), but the interaction between them is
+combinatorial. `layout.algorithm: "dagre"` can conflict with manual node positions.
+`transitionConfig.stagger` can conflict with per-node animation overrides. Each interaction
+was added independently by a different consumer request, and nobody documented the cross-
+cutting combinations.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — The breaking point
+
+The monolith had a high floor and a low ceiling.
+
+**High floor:** simple diagrams were easy. Five nodes, five edges, done. The defaults
+handled the common case beautifully.
+
+**Low ceiling:** the moment you needed anything beyond the defaults — a custom shape, a
+non-standard animation, a domain-specific interaction — you hit the ceiling hard. The path
+from "default" to "customized" ran through four levels of nested configuration, undocumented
+property interactions, and the nagging fear that your override would silently break something
+two sections away.
+
+Then came the request that broke the model entirely: render a React component _inside_ a
+node. Not a text label — an interactive mini-form with inputs and buttons. The monolith's
+rendering pipeline was data → SVG rect → SVG text. No insertion point for custom React.
+The only option was forking the component.
+
+That failure produced the question that changed the architecture: _what if the consumer
+doesn't configure a diagram but composes one?_
+
+Part 2.
+
+</section>

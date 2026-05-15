@@ -1,0 +1,190 @@
+---
+title: "From Bespoke to Semantic — The Assembly"
+summary: "How useFlowDiagram resolves raw data into visual state, how the composed FlowDiagram component assembles all layers, the four levels of usage, and the quality spectrum that rewards richer data with richer rendering."
+date: 2026-05-14
+tags:
+  - design-systems
+  - component-architecture
+  - svg
+  - compound-components
+format: lab
+demo: from-bespoke-to-semantic-4
+series: from-bespoke-to-semantic
+part: 4
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The resolution step
+
+Remember the three bugs from Part 1? The clipped text, the edge through Auth, the cursor that promised interaction and delivered nothing. Every one of those bugs came from the same root cause: rendering logic entangled with article-specific code, solved ad hoc, never reused.
+
+The hook is what prevents that from ever happening again. Look at the demo panel — it starts in **bare** mode, syntactic data only. The diagram renders correctly (all three Part 1 bugs are structurally impossible here), but it's flat and lifeless.
+
+The hook is the machine that turns definitions into resolved state. It takes a `FlowDiagramDef` (the raw data) and produces `ResolvedNode[]`, `ResolvedEdge[]`, and `ResolvedGroup[]` — arrays of objects enriched with variants, opacities, dimensions, and semantic flags. The primitives from Part 2 consume these resolved objects directly.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — The hook architecture
+
+`useFlowDiagram` is the central coordination point. It manages three concerns that would otherwise be entangled:
+
+1. **Selection state** — controlled or uncontrolled, with hover tracking
+2. **Scene context** — one-time semantic analysis (protagonist, roles, arc, stagger order)
+3. **Resolution** — per-render transformation of raw data + state into visual output
+
+<CodeAnnotator blockId="assembly-hook-api" />
+
+The hook follows the React controlled/uncontrolled pattern. Pass `selectedId` and `onSelect` to control selection from outside — the hook becomes a pure state transformer. Omit them and the hook manages its own selection state internally. Same hook, two integration modes, zero configuration flags.
+
+Scene context is computed once from the definition (via `useMemo`). It contains the protagonist ID, role map, arc map, and stagger order — the semantic analysis from Part 3 materialized as lookup tables. This computation doesn't re-run on selection changes — it only re-runs when the diagram definition changes.
+
+Resolution happens every render: for each node, the hook resolves its variant (selected, hovered, dimmed, idle), computes its display dimensions (base size × role scale), and flags whether it's the protagonist. For each edge, it resolves the SVG path, midpoint, and variant. The output is ready for primitives to render — no computation left for the rendering layer.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — From bare to semantic
+
+**Try this:** the three dots in the demo header are clickable — they switch between bare,
+semantic, and full modes. Before you click the middle dot (semantic), predict: how many
+visible changes will you count? Write a number.
+
+Now click. Session swells. A thesis appears. Edges grow labels. Clicking a node reveals its
+relationships. How many did you count? Most people underestimate by half — the semantic
+layer touches more surfaces than you'd expect from "just adding some metadata." Click the
+first dot to go back to bare, then the third to jump to full. Feel the spectrum.
+
+For granular control, open the **Semantic Fields** panel. Toggle individual fields — Thesis, Roles, Verbs, Arc, Tension — on and off independently. Each combination reveals exactly what each semantic field contributes to the diagram's teaching quality.
+
+Now notice what _didn't_ change: the code. Same hook, same primitives, same component. The only difference is the data — `thesis`, `protagonist`, `role`, `verb`, `description` fields added to the definition. The hook reads these fields and produces richer resolved state. The primitives render it identically. They don't know whether the data is bare or semantic.
+
+This is the core design principle: **the system rewards richer data with richer rendering.** A bare definition with just nodes and edges renders correctly. A semantic definition with all five dimensions renders beautifully. The quality difference is in the _data_, not the rendering code. No gatekeeping — just a gradient from minimal to rich.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — The composed component
+
+The `FlowDiagram` component is a convenience wrapper. It calls `useFlowDiagram`, then renders every primitive in the correct order. For 80% of use cases, it's the only import you need.
+
+<CodeAnnotator blockId="assembly-composed-component" />
+
+The component is deliberately thin — roughly 70 lines of JSX that assemble the primitives. It doesn't contain logic beyond "if timeline exists, show timeline controls." All decisions about variants, dimensions, opacity, and stagger order were made by the hook. The component is a rendering template.
+
+This thinness is intentional. A thick composed component would re-create the monolith's problem: all rendering decisions in one place, no escape hatch for customization. By keeping the component thin and the hook rich, consumers can drop down to the hook level when the composed component doesn't fit.
+
+The demo shows **semantic** quality — thesis, protagonist emphasis, edge labels, variant-driven interaction. Click the third dot in the header to preview **full** mode with arc indicators and tension. Every Part 1 bug is fixed regardless of quality level. Every visual decision is derived from semantic data. The consumer wrote zero rendering code.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Level 0: Drop-in
+
+The composed component supports four levels of usage, each adding more control. Level 0 is the simplest: one line, everything handled.
+
+```tsx
+<FlowDiagram {...diagramDef} />
+```
+
+The component renders the thesis, the SVG canvas, the detail panel, and the timeline controls (if present). Selection and hover are managed internally. The consumer provides data and gets a complete interactive diagram.
+
+<CodeAnnotator blockId="assembly-levels-of-usage" />
+
+Level 0 covers most use cases: blog diagrams, documentation illustrations, architecture maps. The consumer focuses on the data — the five semantic dimensions from Part 3 — and the system handles everything else.
+
+**Test your understanding:** you're building a blog post with a simple architecture diagram.
+No external state, no custom detail panels, no sidebar integration. Which level? If you said
+Level 0, you're right — and you'd write exactly one line of JSX.
+
+The demo panel shows the Level 0 indicator.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Level 1: Custom detail panel
+
+Level 1 adds a render prop for the detail panel:
+
+```tsx
+<FlowDiagram {...diagramDef}>
+  {(node) => (
+    <div>
+      <h3>{node.label}</h3>
+      <CodeAnnotator blockId={`detail-${node.id}`} />
+    </div>
+  )}
+</FlowDiagram>
+```
+
+The composed component still handles the SVG, selection, and animation. But the detail panel content is yours. The child function receives a `ResolvedNode` with all computed state — variant, dimensions, protagonist flag. You can render anything: code blocks, charts, forms, embedded playgrounds.
+
+This is the first customization point where the consumer writes React beyond data. The SVG rendering remains unchanged — only the detail panel is replaced. The cost of customization is proportional to the scope of the change.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Level 2: Controlled selection
+
+Level 2 lifts selection state to the parent:
+
+```tsx
+const [activeId, setActiveId] = useState<string | null>(null);
+
+<FlowDiagram
+  {...diagramDef}
+  selectedId={activeId}
+  onSelect={setActiveId}
+/>
+
+{/* External controls can now drive the diagram */}
+<button onClick={() => setActiveId("session")}>Focus Session</button>
+```
+
+**Test your understanding:** your tutorial has a sidebar with "Step 1", "Step 2", "Step 3"
+buttons. Clicking a button should highlight the corresponding node in the diagram. Which
+level do you need? You need _external state driving selection_ — that's Level 2.
+
+Now the diagram's selection state is synchronized with external UI: sidebar navigation, URL parameters, search results, tutorial steps. The diagram becomes a controlled component — the same pattern as `<input value={v} onChange={setV} />`.
+
+The hook handles this transparently. When `selectedId` is provided, internal selection state is bypassed. The resolution pipeline runs identically whether selection is internal or external. The consumer doesn't need to know which mode is active — the hook's output is the same.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Level 3: Full custom
+
+Level 3 uses the hook directly, bypassing the composed component entirely:
+
+```tsx
+const flow = useFlowDiagram(diagramDef);
+
+return (
+  <svg viewBox={diagramDef.viewBox}>
+    {flow.resolvedEdges.map(e => <MyCustomEdge edge={e} />)}
+    {flow.resolvedNodes.map(n => <MyCustomNode node={n} />)}
+  </svg>
+);
+```
+
+You get resolved nodes and edges with variants, opacities, and dimensions computed — but render them however you want. Canvas instead of SVG. WebGL. A table view. ASCII art. The hook is the kitchen; the composed component was just one recipe.
+
+<CodeAnnotator blockId="assembly-quality-spectrum" />
+
+The quality spectrum is the thesis of the entire series.
+
+Part 1 showed the cost of bespoke: the same bugs reincarnated across four articles because the rendering logic was entangled with the content. Part 2 decomposed the monolith into composable layers — types, geometry, primitives — so the text clipping, edge overlap, and interaction gap could never happen again. Part 3 added meaning to structure — five semantic dimensions that turn a correct diagram into a teaching tool. And this part assembled the pipeline that connects them.
+
+The architecture's goal was never to make diagrams _easier_. It was to make the gap between "correct" and "good" proportional to the effort of describing meaning — not the effort of writing rendering code.
+
+The bare minimum works. The fully semantic version teaches. And the four levels of usage ensure the cost of customization is always proportional to the scope of the change. One line for a standard diagram. A hook call for something no one anticipated.
+
+</section>

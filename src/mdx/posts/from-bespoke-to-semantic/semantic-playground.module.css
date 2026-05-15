@@ -1,0 +1,342 @@
+/* SemanticPlayground — layout shell for dual-panel API comparison */
+
+.wrapper {
+  border-radius: var(--radius-3);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+/* ── Header bar ──────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border: 1px solid var(--color-accent);
+}
+
+.headerHint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+/* ── Input panels (side by side) ─────────────────────────────── */
+
+.inputPanels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Left: dark code-editor aesthetic */
+.panelSyntactic {
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+/* Right: lighter form aesthetic */
+.panelSemantic {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-accent) 6%);
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panelSubtitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-muted);
+  opacity: 0.6;
+}
+
+.panelBody {
+  flex: 1;
+  padding: var(--space-3);
+  overflow-y: auto;
+}
+
+/* ── Code block (syntactic panel) ────────────────────────────── */
+
+.codeBlock {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre;
+  color: var(--color-muted);
+  margin: 0;
+  user-select: none;
+}
+
+.codeLine {
+  display: block;
+}
+
+.codeComment {
+  color: color-mix(in srgb, var(--color-muted) 60%, transparent);
+  font-style: italic;
+}
+
+.codeKey {
+  color: var(--color-accent);
+}
+
+.codeValue {
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+.codeNumber {
+  color: var(--cookbook-timer-done);
+}
+
+/* ── Form (semantic panel) ───────────────────────────────────── */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+
+.formGroup:last-child {
+  margin-bottom: 0;
+}
+
+.formLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.formInput {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.formInput:focus {
+  border-color: var(--color-accent);
+}
+
+.formSelect {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 5px 8px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: auto;
+}
+
+.formSelect:focus {
+  border-color: var(--color-accent);
+}
+
+/* ── Role assignment grid ────────────────────────────────────── */
+
+.roleGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.roleNodeName {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  min-width: 70px;
+}
+
+.roleSelect {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  appearance: auto;
+}
+
+.roleSelect:focus {
+  border-color: var(--color-accent);
+}
+
+/* ── Radio group ─────────────────────────────────────────────── */
+
+.radioGroup {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.radioOption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.radioOption[data-selected="true"] {
+  color: var(--color-text);
+}
+
+.radioDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+}
+
+.radioOption[data-selected="true"] .radioDot {
+  border-color: var(--color-accent);
+}
+
+.radioDotInner {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.radioOption[data-selected="true"] .radioDotInner {
+  background: var(--color-accent);
+}
+
+/* ── Preview section ─────────────────────────────────────────── */
+
+.previewSection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.previewPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+.previewSyntactic {
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
+}
+
+.previewSemantic {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-accent) 6%);
+}
+
+.previewHeader {
+  padding: 6px 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+  opacity: 0.7;
+}
+
+.svgArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  min-height: 220px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .inputPanels {
+    grid-template-columns: 1fr;
+  }
+
+  .panelSyntactic {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .previewSection {
+    grid-template-columns: 1fr;
+  }
+
+  .previewSyntactic {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+}

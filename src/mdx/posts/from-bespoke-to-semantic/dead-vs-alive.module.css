@@ -1,0 +1,152 @@
+/* DeadVsAlive — layout shell and structural concerns */
+
+.wrapper {
+  border-radius: var(--radius-3);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+/* ── Toggle bar ───────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.toolbarLabel {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* ── Toggle switch ────────────────────────────────────────────── */
+.toggleTrack {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.toggleTrack[data-on="true"] {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: var(--color-accent);
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.toggleTrack[data-on="true"] .toggleThumb {
+  transform: translateX(18px);
+  background: var(--color-accent);
+}
+
+/* ── Diagram panels ───────────────────────────────────────────── */
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+}
+
+.panelHeader {
+  padding: 8px 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.svgArea {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  min-height: 260px;
+}
+
+/* ── Checklist ────────────────────────────────────────────────── */
+.checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+  white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.checkItem[data-active="true"] {
+  color: var(--color-text);
+}
+
+.checkIcon {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.checkIcon[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* ── Stack on small screens ───────────────────────────────────── */
+@media (max-width: 640px) {
+  .panels {
+    grid-template-columns: 1fr;
+  }
+
+  .checklist {
+    flex-direction: column;
+  }
+}

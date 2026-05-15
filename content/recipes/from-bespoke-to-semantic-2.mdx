@@ -1,0 +1,202 @@
+---
+title: "From Bespoke to Semantic — The Compound Pattern"
+summary: "Decomposing the monolith into independent layers: types as language, geometry as pure math, primitives as atomic renderers, and composition as the architecture that replaces configuration."
+date: 2026-05-14
+tags:
+  - design-systems
+  - component-architecture
+  - svg
+  - compound-components
+format: lab
+demo: from-bespoke-to-semantic-2
+series: from-bespoke-to-semantic
+part: 2
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Types as language
+
+Part 1 ended with a question: _what if the consumer doesn't configure a diagram but composes one?_
+
+The answer starts with types. Not TypeScript types as validation — types as a shared language between the consumer and the system. When you define a `FlowNode`, you're not filling out a form. You're describing an entity in a domain-specific vocabulary.
+
+Look at the demo panel. The first layer — **types** — is highlighted. This is the foundation everything else builds on.
+
+<CodeAnnotator blockId="compound-types-as-language" />
+
+The monolith's types were configuration objects: property bags with optional fields that interacted in undocumented ways. The compound system's types are domain models: they describe what exists (nodes, edges, groups), what properties those things have (shape, role, label), and what escape hatches are available (the `render` prop). The types don't encode rendering decisions — they encode the vocabulary of the domain.
+
+The `NodeShape` union is an example: six shapes, each a string literal. The consumer writes `shape: "diamond"`. They don't write SVG path data. They don't write coordinate math. They name a concept, and the geometry layer translates it into math.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Geometry as pure math
+
+Here's a question: can you unit-test an SVG diagram without rendering anything? No DOM, no browser, no React — just inputs and assertions?
+
+You can, if you isolate the math. The geometry layer is a module of pure functions — no React, no hooks, no DOM, no state. It takes coordinates and returns SVG path strings. In the demo panel, the **geometry** layer is now active. Those edges between nodes? Each one is the output of a function you could test in a plain `.test.ts` file.
+
+<CodeAnnotator blockId="compound-geometry-pure" />
+
+The key function is `nodeExit`: given a node's center point and a target point, compute where a line from center toward target exits the node boundary. This sounds simple for rectangles — it's ray-box intersection. But diamonds have angled edges. Circles have curved boundaries. Hexagons are close enough to circles that a radius approximation works, but each shape still needs its own exit-point dispatch.
+
+The geometry module handles all of this behind a single dispatch function. The edge path generator calls `nodeExit(from, to.x, to.y, gap)` without knowing what shape the source node is. The shape-polymorphic dispatch is the first concrete benefit of the compound architecture: the edge system and the node system are decoupled through a pure function interface.
+
+In the monolith, edge paths were computed inline in the render method, entangled with React state, animation timing, and DOM refs. Here, you can unit-test edge paths with nothing but numbers.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Edge routing solved once
+
+Remember the edge from Part 1 that passed straight through the Auth node? The bespoke fix was manual node repositioning — nudging pixels until the overlap wasn't visible at one viewport width. The monolith's fix was a layout algorithm config option buried four levels deep. The compound system's fix is a pure function.
+
+<CodeAnnotator blockId="compound-edge-paths" />
+
+**Predict:** for two vertically stacked nodes, does the orthogonal path go down→across→down
+or across→down→across?
+
+`orthogonalPath` takes two nodes and returns an SVG path with right-angle turns. The midpoint computation (`midY = (p1.y + p2.y) / 2`) places the bend at the vertical center between the two endpoints. Vertical stack: down→across→down. Horizontal: across→down→across.
+
+This isn't a layout algorithm — it's a path computation. The consumer still positions nodes manually. But the _edges_ between them route cleanly without manual SVG path strings. The geometry module solves the overlap problem that bespoke Article 2 couldn't because it centralizes the math that was previously scattered across four independent implementations.
+
+**Try this:** drag any node in the diagram. Every edge recalculates live — the exit-point math runs per frame. Open the **Geometry Lab** panel (below the diagram) and switch an edge between `line` and `elbow` routing to see the path recompute.
+
+Then scroll to **Node shapes** — change Session from pill to diamond or circle. Watch the edge exit points jump to match the new boundary. That's `nodeExit` dispatching per-shape math: ray-box for rects, `|x/hw|+|y/hh|=1` for diamonds, radius-based for circles.
+
+Four edge route types — straight, orthogonal, curved, arc — share one entry point: `computeEdgePath`. The consumer writes `route: "orthogonal"` and gets clean paths. The geometry module handles the trig. (This demo shows straight and orthogonal — curved and arc are available in the full library.)
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Primitives as atoms
+
+Above the geometry layer sit the rendering primitives: small, focused React components that each do one thing.
+
+The demo panel now shows the **primitives** layer. The nodes are interactive — hover over
+them and you'll see the cursor change.
+
+**Try this:** each node has an invisible hit area for touch accessibility. Can you spot
+them? Look for the faint dashed outlines around each node. Those 44×44px rects are
+`FlowNodeHitArea` in action — normally invisible, made visible here so you can see the
+interaction surface.
+
+<CodeAnnotator blockId="compound-primitives-hitarea" />
+
+`FlowNodeHitArea` solves the interaction gap from bespoke Article 3. It wraps any child content (the shape, the label, whatever you put inside it) with:
+
+- A click handler that fires `onSelect`
+- Mouse enter/leave handlers for hover state
+- A `role="button"` and `tabIndex` for keyboard users
+- An `aria-label` composed from the node's label and description
+- A transparent 44×44px rect for WCAG-compliant touch targets
+- Staggered entrance animation that follows the semantic reading order
+
+The consumer writes zero interaction code. They compose `FlowNodeHitArea > FlowNodeShape > FlowNodeLabel` and get a fully interactive, accessible, animated node. The 60 lines of boilerplate from Part 1's interaction gap — written once, tested once, applied everywhere.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The primitive inventory
+
+`FlowNodeHitArea` is one of eleven primitives. Each handles exactly one concern:
+
+| Primitive | Concern |
+|---|---|
+| `FlowMarkerDefs` | SVG arrow markers (normal, lit, error) |
+| `FlowNodeShape` | Shape rendering (rect, pill, diamond, cylinder, circle, hexagon) |
+| `FlowNodeLabel` | Text or React content inside a node |
+| `FlowNodeHitArea` | Interaction wrapper with accessibility |
+| `FlowArcIndicator` | Numbered dot showing reading order |
+| `FlowEdgePath` | Edge path with variant-driven styling |
+| `FlowGroupBox` | Visual containment boundary |
+| `FlowAnnotationText` | Freeform text labels |
+| `FlowToken` | Animated position indicator for timelines |
+| `FlowDetailPanel` | Node detail display (outside SVG) |
+| `FlowTimelineControls` | Play/pause/step for timeline mode |
+
+Each primitive receives **resolved state** — it never computes visibility, variant, or dimensions itself. `FlowNodeShape` receives a `ResolvedNode` with `variant`, `resolvedW`, `resolvedH`, `isProtagonist` already computed. The primitive's job is pure rendering: turn resolved state into SVG elements.
+
+This separation — hooks compute, primitives render — is what makes the system composable. You can replace any primitive without affecting the others. You can skip primitives you don't need. You can add new primitives that consume the same resolved state.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Composition over configuration
+
+The demo panel now shows all four layers together. Before you look at the code comparison below, make a prediction: which approach uses more lines of JSX — the monolith config object or the compound composition?
+
+<CodeAnnotator blockId="compound-composition-vs-config" />
+
+The monolith takes six top-level config objects with 80+ leaf properties. The compound approach renders eleven primitives in explicit order inside an SVG element. More JSX, yes — but the z-order is _visible_: groups (back) → annotations → edges → nodes (front). The monolith hides this order inside implementation details. The compound version makes it part of the authoring surface.
+
+**Try this:** remember the monolith's `interaction.detailPanelPosition: "inline" | "side"`
+prop? How would you achieve the same thing in the compound system? You wouldn't use a prop —
+you'd make a layout decision. Want the detail panel on the side? Render it in a sidebar
+`<div>`. Want it inline? Render it below the SVG. Want to skip it entirely? Don't render
+`FlowDetailPanel`.
+
+The compound system doesn't prevent customization — it enables it by not having opinions about layout. The primitives render SVG elements. Where those elements live, how they're arranged, what surrounds them — that's the consumer's concern.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — The escape hatch
+
+The monolith hit its breaking point when a consumer wanted to render a React component inside a node. The rendering pipeline was data → SVG rect → SVG text. No insertion point for custom React.
+
+The compound system has `render` on `FlowNode`:
+
+```tsx
+{
+  id: "metrics",
+  label: "Metrics",
+  x: 200, y: 100,
+  render: ({ node, variant }) => (
+    <div style={{ padding: 4, fontSize: 10 }}>
+      <strong>{node.label}</strong>
+      <MiniSparkline data={recentMetrics} />
+    </div>
+  ),
+}
+```
+
+`FlowNodeLabel` checks for the `render` prop. If present, it creates a `foreignObject` in the SVG and renders the React component inside it. The hit area, shape, animation, and accessibility layer still work — they wrap the foreignObject the same way they wrap SVG text.
+
+This is the vending machine vs. kitchen distinction. The monolith offered thirty predefined node appearances. The compound system offers ingredients: a shape, a label renderer, a hit area. The consumer combines them. When the ingredients don't cover a case, the `render` prop is the escape hatch into full React rendering.
+
+The compound system didn't anticipate sparklines inside nodes. It anticipated that it couldn't anticipate everything.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — What composition buys you
+
+The compound architecture costs more upfront. Eleven primitives instead of one component. A geometry module. A type system. The consumer writes more JSX than a single `<DiagramMonolith {...config} />` call.
+
+But the tradeoffs favor composition at scale:
+
+1. **No configuration ceiling.** The monolith's ceiling was "what the props anticipate." The compound system's ceiling is "what SVG and React can render." There is no case that requires forking the system.
+
+2. **Independent testing.** Geometry is tested with numbers. Primitives are tested with resolved state objects. The hook is tested with definitions and assertions on resolved output. No end-to-end rendering needed for unit tests.
+
+3. **Incremental adoption.** A consumer can start with the composed `FlowDiagram` (Part 4) and drop down to primitives only when they need to. The convenience wrapper and the primitive layer coexist.
+
+4. **Independent evolution.** Adding a new node shape means adding a case to `nodeExit` in geometry and a case to `FlowNodeShape` in primitives. Nothing else changes. Adding a new edge animation means touching `FlowEdgePath`. The blast radius of every change is one layer.
+
+But try this thought experiment: strip away every semantic enrichment — the protagonist emphasis, the reading order, the thesis, the relationship descriptions. Leave only coordinates, connections, and labels. You get a _correct_ diagram. Five rectangles, five edges, accurate topology.
+
+You also get something no reader will learn from. Correctness is table stakes. What turns a correct diagram into a _teaching tool_ is the semantic layer.
+
+Part 3.
+
+</section>

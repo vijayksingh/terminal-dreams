@@ -1,0 +1,182 @@
+---
+title: "From Bespoke to Semantic — The Semantic Layer"
+summary: "Five dimensions — intent, hierarchy, relationships, affordance, path — that turn syntactic diagrams into teaching tools. The system translates meaning into visual craft automatically."
+date: 2026-05-14
+tags:
+  - design-systems
+  - component-architecture
+  - svg
+  - compound-components
+format: lab
+demo: from-bespoke-to-semantic-3
+series: from-bespoke-to-semantic
+part: 3
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The craft gap
+
+Part 2 built a compound architecture: types, geometry, primitives. These layers produce structurally correct diagrams — nodes in the right places, edges between the right endpoints, shapes rendered accurately.
+
+But correctness isn't craft. A diagram with five same-sized rectangles connected by unnamed arrows is technically correct. It renders without bugs. It's also useless as a teaching tool — there's no hierarchy, no reading order, no story. The reader's eye wanders across five equally-demanding elements with no guidance about where to start or what matters.
+
+The gap between "structurally correct" and "teaches something" is the semantic layer.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Syntactic vs. semantic
+
+A syntactic diagram describes WHERE things go: coordinates, connections, labels. A semantic diagram describes WHAT things mean: which node is the protagonist, what the connections represent, what order to read them in.
+
+The demo panel shows a bare diagram — syntactic data only. Five nodes, five edges, no hierarchy, no reading order.
+
+**Try this:** look at the bare diagram. Before reading further, decide: which node _should_
+be the protagonist? What reading order would you choose? What information is missing from
+the edges? Hold those answers — by step 6, you'll see if the semantic layer agrees with
+your instincts.
+
+The distinction matters because the visual treatment of a diagram should be _derived_ from its meaning, not manually configured per-node. The monolith from Part 1 made you specify `fill: "oklch(30% 0.08 260)"` and `strokeWidth: 1.8` on the protagonist. The semantic system makes you write `role: "protagonist"` and derives the visual treatment automatically.
+
+This inversion — declare meaning, derive aesthetics — is what separates a design system from a styling library.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Intent: why the diagram exists
+
+Before you define a single node, answer this: _why does this diagram exist?_
+
+Not "what does it show" — why. What should the reader understand after seeing it that they didn't understand before? If you can't answer in one sentence, the diagram is trying to do too much.
+
+The **intent** dimension materializes this answer. Look at the demo panel — a thesis now appears above the diagram.
+
+<CodeAnnotator blockId="semantic-five-dimensions" />
+
+The `thesis` field is the only required semantic field on `FlowDiagramDef`. It forces the hardest question first.
+
+The thesis is rendered as visible text — it's an advance organizer (Ausubel's learning theory). The reader sees the framework before they encounter details. Without it, they have no scaffold to hang new information on. With it, every click and hover reinforces a mental model they've already started building.
+
+The optional `tension` field adds the interesting question: "Single coordination point — bottleneck or feature?" Tension gives the reader a reason to engage. A diagram without tension is information without a point.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Hierarchy: what matters more
+
+Watch the Session node in the demo panel. It just grew. Thicker stroke. Accent fill. Slightly larger text. Five small changes that happened simultaneously — and now your eye goes there first.
+
+That's **hierarchy**. A role system — protagonist, supporting, context — creates a gradient of visual weight. Not all nodes are equally important, and the visual treatment should reflect that without the author touching a single pixel value.
+
+<CodeAnnotator blockId="semantic-role-system" />
+
+The role scale factors are small: protagonist at 1.15×, context at 0.9×. But these differences compound across every visual dimension simultaneously. The protagonist is 15% wider, has 80% thicker strokes, gets accent-colored fills, has 12% larger font, and receives a glow filter on hover. Five small differences that together create an unmistakable focal point.
+
+The author never tweaks `w: 92` vs `w: 72`. They write `role: "protagonist"` and the system applies the visual hierarchy. This means the hierarchy is consistent across every diagram in the system. Every protagonist looks like a protagonist. Every context node recedes the same way.
+
+Typography taught this principle: headline size tells you what matters before you read a word. The same principle applies to node size.
+
+Open the **Hierarchy Lab** below the dimension cards. Reassign any node's role — make Sandbox the protagonist, make Session context — and watch the visual weight redistribute. Slide protagonist scale to 1.5× for an exaggerated effect.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Relationships: what the connections mean
+
+Nodes are characters. Edges are the plot. A diagram with unlabeled arrows is a cast list with no script — you know who's involved but not what happens between them.
+
+**Relationships** turn edges into narrative. The demo panel now shows labels on the edges. Click any node — the detail panel below composes a relationship view from its connections.
+
+<CodeAnnotator blockId="semantic-edge-relationships" />
+
+Each edge carries three text layers:
+- **label**: the short form visible on the edge — `.skill()`, `tool calls`
+- **verb**: the action word — "loads", "spawns", "executes"  
+- **description**: the human explanation — "loads instruction sets into the conversation"
+
+The label serves the visual channel. The description serves the verbal channel. Together they achieve dual coding (Paivio) — two channels reinforcing the same message.
+
+When a node is selected, the system auto-composes a relationship view from its connected edges. The reader sees not just "what is Session" but "how Session connects to everything else." This creates shot/reverse shot (film editing) — understanding node A creates curiosity about node B.
+
+The consumer writes the verb and description per edge. The system builds the relationship panel automatically. Zero custom rendering code per diagram.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Path: how to read it
+
+Where does your eye go after the protagonist? Without guidance, readers scan left-to-right, top-to-bottom — the default reading order of their language, not the conceptual order of the system. For a teaching diagram, that's a problem.
+
+**Path** makes the reading order explicit. The demo panel now shows numbered indicators on each node, appearing in sequence.
+
+An `arc` is a sequence of node IDs: `["session", "skill", "role", "task", "sandbox"]`. When present:
+
+- Small numbered dots appear on nodes (the arc indicators)
+- The entrance animation staggers along the arc order
+- The reader has a visible journey to follow
+
+Not every diagram needs an arc. Reference diagrams and comparison diagrams may work better with free exploration. But teaching diagrams — where concepts build on each other — always benefit from making the learning path explicit.
+
+<CodeAnnotator blockId="semantic-scene-resolution" />
+
+Scene resolution is where all four dimensions merge into a single computed analysis. The `useMemo` block computes:
+
+1. **Protagonist** — from the top-level field or the role property
+2. **Arc map** — positions for numbered indicators
+3. **Role map** — inferred from explicit roles and the protagonist
+4. **Stagger map** — arc nodes first, then remaining nodes by position
+
+The stagger order is the bridge between author intent (arc) and renderer behavior (animation timing). The entrance animation tells a story: the protagonist appears first, then the supporting cast follows the reading order.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Affordance: does it feel alive?
+
+Click a node. Edges light up. The detail panel slides in. Everything else dims to 0.75 opacity. You didn't read documentation to learn this. The cursor changed to a pointer, and you tried it. The diagram _invited_ you.
+
+That invitation is **affordance**: visual and behavioral cues that tell the reader what's interactive before they try it. The demo panel is now fully alive — explore it.
+
+<CodeAnnotator blockId="semantic-variant-resolution" />
+
+The variant system is the bridge between state and rendering. Nine node variants cover every interaction state: idle, selected, hovered, dimmed, active, visited, future, disabled, error. Each variant maps to an opacity, fill color, stroke color, and filter treatment. The renderer never computes these — it receives a variant and applies the lookup.
+
+The `dimmed` variant is subtle but important. When anything is selected, everything else dims to `0.75` opacity. This is Shneiderman's focus-plus-context principle: the selected node is prominent, the rest recedes but remains visible. The reader can still see the graph topology while focusing on one node's details.
+
+The `future` variant at `0.28` opacity is even more aggressive — used in timeline mode, where unreached nodes are suggested but not revealed. Progressive disclosure through opacity.
+
+Affordance is mostly handled by the system's rendering defaults, not by per-diagram data. But the semantic data feeds into it: the protagonist gets the strongest hover signal, the richest edge descriptions produce the most rewarding detail panel on click.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Dimensions compose
+
+The five dimensions are not a checklist of independent features. They form a reinforcing loop:
+
+- **Intent** shapes what **hierarchy** should emphasize — "Session is the hub" means Session should be the focal point
+- **Hierarchy** shapes which elements get the strongest **affordance** — the protagonist gets the most inviting hover state
+- **Affordance** shapes how interaction reveals **relationships** — clicking the protagonist shows its rich connections
+- **Relationships** shape the natural **path** — "Session connects to Skill" creates curiosity about Skill next
+- **Path** completes the **intent** — after following the arc, the reader understands the thesis
+
+When every visual decision is backed by multiple dimensions pointing to the same conclusion, the result feels intentional. A node isn't big for one reason — it's big because of its role AND its arc position AND its connection count.
+
+**Try this:** the colored dots in the demo header are now clickable. Toggle each dimension
+off one at a time. Which removal hurts the most? For most readers, turning off hierarchy
+(the purple dot) causes the sharpest loss — the protagonist disappears and every node
+competes equally for attention. Try it.
+
+A diagram where the dimensions conflict — where the hierarchy says "look here" but the arc says "start there" — feels dissonant. The system prevents this by deriving visuals from the semantic data, not from independent manual choices.
+
+The compound architecture (Part 2) provides the ingredients. The semantic layer provides the recipes. Part 4 shows how the hook and the composed component assemble everything — and the quality spectrum from bare-minimum to fully-semantic.
+
+</section>
