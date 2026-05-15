@@ -71,8 +71,7 @@ export async function getAllPosts(): Promise<PostListItem[]> {
 }
 
 export async function getPostBySlug(slug: string): Promise<PostContent | null> {
-  // Check cache first
-  if (postCache.has(slug)) {
+  if (process.env.NODE_ENV === "production" && postCache.has(slug)) {
     return postCache.get(slug)!;
   }
 
@@ -92,7 +91,6 @@ export async function getPostBySlug(slug: string): Promise<PostContent | null> {
     readTime: formatReadTime(readingTime(content).text),
   };
 
-  // Cache the result
   postCache.set(slug, post);
   return post;
 }
