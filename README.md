@@ -79,10 +79,85 @@ content/
   recipes/       # Code walkthrough definitions
 src/
   app/           # Next.js routes (blog, cookbook, playground, recipes)
+    api/         # Route handlers: guestbook, webring, post-metrics, playground sync
   components/    # UI components, playground, cookbook player
-  lib/           # Utilities, MDX pipeline, content loaders
+  lib/           # Utilities, MDX pipeline, content loaders, PocketBase client
   styles/        # Tailwind config, CSS modules
 public/          # Static assets, sounds, images
+infra/
+  pocketbase/    # PocketBase Dockerfile + JS migrations
+  compose/       # Docker Swarm stack definition
+  deploy.sh      # Build images + deploy to local swarm
+```
+
+---
+
+## Persistence
+
+User-generated state lives in [PocketBase](https://pocketbase.io). The PB
+service runs alongside the Next app on the same Docker network and never
+exposes a port to the public internet — the Next app authenticates as a
+superuser via a server-side SDK and brokers all writes.
+
+Collections (declared in `infra/pocketbase/pb_migrations/`):
+
+| Collection | Purpose |
+|---|---|
+| `guestbook_entries` | Public sign-ins (name, message). Rate-limited per IP. |
+| `webring_sites`     | Curated link ring. Managed via PB admin UI. |
+| `post_metrics`      | Per-slug view + like counters. Cookie-based idempotency. |
+| `playground_workspaces` | Per-user workspace JSON (auth required). |
+| `playground_recipes`    | Per-user recipe JSON (auth required). |
+
+The browser still uses `localStorage` for playground state by default;
+PocketBase sync is opt-in via sign-in and lets the same workspace appear on
+another device.
+
+### Local dev with persistence
+
+```bash
+# 1. Start PocketBase locally (separate terminal)
+docker build -t terminal-dreams-pocketbase:local infra/pocketbase
+docker run -d --name td-pb -p 8090:8090 \
+    -v td-pb-data:/pb/pb_data \
+    terminal-dreams-pocketbase:local
+docker exec td-pb pocketbase superuser upsert admin@local.test Password123! \
+    --dir=/pb/pb_data
+
+# 2. Point Next at it
+cat > .env.local <<EOF
+POCKETBASE_URL=http://127.0.0.1:8090
+POCKETBASE_ADMIN_EMAIL=admin@local.test
+POCKETBASE_ADMIN_PASSWORD=Password123!
+SESSION_SECRET=$(openssl rand -hex 16)
+APP_BASE_URL=http://localhost:3000
+EOF
+
+npm run dev
+```
+
+### Production deploy (Docker Swarm)
+
+The host must already have a `dokploy-network` external swarm network and a
+Traefik instance attached to it (this is the platform-01 layout).
+
+```bash
+sudo ./infra/deploy.sh
+```
+
+The script builds both images, generates `secrets/app.env` on first run,
+deploys the stack, and provisions the PB superuser. Verify with:
+
+```bash
+curl --resolve terminal-dreams.local:80:127.0.0.1 \
+    http://terminal-dreams.local/
+```
+
+PocketBase's admin UI stays internal — reach it via an SSH tunnel:
+
+```bash
+ssh -L 8090:127.0.0.1:8090 admin@<host>
+# then browse http://localhost:8090/_/
 ```
 
 ---
@@ -92,10 +167,12 @@ public/          # Static assets, sounds, images
 - [ ] File architecture cleanup — co-locate CSS and components
 - [ ] Timeline component for blog posts
 - [ ] Differentiated card styles per content type (Blog, TIL, Project, Notes, Essays)
-- [ ] Guestbook
-- [ ] Webring
+- [x] Guestbook
+- [x] Webring
+- [x] Post view/like counters
 - [ ] System status widget
 - [ ] Sticky table of contents
+- [ ] Logto SSO for playground sync (currently uses PB-native auth)
 
 ---
 
