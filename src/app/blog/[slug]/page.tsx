@@ -3,6 +3,7 @@ import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 // import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { ToC } from "@/components/retro/ToC";
+import { PostMetrics } from "@/components/post-metrics/PostMetrics";
 import { getAllPostSlugs, getPostBySlug } from "@/lib/mdx";
 import { buildComponentsForSlug } from "@/mdx/registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
@@ -33,6 +34,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           ) : null}
           <span>{"// "}{post.readTime}</span>
         </div>
+        <PostMetrics slug={`blog/${post.slug}`} />
       </div>
 
       <div className={styles.postLayout}>
