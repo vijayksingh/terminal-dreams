@@ -7,9 +7,9 @@
 # Build steps run on the host (see infra/deploy.sh). Images are tagged
 # locally; we don't push to a registry yet.
 #
-# Traefik picks up the app via deploy.labels (Swarm provider). Until a real
-# domain is wired, the Host rule is terminal-dreams.local -- verify with
-# `curl --resolve terminal-dreams.local:80:127.0.0.1 http://terminal-dreams.local`.
+# Public hostname: https://terminal-dreams.unlocalhosted.com (proxied through
+# Cloudflare, Traefik DNS-01 for the LE cert, HSTS via hsts@file middleware).
+# NOT SSO-gated -- this is a public-facing portfolio app.
 
 version: "3.9"
 
@@ -60,8 +60,10 @@ services:
       labels:
         - traefik.enable=true
         - traefik.swarm.network=dokploy-network
-        - traefik.http.routers.terminal-dreams.rule=Host(`terminal-dreams.local`)
-        - traefik.http.routers.terminal-dreams.entrypoints=web
+        - traefik.http.routers.terminal-dreams.rule=Host(`terminal-dreams.unlocalhosted.com`)
+        - traefik.http.routers.terminal-dreams.entrypoints=websecure
+        - traefik.http.routers.terminal-dreams.tls.certresolver=letsencrypt
+        - traefik.http.routers.terminal-dreams.middlewares=hsts@file
         - traefik.http.services.terminal-dreams.loadbalancer.server.port=3000
 
 volumes:
