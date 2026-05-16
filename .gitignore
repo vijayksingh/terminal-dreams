@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# infra runtime secrets (deploy.sh writes here)
+secrets/
+infra/pocketbase/pb_data/

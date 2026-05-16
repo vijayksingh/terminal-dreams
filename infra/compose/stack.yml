@@ -1,0 +1,72 @@
+# Terminal Dreams swarm stack.
+#
+# Two services on the existing platform-01 dokploy-network:
+#   - terminal-dreams:    Next.js app (port 3000 internal, behind Traefik)
+#   - pocketbase:         PocketBase (port 8090 internal, no Traefik route)
+#
+# Build steps run on the host (see infra/deploy.sh). Images are tagged
+# locally; we don't push to a registry yet.
+#
+# Traefik picks up the app via deploy.labels (Swarm provider). Until a real
+# domain is wired, the Host rule is terminal-dreams.local -- verify with
+# `curl --resolve terminal-dreams.local:80:127.0.0.1 http://terminal-dreams.local`.
+
+version: "3.9"
+
+services:
+  pocketbase:
+    image: terminal-dreams-pocketbase:local
+    networks:
+      - dokploy-network
+    volumes:
+      - pb_data:/pb/pb_data
+    environment:
+      - TZ=UTC
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      resources:
+        limits:
+          memory: 256M
+      # No traefik labels -- PB stays internal-only. The Next app reaches it
+      # via http://pocketbase:8090 on dokploy-network.
+
+  app:
+    image: terminal-dreams-app:local
+    networks:
+      - dokploy-network
+    environment:
+      - NODE_ENV=production
+      - POCKETBASE_URL=http://pocketbase:8090
+      # POCKETBASE_ADMIN_EMAIL / POCKETBASE_ADMIN_PASSWORD / SESSION_SECRET are
+      # injected from /opt/apps/terminal-dreams/secrets/app.env at deploy time
+      # via `docker stack deploy`'s --with-env. We don't bake them into the
+      # image; see infra/deploy.sh.
+      - POCKETBASE_ADMIN_EMAIL
+      - POCKETBASE_ADMIN_PASSWORD
+      - SESSION_SECRET
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+      resources:
+        limits:
+          memory: 512M
+      labels:
+        - traefik.enable=true
+        - traefik.swarm.network=dokploy-network
+        - traefik.http.routers.terminal-dreams.rule=Host(`terminal-dreams.local`)
+        - traefik.http.routers.terminal-dreams.entrypoints=web
+        - traefik.http.services.terminal-dreams.loadbalancer.server.port=3000
+
+volumes:
+  pb_data:
+
+networks:
+  dokploy-network:
+    external: true
