@@ -1,0 +1,163 @@
+---
+title: "Design a Booking Platform"
+slug: design-booking-platform
+section: system-design-problems
+stopId: sdp-booking-platform
+order: 2
+kind: system-design-problem
+summary: "Build a booking platform like Airbnb/Agoda — from search to checkout"
+tags: ["search", "availability", "booking-flow", "maps", "real-time", "calendar", "multi-step-forms"]
+intersections: ["sdp-image-gallery"]
+prerequisites: []
+demo: design-booking-platform
+---
+
+<section id="step-1" className="recipe-step">
+
+## Step 1 — Requirements
+
+Design a property booking platform. Users search listings by location and dates, view listing details, check availability, and book stays.
+
+**Scope it:** Not everything belongs in v1. Toggle features below — each one multiplies complexity. A booking platform without map search is still a booking platform.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## Step 2 — API Design
+
+Five endpoints cover the core booking flows. Notice how `/api/search` returns lightweight `ListingSummary` objects for the grid, while `/api/listings/:id` returns the full `ListingDetail` only when the user clicks through.
+
+**The tension:** Search needs to support compound filters (location + dates + guests + price range + property type) without N+1 queries or sending the full listing payload for every result. Response shaping is the answer — the API returns the minimum data each view needs.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## Step 3 — Component Architecture
+
+`SearchPage` is the single state owner. Props flow down to display components; callbacks bubble user events back up. The API layer is only touched by the state owner — child components never fetch directly.
+
+**Key decision:** DetailPanel and BookingForm are siblings under SearchPage, not nested. This means switching between search, detail, and booking views is a state change in SearchPage, not a route change. Keeps the component tree flat and the back-button instant.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## Step 4 — First Render: Listing Cards
+
+Eight listings. Each card shows a thumbnail, property name, location, price per night, and rating. No interactivity yet — just proving the data shape works from API to pixel.
+
+**The pattern:** Each card renders from a `ListingSummary` — the same lightweight type the search API returns. We never request `ListingDetail` until the user clicks a specific card.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## Step 5 — Search and Filtering
+
+The search bar appears with location input, date display, and guest count. Filter chips let you narrow by property type. A price range slider caps the ceiling.
+
+**The tension:** Every filter change re-renders the grid. With compound filters, the question isn't *if* to debounce, but *what* to debounce. Text input: debounce 300ms. Chip toggles: immediate. Price slider: debounce on release. URL state sync ensures refreshing preserves the filter state.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## Step 6 — Date Range Picker
+
+Click "Dates" to open the calendar. Select check-in first, then check-out. Blocked dates are greyed out. Prices appear below each day number.
+
+**The tension:** Date math is deceptively complex. Check-out must be after check-in. Minimum stay rules (2 nights for cabins, 3 for villas) constrain which check-out dates are valid. And all dates are in the *listing's* timezone, not the user's — a midnight boundary bug waiting to happen.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## Step 7 — Listing Detail View
+
+Click any card. The detail panel renders: hero image, property info, amenities, rating. The "back to search" link returns instantly because search results are still in state.
+
+**The tension:** Content loading priority matters. The hero image is the LCP element — it loads first. Title and price render from the already-cached `ListingSummary`. Amenities and reviews can lazy-load below the fold. This isn't just performance — it's perceived speed.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## Step 8 — Availability and Dynamic Pricing
+
+The availability calendar appears in the detail view. Each day shows its price, color-coded: green for normal, orange for mid-range, red for peak. Blocked dates are struck through.
+
+**The tension:** Dynamic pricing means the price shown on the search card might differ from the calendar price for specific dates. Weekend rates are 1.3x base. Seasonal surges add another 5% per cycle. The UI must show the *per-night* price on the calendar while computing the *total* for the selected range.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## Step 9 — Booking Checkout Flow
+
+"Book Now" enters a three-step checkout: guest details, payment summary, confirmation. The progress indicator shows where you are. Price breakdown shows nightly rate, cleaning fee, service fee, and total.
+
+**The tension:** Multi-step forms need careful state management. Going back must preserve entered data. The payment step must validate before allowing confirmation. And the "Confirm Booking" call is a POST that should be idempotent — double-clicking shouldn't double-book.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## Step 10 — Map-Based Search
+
+The grid splits into a list + map layout. Each listing appears as a marker positioned geographically. Hover a marker to see the price tooltip. Hover a card to highlight its marker.
+
+**The tension:** Bi-directional sync between list and map. Panning the map should re-query visible listings (viewport-based search). Marker clustering prevents overlap when listings are close. And the list must scroll to the corresponding card when a marker is clicked — smooth, not jarring.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## Step 11 — Real-Time Updates
+
+Live indicators appear: price changes flash on cards, "Booked 3 times today" counters show social proof. A WebSocket event stream delivers updates.
+
+**The tension:** Stale prices are a liability. If a user sees $185 on the card but the price changed to $235 before they click "Book," that's a broken trust moment. Real-time updates via WebSocket keep prices current, but you need to handle the race condition: what if the price changes *during* checkout?
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## Step 12 — Search Performance
+
+Search input debounces at 300ms. Skeleton cards show during loading. Cached results serve instantly on back-navigation. URL parameters sync filter state for shareable links.
+
+**The tension:** Perceived performance vs. actual performance. A 320ms search feels slow with a blank grid. Skeleton cards + stale-while-revalidate makes the same 320ms feel instant. The cache strategy: search results cached by query hash, listing details cached by ID, availability *never* cached (it changes per-minute).
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## Step 13 — Mobile Responsive
+
+The layout adapts: single-column cards, collapsed search bar, bottom-sheet filters, toggle between list and map (not side-by-side). Touch targets grow to 44px minimum.
+
+**The tension:** Mobile isn't just "smaller." The filter panel becomes a bottom sheet with a drag handle. The map takes the full viewport with a floating card overlay. Date pickers need larger tap targets. And the booking flow must work on a 320px-wide screen without horizontal scroll.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## Step 14 — Error Handling
+
+Network timeout on search → retry with exponential backoff. Double-booking conflict → suggest alternative dates. Payment declined → preserve form state, highlight the card field.
+
+**The tension:** Each error type needs a different recovery. Network errors are transient — auto-retry is safe. Booking conflicts are permanent — showing stale availability is worse than showing an error. Payment failures need human judgment — keep the form filled, let the user fix and retry. The error boundary around the booking flow must not nuke the search results in state.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## Step 15 — Scaling to Global
+
+Multi-currency display, i18n for all UI strings, timezone-aware date handling, CDN for listing images, performance budgets. LCP under 2.5s, INP under 200ms, CLS under 0.1.
+
+**The tension at scale:** 2M+ listings across 190 countries. Search must be geo-indexed (PostGIS or Elasticsearch). Images need a CDN with responsive variants (srcset). Pricing must handle currency conversion *at display time* (not storage). And A/B testing the booking flow means the checkout must be instrumented without adding 50ms to INP.
+
+</section>

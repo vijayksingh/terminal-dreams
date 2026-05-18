@@ -1,0 +1,1 @@
+export { BookingPlatformDemo } from "./BookingPlatformDemo";

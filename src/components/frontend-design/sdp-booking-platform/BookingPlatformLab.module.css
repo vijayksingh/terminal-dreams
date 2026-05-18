@@ -1,0 +1,1444 @@
+/* ── Lab shell ──────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  min-height: 0;
+}
+
+.scrollArea {
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
+  padding: var(--space-2);
+}
+
+/* ── Step bar ──────────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2) var(--space-2) 0;
+  flex-wrap: wrap;
+}
+
+.stepDot {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+.stepDot[data-current="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+/* ── Planning panels ───────────────────────────────────────── */
+
+.planningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionHeading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+/* ── Scope checklist ───────────────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: all 150ms ease;
+}
+
+.checkItem[data-checked="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+}
+
+.checkToggle {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-success);
+  transition: border-color 150ms ease;
+}
+
+.checkItem[data-checked="true"] .checkToggle {
+  border-color: var(--color-success);
+}
+
+.checkLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.checkDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  margin: 2px 0 0;
+}
+
+.scopeSummary {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.scopeLabel {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.scopeValue {
+  font-size: 0.7rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ── Panel tabs ────────────────────────────────────────────── */
+
+.panelTabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0;
+}
+
+.panelTab {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 150ms ease;
+}
+
+.panelTab[data-active="true"] {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+/* ── Endpoint cards ────────────────────────────────────────── */
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease;
+}
+
+.endpointCard[data-expanded="true"] {
+  border-color: var(--color-accent);
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.methodBadge {
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.methodBadge[data-method="GET"] { background: color-mix(in srgb, var(--diagram-layer-1) 20%, transparent); color: var(--diagram-layer-1); }
+.methodBadge[data-method="POST"] { background: color-mix(in srgb, var(--diagram-layer-4) 20%, transparent); color: var(--diagram-layer-4); }
+.methodBadge[data-method="DELETE"] { background: color-mix(in srgb, var(--color-error) 20%, transparent); color: var(--color-error); }
+
+.endpointPath {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.endpointChevron {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+}
+
+.endpointDesc {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.endpointUsedBy {
+  font-size: 0.55rem;
+  color: var(--diagram-layer-2);
+  font-style: italic;
+}
+
+.endpointDetail {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointDetailLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.paramGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.paramRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: var(--space-1);
+  font-size: 0.6rem;
+}
+
+.paramName { color: var(--color-text); font-weight: 600; }
+.paramType { color: var(--diagram-layer-5); }
+.paramNote { color: var(--color-muted); }
+
+.responseType {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--diagram-layer-5);
+}
+
+/* ── Type cards ────────────────────────────────────────────── */
+
+.typeCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-2);
+}
+
+.typeCard {
+  border: 1px solid var(--color-border);
+  border-top-width: 3px;
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.typeCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.typeCardName {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.typeCardCategory {
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.typeCardExtends {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.typeCardExtends span {
+  color: var(--diagram-layer-5);
+  font-weight: 600;
+}
+
+.typeCardFields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.typeFieldRow {
+  display: flex;
+  gap: var(--space-1);
+  font-size: 0.58rem;
+  align-items: baseline;
+}
+
+.typeFieldName { color: var(--color-text); font-weight: 500; }
+.typeFieldType { color: var(--diagram-layer-5); }
+.typeFieldNote { color: var(--color-muted); font-style: italic; }
+
+/* ── Metrics bar ───────────────────────────────────────────── */
+
+.metricsBar {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.metricCard {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.metricValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.metricValue[data-status="bad"] { color: var(--color-error); }
+.metricValue[data-status="good"] { color: var(--color-success); }
+
+/* ── Step message ──────────────────────────────────────────── */
+
+.stepMessage {
+  font-size: 0.7rem;
+  color: var(--color-text);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.stepMessage[data-severity="warning"] {
+  border-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface));
+}
+
+/* ── Booking container ─────────────────────────────────────── */
+
+.bookingContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.viewArea {
+  min-height: 300px;
+}
+
+/* ── Search bar ────────────────────────────────────────────── */
+
+.searchSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.searchBar {
+  display: flex;
+  gap: 1px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: var(--color-border);
+}
+
+.searchInput {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  outline: none;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: var(--color-muted);
+}
+
+.searchDateBtn {
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 100ms ease;
+}
+
+.searchDateBtn:hover {
+  background: var(--color-surface-2);
+}
+
+.guestControl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 var(--space-2);
+  background: var(--color-surface);
+}
+
+.guestBtn {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 100ms ease;
+}
+
+.guestBtn:hover {
+  background: var(--color-surface-2);
+}
+
+.guestCount {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 14px;
+  text-align: center;
+}
+
+/* ── Filter chips ──────────────────────────────────────────── */
+
+.filterRow {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterChip {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 100ms ease;
+}
+
+.filterChip[data-active="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.priceSlider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.priceLabel {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  font-weight: 600;
+  min-width: 32px;
+}
+
+.rangeInput {
+  width: 60px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* ── Calendar ──────────────────────────────────────────────── */
+
+.calendar,
+.availCalendar {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-2);
+  background: var(--color-surface);
+}
+
+.calendarNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.calendarArrow {
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: color 100ms ease;
+}
+
+.calendarArrow:hover {
+  color: var(--color-text);
+}
+
+.calendarMonth {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.calendarDayNames {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.dayNameCell {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 2px 0;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dayEmpty {
+  aspect-ratio: 1;
+}
+
+.dayCell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 100ms ease;
+  padding: 2px;
+}
+
+.dayCell:hover:not([data-blocked="true"]) {
+  background: var(--color-surface-2);
+}
+
+.dayCell[data-blocked="true"] {
+  opacity: 0.25;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.dayCell[data-selected="true"] {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.dayCell[data-checkin="true"],
+.dayCell[data-checkout="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.dayCell[data-checkin="true"] .dayPrice,
+.dayCell[data-checkout="true"] .dayPrice {
+  color: var(--color-bg);
+  opacity: 0.7;
+}
+
+.dayCell[data-price-tier="high"] {
+  color: var(--color-error);
+}
+
+.dayCell[data-price-tier="low"] {
+  color: var(--color-success);
+}
+
+.dayNumber {
+  font-size: 0.6rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.dayPrice {
+  font-size: 0.45rem;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+.priceLegend {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+
+.priceLegend span {
+  font-size: 0.55rem;
+  font-weight: 600;
+}
+
+.priceLegend span[data-tier="low"] { color: var(--color-success); }
+.priceLegend span[data-tier="mid"] { color: var(--color-text); }
+.priceLegend span[data-tier="high"] { color: var(--color-error); }
+.priceLegend span[data-tier="blocked"] { color: var(--color-muted); text-decoration: line-through; }
+
+/* ── Listing grid ──────────────────────────────────────────── */
+
+.gridLayout {
+  width: 100%;
+}
+
+.splitLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.listingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+/* ── Listing card ──────────────────────────────────────────── */
+
+.listingCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.listingCard:hover {
+  border-color: var(--color-text);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.listingCard[data-highlighted="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.cardImage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.cardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.cardImgFill {
+  width: 100%;
+  height: 100%;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.superhostBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  letter-spacing: 0.02em;
+}
+
+.cardInfo {
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cardLocation {
+  font-size: 0.55rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.cardName {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardBottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.cardPrice {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cardPrice span {
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: 0.6rem;
+}
+
+.cardRating {
+  font-size: 0.6rem;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+/* ── Skeleton card ─────────────────────────────────────────── */
+
+.skeletonCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  background: var(--color-surface);
+  padding: var(--space-2);
+}
+
+.skeletonImg {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--color-surface-2);
+  border-radius: 3px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLine {
+  height: 10px;
+  width: 80%;
+  background: var(--color-surface-2);
+  border-radius: 2px;
+  margin-top: var(--space-2);
+  animation: shimmer 1.5s ease-in-out infinite 0.1s;
+}
+
+.skeletonLineShort {
+  height: 10px;
+  width: 50%;
+  background: var(--color-surface-2);
+  border-radius: 2px;
+  margin-top: 4px;
+  animation: shimmer 1.5s ease-in-out infinite 0.2s;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Mini map ──────────────────────────────────────────────── */
+
+.mapContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.mapSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Detail view ───────────────────────────────────────────── */
+
+.detailView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.backButton {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+
+.backButton:hover {
+  text-decoration: underline;
+}
+
+.detailImage {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.detailImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.detailHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.detailName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.detailMeta {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.detailRating {
+  font-size: 0.7rem;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.detailStats {
+  display: flex;
+  gap: var(--space-1);
+  font-size: 0.65rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.amenityList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.amenityChip {
+  font-size: 0.55rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ── Price box ─────────────────────────────────────────────── */
+
+.priceBox {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.priceRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--color-text);
+}
+
+.priceDivider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-1) 0;
+}
+
+.priceTotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.bookButton {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 150ms ease;
+}
+
+.bookButton:hover {
+  opacity: 0.9;
+}
+
+/* ── Booking flow ──────────────────────────────────────────── */
+
+.bookingFlow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bookingProgress {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.bookingProgressStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.bookingProgressStep[data-active="true"] {
+  color: var(--color-text);
+}
+
+.bookingProgressStep[data-current="true"] {
+  color: var(--color-accent);
+}
+
+.progressDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+}
+
+.bookingProgressStep[data-active="true"] .progressDot {
+  border-color: var(--color-accent);
+}
+
+.bookingProgressStep[data-current="true"] .progressDot {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.bookingStepContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bookingStepTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.formField span {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.formField input {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.bookingActions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.bookingBackBtn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bookingNextBtn {
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-1);
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bookingSummaryCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summaryListing {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.summaryDates {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+}
+
+.mockCard {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-size: 0.7rem;
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+/* ── Confirmation panel ────────────────────────────────────── */
+
+.confirmationPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  text-align: center;
+}
+
+.confirmCheck {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: var(--color-bg);
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirmTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.confirmCode {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  letter-spacing: 0.15em;
+}
+
+.confirmDetails {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirmTotal {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ── Widgets ───────────────────────────────────────────────── */
+
+.widgetPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+}
+
+.widgetTitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+
+.widgetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.widgetNote {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  font-style: italic;
+  margin-top: var(--space-1);
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--color-text);
+}
+
+.statRow span:last-child {
+  font-weight: 700;
+}
+
+/* ── Priority list widget ──────────────────────────────────── */
+
+.priorityList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.priorityItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.65rem;
+  color: var(--color-text);
+}
+
+.priorityNumber {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 0.55rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Funnel widget ─────────────────────────────────────────── */
+
+.funnelList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.funnelRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  position: relative;
+}
+
+.funnelBar {
+  height: 16px;
+  border-radius: 2px;
+  background: var(--color-surface-2);
+  min-width: 4px;
+  transition: all 300ms ease;
+}
+
+.funnelBar[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-surface-2));
+}
+
+.funnelLabel {
+  font-size: 0.6rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.funnelPct {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+/* ── Event stream widget ───────────────────────────────────── */
+
+.eventList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eventRow {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 0.6rem;
+  color: var(--color-text);
+  padding: 3px var(--space-1);
+  border-left: 2px solid var(--color-border);
+}
+
+.eventRow[data-type="price"] { border-left-color: var(--diagram-layer-4); }
+.eventRow[data-type="booking"] { border-left-color: var(--color-success); }
+.eventRow[data-type="info"] { border-left-color: var(--diagram-layer-5); }
+
+.eventTime {
+  font-weight: 600;
+  color: var(--color-muted);
+  min-width: 28px;
+}
+
+/* ── Cache widget ──────────────────────────────────────────── */
+
+.cacheTable {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cacheRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-2);
+  font-size: 0.6rem;
+  padding: 3px var(--space-1);
+  border-radius: 2px;
+}
+
+.cacheRow[data-status="HIT"] { background: color-mix(in srgb, var(--color-success) 10%, transparent); }
+.cacheRow[data-status="MISS"] { background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+
+.cacheQuery {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cacheStatus {
+  font-weight: 700;
+}
+
+.cacheRow[data-status="HIT"] .cacheStatus { color: var(--color-success); }
+.cacheRow[data-status="MISS"] .cacheStatus { color: var(--color-error); }
+
+.cacheTtl {
+  color: var(--color-muted);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ── Error widget ──────────────────────────────────────────── */
+
+.errorList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.errorItem {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.errorItem:last-child { border-bottom: none; }
+
+.errorScenario {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.errorRecovery {
+  font-size: 0.6rem;
+  color: var(--color-text);
+  margin-top: 2px;
+}
+
+/* ── CWV widget ────────────────────────────────────────────── */
+
+.vitalsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vitalRow {
+  display: grid;
+  grid-template-columns: 40px 60px 1fr;
+  gap: var(--space-2);
+  font-size: 0.65rem;
+  align-items: center;
+}
+
+.vitalLabel {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.vitalValue {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.vitalValue[data-good="true"] {
+  color: var(--color-success);
+}
+
+.vitalTarget {
+  color: var(--color-muted);
+}

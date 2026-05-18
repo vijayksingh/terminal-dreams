@@ -16,6 +16,8 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-notification-system"),
   "design-autocomplete": () =>
     import("@/mdx/frontend-design/design-autocomplete"),
+  "design-booking-platform": () =>
+    import("@/mdx/frontend-design/design-booking-platform"),
 };
 
 function isMdxComponent(value: unknown): value is MdxComponent {

@@ -95,6 +95,7 @@ export const STOPS: FdStop[] = [
   { id: "sdp-notifications", sectionSlug: "system-design-problems", label: "Design a Notification System", slug: "design-notification-system", order: 10, kind: "system-design-problem", intersections: ["api-observer-overview", "net-long-polling", "render-edge"] },
   { id: "sdp-microfrontend", sectionSlug: "system-design-problems", label: "Design a Micro-frontend Architecture", slug: "design-microfrontend", order: 11, kind: "system-design-problem", intersections: ["state-memory", "perf-bundle", "render-csr-ssr-ssg"] },
   { id: "sdp-image-gallery", sectionSlug: "system-design-problems", label: "Design an Image Gallery", slug: "design-image-gallery", order: 12, kind: "system-design-problem", intersections: ["api-intersection", "virt-windowing", "perf-images"] },
+  { id: "sdp-booking-platform", sectionSlug: "system-design-problems", label: "Design a Booking Platform", slug: "design-booking-platform", order: 13, kind: "system-design-problem", intersections: ["state-storage", "net-long-polling", "perf-js", "api-intersection"] },
 ];
 
 export function getSectionBySlug(slug: FdSectionSlug): FdSection | undefined {
