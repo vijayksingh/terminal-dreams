@@ -122,6 +122,11 @@
   }
 }
 
+@media (hover: none) {
+  .timelineRow:active { background: var(--color-surface-2); }
+  .seriesPartRow:active { background: var(--color-surface-2); }
+}
+
 /* ── Series card ───────────────────────────────────────────── */
 
 .seriesCard {
@@ -215,6 +220,19 @@
 }
 
 @media (max-width: 768px) {
+  .timelineRow {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-3);
+  }
+
+  .timelineBadge { justify-self: start; }
+
+  .timelineDay,
+  .timelineRead {
+    display: none;
+  }
+
   .seriesHeader {
     grid-template-columns: auto 1fr;
     gap: var(--space-2);

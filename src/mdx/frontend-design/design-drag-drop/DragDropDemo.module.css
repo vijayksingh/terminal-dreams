@@ -1,0 +1,347 @@
+/* ── DragDropDemo: Trello-style kanban board with drag & drop ── */
+
+/* ── Color tokens ──────────────────────────────────────────── */
+
+.root {
+  --col-todo-accent: oklch(65% 0.18 200);
+  --col-inprogress-accent: oklch(65% 0.18 60);
+  --col-done-accent: oklch(65% 0.18 140);
+  --event-down: oklch(60% 0.18 250);
+  --event-move: oklch(70% 0.18 80);
+  --event-up: oklch(60% 0.18 140);
+  --event-cancel: oklch(60% 0.2 25);
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 320px;
+  user-select: none;
+}
+
+/* ── Column ─────────────────────────────────────────────────── */
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  min-height: 200px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.columnDropTarget {
+  border-color: var(--diagram-layer-9);
+  box-shadow: inset 0 0 0 1px var(--diagram-layer-9),
+    0 0 12px oklch(from var(--diagram-layer-9) l c h / 0.25);
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--diagram-layer-9);
+  margin-bottom: var(--space-1);
+}
+
+.columnTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.columnCount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  opacity: 0.6;
+}
+
+/* ── Card ───────────────────────────────────────────────────── */
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: 40px;
+}
+
+.card {
+  position: relative;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  cursor: grab;
+  touch-action: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--radius-1) 0 0 var(--radius-1);
+  background: var(--card-accent, var(--diagram-layer-9));
+}
+
+.cardDragging {
+  opacity: 0.35;
+  transform: scale(0.97);
+}
+
+.cardFocused {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
+.cardGrabbed {
+  border-style: dashed;
+  border-color: var(--diagram-layer-9);
+  background: oklch(from var(--diagram-layer-9) l c h / 0.08);
+}
+
+.cardShifted {
+  transition: transform 0.2s ease;
+}
+
+.cardGrabbedLabel {
+  display: inline-block;
+  margin-left: var(--space-2);
+  font-size: 0.65rem;
+  color: var(--diagram-layer-9);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cardDropIndicator {
+  height: 2px;
+  background: var(--diagram-layer-9);
+  border-radius: 1px;
+  margin: calc(-1 * var(--space-1)) 0;
+  transition: opacity 0.12s ease;
+}
+
+.cardInsertionIndicator {
+  height: 3px;
+  background: var(--diagram-layer-9);
+  border-radius: 1.5px;
+  margin: calc(-1 * var(--space-1)) 0;
+  transition: opacity 0.12s ease;
+  box-shadow: 0 0 6px oklch(from var(--diagram-layer-9) l c h / 0.4);
+}
+
+/* ── Ghost element ──────────────────────────────────────────── */
+
+.ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform;
+  pointer-events: none;
+  z-index: 9999;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--diagram-layer-9);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  box-shadow: 0 4px 16px oklch(from var(--color-bg) l c h / 0.3),
+    0 0 0 1px var(--diagram-layer-9);
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+.ghost::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--radius-1) 0 0 var(--radius-1);
+  background: var(--card-accent, var(--diagram-layer-9));
+}
+
+/* ── Event Timeline ─────────────────────────────────────────── */
+
+.timelineWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.timelineBoard {
+  min-height: 200px;
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  min-height: 100px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.timelineHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timelineTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.timelineClearBtn {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+
+.timelineClearBtn:hover {
+  border-color: var(--diagram-layer-9);
+  color: var(--color-text);
+}
+
+.timelineTrack {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.timelineEvent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.timelineDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.timelineArrow {
+  color: var(--color-muted);
+  font-size: 0.6rem;
+  margin: 0 2px;
+}
+
+/* ── Keyboard mode ──────────────────────────────────────────── */
+
+.keyboardInstructions {
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  margin-bottom: var(--space-3);
+}
+
+.keyboardInstructionsText {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-text);
+  margin: 0 2px;
+  vertical-align: baseline;
+}
+
+/* ── Announcements (screen reader only) ─────────────────────── */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+
+  .cardShifted {
+    transition: none;
+  }
+
+  .column {
+    transition: none;
+  }
+
+  .ghost {
+    transition: none;
+  }
+
+  .timelineClearBtn {
+    transition: none;
+  }
+
+  .cardDropIndicator {
+    transition: none;
+  }
+
+  .cardInsertionIndicator {
+    transition: none;
+  }
+}

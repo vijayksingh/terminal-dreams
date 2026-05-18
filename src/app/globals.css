@@ -99,9 +99,11 @@ body {
   margin-bottom: 0.35em;
 }
 
-/* Retro blog global touches */
-body {
-  cursor: crosshair;
+/* Tame tap highlight on touch devices */
+@media (hover: none) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 /* Custom scrollbar */

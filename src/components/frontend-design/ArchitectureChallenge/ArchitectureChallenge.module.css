@@ -1,0 +1,756 @@
+/* ── ArchitectureChallenge: drag-and-connect architecture builder ── */
+
+.wrapper {
+  --ac-accent: var(--color-accent);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-3);
+  background: var(--color-surface);
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Top bar ────────────────────────────────────────────────────── */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-surface);
+  min-height: 40px;
+}
+
+.topTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.checkButton {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: var(--space-1) var(--space-3);
+  border: 2px solid var(--ac-accent);
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--ac-accent);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.checkButton:hover {
+  background: var(--ac-accent);
+  color: var(--color-bg);
+}
+
+.checkButton:focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+.resetButton {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.03em;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  margin-right: var(--space-2);
+}
+
+.resetButton:hover {
+  border-color: var(--color-muted);
+  color: var(--color-text);
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Scenario tabs ──────────────────────────────────────────────── */
+
+.scenarioTabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-bg);
+  overflow-x: auto;
+}
+
+.scenarioTab {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -2px;
+}
+
+.scenarioTab:hover {
+  color: var(--color-text);
+}
+
+.scenarioTabActive {
+  color: var(--ac-accent);
+  border-bottom-color: var(--ac-accent);
+  font-weight: 600;
+}
+
+.scenarioTab:focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: -2px;
+}
+
+/* ── Scenario description ───────────────────────────────────────── */
+
+.scenarioDesc {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.scenarioDescText {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-text);
+  margin: 0;
+  border-left: 3px solid var(--ac-accent);
+  padding-left: var(--space-3);
+}
+
+/* ── Main layout: sidebar + canvas ──────────────────────────────── */
+
+.main {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 420px;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+
+.sidebar {
+  border-right: 2px solid var(--color-border);
+  background: var(--color-bg);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
+  max-height: 520px;
+}
+
+.sidebarLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.blockCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: grab;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+  touch-action: none;
+}
+
+.blockCard:hover {
+  border-color: var(--ac-accent);
+  box-shadow: 0 0 0 1px var(--ac-accent);
+}
+
+.blockCard:focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+.blockCardPlaced {
+  opacity: 0.4;
+  cursor: default;
+  border-style: dashed;
+}
+
+.blockCardPlaced:hover {
+  border-color: var(--color-border);
+  box-shadow: none;
+}
+
+.blockCardDisabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.blockCardLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.blockCardCheck {
+  color: var(--color-success);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.blockCardDesc {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.categoryDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Mystery block ──────────────────────────────────────────────── */
+
+.mysteryCard {
+  border: 2px dashed var(--ac-accent);
+  background: var(--color-bg);
+}
+
+.mysteryCard:hover {
+  box-shadow: 0 0 0 1px var(--ac-accent);
+}
+
+.mysteryHint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ac-accent);
+  font-style: italic;
+}
+
+.mysteryRevealed {
+  border-style: solid;
+  border-color: var(--color-success);
+  background: var(--color-success-muted);
+}
+
+/* ── Canvas ─────────────────────────────────────────────────────── */
+
+.canvasArea {
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(
+    circle,
+    var(--color-muted) 0.6px,
+    transparent 0.6px
+  );
+  background-size: 20px 20px;
+  background-position: 10px 10px;
+  cursor: crosshair;
+}
+
+.canvasAreaDragging {
+  cursor: grabbing;
+}
+
+/* ── SVG arrow layer ────────────────────────────────────────────── */
+
+.svgLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.connectionLine {
+  fill: none;
+  stroke: var(--ac-accent);
+  stroke-width: 2;
+  pointer-events: visibleStroke;
+  cursor: pointer;
+  transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+.connectionLine:hover {
+  stroke-width: 3;
+}
+
+.connectionLineCorrect {
+  stroke: var(--color-success);
+  stroke-width: 2.5;
+}
+
+.connectionLineMissing {
+  stroke: var(--color-error);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  animation: pulseDash 1.2s ease-in-out infinite;
+}
+
+.connectionLineExtra {
+  stroke: var(--color-warning);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
+.connectionLineForbidden {
+  stroke: var(--color-error);
+  stroke-width: 2.5;
+}
+
+.connectionLineDrawing {
+  stroke: var(--ac-accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 3;
+  opacity: 0.7;
+}
+
+.connectionLineReveal {
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+@keyframes pulseDash {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ── Canvas blocks ──────────────────────────────────────────────── */
+
+.canvasBlock {
+  position: absolute;
+  z-index: 2;
+  min-width: 140px;
+  max-width: 200px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.canvasBlock:hover {
+  border-color: var(--ac-accent);
+}
+
+.canvasBlock:focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+.canvasBlockSelected {
+  border-color: var(--ac-accent);
+  box-shadow: 0 0 0 2px var(--ac-accent);
+}
+
+.canvasBlockDragging {
+  cursor: grabbing;
+  box-shadow: var(--shadow-2);
+  z-index: 10;
+}
+
+.canvasBlockLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+  text-align: center;
+}
+
+.canvasBlockCategory {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  margin-bottom: var(--space-1);
+}
+
+/* ── Ports ──────────────────────────────────────────────────────── */
+
+.port {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--ac-accent);
+  background: var(--color-surface);
+  transform: translateY(-50%);
+  cursor: pointer;
+  z-index: 3;
+  transition: background 0.15s, transform 0.15s;
+  pointer-events: all;
+  /* Pad must be set to 0 for the pseudo-element hit area */
+  padding: 0;
+}
+
+/* 44px touch target via transparent pseudo-element (fix #1: WCAG) */
+.port::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.port:hover {
+  background: var(--ac-accent);
+  transform: translateY(-50%) scale(1.3);
+}
+
+.port:focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+.portInput {
+  left: -7px;
+}
+
+.portOutput {
+  right: -7px;
+}
+
+.portActive {
+  background: var(--ac-accent);
+  transform: translateY(-50%) scale(1.3);
+}
+
+/* ── Remove button on canvas blocks ─────────────────────────────── */
+
+.removeBlock {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  line-height: 1;
+}
+
+.canvasBlock:hover .removeBlock {
+  opacity: 1;
+}
+
+.removeBlock:hover {
+  background: var(--color-error);
+  border-color: var(--color-error);
+  color: var(--color-bg);
+}
+
+.removeBlock:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+/* ── Validation panel ───────────────────────────────────────────── */
+
+.validationPanel {
+  border-top: 2px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.validationScore {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.validationScoreBar {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+  max-width: 200px;
+}
+
+.validationScoreFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.validationScorePerfect {
+  background: var(--color-success);
+}
+
+.validationScorePartial {
+  background: var(--color-warning);
+}
+
+.validationFeedbackList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feedbackItem {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.feedbackCorrect {
+  color: var(--color-success);
+  background: var(--color-success-muted);
+}
+
+.feedbackMissing {
+  color: var(--color-error);
+  background: var(--color-error-muted);
+}
+
+.feedbackExtra {
+  color: var(--color-warning);
+  background: var(--color-warning-muted);
+}
+
+.feedbackForbidden {
+  color: var(--color-error);
+  background: var(--color-error-muted);
+  font-weight: 600;
+}
+
+.feedbackIcon {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+/* ── Empty canvas placeholder ───────────────────────────────────── */
+
+.canvasEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.canvasEmptyText {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  text-align: center;
+  padding: var(--space-4);
+}
+
+/* ── Connection delete button ───────────────────────────────────── */
+
+.connectionDelete {
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.connectionDeleteBg {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+  stroke-width: 1.5;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.connectionDelete:hover .connectionDeleteBg {
+  fill: var(--color-error);
+  stroke: var(--color-error);
+}
+
+.connectionDeleteX {
+  fill: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: fill 0.15s;
+}
+
+.connectionDelete:hover .connectionDeleteX {
+  fill: var(--color-bg);
+}
+
+/* ── Drag ghost (fix #2) ───────────────────────────────────────── */
+
+.dragGhost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 160px;
+  z-index: 1000;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--ac-accent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  opacity: 0.8;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  will-change: transform;
+}
+
+/* ── Connection error toast (fix #4) ──────────────────────────── */
+
+.connectionErrorToast {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-2);
+  background: var(--color-error-muted);
+  color: var(--color-error);
+  z-index: 20;
+  animation: shakeToast 0.3s ease;
+  pointer-events: none;
+}
+
+@keyframes shakeToast {
+  0%, 100% { transform: translateX(-50%) translateX(0); }
+  25% { transform: translateX(-50%) translateX(-6px); }
+  50% { transform: translateX(-50%) translateX(6px); }
+  75% { transform: translateX(-50%) translateX(-3px); }
+}
+
+/* ── Screen-reader only (fix #9) ──────────────────────────────── */
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .connectionLineMissing {
+    animation: none;
+  }
+
+  .connectionErrorToast {
+    animation: none;
+  }
+
+  .canvasBlock,
+  .blockCard,
+  .port,
+  .connectionLine {
+    transition: none;
+  }
+
+  .dragGhost {
+    opacity: 0.8;
+  }
+}
+
+/* ── Mobile: stack layout ───────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 2px solid var(--color-border);
+    max-height: 180px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebarLabel {
+    width: 100%;
+  }
+
+  .blockCard {
+    min-width: 140px;
+    flex-shrink: 0;
+  }
+
+  .canvasArea {
+    min-height: 300px;
+  }
+}

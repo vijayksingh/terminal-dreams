@@ -19,6 +19,8 @@
     "d3": "^7.9.0",
     "es-module-lexer": "^2.0.0",
     "framer-motion": "^12.38.0",
+    "geist": "^1.7.0",
+    "lucide-react": "^1.16.0",
     "magic-string": "^0.30.21",
     "monaco-editor": "^0.55.1",
     "motion": "^12.38.0",

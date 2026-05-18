@@ -1,0 +1,99 @@
+---
+title: "The Box Model"
+slug: box-model
+section: core-fundamentals
+stopId: core-box-model
+order: 1
+kind: article
+summary: "Every element on the web is a rectangular box. Understanding how content, padding, border, and margin compose that box is the foundation of all layout."
+tags:
+  - css
+  - layout
+  - box-model
+intersections:
+  - perf-css
+prerequisites: []
+---
+
+## Every Element Is a Box
+
+Open DevTools on any website. Hover over an element. You'll see colored rectangles: the blue content area, green padding, the border line, and orange margin pushing outward. This is the **box model** — the fundamental abstraction that every CSS layout algorithm builds on.
+
+Understanding the box model isn't just about knowing what `padding` does. It's about understanding _how the browser calculates size_, and why your element is 20 pixels wider than you expected.
+
+## The Four Layers
+
+Every element generates a box with four concentric areas:
+
+1. **Content** — the text, image, or child elements
+2. **Padding** — transparent space between content and border
+3. **Border** — the visible (or invisible) edge of the element
+4. **Margin** — transparent space _outside_ the border, pushing other elements away
+
+<BoxModelExplorer />
+
+## `box-sizing` Changes Everything
+
+The default `box-sizing: content-box` means `width` and `height` only control the content area. Padding and border are _added on top_:
+
+```css
+.box {
+  width: 200px;
+  padding: 20px;
+  border: 2px solid;
+  /* Actual rendered width: 200 + 20*2 + 2*2 = 244px */
+}
+```
+
+With `box-sizing: border-box`, the `width` includes padding and border. The content area shrinks to fit:
+
+```css
+.box {
+  box-sizing: border-box;
+  width: 200px;
+  padding: 20px;
+  border: 2px solid;
+  /* Actual rendered width: 200px (content = 156px) */
+}
+```
+
+This is why every modern reset includes:
+
+```css
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+```
+
+## Margin Collapse
+
+Margins have a behavior that surprises almost every developer at least once: **vertical margins collapse**. When two block-level elements stack vertically, their margins don't add — the larger margin wins.
+
+```
+Element A: margin-bottom: 30px
+Element B: margin-top: 20px
+──────────────────────────────
+Gap between them: 30px (not 50px)
+```
+
+Margin collapse only happens:
+- Between **block-level** elements in **normal flow**
+- On **vertical** margins (top/bottom), never horizontal (left/right)
+- When there's no padding, border, or inline content between them
+
+This interacts with the _formatting context_ — which is the topic of the next stop on this line.
+
+## Why This Matters for System Design
+
+The box model isn't just CSS trivia. It directly impacts:
+
+- **Layout performance**: changing `width` or `padding` triggers _layout recalculation_ (reflow) for the element and its descendants. We'll cover this in depth in the Rendering Cycle stop.
+- **Responsive design**: percentage-based padding/margin is always relative to the _containing block's width_ — even for vertical padding. This is the basis of aspect-ratio hacks.
+- **Scroll containers**: the difference between `clientWidth` (content + padding) and `offsetWidth` (content + padding + border) catches developers constantly when building custom scroll behaviors.
+
+## Key Takeaways
+
+1. Every element is a box with content, padding, border, and margin layers
+2. `border-box` makes sizing predictable — always use it
+3. Vertical margins collapse; horizontal margins never do
+4. Size changes trigger reflow — a performance concern for animations

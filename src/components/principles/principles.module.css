@@ -1,0 +1,163 @@
+/* ── Principle page: hybrid retro/editorial identity ─────────── */
+
+/* Editorial title — Fraunces display font */
+.principleTitle {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0 0 var(--space-2) 0;
+}
+
+/* Summary below title — Inter body font */
+.summary {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-4) 0;
+}
+
+/* Meta bar: categories + read time — retro mono */
+.metaBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+/* ── Category chips ─────────────────────────────────────────── */
+
+.categoryChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.15em 0.5em;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  border: 1px solid;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.categoryChip:hover {
+  opacity: 0.8;
+}
+
+.chipDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Related principles cards ───────────────────────────────── */
+
+.relatedSection {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.relatedTitle {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.relatedCard {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-4);
+  text-decoration: none;
+  display: block;
+  transition: border-color 0.15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .relatedCard:hover {
+    border-color: var(--color-accent);
+  }
+}
+
+@media (hover: none) {
+  .relatedCard:active {
+    border-color: var(--color-accent);
+  }
+}
+
+.relatedCardTitle {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.relatedCardSummary {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Prev/next nav ──────────────────────────────────────────── */
+
+.prevNextNav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+  margin-bottom: var(--space-4);
+}
+
+.prevNextLink {
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.prevNextLink:hover {
+  color: var(--color-accent);
+}
+
+/* ── Editorial content overrides ────────────────────────────── */
+/* Applied inside principle pages to shift from mono to editorial */
+
+.editorialContent h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.editorialContent h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.editorialContent p,
+.editorialContent li {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.9;
+}

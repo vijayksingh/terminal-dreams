@@ -33,6 +33,8 @@ export function RetroHeader({ showAboutCard = false }: RetroHeaderProps) {
   const theme = useTheme();
   const items = [
     { label: "~/archive", href: "/blog" },
+    { label: "~/principles", href: "/principles" },
+    { label: "~/frontend-design", href: "/frontend-design" },
     { label: "~/playground", href: "/playground" },
     { label: "~/about", href: "/about" },
     { label: "~/guestbook", href: "/guestbook" },

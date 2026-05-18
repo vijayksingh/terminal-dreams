@@ -1,0 +1,1369 @@
+/* ── ImageGalleryLab ─────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Step indicator bar ────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 3px;
+  transition: all 200ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-9);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  font-weight: 700;
+}
+
+/* ── Scroll area ────────────────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Section headings ───────────────────────────────────────────── */
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-3) 0 var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading:first-child {
+  margin-top: 0;
+}
+
+/* ── Planning panel ─────────────────────────────────────────────── */
+
+.planningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Step 1: Requirements checklist ─────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.checkItem:hover {
+  border-color: var(--diagram-layer-9);
+}
+
+.checkItem[data-checked="true"] {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
+}
+
+.checkToggle {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  transition: all 150ms ease;
+  color: transparent;
+}
+
+.checkItem[data-checked="true"] .checkToggle {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+  color: var(--color-bg);
+}
+
+.checkLabel {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.checkDesc {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.scopeSummary {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.scopeLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+.scopeValue {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ── Panel tabs ────────────────────────────────────────────────── */
+
+.panelTabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+
+.panelTab {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.panelTab[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+}
+
+/* ── Endpoint cards ────────────────────────────────────────────── */
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+  text-align: left;
+}
+
+.endpointCard:hover,
+.endpointCard[data-expanded="true"] {
+  border-color: var(--diagram-layer-9);
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.methodBadge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.methodBadge[data-method="GET"] {
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));
+  color: var(--color-success);
+}
+
+.methodBadge[data-method="POST"] {
+  background: color-mix(in srgb, var(--diagram-layer-9) 15%, var(--color-surface));
+  color: var(--diagram-layer-9);
+}
+
+.methodBadge[data-method="DELETE"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  color: var(--color-error);
+}
+
+.endpointPath {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.endpointChevron {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.endpointDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.endpointUsedBy {
+  font-size: 0.6rem;
+  color: var(--diagram-layer-9);
+  opacity: 0.7;
+}
+
+.endpointDetail {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointDetailLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.paramGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paramRow {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr;
+  gap: var(--space-2);
+  padding: 3px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.62rem;
+  align-items: center;
+}
+
+.paramName {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.paramType {
+  font-family: var(--font-mono);
+  color: var(--diagram-layer-5);
+}
+
+.paramNote {
+  color: var(--color-muted);
+}
+
+.responseType {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--diagram-layer-9);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--diagram-layer-9);
+  border-radius: var(--radius-1);
+  display: inline-block;
+}
+
+/* ── Architecture SVG diagram ──────────────────────────────────── */
+
+.archDiagramWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.archSvg {
+  width: 100%;
+  height: auto;
+  max-height: 340px;
+}
+
+.archNodeLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.archNodeDetail {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  fill: var(--color-muted);
+}
+
+.archEdgeLabel {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: var(--color-text);
+  transition: opacity 200ms ease;
+}
+
+.archLegendText {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  fill: var(--color-muted);
+}
+
+.archHint {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Data model cards ──────────────────────────────────────────── */
+
+.modelFilters {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.modelFilterBtn {
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.modelFilterBtn[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+}
+
+.typeCardGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.typeCard {
+  border: 1px solid var(--color-border);
+  border-top: 3px solid;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.typeCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.typeCardName {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.typeCardCategory {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.typeCardExtends {
+  padding: 3px var(--space-3);
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.typeCardExtends span {
+  font-weight: 600;
+  color: var(--diagram-layer-5);
+}
+
+.typeCardFields {
+  display: flex;
+  flex-direction: column;
+}
+
+.typeFieldRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 3px var(--space-3);
+  font-size: 0.62rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.typeFieldRow:last-child {
+  border-bottom: none;
+}
+
+.typeFieldName {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 80px;
+}
+
+.typeFieldType {
+  font-family: var(--font-mono);
+  color: var(--diagram-layer-5);
+  flex-shrink: 0;
+}
+
+.typeFieldNote {
+  color: var(--color-muted);
+  font-size: 0.55rem;
+  margin-left: auto;
+}
+
+/* ── Metrics bar ───────────────────────────────────────────────── */
+
+.metricsBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.metricCard {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  margin-bottom: 2px;
+}
+
+.metricValue {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  transition: color 300ms ease;
+}
+
+.metricValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.metricValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.metricValue[data-status="neutral"] {
+  color: var(--color-text);
+}
+
+/* ── Step message ──────────────────────────────────────────────── */
+
+.stepMessage {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-surface));
+  border-radius: 0 var(--radius-1) var(--radius-1) 0;
+  font-size: 0.75rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.stepMessage[data-severity="warning"] {
+  border-left-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 5%, var(--color-surface));
+}
+
+/* ── Gallery grid ──────────────────────────────────────────────── */
+
+.galleryContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: var(--color-bg);
+  position: relative;
+}
+
+.galleryScroll {
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-2);
+  position: relative;
+}
+
+.uniformGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.cssColumnsGrid {
+  columns: 3;
+  column-gap: 4px;
+}
+
+.cssColumnsGrid > * {
+  break-inside: avoid;
+  margin-bottom: 4px;
+}
+
+.cssGridMasonry {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 8px;
+  gap: 4px;
+}
+
+/* ── Image card ────────────────────────────────────────────────── */
+
+.imageCard {
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.imageCard:hover {
+  transform: scale(1.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.imageCardInner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageCardImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.imageCardBlurFill {
+  width: 100%;
+  height: 100%;
+  filter: blur(6px) brightness(0.7);
+}
+
+.imageCardFill {
+  width: 100%;
+  height: 100%;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.imageCardIndex {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.imageCardPending {
+  width: 100%;
+  height: 100%;
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border);
+}
+
+.imageCardPlaceholder {
+  width: 100%;
+  height: 100%;
+  filter: blur(4px) saturate(0.6);
+  animation: placeholderShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes placeholderShimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.imageCardError {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+/* ── IO viewport band ──────────────────────────────────────────── */
+
+.ioViewportBand {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
+  border-top: 2px solid var(--diagram-layer-9);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.ioLabel {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--diagram-layer-9);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ioRootMargin {
+  font-size: 0.55rem;
+  color: var(--diagram-layer-9);
+  opacity: 0.7;
+}
+
+/* ── Feature toggle strip ──────────────────────────────────────── */
+
+.toggleStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.toggleLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.toggleButton {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-2);
+  cursor: pointer;
+  position: relative;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.toggleButton[data-on="true"] {
+  border-color: var(--color-success);
+  background: var(--color-success);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition: transform 150ms ease;
+}
+
+.toggleButton[data-on="true"] .toggleKnob {
+  transform: translateX(16px);
+  background: var(--color-bg);
+}
+
+.toggleImpact {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  padding: 0 var(--space-3);
+  line-height: 1.5;
+}
+
+.toggleImpact strong[data-status="good"] {
+  color: var(--color-success);
+}
+
+.toggleImpact strong[data-status="bad"] {
+  color: var(--color-error);
+}
+
+/* ── Layout mode selector ──────────────────────────────────────── */
+
+.layoutModes {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.layoutModeButton {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.layoutModeButton[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+}
+
+/* ── Responsive controls ───────────────────────────────────────── */
+
+.responsiveControls {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.responsiveSelect {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.responsiveSelectLabel {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.responsiveSelectGroup {
+  display: flex;
+  gap: 2px;
+}
+
+.responsiveOption {
+  flex: 1;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.responsiveOption[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
+}
+
+.responsiveStats {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.responsiveStat {
+  flex: 1;
+  text-align: center;
+}
+
+.responsiveStatValue {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.responsiveStatLabel {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+/* ── Scale controls ────────────────────────────────────────────── */
+
+.scaleControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.scaleSliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scaleSliderLabel {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.scaleSliderValue {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--diagram-layer-9);
+  font-family: var(--font-mono);
+}
+
+.scaleSliderInput {
+  width: 100%;
+  accent-color: var(--diagram-layer-9);
+  cursor: pointer;
+}
+
+.scaleMarks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.55rem;
+  color: var(--color-muted);
+}
+
+.paginationToggle {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ── Widget panels (below gallery) ─────────────────────────────── */
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--diagram-layer-9);
+}
+
+.widgetNote {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.widgetNote strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ── Step 5: Breakdown grid ────────────────────────────────────── */
+
+.breakdownGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.breakdownItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+}
+
+.breakdownValue {
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.breakdownValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.breakdownLabel {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+/* ── Step 6: CLS meter ─────────────────────────────────────────── */
+
+.clsMeter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.clsTrack {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.clsFill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 400ms ease, background 400ms ease;
+}
+
+.clsLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.55rem;
+  color: var(--color-muted);
+  position: relative;
+}
+
+/* ── Step 8: IO diagram ────────────────────────────────────────── */
+
+.ioDiagram {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.ioRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.7rem;
+  color: var(--color-text);
+}
+
+.ioDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ioDot[data-state="loaded"] {
+  background: var(--color-success);
+}
+
+.ioDot[data-state="pending"] {
+  background: var(--color-muted);
+  opacity: 0.4;
+}
+
+/* ── Step 9: Placeholder demo ──────────────────────────────────── */
+
+.placeholderDemo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.placeholderStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.placeholderBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.placeholderBox[data-state="pending"] {
+  background: var(--color-surface-2);
+  border-style: dashed;
+}
+
+.placeholderBox[data-state="empty"] {
+  background: var(--color-surface-2);
+}
+
+.placeholderBox[data-state="blur"] {
+  background: oklch(50% 0.08 200);
+  filter: blur(3px) saturate(0.5);
+}
+
+.placeholderBox[data-state="loaded"] {
+  background: oklch(55% 0.18 200);
+}
+
+.placeholderArrow {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+/* ── Step 10: DOM window strip ─────────────────────────────────── */
+
+.domStrip {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.domDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--color-surface-2);
+  transition: background 200ms ease;
+}
+
+.domDot[data-active="true"] {
+  background: var(--diagram-layer-9);
+}
+
+.domStripLegend {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.domStripLegend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ── Step 14: State machine ────────────────────────────────────── */
+
+.errorStateMachine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2);
+}
+
+.stateNode {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  color: var(--color-text);
+}
+
+.stateNode[data-error="true"] {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+/* ── CWV gauges ────────────────────────────────────────────────── */
+
+.gaugeRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.gauge {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  text-align: center;
+}
+
+.gaugeLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.gaugeBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-surface-2);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.gaugeFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 300ms ease, background 300ms ease;
+}
+
+.gaugeValue {
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ── Lightbox ──────────────────────────────────────────────────── */
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+}
+
+.lightboxInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lightboxContent {
+  position: relative;
+  width: 80%;
+  max-width: 500px;
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+
+.lightboxImg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
+}
+
+.lightboxControls {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.lightboxButton {
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.lightboxButton[data-focused="true"] {
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
+}
+
+.lightboxButton:hover {
+  border-color: var(--diagram-layer-9);
+}
+
+/* ── Focus trap + a11y ─────────────────────────────────────────── */
+
+.focusTrap {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.focusTrap strong {
+  color: var(--diagram-layer-9);
+  font-weight: 600;
+}
+
+.kbdHints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.kbdHint {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.kbdHint kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--color-text);
+  margin: 0 2px;
+}
+
+.a11yPanel {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-size: 0.65rem;
+}
+
+.a11yPanelLabel {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  margin-bottom: 4px;
+}
+
+.a11yPanelText {
+  color: var(--diagram-layer-9);
+  font-weight: 500;
+}
+
+/* ── Shared message box ────────────────────────────────────────── */
+
+.messageBox {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-surface));
+  border-radius: 0 var(--radius-1) var(--radius-1) 0;
+  font-size: 0.7rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .imageCard:hover {
+    transform: none;
+  }
+
+  .toggleKnob {
+    transition: none;
+  }
+
+  .gaugeFill,
+  .clsFill {
+    transition: none;
+  }
+
+  .imageCardPlaceholder {
+    animation: none;
+    opacity: 0.5;
+  }
+}

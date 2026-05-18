@@ -14,9 +14,11 @@ export type CommandPalettePost = {
 
 type CommandPaletteProps = {
   posts: CommandPalettePost[];
+  principles?: CommandPalettePost[];
+  frontendDesign?: CommandPalettePost[];
 };
 
-export default function CommandPalette({ posts }: CommandPaletteProps) {
+export default function CommandPalette({ posts, principles = [], frontendDesign = [] }: CommandPaletteProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -86,6 +88,38 @@ export default function CommandPalette({ posts }: CommandPaletteProps) {
             </Command.Item>
           ))}
         </Command.Group>
+
+        {principles.length > 0 && (
+          <Command.Group heading="Principles" className={styles.group}>
+            {principles.map((p) => (
+              <Command.Item
+                key={p.slug}
+                value={`${p.title} ${p.slug} ${p.category ?? ""} principle`}
+                onSelect={() => go(`/principles/${p.slug}`)}
+                className={styles.item}
+              >
+                <span className={styles.itemLabel}>{p.title}</span>
+                <span className={styles.itemHint}>/principles/{p.slug}</span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
+
+        {frontendDesign.length > 0 && (
+          <Command.Group heading="Frontend Design" className={styles.group}>
+            {frontendDesign.map((p) => (
+              <Command.Item
+                key={p.slug}
+                value={`${p.title} ${p.slug} ${p.category ?? ""} frontend design`}
+                onSelect={() => go(`/frontend-design/${p.slug}`)}
+                className={styles.item}
+              >
+                <span className={styles.itemLabel}>{p.title}</span>
+                <span className={styles.itemHint}>/frontend-design/{p.slug}</span>
+              </Command.Item>
+            ))}
+          </Command.Group>
+        )}
 
         <Command.Group heading="Posts" className={styles.group}>
           {posts.map((post) => (

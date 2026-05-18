@@ -1,0 +1,373 @@
+/* ── Scrollable curriculum page ───────────────────────────────── */
+
+.page {
+  min-height: 100dvh;
+  background: var(--color-bg);
+  padding: 40px 40px 160px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ── Breadcrumb ──────────────────────────────────────────────── */
+
+.breadcrumb {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  margin-bottom: 60px;
+}
+
+.breadcrumbLink {
+  color: var(--color-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.breadcrumbLink:hover {
+  color: var(--color-accent);
+}
+
+.breadcrumbSlash {
+  color: var(--color-border);
+  margin: 0 2px;
+}
+
+.breadcrumbCurrent {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────── */
+
+.hero {
+  margin-bottom: 80px;
+}
+
+.heroTitle {
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  margin: 0 0 16px 0;
+}
+
+.heroSub {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+  margin: 0 0 28px 0;
+  letter-spacing: 0.01em;
+}
+
+.heroDots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.heroDot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.heroDot:hover {
+  opacity: 0.7;
+}
+
+.heroDotCircle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.heroDotLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+}
+
+.heroProgress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.heroProgressBar {
+  width: 120px;
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.heroProgressFill {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.heroProgressText {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Section list ────────────────────────────────────────────── */
+
+.sectionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Section card ────────────────────────────────────────────── */
+
+.sectionCard {
+  border-left: 4px solid;
+  padding: 0 0 48px 28px;
+  margin-bottom: 48px;
+}
+
+.sectionCard:last-child {
+  margin-bottom: 0;
+}
+
+.sectionHead {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.sectionNumber {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionName {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0 0 6px 0;
+}
+
+.sectionDesc {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* ── Stop grid ───────────────────────────────────────────────── */
+
+.stopGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stopLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-muted);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.stopLink:hover {
+  border-color: var(--stop-color);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.stopDone {
+  border-color: var(--stop-color);
+  color: var(--color-text);
+}
+
+.stopCheck {
+  margin-right: 5px;
+  color: var(--stop-color);
+  font-weight: 700;
+}
+
+.stopKindPrefix {
+  margin-right: 4px;
+  opacity: 0.5;
+  font-size: 10px;
+}
+
+/* ── Section progress ────────────────────────────────────────── */
+
+.sectionProgress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sectionProgressBar {
+  width: 80px;
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sectionProgressFill {
+  display: block;
+  height: 100%;
+  background: var(--bar-color);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.sectionProgressText {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Article page styles ─────────────────────────────────────── */
+
+.articleTitle {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-text);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.articleSummary {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-muted);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.metaBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.sectionChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0.15em 0.5em;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  border: 1px solid;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.sectionChip:hover {
+  opacity: 0.8;
+}
+
+.chipDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Editorial content overrides ─────────────────────────────── */
+
+.editorialContent h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.editorialContent h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.editorialContent p,
+.editorialContent li {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.9;
+}
+
+/* ── Mobile responsive ───────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 20px 80px;
+  }
+
+  .breadcrumb {
+    margin-bottom: 32px;
+  }
+
+  .hero {
+    margin-bottom: 48px;
+  }
+
+  .heroTitle {
+    font-size: 2rem;
+  }
+
+  .sectionCard {
+    padding-left: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 32px;
+  }
+
+  .sectionHead {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sectionNumber {
+    font-size: 32px;
+  }
+
+  .sectionName {
+    font-size: 1.2rem;
+  }
+
+  .stopLink {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+}

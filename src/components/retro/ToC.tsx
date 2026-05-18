@@ -22,10 +22,19 @@ function collectHeadings(): HTMLElement[] {
 }
 
 function ensureHeadingIds(elements: HTMLElement[]) {
+  const seen = new Set<string>();
   elements.forEach((element) => {
     if (!element.id) {
       element.id = slugify(element.innerText);
     }
+    let id = element.id;
+    if (seen.has(id)) {
+      let n = 2;
+      while (seen.has(`${id}-${n}`)) n++;
+      id = `${id}-${n}`;
+      element.id = id;
+    }
+    seen.add(id);
   });
 }
 

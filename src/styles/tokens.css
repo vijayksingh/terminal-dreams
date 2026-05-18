@@ -103,12 +103,29 @@
   --diagram-layer-2: oklch(65% 0.15 300);
   --diagram-layer-3: oklch(65% 0.15 60);
   --diagram-layer-4: oklch(65% 0.15 30);
+  --diagram-layer-5: oklch(65% 0.15 170);
+  --diagram-layer-6: oklch(65% 0.15 350);
+  --diagram-layer-7: oklch(65% 0.15 90);
+  --diagram-layer-8: oklch(65% 0.15 0);
+  --diagram-layer-9: oklch(65% 0.15 260);
+
+  /* Map-specific tokens */
+  --map-glow: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 20px currentColor);
+  --map-dim: 0.08;
+  --map-track-glow-opacity: 0.15;
+  --map-stop-ring: oklch(94% 0.006 262);
+  --map-intersection-opacity: 0.15;
+  --map-intersection-active: 0.60;
+  --glass-bg: oklch(13% 0.01 250 / 0.78);
+  --glass-border: oklch(40% 0.01 250 / 0.25);
 
   /* Feedback tokens */
   --color-error: oklch(65% 0.2 25);
   --color-error-muted: oklch(30% 0.06 25 / 0.4);
   --color-success: oklch(60% 0.18 140);
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
+  --color-warning: oklch(70% 0.18 80);
+  --color-warning-muted: oklch(30% 0.04 80 / 0.3);
 }
 
 /* ── Dark theme (explicit) ─────────────────────────────────────── */
@@ -162,10 +179,17 @@
   --diagram-layer-2: oklch(65% 0.15 300);
   --diagram-layer-3: oklch(65% 0.15 60);
   --diagram-layer-4: oklch(65% 0.15 30);
+  --diagram-layer-5: oklch(65% 0.15 170);
+  --diagram-layer-6: oklch(65% 0.15 350);
+  --diagram-layer-7: oklch(65% 0.15 90);
+  --diagram-layer-8: oklch(65% 0.15 0);
+  --diagram-layer-9: oklch(65% 0.15 260);
   --color-error: oklch(65% 0.2 25);
   --color-error-muted: oklch(30% 0.06 25 / 0.4);
   --color-success: oklch(60% 0.18 140);
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
+  --color-warning: oklch(70% 0.18 80);
+  --color-warning-muted: oklch(30% 0.04 80 / 0.3);
 }
 
 /* ── Light theme ─────────────────────────────────────────────── */
@@ -214,15 +238,32 @@
   --cookbook-timer-warning: oklch(74.12% 0.181 60);
   --cookbook-timer-done: oklch(52.84% 0.117 170);
 
-  --diagram-layer-0: oklch(45% 0.15 200);
-  --diagram-layer-1: oklch(45% 0.15 140);
-  --diagram-layer-2: oklch(45% 0.15 300);
-  --diagram-layer-3: oklch(45% 0.15 60);
-  --diagram-layer-4: oklch(45% 0.15 30);
+  --diagram-layer-0: oklch(55% 0.22 225);
+  --diagram-layer-1: oklch(55% 0.21 150);
+  --diagram-layer-2: oklch(55% 0.22 290);
+  --diagram-layer-3: oklch(68% 0.18 78);
+  --diagram-layer-4: oklch(65% 0.20 42);
+  --diagram-layer-5: oklch(55% 0.18 180);
+  --diagram-layer-6: oklch(62% 0.22 350);
+  --diagram-layer-7: oklch(58% 0.19 140);
+  --diagram-layer-8: oklch(60% 0.24 25);
+  --diagram-layer-9: oklch(50% 0.22 268);
+
+  --map-glow: drop-shadow(0 0 3px currentColor);
+  --map-dim: 0.18;
+  --map-track-glow-opacity: 0.08;
+  --map-stop-ring: oklch(20% 0.01 262);
+  --map-intersection-opacity: 0.12;
+  --map-intersection-active: 0.50;
+  --glass-bg: oklch(99% 0.003 250 / 0.72);
+  --glass-border: oklch(70% 0.005 250 / 0.25);
+
   --color-error: oklch(50% 0.2 25);
   --color-error-muted: oklch(92% 0.04 25 / 0.6);
   --color-success: oklch(45% 0.18 140);
   --color-success-muted: oklch(92% 0.04 140 / 0.6);
+  --color-warning: oklch(68% 0.18 80);
+  --color-warning-muted: oklch(92% 0.04 80 / 0.6);
 }
 
 /* ── System preference fallback ──────────────────────────────── */
@@ -272,14 +313,31 @@
     --cookbook-timer-warning: oklch(74.12% 0.181 60);
     --cookbook-timer-done: oklch(52.84% 0.117 170);
 
-    --diagram-layer-0: oklch(45% 0.15 200);
-    --diagram-layer-1: oklch(45% 0.15 140);
-    --diagram-layer-2: oklch(45% 0.15 300);
-    --diagram-layer-3: oklch(45% 0.15 60);
-    --diagram-layer-4: oklch(45% 0.15 30);
+    --diagram-layer-0: oklch(55% 0.22 225);
+    --diagram-layer-1: oklch(55% 0.21 150);
+    --diagram-layer-2: oklch(55% 0.22 290);
+    --diagram-layer-3: oklch(68% 0.18 78);
+    --diagram-layer-4: oklch(65% 0.20 42);
+    --diagram-layer-5: oklch(55% 0.18 180);
+    --diagram-layer-6: oklch(62% 0.22 350);
+    --diagram-layer-7: oklch(58% 0.19 140);
+    --diagram-layer-8: oklch(60% 0.24 25);
+    --diagram-layer-9: oklch(50% 0.22 268);
+
+    --map-glow: drop-shadow(0 0 3px currentColor);
+    --map-dim: 0.18;
+    --map-track-glow-opacity: 0.08;
+    --map-stop-ring: oklch(20% 0.01 262);
+    --map-intersection-opacity: 0.12;
+    --map-intersection-active: 0.50;
+    --glass-bg: oklch(99% 0.003 250 / 0.72);
+    --glass-border: oklch(70% 0.005 250 / 0.25);
+
     --color-error: oklch(50% 0.2 25);
     --color-error-muted: oklch(92% 0.04 25 / 0.6);
     --color-success: oklch(45% 0.18 140);
     --color-success-muted: oklch(92% 0.04 140 / 0.6);
+    --color-warning: oklch(68% 0.18 80);
+    --color-warning-muted: oklch(92% 0.04 80 / 0.6);
   }
 }

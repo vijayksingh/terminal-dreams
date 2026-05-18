@@ -1,0 +1,123 @@
+/* ── Knowledge graph ─────────────────────────────────────────── */
+
+.graphContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .graphContainer {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.graphSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Nodes ──────────────────────────────────────────────────── */
+
+.nodeGroup {
+  cursor: pointer;
+}
+
+.nodeGroup:focus-visible {
+  outline: none;
+}
+
+.nodeGroup:focus-visible .nodeCircle {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+
+.nodeCircle {
+  transition: r 0.2s, opacity 0.3s;
+}
+
+.nodeLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--color-text);
+  text-anchor: middle;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+/* ── Edges ──────────────────────────────────────────────────── */
+
+.edge {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  transition: opacity 0.3s;
+}
+
+/* ── Tooltip ────────────────────────────────────────────────── */
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  max-width: 260px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.tooltipTitle {
+  color: var(--color-text);
+  font-weight: 600;
+  margin: 0 0 var(--space-1) 0;
+}
+
+.tooltipSummary {
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Dimming for category filter ────────────────────────────── */
+
+.dimmed {
+  opacity: 0.12;
+}
+
+.edgeDimmed {
+  opacity: 0.05;
+}
+
+/* ── Mobile fallback list ───────────────────────────────────── */
+
+.mobileList {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+@media (max-width: 480px) {
+  .graphContainer {
+    display: none;
+  }
+  .mobileList {
+    display: flex;
+  }
+}
+
+.mobileItem {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  text-decoration: none;
+  display: block;
+}
+
+.mobileItem:hover {
+  border-color: var(--color-accent);
+}

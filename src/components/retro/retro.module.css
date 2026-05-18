@@ -15,7 +15,11 @@
 
 @media (max-width: 768px) {
   .tocAsideStickyBottom { display: none; }
-  .postLayout { grid-template-columns: 1fr; }
+  .postLayout {
+    grid-template-columns: 1fr;
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-5);
+  }
 }
 
 .toc {
@@ -41,6 +45,14 @@
 
 .postContent {
   background: transparent;
+}
+
+.tocMobileBottom {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .tocMobileBottom { display: block; }
 }
 @keyframes flicker {
   0%, 100% { opacity: 1; }
@@ -111,6 +123,10 @@
   pointer-events: none;
   z-index: 2;
   will-change: transform;
+}
+
+@media (hover: none) {
+  .cursorGlow { display: none; }
 }
 
 :global([data-theme="light"]) .cursorGlow {
@@ -247,10 +263,24 @@
 @media (max-width: 768px) {
   .main {
     grid-template-columns: 1fr;
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-4);
   }
   .sidebar {
     position: static;
   }
+  .article { padding: var(--space-4); }
+  .postTitle { font-size: 1.4rem; }
+  .content h1 { font-size: 1.4rem; }
+  .content h2 { font-size: 1.15rem; }
+  .content h3 { font-size: 1rem; }
+  .content { font-size: 1rem; }
+  .statusRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .statusRow dt { grid-row: auto; }
+  .statusRow dd { grid-row: auto; }
+  .widget { padding: var(--space-4); }
 }
 
 .article {
@@ -625,6 +655,21 @@
   .headerGrid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 768px) {
+  .header { padding: var(--space-5) 0; }
+  .headerInner { padding: 0 var(--space-4); }
+  .ascii { display: none; }
+  .title { font-size: 1.6rem; }
+  .navList { gap: 0.5rem; }
+  .navLink { padding: 0.4rem 0.7rem; font-size: var(--text-xs); }
+  .aboutCard {
+    padding: var(--space-3);
+    margin-top: var(--space-4);
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .navLink:hover {
     border-color: var(--color-border);
@@ -647,6 +692,27 @@
   .backLinkInline:hover {
     color: var(--color-text);
     text-decoration: underline;
+  }
+}
+
+/* Touch feedback for non-hover devices */
+@media (hover: none) {
+  .navLink:active {
+    background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+    border-color: var(--color-muted);
+  }
+
+  .article:active {
+    border-color: var(--color-muted);
+  }
+
+  .listItem:active {
+    color: var(--color-text);
+  }
+
+  .aboutLink:active,
+  .backLinkInline:active {
+    color: var(--color-text);
   }
 }
 

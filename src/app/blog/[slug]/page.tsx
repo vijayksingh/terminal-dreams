@@ -56,6 +56,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               />
             </div>
           </article>
+          <div className={styles.tocMobileBottom}>
+            <ToC variant="bottom" />
+          </div>
         </main>
       </div>
       <RetroFooter />

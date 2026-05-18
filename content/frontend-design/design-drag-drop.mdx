@@ -1,0 +1,88 @@
+---
+title: "Design a Drag & Drop System"
+slug: design-drag-drop
+section: system-design-problems
+stopId: sdp-drag-drop
+order: 2
+kind: system-design-problem
+summary: "Design drag-and-drop with pointer events, 2D hit testing, keyboard accessibility, and nested sortables"
+tags:
+  - system-design
+  - drag-drop
+  - pointer-events
+  - accessibility
+  - hit-testing
+intersections:
+  - core-render-cycle
+  - dom-refresher
+  - api-intersection
+prerequisites: []
+---
+
+## Why Drag-and-Drop Is Harder Than It Looks
+
+Every developer has dragged a `<div>` across a screen and thought "this is easy." Then they ship it and the bug reports start: cards flicker on fast swipes, touch users can't scroll, keyboard users can't participate at all, and dropping onto a nested sortable puts the item in the wrong list.
+
+The HTML5 Drag and Drop API was designed for file uploads and inter-window transfers — not for smooth in-page reordering. Its events fire inconsistently across browsers, it provides no ghost customization, and it has zero keyboard support. Every serious drag-and-drop library (dnd-kit, react-beautiful-dnd, Atlassian's Pragmatic drag-and-drop) bypasses it entirely and builds on top of pointer events.
+
+A production drag-and-drop system solves three hard problems simultaneously: **pointer tracking** (converting raw events into a smooth drag gesture), **2D hit testing** (figuring out which drop zone the pointer is over, and where in that zone the item should land), and **accessible reordering** (providing an equivalent keyboard/screen reader experience that doesn't rely on pointing).
+
+## Phase 1: Architecture Overview
+
+A well-structured drag-and-drop system decomposes into six collaborating modules:
+
+**PointerTracker** — Captures `pointerdown`, `pointermove`, and `pointerup` events. Uses `setPointerCapture` to ensure the drag handle receives all subsequent pointer events even if the cursor leaves the element. Tracks accumulated distance to distinguish a click from a drag (activation threshold of ~5px prevents accidental drags). Normalizes touch and mouse input into a single coordinate stream.
+
+**HitTester** — On every `pointermove`, checks the pointer position against the bounding rectangles of all registered drop zones. For vertical sorting within a column, it compares the pointer Y against each card's midpoint to determine the insertion index. For cross-column movement, it first identifies which column the pointer is over (horizontal bounding rect), then runs the vertical insertion logic within that column. This two-pass strategy (column first, card index second) keeps the hit testing O(columns + cards) rather than O(total cards).
+
+**GhostRenderer** — Creates a semi-transparent visual copy of the dragged card that follows the pointer. Positioned with `position: fixed` and updated via `transform: translate()` on each pointer move — never via `top`/`left` to avoid triggering layout. The ghost is rendered outside the normal flow to prevent it from affecting other elements' positions.
+
+**AnimationOrchestrator** — When the drop target changes, animates surrounding cards to make space for the incoming item. Uses CSS transforms exclusively (translate, scale) — never changes width, height, or DOM order during the drag. The actual DOM reorder happens only on drop, in a single synchronous state update.
+
+**DropZoneManager** — Registers and unregisters drop zones as they mount/unmount. Maintains a map of zone IDs to their DOM refs and metadata (accepted types, sort direction). Fires visual feedback (border glow, placeholder insertion) when a zone becomes the active drop target.
+
+**KeyboardAdapter** — Provides a parallel interaction path: Tab to focus a card, Space to grab, arrow keys to move (up/down within column, left/right across columns), Space to drop, Escape to cancel. Maintains an `aria-live="assertive"` region that announces every state change ("Grabbed task. Use arrow keys to move."). This is not a degraded experience — it's a first-class interaction mode.
+
+<DragDropDemo />
+
+## Phase 2: What the Demo Teaches
+
+The Trello-style board above demonstrates the core mechanics. Switch between the three tabs to explore different facets of the system:
+
+**The Board tab** shows the full pointer-driven experience. Notice how the ghost element is slightly rotated and scaled — a small visual cue that communicates "this item is being moved" without obscuring the drop target beneath it. The colored left borders on each card persist during the drag, maintaining visual identity. Drop zone highlighting (the indigo border glow) provides immediate feedback about which column will receive the card.
+
+**The Events tab** reveals the pointer event sequence that drives the entire system. A single drag gesture generates one `pointerdown`, many `pointermove` events (often 60+ per second), and one `pointerup`. The accumulated distance counter shows how `pointermove` coordinates translate into displacement. Notice that `pointercancel` fires when the browser interrupts the gesture (e.g., a system dialog appears). A robust system must handle cancellation gracefully — restoring the card to its original position without animation glitches.
+
+**The Keyboard tab** demonstrates accessible reordering. The interaction is deterministic and audible: every arrow key press produces an announcement, every grab and drop is confirmed. This mode uses `role="listbox"` with `role="option"` children, and `aria-selected` to indicate the grabbed state. The `aria-live="assertive"` region ensures screen readers interrupt their current speech to announce the move.
+
+The demo uses `setPointerCapture` on the card element during `pointerdown`. This is critical: without pointer capture, fast mouse movement can cause the pointer to leave the card element, and subsequent `pointermove` events would fire on whatever element is under the cursor instead. Pointer capture guarantees all events route to the original target until `pointerup` or explicit release.
+
+Hit testing runs on every `pointermove` by comparing `clientX`/`clientY` against column bounding rects. The demo caches all bounding rects at drag start (when the activation threshold is crossed) and reuses them for every subsequent `pointermove` — since cards reposition via CSS transforms rather than DOM mutations, the cached rects stay valid for the entire gesture. For the insertion index, each card's midpoint is computed from the cached rect — if the pointer is above the midpoint, the insertion happens before that card. This midpoint strategy produces intuitive behavior: you drag "past" a card to move below it. Phase 3 below explores how this caching approach scales to boards with hundreds of cards.
+
+## Phase 3: Scaling Scenarios
+
+When an interviewer pushes past the basic implementation, three scenarios reveal architectural depth:
+
+### Nested Sortables with 500+ Cards
+
+A kanban board with 50 columns and 10 cards each. Naive hit testing (checking every card on every `pointermove`) runs 500 bounding rect calculations 60 times per second — that's 30,000 `getBoundingClientRect` calls per second, each of which can force a layout reflow if the DOM is dirty. The fix: **spatial indexing**. The demo already implements the first layer of this optimisation — it caches all column and card bounding rects at drag start and uses the cached values for every subsequent hit test. Since the demo repositions cards via CSS transforms (not DOM reorders), the cached rects stay valid for the entire gesture. At production scale, you'd take this further: organize cached rects into a column-first lookup with binary search within each column's sorted Y-coordinates for O(log cards) per event instead of O(cards). For deeply nested sortables (lists within lists), maintain a tree of drop zones and walk it top-down, checking containment at each level.
+
+### Touch Conflicts on Scrollable Containers
+
+On mobile, a vertical drag and a vertical scroll are the same gesture. The solution is a **drag activation delay**: require the pointer to move 5-10px before starting the drag, and check the direction of that initial movement. If the movement is primarily vertical on a vertically-scrolling container, let the scroll happen. If it's horizontal (or if the user holds for 200ms before moving), activate the drag. Use `touch-action: none` on the drag handle (not the entire card) to prevent the browser's default touch behavior only on the interactive element. This preserves scroll on the card body while enabling drag on the handle.
+
+### Animation Jank During Drop
+
+When a card drops into its new position, the naive approach is: update state (which triggers a React re-render), then let the browser figure out the layout. This causes a visible jump — the card teleports from the ghost position to its final slot. The demo sidesteps this for the during-drag phase by using CSS transforms for card shuffling and a single synchronous state update on drop. For a fully polished drop animation, the production technique is the **FLIP technique** (First, Last, Invert, Play): record the card's position before the state update (First), update state and let React re-render (Last), calculate the difference (Invert — apply a transform that makes the card appear in its old position), then animate to `transform: none` (Play). All transforms happen on the compositor thread, so the animation runs at 60fps even during the React reconciliation.
+
+## Key Takeaways
+
+**Use pointer events, not HTML5 drag-and-drop.** Pointer events give you full control over the gesture lifecycle, work identically for mouse and touch, and allow custom ghost rendering. The HTML5 API provides none of this.
+
+**Hit testing is the architectural core.** The difference between a janky and a polished drag-and-drop is how efficiently and accurately you determine "where will this item land?" Invest in spatial indexing and midpoint-based insertion.
+
+**Keyboard access is not optional.** WCAG 2.1 requires all functionality to be operable via keyboard. Drag-and-drop without keyboard support is an accessibility violation. Design the keyboard interaction as a first-class mode with its own state machine, not as an afterthought bolted onto pointer logic.
+
+**Animate with transforms, reorder on drop.** Never mutate the DOM during a drag. Use CSS transforms to create the visual effect of movement, then do a single synchronous state update when the user drops. This prevents layout thrashing and keeps the animation on the compositor thread.
+
+**Pointer capture is non-negotiable.** Without `setPointerCapture`, fast drags will lose track of the pointer. This is the single most common bug in hand-rolled drag implementations.

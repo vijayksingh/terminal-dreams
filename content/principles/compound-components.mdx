@@ -1,0 +1,143 @@
+---
+title: "Compound Components"
+slug: compound-components
+summary: "Split a monolithic component into cooperating children that share implicit state, giving consumers layout control without exposing internals."
+categories:
+  - component-design
+tags:
+  - react
+  - composition
+  - api-design
+relatedPrinciples:
+  - primitive-composition
+  - render-delegation
+learningPaths:
+  - build-a-composable-component
+deepDiveRefs:
+  - series: from-bespoke-to-semantic
+    part: 2
+    label: "Compound component extraction from the FlowDiagram monolith"
+---
+
+## The Problem
+
+A `<Select>` component that accepts `options`, `value`, `onChange`, `renderOption`, `renderTrigger`, `placeholder`, `disabled`, `searchable`, `maxHeight`, `virtualized`, `groupBy`, `sortFn`, `emptyMessage`, `loadingMessage`... The prop list grows until the component is a configuration language, not a component.
+
+Every new feature is a new prop. Every new prop is a new conditional branch in the render function. The component becomes a ball of mud that nobody wants to touch.
+
+The deeper problem: the consumer has no control over layout. Want the options above the trigger instead of below? Add a `placement` prop. Want a divider between groups? Add a `showDividers` prop. Want a footer with a "Create new" button? Add a `footer` prop. Each is reasonable in isolation. Together they encode a parallel layout language inside the component's props.
+
+## The Principle
+
+**A component should be split into composable sub-components when its prop list starts encoding layout decisions or rendering variations.**
+
+The compound component pattern replaces configuration props with composition. Instead of `<Select options={...} renderOption={...} footer={...}>`, you write:
+
+```tsx
+<Select value={value} onValueChange={setValue}>
+  <Select.Trigger>
+    <Select.Value placeholder="Choose..." />
+  </Select.Trigger>
+  <Select.Content>
+    <Select.Group>
+      <Select.Label>Fruits</Select.Label>
+      <Select.Item value="apple">Apple</Select.Item>
+      <Select.Item value="banana">Banana</Select.Item>
+    </Select.Group>
+    <Select.Separator />
+    <Select.Footer>
+      <button>Create new...</button>
+    </Select.Footer>
+  </Select.Content>
+</Select>
+```
+
+The sub-components share state through context (the selected value, the open/closed state, keyboard navigation position). The consumer controls layout through composition — put the Footer wherever you want, or omit it entirely. New features don't require new props on the root; they require new sub-components, which can be composed independently.
+
+This is **inversion of control** applied to React components. The library doesn't render for you; it gives you building blocks that handle the hard parts (state, accessibility, keyboard interactions) and lets you control the easy parts (layout, styling, additional content).
+
+<PropExplosion />
+
+## Real-World Example
+
+Radix UI's `Select` component demonstrates this pattern cleanly. Here's an annotated excerpt from their source:
+
+```tsx
+// The root provider shares state across all sub-components
+function Select({ value, onValueChange, children }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
+      {children}
+    </SelectContext.Provider>
+  );
+}
+
+// Each sub-component reads only what it needs from context
+function SelectTrigger({ children }) {
+  const { open, setOpen } = useSelectContext();
+  return (
+    <button
+      aria-expanded={open}
+      onClick={() => setOpen(!open)}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Items know their own selected state
+function SelectItem({ value, children }) {
+  const { value: selected, onValueChange } = useSelectContext();
+  return (
+    <div
+      role="option"
+      aria-selected={value === selected}
+      onClick={() => onValueChange(value)}
+    >
+      {children}
+    </div>
+  );
+}
+```
+
+Notice how each sub-component has a single concern. `SelectTrigger` manages open/close. `SelectItem` manages selection. Neither knows about the other's existence. The consumer composes them in whatever order and layout they want.
+
+## Anti-Patterns
+
+### The Render Prop Graveyard
+
+```tsx
+<Select
+  renderTrigger={({ open }) => <MyTrigger open={open} />}
+  renderOption={({ item, selected }) => <MyOption item={item} />}
+  renderGroup={({ label, children }) => <MyGroup label={label}>{children}</MyGroup>}
+  renderEmpty={() => <EmptyState />}
+/>
+```
+
+Every visual customization point is a render prop. This is compound components without the composition — the consumer still can't control layout, they can only replace specific render slots. And the parent component still orchestrates where each render prop appears.
+
+### The Premature Split
+
+Splitting a 40-line component into 8 sub-components when it's used in exactly one place with no variations. Compound components solve the *variability* problem. If there's no variability, the indirection is pure cost. A simple component used once doesn't need decomposition — it needs to stay simple.
+
+### The Context Leak
+
+Sub-components that work outside their parent context because the context has a default value. `<Select.Item>` rendered without a `<Select>` parent silently renders as a div that does nothing. The compound contract should enforce co-location — throw in development if context is missing.
+
+## Related Principles
+
+- **Primitive Composition** — Compound components are one instantiation of the broader "compose small pieces" principle. Primitive Composition is the general principle; Compound Components is the React-specific pattern.
+- **Render Delegation** — When compound sub-components use `asChild` or render props to let the consumer control the underlying DOM element, that's render delegation layered on top of composition.
+
+## When to Break This Rule
+
+- **One-off components with no variation.** A dashboard chart used exactly once, with exactly one layout, doesn't benefit from decomposition. The monolith is simpler.
+- **Performance-critical components where context overhead matters.** Each context read is a potential re-render boundary. For components rendered thousands of times (virtualized list items), the context lookup overhead may matter. Profile first.
+- **When the compound API is more complex than the prop API.** If your component has 3 features and the compound version requires 6 sub-components with specific nesting rules, the cure is worse than the disease. Compound components reduce complexity only when the feature count is high enough that prop-based configuration becomes unwieldy.
+
+## Deep-Dive References
+
+- **From Bespoke to Semantic, Part 2** — The specific refactoring journey where `<FlowDiagram>` was split into composable sub-components, showing the before/after of prop explosion vs. composition.

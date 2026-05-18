@@ -1,0 +1,460 @@
+---
+title: "Design an Image Gallery"
+slug: design-image-gallery
+section: system-design-problems
+stopId: sdp-image-gallery
+order: 1
+kind: system-design-problem
+summary: "Walk through the system design of an image gallery — from requirements to production scaling — using progressive reasoning"
+tags:
+  - system-design
+  - lazy-loading
+  - virtualization
+  - responsive-images
+  - intersection-observer
+intersections:
+  - api-intersection
+  - virt-windowing
+  - perf-images
+prerequisites: []
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design an image gallery."
+
+That's all the interviewer gives you. Before touching a single component, shrink the problem space. The panel on the right shows five questions you'd ask in a real interview. Toggle them and watch the scope summary change.
+
+**Masonry or uniform grid?** Masonry preserves aspect ratios but needs intrinsic dimensions from the server before rendering. Uniform grids are simpler — fixed cells, predictable layout — but crop or letterbox images. The choice cascades: masonry requires `width` and `height` in the API response; uniform doesn't.
+
+**Upload support?** If yes, you're designing two systems — a read path and a write path. Drag-and-drop, progress bars, client-side validation, server-side processing. That's easily half the interview. Clarifying this upfront saves you from designing something you'll never have time to explain.
+
+**Scale: hundreds vs hundreds of thousands?** At 100 images you can render them all. At 100K you need virtualization, pagination, and memory management. The interviewer wants to hear where the architecture breaks, not just that "it scales."
+
+**Mobile?** Touch gestures, responsive breakpoints, bandwidth-adaptive loading — each is a subsystem.
+
+**Search?** Tag taxonomy, indexing, filter UI. Often out of scope for a gallery question, but asking demonstrates product sense.
+
+The point isn't to check every box. It's to show that the answer *depends on the question*. A photographer's portfolio (500 curated, masonry, no upload) is a fundamentally different system than Google Photos (billions, upload, search, AI tags).
+
+For this walkthrough: **masonry, no upload, scales to 100K, mobile, no search.**
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API design
+
+Before any UI code, design the data contracts. The right panel has two tabs — **Endpoints** shows the four API routes our gallery needs, **Types** shows the response type definitions. Click any endpoint card to expand its parameters and response type.
+
+A gallery that supports masonry layout, lazy loading, lightbox viewing, and responsive images at 100K scale needs four distinct endpoints, not one:
+
+**`GET /api/gallery`** is the workhorse — paginated list of image summaries for the grid. Notice it returns `ImageSummary`, not full image data. The summary includes `thumb` (200px thumbnail), `width`/`height` (intrinsic dimensions for CLS-free masonry), and `blurhash` (blur placeholder). It deliberately omits the full-res URL — that's a lightbox concern, not a grid concern. Cursor pagination via `nextCursor` keeps it stable under concurrent writes.
+
+**`GET /api/gallery/:id`** returns `ImageDetail` — the full-resolution URL, all srcSet variants for responsive serving, EXIF metadata, and everything the lightbox needs. This is a *separate call* from the list endpoint because full image detail is expensive and only needed when the user clicks to open the lightbox. Fetching detail for 500 images upfront would waste bandwidth.
+
+**`GET /api/gallery/dimensions`** is the masonry enabler. It batch-fetches pre-computed display dimensions for a set of image IDs at a given viewport width. The server does the aspect ratio math; the client just applies `grid-row: span N`. This avoids client-side layout thrashing when rendering masonry.
+
+**`GET /api/gallery/srcset/:id`** returns responsive variants — every available resolution and format for a single image. The lightbox uses this to serve the right size: full-res AVIF on fast connections, lower-res WebP on mobile.
+
+Switch to the **Types** tab to see the data shapes. The key split is `ImageSummary` (lightweight, for the grid) vs `ImageDetail` (heavyweight, extends summary, for the lightbox). This separation is what makes lazy loading effective — the grid only needs summary data.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Component architecture
+
+The right panel has two tabs. **Architecture** shows an SVG diagram of the component hierarchy — hover any box to highlight its connections and see the data flowing between components. **Data Model** shows every TypeScript interface, filterable by category (API response, internal state, component props).
+
+### Architecture diagram
+
+The diagram shows five components connected by props (solid lines) and callbacks (dashed teal lines). The key insight is the *shape* of the graph:
+
+**Gallery** is the only stateful component. It owns `images[]`, `cursor`, `layout`, `lightbox`, and `imageStates` — the complete application state. Every other component is a controlled child that receives props and fires callbacks.
+
+**Grid, Lightbox, and Pagination** are siblings, not nested. They each receive a slice of Gallery's state and handlers to call when something happens. Grid doesn't know Lightbox exists. Pagination doesn't know about layout mode. This means you can replace any subsystem without touching the others.
+
+The two callback arrows (dashed) show events flowing *up*: ImageCard reports intersection events back to Gallery (for lazy loading state), and Pagination fires `fetch next page` which hits the API. Props flow down, events flow up — unidirectional data flow.
+
+### Data model
+
+Switch to the **Data Model** tab and use the filter buttons to explore by category:
+
+**API Response types** define the contract between server and client. `ImageSummary` is intentionally lightweight — it carries everything the grid needs and nothing more. `ImageDetail` extends it with the full-res URL and srcSet variants for the lightbox. This split is the foundation of the lazy loading strategy.
+
+**Internal State types** define what Gallery manages. `GalleryState` tracks the full picture: the image list, pagination cursor, per-image load states (`Map<string, LoadState>`), and lightbox state. The `LoadState` type (`pending | loading | loaded | error`) is the state machine for each image — it appears again in steps 8 and 14.
+
+**Component Props types** define the contracts between components. Notice how `GridProps.onNearEnd` is typed as `() => void` — Grid doesn't know *what* happens when the user scrolls near the bottom. It just fires the callback. Gallery decides whether to fetch the next page or not.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — First render
+
+Look at the right panel. Twenty images, uniform grid, all loaded eagerly. The metrics bar at the top is all green: 20 DOM nodes, 20 network requests, 1.7 MB memory, zero CLS.
+
+This is the version you'd ship in a hackathon. It works. And for 20 images on a fast connection, there's genuinely nothing wrong with it.
+
+```tsx
+function Gallery({ images }: { images: Image[] }) {
+  return (
+    <div className="grid grid-cols-6 gap-1">
+      {images.map(img => (
+        <img key={img.id} src={img.src} alt={img.alt} />
+      ))}
+    </div>
+  );
+}
+```
+
+No lazy loading. No virtualization. No placeholders. Every `<img>` tag triggers an HTTP request the moment React commits it to the DOM. The browser's connection pool handles the parallelism (6 concurrent requests per origin in HTTP/1.1, unlimited in HTTP/2).
+
+This is deliberately simple. The instinct is to wire up IntersectionObserver, add a virtualization library, and implement placeholder blur — all at once. But if something looks wrong after wiring three layers simultaneously, which layer broke?
+
+Starting simple gives you a baseline you can trust. Every optimization we add from here will be measured against these green numbers. You need to see the "before" to appreciate the "after."
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — What breaks at scale
+
+Same code. Same grid. Now 500 images instead of 20.
+
+Look at the metrics. Everything turned red. The widget below the gallery breaks down exactly what went wrong:
+
+- **500 DOM nodes** — every image card is in the tree, including the ones far below the fold that the user may never scroll to
+- **500 network requests** — the browser fires them all on mount. On HTTP/2, there's no connection limit, so all 500 compete for bandwidth simultaneously
+- **~42 MB memory** — 500 images × 85 KB average
+- **3200 ms LCP** — above-the-fold images compete with below-the-fold images for bandwidth, delaying the ones the user actually sees
+
+On a 3G connection (750 Kbps), 42 MB takes *seven minutes* to transfer. The user scrolls into a wall of empty rectangles.
+
+The point of this step isn't to solve anything. It's to sit with the problem and understand *exactly* what degraded. The naive approach doesn't have one problem — it has four independent problems (DOM count, network, memory, perceived performance), and each requires a different optimization. Conflating them leads to confused solutions.
+
+We'll fix them one at a time, starting with the subtlest: layout shift.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Layout shift
+
+Before we optimize network or DOM, there's a visual problem hiding in the current implementation. Toggle "Reserve aspect-ratio space" on the right and watch the CLS meter.
+
+**Without reservation:** CLS 0.45. Every time an image finishes loading, it pushes content below it downward. If the user is reading a caption or scrolling slowly, the page literally jumps under their finger. Google's Core Web Vitals penalize CLS above 0.1 — our gallery scores 4.5× the "poor" threshold.
+
+**With reservation:** CLS 0.08. Each image slot has `aspect-ratio: width/height` applied immediately on render, before any image data arrives. The slot is the correct size from the first frame. When the image loads, it fills space that was already reserved — zero shift.
+
+```css
+.imageCard {
+  aspect-ratio: var(--img-w) / var(--img-h);
+}
+```
+
+This is why we put `width` and `height` in the API response back in step 2. Without server-provided dimensions, you'd need to either hardcode a fixed aspect ratio for all images (inaccurate) or accept a layout reflow when the true dimensions arrive (one shift per image).
+
+CLS is particularly insidious because it's invisible during development. On fast connections with cached images, everything loads instantly and nothing shifts. The problem only appears on real networks with real latency — exactly the conditions you don't test locally. That's why you design for it structurally (reserve space) rather than hoping it won't happen.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Masonry: three approaches
+
+The uniform grid works but wastes vertical space — every image gets the same height regardless of aspect ratio. Toggle between the three layout modes on the right. Watch the reading order numbers on each image.
+
+### Uniform grid
+
+Simple `grid-template-columns: repeat(6, 1fr)`. Correct left-to-right reading order (1→2→3→4→5→6 across each row). But all images are forced to the same cell height. Tall images are cropped, wide images letterboxed.
+
+### CSS Columns
+
+Gorgeous masonry. Images flow naturally with their real aspect ratios. But look at the reading order: **1→2→3→...→12 are all in column 1**, top to bottom. Then 13→24 fill column 2. The DOM order is left-to-right, but the visual order is column-first.
+
+This matters for accessibility. A screen reader traverses the DOM, not the CSS layout. Users who navigate sequentially encounter images in a different order than sighted users see. For a chronologically ordered gallery, this breaks the narrative.
+
+### CSS Grid + row span
+
+```css
+.grid { grid-auto-rows: 8px; }
+.card { grid-row: span var(--row-span); }
+```
+
+Each card computes a row span from its aspect ratio: `Math.ceil(height / rowUnit) + gapRows`. CSS Grid places items left-to-right, wrapping when a row is full — so DOM order matches visual order. You get correct reading order *and* natural aspect ratios.
+
+The tradeoff: you need the aspect ratio before render to compute `--row-span`. That's the `width`/`height` fields from step 2 paying off again.
+
+This is the answer interviewers want: you know all three approaches, you know why CSS Columns fails for accessibility, and you chose CSS Grid with row span because it preserves both visual quality and DOM order.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Lazy loading
+
+Toggle "Lazy Loading (IntersectionObserver)" on the right. Watch the Network metric drop from 500 to about 15 — only the images in or near the viewport get fetched.
+
+Below the gallery, the IO widget shows loaded vs pending counts updating in real time. The colored band at the bottom of the gallery is the IntersectionObserver's viewport — images enter it and transition from pending to loading.
+
+```tsx
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        loadImage(entry.target.dataset.src);
+        observer.unobserve(entry.target);
+      }
+    });
+  },
+  { rootMargin: "100px" }
+);
+```
+
+**Why IntersectionObserver, not a scroll handler?** A scroll handler fires synchronously on the main thread for every scroll event — 60+ times per second during a fast gesture. Each invocation runs `getBoundingClientRect()` calls that can force layout recalculation. Under load, this causes visible jank.
+
+IntersectionObserver runs on the browser's compositor thread. You configure a root margin (`100px` means images start loading 100px *before* they scroll into view), and the browser batches intersection checks and delivers callbacks only when elements cross the threshold. No per-frame cost. No layout thrashing.
+
+The `rootMargin` is the key tuning knob. Too small and users see empty slots; too large and you prefetch images they might not reach. 100px is a reasonable default — enough to hide loading latency on fast connections, conservative enough to not waste bandwidth.
+
+Toggle it off and watch the network metric jump back to 500. The gallery looks the same — lazy loading is invisible when it works.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Blur placeholders
+
+Toggle "Blur Placeholders" on the right. Look at the unloaded images — instead of empty gray boxes, they show a soft blurred color.
+
+The widget below the gallery shows the three-state progression: **pending** (gray, dashed border) → **blur** (soft color, low detail) → **loaded** (sharp, full color).
+
+Without placeholders, images appear from nothing. The user scrolls into empty space, waits, and then content pops in. With placeholders, the blur signals "content exists here, it's arriving." This is a UX contract — the visual system is telling the user something meaningful about the state of the data.
+
+In production, you'd decode the `blurhash` field from the API into a tiny 4×4 pixel gradient and display it instantly:
+
+```tsx
+// Decode blurhash into a 4x4 pixel array
+const pixels = decode(image.blurhash, 4, 4);
+// Draw to a tiny canvas, display as CSS background
+const dataUrl = canvasToDataUrl(pixels);
+```
+
+The blurhash is ~20 bytes in the API response, but when decoded and rendered with CSS `filter: blur(20px)`, it produces a convincing low-fidelity preview of the actual image. The visual transition from blurred to sharp is quick enough to feel instant on fast connections, but distinct enough to notice on slow ones.
+
+Toggle it off again. See how the gallery feels more uncertain — you can't tell what's coming. That uncertainty is what the placeholder eliminates.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Virtualization
+
+Toggle "Virtualization (DOM recycling)" on the right. Watch the DOM metric drop from 500 to about 20.
+
+The key widget for this step is the **DOM window strip** below the gallery. Each dot represents an image. Filled dots are actual DOM nodes; empty dots are virtual — they exist only as height values in an offset table. The "window" of filled dots is tiny compared to the total.
+
+```tsx
+// Offset table: cumulative pixel position per row
+// offsets[r] = pixel top of row r
+const offsets = computeOffsets(images, rowHeight);
+
+// On scroll: binary search for first visible row
+const startRow = binarySearch(offsets, scrollTop - buffer);
+const endRow = binarySearch(offsets, scrollTop + viewportHeight + buffer);
+
+// Only these rows get DOM nodes
+const visibleImages = images.slice(startRow * cols, endRow * cols);
+```
+
+This is a *rendering* optimization, not a network optimization. Lazy loading reduced network requests (how many images we fetch). Virtualization reduces DOM nodes (how many elements the browser needs to lay out and paint). They solve orthogonal problems.
+
+You can have virtualization without lazy loading: all images pre-fetched, but only visible ones rendered as DOM nodes. Or lazy loading without virtualization: all images in the DOM, but only visible ones fetched from the network.
+
+A production gallery uses both because they compose independently. Together, 500 images produce ~20 DOM nodes and ~15 network requests at any moment.
+
+The offset table is cheap: 500 entries × 8 bytes = 4 KB. Even at 100K images, it's 800 KB — well within budget. The binary search runs in O(log n), so finding the first visible row is effectively instant.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Responsive images
+
+Every image request is a negotiation between the server and the client's capabilities. Switch between devices and formats on the right to see how file size and decode time change.
+
+```html
+<picture>
+  <source type="image/avif"
+    srcset="photo-400.avif 400w, photo-800.avif 800w, photo-1200.avif 1200w"
+    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+  <source type="image/webp"
+    srcset="photo-400.webp 400w, photo-800.webp 800w, photo-1200.webp 1200w"
+    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+  <img src="photo-800.jpg" alt="..." />
+</picture>
+```
+
+`srcset` tells the browser what's available. `sizes` tells the browser how wide the image will be at each breakpoint. The browser picks the smallest file that satisfies the display requirement.
+
+The format comparison widget shows the tradeoff: **AVIF** is 50-65% smaller than JPEG but decodes slower. On a powerful desktop, decode is negligible. On a low-end mobile processor, AVIF decode can block the main thread for 50+ ms per image.
+
+That's why `img.decode()` exists — it returns a Promise that resolves when decode completes off the main thread. Show the blur placeholder, kick off decode in the background, swap in the sharp image only after `decode()` resolves. The UI never freezes.
+
+For slow connections, reduce the IntersectionObserver `rootMargin` to zero, serve only thumbnails in the grid, and require an explicit tap to load full resolution in the lightbox:
+
+```tsx
+const connection = navigator.connection;
+if (connection?.effectiveType === "2g") {
+  rootMargin = "0px";
+}
+```
+
+This is bandwidth empathy — don't burn a user's metered data on images they haven't asked to see.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Lightbox
+
+Click any image in the gallery on the right. A modal overlay opens with the full-size image, navigation buttons, and an image counter.
+
+The lightbox is a separate component from the grid — a sibling, not a child. This is the decomposition from step 3 paying off: the lightbox has its own state (open/closed, current index), its own rendering (full-viewport overlay), and its own interaction model (prev/next navigation, close).
+
+```tsx
+function Lightbox({ images, index, onClose, onNext, onPrev }) {
+  return (
+    <div role="dialog" aria-modal="true"
+      aria-label={`Image ${index + 1} of ${images.length}`}>
+      <img src={images[index].src} alt={images[index].alt} />
+      <button onClick={onPrev}>Prev</button>
+      <button onClick={onNext}>Next</button>
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+}
+```
+
+When the lightbox opens, fetch the full-resolution image (not the thumbnail from the grid). Use `img.decode()` behind a loading spinner so the UI stays responsive while the large image decodes:
+
+```tsx
+const img = new Image();
+img.src = images[index].src;
+await img.decode();
+// Now safe to display without blocking the main thread
+```
+
+Arrow keys navigate between images. Escape closes the lightbox. These are keyboard affordances that users expect from any modal — but they're not the same as accessibility. The next step handles the hard part.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Focus management
+
+Open the lightbox (click an image), then press Tab. Watch the focus indicator on the right panel cycle between Prev, Next, and Close. Press Escape to close. The keyboard hint panel shows all available shortcuts.
+
+This is a **focus trap**, and it's required by WCAG 2.4.3. When a modal opens, keyboard focus must move into the modal and cannot escape to background content until the modal is dismissed.
+
+```tsx
+const FOCUSABLE = ["prev", "next", "close"];
+
+function handleKeyDown(e: KeyboardEvent) {
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowRight") nextImage();
+  if (e.key === "ArrowLeft") prevImage();
+  if (e.key === "Tab") {
+    e.preventDefault(); // THIS is the trap
+    const idx = FOCUSABLE.indexOf(currentFocus);
+    const next = e.shiftKey
+      ? (idx - 1 + FOCUSABLE.length) % FOCUSABLE.length
+      : (idx + 1) % FOCUSABLE.length;
+    setFocus(FOCUSABLE[next]);
+  }
+}
+```
+
+`e.preventDefault()` on Tab is what creates the trap. Without it, the browser's default behavior moves focus to the next element in DOM order — which could be behind the modal overlay, invisible to the user.
+
+**ARIA semantics:** `role="dialog"` tells assistive technology this is a modal. `aria-modal="true"` tells screen readers to treat everything outside as inert. `aria-label` provides context that sighted users get from the image counter.
+
+**Focus restoration:** when the lightbox closes, focus must return to the element that opened it — the image card that was clicked. Without this, focus jumps to the top of the page and the user loses their scroll context. Store a ref to the trigger before opening, restore on close.
+
+The screen reader panel at the bottom of the demo shows what would be announced during navigation. This isn't a nice-to-have — companies with accessibility mandates (government contracts, large enterprises) require it.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Error handling
+
+Toggle "Simulate Network Errors" on the right. Some images turn red with a retry button — these represent failed HTTP requests.
+
+Every image is a network request that can fail: timeout, CDN error, 404, corrupt response. If your state machine only has `pending → loading → loaded`, failures are invisible — the image stays in `loading` forever, showing a spinner that never resolves.
+
+The state machine needs a `failed` state from day one:
+
+```
+pending → loading → loaded
+              ↓
+           failed → loading (retry)
+```
+
+The widget below the gallery shows this machine. Each failed image tracks its own retry state independently.
+
+**Retry strategy:** exponential backoff — first retry after 1s, second after 4s, third after 16s, then give up and show a permanent error state with a manual retry button. This prevents a temporary network hiccup from hammering the server with retry storms.
+
+**Bulk failure detection:** if more than 20% of recent requests fail, it's likely a connectivity issue, not individual image problems. Surface a single banner ("Connection lost — retry all") instead of 50 individual retry buttons. This is a UX decision that prevents the error state from becoming noisier than the content.
+
+```tsx
+const recentFailureRate = recentFailures / recentRequests;
+if (recentFailureRate > 0.2) {
+  showConnectivityBanner();
+} else {
+  showPerImageRetry(failedId);
+}
+```
+
+Designing for failure upfront means the error state is a first-class part of the UI, not a forgotten edge case that surfaces as a blank screen in production.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Scaling to 100K
+
+Drag the slider on the right from 100 to 100K. Watch the Core Web Vitals gauges change color as the system strains under scale.
+
+**At 1K images:** lazy loading is essential. The naive payload would be ~83 MB. Our IntersectionObserver + virtualization architecture handles this without changes — 20 DOM nodes, 15 network requests, regardless of total count.
+
+**At 10K images:** the offset table for virtualization is still small (80 KB). The real problem is the API response — a 10K-item manifest is 200+ KB of JSON before a single image appears. Solution: **server-side cursor pagination**. Load 50 images per page, render them, fetch the next page when the user scrolls within 3 rows of the bottom.
+
+**At 100K images:** memory management becomes the bottleneck. Even with lazy loading, a user who scrolls through 50K images accumulates ~4 GB of decoded data. The fix is an **LRU eviction cache**:
+
+```tsx
+class ImageCache {
+  private maxBytes = 200 * 1024 * 1024; // 200MB budget
+  private entries = new Map<string, { bytes: number; lastAccess: number }>();
+
+  evictUntilBudget() {
+    const sorted = [...this.entries.entries()]
+      .sort(([, a], [, b]) => a.lastAccess - b.lastAccess);
+    while (this.currentBytes > this.maxBytes && sorted.length) {
+      const [id] = sorted.shift()!;
+      this.entries.delete(id);
+      // Reset to pending — shows blur placeholder if user scrolls back
+    }
+  }
+}
+```
+
+Toggle between **infinite scroll** and **page buttons** to see the tradeoff. Infinite scroll is seamless but makes scroll position meaningless (how do you restore 40K pixels deep?). Page buttons sacrifice flow for addressability — each page has a URL, the back button works, bookmarks are possible.
+
+The production answer is usually infinite scroll with URL-synced cursor state (`?after=abc123`). The URL always reflects the current position, so reload and share both work.
+
+</section>

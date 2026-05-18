@@ -1,0 +1,509 @@
+/* ── Root ────────────────────────────────────────────────────────── */
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  color: var(--color-text);
+}
+
+/* ── Scenario tabs ───────────────────────────────────────────────── */
+
+.scenarioTabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-2);
+}
+
+.scenarioTab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
+    transform 160ms ease;
+  letter-spacing: -0.01em;
+}
+
+.scenarioTab:hover {
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 50%, var(--color-border));
+  color: var(--color-text);
+}
+
+.scenarioTab[data-active="true"] {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: 0 0 0 1px var(--color-accent), 0 6px 18px -10px
+    color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+.scenarioTabIndex {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 700;
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.scenarioTab[data-active="true"] .scenarioTabIndex {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.scenarioTabLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Blurb ──────────────────────────────────────────────────────── */
+
+.scenarioBlurb {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ── Caption strip ──────────────────────────────────────────────── */
+
+.captionStrip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--diagram-layer-9) 4%, var(--color-surface));
+  min-height: 2.2rem;
+}
+
+.captionStep {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--diagram-layer-9);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.captionSlash {
+  color: var(--color-muted);
+  margin: 0 1px;
+  font-weight: 400;
+}
+
+.captionText {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+}
+
+/* ── Canvas ─────────────────────────────────────────────────────── */
+
+.canvasWrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  padding: var(--space-2);
+}
+
+.canvasSvg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nodeLabel {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  pointer-events: none;
+}
+
+.nodeSublabel {
+  font-family: var(--font-mono);
+  font-size: 8.2px;
+  font-weight: 400;
+  pointer-events: none;
+}
+
+.chipLabel {
+  font-family: var(--font-mono);
+  font-size: 8.4px;
+  font-weight: 700;
+  fill: var(--color-accent);
+  letter-spacing: -0.005em;
+  pointer-events: none;
+}
+
+/* ── Panel grid ─────────────────────────────────────────────────── */
+
+.panelGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+@media (max-width: 720px) {
+  .panelGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Type preview card ──────────────────────────────────────────── */
+
+.typeCardSlot {
+  position: relative;
+  min-height: 9rem;
+}
+
+.typeCard {
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--color-accent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+}
+
+.typeCardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.typeCardKind {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-accent);
+}
+
+.typeCardName {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.typeCardExtends {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+.typeCardExtends em {
+  font-style: normal;
+  color: var(--diagram-layer-9);
+  font-weight: 600;
+}
+
+.typeCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.typeRow {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) auto 1fr;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.typeFieldName {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.typeFieldType {
+  color: var(--color-accent);
+}
+
+.typeFieldNote {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-style: italic;
+}
+
+.typeSample {
+  margin: 0;
+  padding: var(--space-2);
+  background: var(--color-bg);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  border: 1px dashed color-mix(in srgb, var(--color-border) 80%, transparent);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.typeCardEmpty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.typeCardEmptyDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* ── State diff panel ──────────────────────────────────────────── */
+
+.statePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-top: 2px solid var(--diagram-layer-9);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  min-height: 9rem;
+}
+
+.statePanelHead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statePanelKind {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--diagram-layer-9);
+}
+
+.statePanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stateRow {
+  display: grid;
+  grid-template-columns: minmax(64px, auto) auto 1fr;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 0.7rem;
+  line-height: 1.45;
+  padding: 2px 0;
+  border-left: 2px solid transparent;
+  padding-left: 6px;
+  margin-left: -8px;
+}
+
+.stateRow[data-kind="changed"] {
+  border-left-color: var(--color-accent);
+}
+
+.stateRow[data-kind="added"] {
+  border-left-color: var(--diagram-layer-9);
+}
+
+.stateRow[data-kind="removed"] {
+  border-left-color: var(--color-muted);
+  opacity: 0.55;
+}
+
+.stateRow[data-kind="same"] {
+  opacity: 0.55;
+}
+
+.stateKey {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.stateColon {
+  color: var(--color-muted);
+}
+
+.stateValueGroup {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stateValue {
+  color: var(--color-text);
+}
+
+.stateValueNew {
+  color: var(--diagram-layer-9);
+  font-weight: 600;
+}
+
+.stateValueOld {
+  color: var(--color-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--color-muted) 70%, transparent);
+}
+
+.stateArrow {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.statePanelEmpty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.statePanelEmptyDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  opacity: 0.6;
+}
+
+/* ── Scrub bar ─────────────────────────────────────────────────── */
+
+.scrubBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.scrubTrack {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.scrubDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.25px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  padding: 0;
+  transition: all 180ms ease;
+}
+
+.scrubDot:hover {
+  border-color: var(--diagram-layer-9);
+}
+
+.scrubDot[data-state="visited"] {
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  opacity: 0.7;
+}
+
+.scrubDot[data-state="active"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: scale(1.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.controlBtn,
+.controlBtnPrimary {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.controlBtn:hover:not(:disabled),
+.controlBtnPrimary:hover {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+}
+
+.controlBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.controlBtnPrimary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.controlBtnPrimary:hover {
+  background: color-mix(in srgb, var(--color-accent) 80%, white);
+  color: var(--color-bg);
+  border-color: color-mix(in srgb, var(--color-accent) 80%, white);
+}
+
+/* ── Footnote ─────────────────────────────────────────────────── */
+
+.footnote {
+  margin: 0;
+  font-size: 0.66rem;
+  color: var(--color-muted);
+  line-height: 1.55;
+  font-style: italic;
+}

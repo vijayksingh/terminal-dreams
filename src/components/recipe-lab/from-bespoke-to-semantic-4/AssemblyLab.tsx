@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SPRING, TRANSITION, STAGGER } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { DialToggle } from "@/components/ui/dialkit";
+import { DialToggle, DialPanel, DialChips } from "@/components/ui/dialkit";
 import { QUALITY_COLORS as QC, USAGE_COLORS as UC } from "../diagram-colors";
 import { BASE_NODES, BASE_EDGES, ARC, THESIS, TENSION, VIEWBOX, ROLE_SCALE } from "../shared/graph-data";
 import type { BaseNodeDef } from "../shared/graph-data";
@@ -60,6 +60,12 @@ const EDGES = BASE_EDGES;
 // ── Quality + Usage config ────────────────────────────────
 
 const QUALITY_MODES: QualityMode[] = ["bare", "semantic", "full"];
+
+const QUALITY_CHIP_COLORS: Partial<Record<QualityMode, string>> = {
+  bare: QC.bare.dot,
+  semantic: QC.semantic.dot,
+  full: QC.full.dot,
+};
 
 const QUALITY_INFO: Record<QualityMode, { title: string; what: string; effect: string }> = {
   bare: {
@@ -158,28 +164,17 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [expandedQuality, setExpandedQuality] = useState<QualityMode | null>(null);
-  const [expandedUsage, setExpandedUsage] = useState<UsageLevel | null>(null);
 
-  useEffect(() => { setManualQuality(null); setFieldOverrides(null); setSelectedId(null); setExpandedQuality(null); setExpandedUsage(null); }, [activeStep]);
+  useEffect(() => { setManualQuality(null); setFieldOverrides(null); setSelectedId(null); }, [activeStep]);
 
   const toggleNode = useCallback((id: string) => {
     setSelectedId((prev) => (prev === id ? null : id));
-    setExpandedQuality(null);
-    setExpandedUsage(null);
   }, []);
 
-  const toggleQuality = useCallback((q: QualityMode) => {
-    setExpandedQuality((prev) => (prev === q ? null : q));
-    setSelectedId(null);
-    setExpandedUsage(null);
-  }, []);
-
-  const toggleUsage = useCallback((level: UsageLevel) => {
-    setExpandedUsage((prev) => (prev === level ? null : level));
-    setSelectedId(null);
-    setExpandedQuality(null);
-  }, []);
+  const reachedModes = useMemo(
+    () => QUALITY_MODES.filter((_, i) => i <= QUALITY_MODES.indexOf(getQualityMode(activeStep))),
+    [activeStep],
+  );
 
   const isBare = quality === "bare";
   const showRoles = fields.roles;
@@ -219,16 +214,6 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
     ? EDGES.filter((e) => e.from === selectedNode.id || e.to === selectedNode.id)
     : [];
 
-  const nothingExpanded = !selectedNode && !expandedQuality && expandedUsage === null;
-
-  const hintText =
-    activeStep <= 2 ? "Bare mode — every node identical, no labels, no story. Click one."
-    : activeStep <= 4 ? "Semantic mode active — click a node to compare bare vs semantic"
-    : activeStep === 5 ? "Level 0: one import, everything handled. Click a quality tab."
-    : activeStep === 6 ? "Level 1: custom detail panel. Click to see the code pattern."
-    : activeStep === 7 ? "Level 2: you own selection state. External coordination."
-    : "Level 3: hook only. You bring the renderers. Maximum control.";
-
   return (
     <div className="flex flex-col h-full" style={{ background: "var(--color-bg)" }}>
 
@@ -267,7 +252,7 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label="Assembly demo diagram"
-          onClick={() => { setSelectedId(null); setExpandedQuality(null); setExpandedUsage(null); }}
+          onClick={() => setSelectedId(null)}
         >
           <LabSvgDefs prefix="asm" />
           <rect x={-20} y={-20} width={VIEWBOX.w + 40} height={VIEWBOX.h + 40} fill="url(#asm-grid)" />
@@ -397,92 +382,83 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
         </svg>
       </div>
 
-      {/* ── Readout strip ─────────────────────────────── */}
+      {/* ── Workshop ─────────────────────────────────── */}
       <div
-        className="shrink-0 overflow-y-auto"
-        style={{ maxHeight: "45%", borderTop: "1px solid var(--color-border)" }}
+        className="shrink-0 overflow-y-auto flex flex-col gap-2 p-3"
+        style={{ maxHeight: "50%", borderTop: "1px solid var(--color-border)" }}
       >
-        {/* Quality + Usage tabs */}
-        <div className="flex items-center gap-1 px-4 py-2 flex-wrap">
-          <span className="font-mono text-xs uppercase tracking-wider mr-2" style={{ color: "var(--color-muted)", opacity: 0.5 }}>
-            quality
-          </span>
-          {QUALITY_MODES.map((q) => {
-            const reached = QUALITY_MODES.indexOf(quality) >= QUALITY_MODES.indexOf(q);
-            const isCurrent = quality === q;
-            const isExpanded = expandedQuality === q;
-            const c = QC[q];
-            if (!reached) return null;
-            return (
-              <button
-                key={q}
-                type="button"
-                onClick={() => { setManualQuality(q); toggleQuality(q); }}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded-full transition-colors hover:bg-white/5"
-                style={{
-                  background: isExpanded ? "color-mix(in srgb, var(--color-surface-2) 60%, transparent)" : undefined,
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full transition-all"
-                  style={{ background: c.dot, boxShadow: isCurrent ? `0 0 4px ${c.dot}` : "none" }} />
-                <span className="font-mono text-xs" style={{ color: isExpanded ? "var(--color-text)" : "var(--color-muted)" }}>
-                  {q}
-                </span>
-              </button>
-            );
-          })}
-          {activeStep >= 5 && (
-            <>
-              <span className="font-mono text-xs uppercase tracking-wider mx-2" style={{ color: "var(--color-muted)", opacity: 0.5 }}>
-                usage
-              </span>
-              {([0, 1, 2, 3] as UsageLevel[]).filter((l) => l <= usageLevel).map((level) => {
-                const isExpanded = expandedUsage === level;
-                return (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => toggleUsage(level)}
-                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-full transition-colors hover:bg-white/5"
-                    style={{
-                      background: isExpanded ? "color-mix(in srgb, var(--color-surface-2) 60%, transparent)" : undefined,
-                    }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: UC.dot }} />
-                    <span className="font-mono text-xs" style={{ color: isExpanded ? "var(--color-text)" : "var(--color-muted)" }}>
-                      L{level}
-                    </span>
-                  </button>
-                );
-              })}
-            </>
-          )}
-        </div>
+        <DialPanel title="Quality" accent={QC[quality].dot}>
+          <DialChips
+            label="Mode"
+            options={reachedModes}
+            value={quality}
+            onChange={(q) => { setManualQuality(q); setFieldOverrides(null); }}
+            colors={QUALITY_CHIP_COLORS}
+          />
+          <p className="font-mono text-xs" style={{ color: QC[quality].text, lineHeight: 1.5 }}>
+            {QUALITY_INFO[quality].effect}
+          </p>
+        </DialPanel>
 
-        {/* Readout content */}
-        <div className="px-4 pb-3">
-          <AnimatePresence mode="wait">
-            {selectedNode ? (
-              <motion.div
-                key={`node-${selectedNode.id}`}
-                initial={reducedMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={TRANSITION.enterItem}
+        {!isBare && (
+          <DialPanel title="Semantic Fields">
+            <DialToggle label="Thesis" value={fields.thesis} onChange={(v) => toggleField("thesis", v)} />
+            <DialToggle label="Roles" value={fields.roles} onChange={(v) => toggleField("roles", v)} />
+            <DialToggle label="Verbs" value={fields.verbs} onChange={(v) => toggleField("verbs", v)} />
+            <DialToggle label="Arc" value={fields.arc} onChange={(v) => toggleField("arc", v)} />
+            <DialToggle label="Tension" value={fields.tension} onChange={(v) => toggleField("tension", v)} />
+            {fieldOverrides && (
+              <button
+                type="button"
+                onClick={() => setFieldOverrides(null)}
+                className="font-mono text-xs mt-0.5 self-start transition-colors hover:text-[var(--color-text)]"
+                style={{ color: "var(--color-muted)" }}
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-xs font-bold" style={{ color: "var(--color-accent)" }}>
-                    {selectedNode.label}
-                  </span>
-                  <span className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>
-                    {selectedNode.role}
-                  </span>
-                </div>
-                <div className="font-mono text-xs mt-1" style={{ color: "var(--color-muted)", lineHeight: 1.5 }}>
-                  {selectedNode.brief}
-                </div>
-                <div className="flex flex-col gap-0.5 mt-2">
-                  {QUALITY_MODES.filter((q) => QUALITY_MODES.indexOf(quality) >= QUALITY_MODES.indexOf(q)).map((q) => {
+                ↺ reset to {quality}
+              </button>
+            )}
+          </DialPanel>
+        )}
+
+        {activeStep >= 5 && (
+          <DialPanel title="Usage" accent={UC.dot}>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs shrink-0" style={{ color: "var(--color-muted)", minWidth: 52 }}>Level</span>
+              <span className="font-mono text-xs font-semibold" style={{ color: UC.text }}>
+                {USAGE_INFO[usageLevel].title}
+              </span>
+            </div>
+            <code
+              className="block font-mono text-xs px-1.5 py-1 rounded"
+              style={{
+                color: "var(--color-accent)",
+                background: "color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))",
+                lineHeight: 1.5,
+              }}
+            >
+              {USAGE_INFO[usageLevel].code}
+            </code>
+            <p className="font-mono text-xs" style={{ color: "var(--color-muted)", lineHeight: 1.5 }}>
+              {USAGE_INFO[usageLevel].detail}
+            </p>
+          </DialPanel>
+        )}
+
+        <AnimatePresence>
+          {selectedNode && (
+            <motion.div
+              key={`inspect-${selectedNode.id}`}
+              initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={TRANSITION.enterItem}
+            >
+              <DialPanel title={selectedNode.label} accent="var(--color-accent)">
+                <span className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>
+                  {selectedNode.role} — {selectedNode.brief}
+                </span>
+                <div className="flex flex-col gap-0.5">
+                  {reachedModes.map((q) => {
                     const isCurrent = quality === q;
                     const c = QC[q];
                     return (
@@ -500,7 +476,7 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
                   })}
                 </div>
                 {selectedEdges.length > 0 && showEdgeLabels && (
-                  <div className="mt-2 pt-1.5" style={{ borderTop: "1px solid color-mix(in srgb, var(--color-border) 50%, transparent)" }}>
+                  <div className="pt-1.5" style={{ borderTop: "1px solid color-mix(in srgb, var(--color-border) 50%, transparent)" }}>
                     {selectedEdges.map((e) => {
                       const isOut = e.from === selectedNode.id;
                       const other = NODES.find((n) => n.id === (isOut ? e.to : e.from))!;
@@ -514,81 +490,10 @@ export function AssemblyLab({ activeStep }: { activeStep: number }) {
                     })}
                   </div>
                 )}
-              </motion.div>
-            ) : expandedQuality ? (
-              <motion.div
-                key={`q-${expandedQuality}`}
-                initial={reducedMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={TRANSITION.enterItem}
-              >
-                <div className="font-mono text-xs font-semibold" style={{ color: QC[expandedQuality].text }}>
-                  {QUALITY_INFO[expandedQuality].title}
-                </div>
-                <div className="font-mono text-xs mt-1 font-medium" style={{ color: "var(--color-muted)", lineHeight: 1.5 }}>
-                  {QUALITY_INFO[expandedQuality].what}
-                </div>
-                <div className="font-mono text-xs mt-0.5" style={{ color: QC[expandedQuality].text, lineHeight: 1.5 }}>
-                  {QUALITY_INFO[expandedQuality].effect}
-                </div>
-              </motion.div>
-            ) : expandedUsage !== null ? (
-              <motion.div
-                key={`u-${expandedUsage}`}
-                initial={reducedMotion ? false : { opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={TRANSITION.enterItem}
-              >
-                <div className="font-mono text-xs font-semibold" style={{ color: UC.text }}>
-                  {USAGE_INFO[expandedUsage].title}
-                </div>
-                <div
-                  className="font-mono text-xs mt-1.5 px-1.5 py-1 rounded"
-                  style={{ color: "var(--color-accent)", background: "color-mix(in srgb, var(--color-accent) 8%, var(--color-surface))", lineHeight: 1.5 }}
-                >
-                  {USAGE_INFO[expandedUsage].code}
-                </div>
-                <div className="font-mono text-xs mt-1" style={{ color: "var(--color-muted)", lineHeight: 1.5 }}>
-                  {USAGE_INFO[expandedUsage].detail}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={TRANSITION.crossfade}>
-                <span className="font-mono text-xs italic" style={{ color: "var(--color-muted)" }}>
-                  {hintText}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Semantic field toggles — inline, when not bare */}
-          {!isBare && (
-            <div className="mt-3 pt-3" style={{ borderTop: "1px solid color-mix(in srgb, var(--color-border) 50%, transparent)" }}>
-              <div className="flex flex-col gap-1.5">
-                <span className="font-mono text-xs uppercase tracking-wider" style={{ color: "var(--color-muted)", opacity: 0.5 }}>
-                  semantic fields
-                </span>
-                <DialToggle label="Thesis" value={fields.thesis} onChange={(v) => toggleField("thesis", v)} />
-                <DialToggle label="Roles" value={fields.roles} onChange={(v) => toggleField("roles", v)} />
-                <DialToggle label="Verbs" value={fields.verbs} onChange={(v) => toggleField("verbs", v)} />
-                <DialToggle label="Arc" value={fields.arc} onChange={(v) => toggleField("arc", v)} />
-                <DialToggle label="Tension" value={fields.tension} onChange={(v) => toggleField("tension", v)} />
-                {fieldOverrides && (
-                  <button
-                    type="button"
-                    onClick={() => setFieldOverrides(null)}
-                    className="font-mono text-xs mt-1 transition-colors hover:text-[var(--color-text)]"
-                    style={{ color: "var(--color-muted)" }}
-                  >
-                    ↺ reset
-                  </button>
-                )}
-              </div>
-            </div>
+              </DialPanel>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );

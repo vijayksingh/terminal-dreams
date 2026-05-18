@@ -1,8 +1,12 @@
 import CommandPalette from "@/components/CommandPalette/CommandPalette";
+import { getCommandPaletteFdArticles } from "@/lib/frontend-design";
 import { getCommandPalettePosts } from "@/lib/posts";
+import { getCommandPalettePrinciples } from "@/lib/principles";
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Fraunces, Inter, Fira_Code } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
+import { GeistPixelSquare } from "geist/font/pixel";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,11 +37,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const posts = await getCommandPalettePosts();
+  const [posts, principles, frontendDesign] = await Promise.all([
+    getCommandPalettePosts(),
+    getCommandPalettePrinciples(),
+    getCommandPaletteFdArticles(),
+  ]);
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${firaCode.variable} ${fraunces.variable} antialiased`}
+        className={`${inter.variable} ${firaCode.variable} ${fraunces.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} antialiased`}
       >
         {/* Theme init — must run before first paint to prevent flash */}
         <Script src="/theme-init.js" strategy="beforeInteractive" />
@@ -48,7 +56,7 @@ export default async function RootLayout({
             strategy="beforeInteractive"
           />
         )}
-        <CommandPalette posts={posts} />
+        <CommandPalette posts={posts} principles={principles} frontendDesign={frontendDesign} />
         {children}
       </body>
     </html>

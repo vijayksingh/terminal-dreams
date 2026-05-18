@@ -1,0 +1,121 @@
+---
+title: "Primitive Composition"
+slug: primitive-composition
+summary: "Build complex components by composing small, single-responsibility primitives rather than extending a monolithic base."
+categories:
+  - component-design
+  - architecture
+tags:
+  - react
+  - composition
+  - primitives
+  - layered-architecture
+relatedPrinciples:
+  - compound-components
+  - render-delegation
+  - derived-state
+learningPaths:
+  - build-a-composable-component
+deepDiveRefs:
+  - series: from-bespoke-to-semantic
+    part: 3
+    label: "Layered primitive extraction in the FlowDiagram system"
+---
+
+## The Problem
+
+A `<FlowDiagram>` component that handles node rendering, edge routing, group boundaries, text measurement, layout calculation, animation, selection state, hover state, keyboard navigation, accessibility, and responsive sizing. The component is 600 lines. Every bug fix risks breaking something else because all concerns share scope.
+
+This is the FlowDiagram's actual history on this blog. The first version was a monolith — it worked. Then we needed different edge routing for a new article. Then we needed groups for an architecture map. Then we needed animation for an execution flow. Each feature was added to the same component. By the fourth article, the component was untouchable — every change was a regression risk.
+
+Testing requires mounting the entire component even to verify that edge routing works correctly. You can't test geometry without also bootstrapping React, state management, and the DOM.
+
+## The Principle
+
+**Decompose a complex component into a stack of single-responsibility layers: types → geometry → hooks → primitives → composed component.**
+
+Each layer depends only on the layer below it:
+
+- **Types** (`types.ts`): Data shapes, no logic. `FlowNode`, `FlowEdge`, `FlowGroup`. The vocabulary.
+- **Geometry** (`geometry.ts`): Pure functions that compute positions, paths, bounding boxes. No React, no state, no side effects. Takes types, returns numbers.
+- **Hooks** (`use-flow-diagram.ts`): React hooks that manage interaction state (selection, hover, keyboard focus) and resolve raw data + interaction state into resolved types.
+- **Primitives** (`primitives.tsx`): Small React components that render one thing: a node shape, an edge path, a group boundary, a label. Each receives resolved data and renders it. No state management, no interaction handling.
+- **Composed component** (`FlowDiagram.tsx`): The public API. Wires hooks to primitives. Provides defaults. Handles layout. This is what the consumer imports.
+
+The key insight: each layer is independently testable and independently replaceable. Swap the geometry layer and every component using it gets new edge routing. Swap a primitive and the visual changes without touching state logic.
+
+<LayerStack />
+
+## Real-World Example
+
+The FlowDiagram system in this blog follows this exact layering. Here's the geometry layer — pure functions, no React:
+
+```tsx
+// geometry.ts — pure functions, testable without React
+export function computeEdgePath(
+  source: { x: number; y: number },
+  target: { x: number; y: number },
+  route: "straight" | "orthogonal" | "curved"
+): string {
+  switch (route) {
+    case "straight":
+      return `M ${source.x} ${source.y} L ${target.x} ${target.y}`;
+    case "orthogonal": {
+      const midX = (source.x + target.x) / 2;
+      return `M ${source.x} ${source.y} L ${midX} ${source.y} L ${midX} ${target.y} L ${target.x} ${target.y}`;
+    }
+    case "curved":
+      return `M ${source.x} ${source.y} C ${source.x + 50} ${source.y}, ${target.x - 50} ${target.y}, ${target.x} ${target.y}`;
+  }
+}
+```
+
+And a primitive — a single-concern React component:
+
+```tsx
+// primitives.tsx — renders one thing, takes resolved data
+function FlowEdge({ path, animate, color }: ResolvedEdge) {
+  return (
+    <motion.path
+      d={path}
+      stroke={color}
+      fill="none"
+      initial={{ pathLength: 0 }}
+      animate={{ pathLength: 1 }}
+      transition={TRANSITION.enterCard}
+    />
+  );
+}
+```
+
+Neither layer knows about the other. The composed `FlowDiagram` component is the only place they meet.
+
+## Anti-Patterns
+
+### The God Component
+
+A single file that imports every dependency, manages all state, computes all derived values, handles all events, and renders the entire tree. When you need to change edge routing, you're scrolling past 200 lines of node rendering code to find it.
+
+### The Premature Abstraction
+
+Extracting a "geometry utils" file when you have one diagram with one edge type. The abstraction boundary doesn't earn its keep until there are at least two consumers with different needs. Start monolithic, extract when the second use case arrives.
+
+### The Leaky Layer
+
+A primitive component that imports the hook directly instead of receiving resolved data as props. Now the primitive can't be used with different state management, and testing it requires mocking the hook.
+
+## Related Principles
+
+- **Compound Components** — The React-specific pattern for consumer-facing composition. Primitive Composition is the internal architecture; Compound Components is the external API.
+- **Derived State** — The geometry layer is a pure derivation from types. Understanding derived state helps you design layers that compute rather than store.
+- **Render Delegation** — Primitives that accept `asChild` or render props extend the composition to the DOM element level.
+
+## When to Break This Rule
+
+- **One-off components with no variation.** If the component is used once and will never be reused, the layering adds indirection without payoff. Wait for the second use case.
+- **Prototyping.** When exploring a new feature, write the monolith first. Extract layers once you understand the domain. Premature decomposition creates the wrong abstractions.
+- **Trivial components.** A `<Badge>` component that renders a styled `<span>` doesn't need five layers. The principle applies to components complex enough that concerns actually conflict.
+
+## Deep-Dive References
+
+- **From Bespoke to Semantic, Part 3** — The full extraction story: how the FlowDiagram monolith was decomposed into `types.ts` → `geometry.ts` → `use-flow-diagram.ts` → `primitives.tsx` → `FlowDiagram.tsx`.
