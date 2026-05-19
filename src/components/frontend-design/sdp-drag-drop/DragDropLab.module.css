@@ -872,6 +872,98 @@
 .codeLine { padding: 1px 0; }
 .codeComment { color: var(--color-muted); }
 
+/* ── Reorder visualizer ─────────────────────────────────────── */
+
+.reorderControls {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.reorderLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+}
+
+.reorderSelect {
+  padding: 4px 8px;
+  min-height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.reorderTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.reorderStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reorderStepLabel {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+  min-width: 90px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.reorderRow {
+  display: flex;
+  gap: 4px;
+}
+
+.reorderCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-fg);
+  background: var(--color-surface);
+  transition: all 200ms ease;
+  position: relative;
+}
+
+.reorderCell[data-active="true"] {
+  border-color: var(--color-app-accent);
+  background: color-mix(in srgb, var(--color-app-accent) 18%, transparent);
+  color: var(--color-app-accent);
+}
+
+.reorderCell[data-empty="true"] {
+  border-style: dashed;
+  opacity: 0.4;
+}
+
+.reorderSub {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 0.5rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
 /* ── Placeholder demo ────────────────────────────────────────── */
 
 .placeholderDemo {

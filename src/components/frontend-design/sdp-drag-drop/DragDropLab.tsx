@@ -948,20 +948,102 @@ function HitTestVisualizerWidget() {
 }
 
 function ReorderStateWidget() {
+  const ITEMS = ["A", "B", "C", "D", "E"];
+  const [fromIdx, setFromIdx] = useState(1);
+  const [toIdx, setToIdx] = useState(4);
+  const adjusted = fromIdx < toIdx ? toIdx - 1 : toIdx;
+
+  const afterRemove = ITEMS.filter((_, i) => i !== fromIdx);
+  const afterInsert = [...afterRemove.slice(0, adjusted), ITEMS[fromIdx]!, ...afterRemove.slice(adjusted)];
+
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Reorder: splice strategy</div>
-      <div className={styles.codeBlock}>
-        <div className={styles.codeLine}><span className={styles.codeComment}>{"// 1. Remove from source"}</span></div>
-        <div className={styles.codeLine}>source.items.splice(fromIdx, 1)</div>
-        <div className={styles.codeLine}><span className={styles.codeComment}>{"// 2. Adjust target index if same zone"}</span></div>
-        <div className={styles.codeLine}>{"const adj = same && from < to ? to - 1 : to"}</div>
-        <div className={styles.codeLine}><span className={styles.codeComment}>{"// 3. Insert at target"}</span></div>
-        <div className={styles.codeLine}>target.items.splice(adj, 0, item)</div>
+      <div className={styles.reorderControls}>
+        <label className={styles.reorderLabel}>
+          From:
+          <select
+            className={styles.reorderSelect}
+            value={fromIdx}
+            onChange={(e) => setFromIdx(Number(e.target.value))}
+          >
+            {ITEMS.map((item, i) => (
+              <option key={i} value={i}>[{i}] {item}</option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.reorderLabel}>
+          To:
+          <select
+            className={styles.reorderSelect}
+            value={toIdx}
+            onChange={(e) => setToIdx(Number(e.target.value))}
+          >
+            {ITEMS.map((_, i) => (
+              <option key={i} value={i}>index {i}</option>
+            ))}
+          </select>
+        </label>
       </div>
-      <div className={styles.widgetNote}>
-        The index adjustment is the classic gotcha. If dragging item[2] to position[5] within the same list, removing item[2] shifts everything — position[5] is now position[4].
+
+      <div className={styles.reorderTimeline}>
+        <div className={styles.reorderStep}>
+          <span className={styles.reorderStepLabel}>Before:</span>
+          <div className={styles.reorderRow}>
+            {ITEMS.map((item, i) => (
+              <span
+                key={i}
+                className={styles.reorderCell}
+                data-active={i === fromIdx ? "true" : undefined}
+              >
+                {item}<sub className={styles.reorderSub}>{i}</sub>
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className={styles.reorderStep}>
+          <span className={styles.reorderStepLabel}>Remove [{fromIdx}]:</span>
+          <div className={styles.reorderRow}>
+            {afterRemove.map((item, i) => (
+              <span key={i} className={styles.reorderCell}>
+                {item}<sub className={styles.reorderSub}>{i}</sub>
+              </span>
+            ))}
+            <span className={styles.reorderCell} data-empty="true">_</span>
+          </div>
+        </div>
+        <div className={styles.reorderStep}>
+          <span className={styles.reorderStepLabel}>
+            Insert at {fromIdx < toIdx ? (
+              <><s style={{ opacity: 0.5 }}>{toIdx}</s> → <strong>{adjusted}</strong></>
+            ) : (
+              <strong>{adjusted}</strong>
+            )}:
+          </span>
+          <div className={styles.reorderRow}>
+            {afterInsert.map((item, i) => (
+              <span
+                key={i}
+                className={styles.reorderCell}
+                data-active={item === ITEMS[fromIdx] ? "true" : undefined}
+              >
+                {item}<sub className={styles.reorderSub}>{i}</sub>
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {fromIdx < toIdx && (
+        <div className={styles.widgetNote} style={{ color: "var(--diagram-layer-4)" }}>
+          Index adjusted: {toIdx} → {adjusted}. Removing [{fromIdx}] shifted everything after it left by 1.
+        </div>
+      )}
+      {fromIdx >= toIdx && (
+        <div className={styles.widgetNote}>
+          No adjustment needed — source is after target, so removal doesn&apos;t affect the target index.
+        </div>
+      )}
     </div>
   );
 }

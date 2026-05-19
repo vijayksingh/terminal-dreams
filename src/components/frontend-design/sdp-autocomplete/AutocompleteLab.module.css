@@ -119,7 +119,7 @@
 
 .checkItem[data-checked="true"] {
   border-color: var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .checkToggle {
@@ -887,13 +887,14 @@
 }
 
 .networkDot {
-  width: 12px;
-  height: 12px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   position: relative;
   cursor: default;
-  min-width: 12px;
-  min-height: 12px;
+  min-width: 20px;
+  min-height: 20px;
+  border: 2px solid color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .networkDot:focus-visible {
@@ -1135,12 +1136,12 @@
 
 .baselineBurst[data-type="naive"] {
   color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 6%, transparent);
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
 }
 
 .baselineBurst[data-type="debounced"] {
   color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
 }
 
 /* ── Comparison bars (used by Baseline + Debounce widgets) ──────── */
@@ -1241,7 +1242,7 @@
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--diagram-layer-0);
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-0) 8%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-0) 14%, transparent);
   color: var(--diagram-layer-0);
   font-family: var(--font-mono);
   font-size: 0.625rem;
@@ -1250,7 +1251,7 @@
   transition: all 150ms ease;
 }
 
-.simButton:hover { background: color-mix(in srgb, var(--diagram-layer-0) 16%, transparent); }
+.simButton:hover { background: color-mix(in srgb, var(--diagram-layer-0) 22%, transparent); }
 .simButton:focus-visible { outline: 2px solid var(--diagram-layer-0); outline-offset: 2px; }
 
 .simButtonSecondary {
@@ -1324,15 +1325,15 @@
   border-radius: var(--radius-1);
   font-size: 0.625rem;
   font-weight: 600;
-  background: color-mix(in srgb, var(--color-error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+  background: color-mix(in srgb, var(--color-error) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
   color: var(--color-error);
   margin-top: var(--space-2);
 }
 
 .raceOutcome[data-correct="true"] {
-  background: color-mix(in srgb, var(--color-success) 8%, transparent);
-  border-color: color-mix(in srgb, var(--color-success) 25%, transparent);
+  background: color-mix(in srgb, var(--color-success) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 30%, transparent);
   color: var(--color-success);
 }
 
