@@ -97,6 +97,15 @@ export type ArchScenario = {
 // The diagram shape itself uses the upstream FlowDiagram types, so
 // lessons can pass their existing nodes/edges and add scenarios on top.
 
+export type ArchCardArea = {
+  /** Which side of the canvas the detail card docks to. */
+  side: "right";
+  /** Reserved card width in viewBox units (used by SVG connector geometry). */
+  widthVB: number;
+  /** Horizontal gap between active node and card, in viewBox units. */
+  gapVB?: number;
+};
+
 export type ArchScenarioPlayerConfig = {
   /** Headline for the widget. Defaults to "Architecture". */
   title?: string;
@@ -116,6 +125,18 @@ export type ArchScenarioPlayerConfig = {
   footnote?: ReactNode;
   /** Optional FlowDiagram passthrough config. */
   flowConfig?: FlowDiagramDef["config"];
+  /**
+   * "anchored" docks the detail card next to the active node inside the
+   * same canvas (card's vertical center tracks the active node). "stacked"
+   * keeps the legacy below-the-diagram bubble. Default: "stacked".
+   */
+  layout?: "anchored" | "stacked";
+  /**
+   * For "anchored" layout: reserve a card area on one side of the canvas.
+   * Diagram nodes should be positioned to avoid this area. Defaults to
+   * `{ side: "right", widthVB: 200, gapVB: 16 }`.
+   */
+  cardArea?: ArchCardArea;
 };
 
 // ── Props ───────────────────────────────────────────────────────────

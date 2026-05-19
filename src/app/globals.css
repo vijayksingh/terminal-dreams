@@ -30,15 +30,327 @@ body {
 }
 
 .richtext-code-pill {
-  transition: background-color 180ms ease-out;
-  padding: 0.05em 0.28em;
-  margin: -0.05em -0.28em;
-  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--color-code-fg);
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  padding: 0.08em 0.42em;
+  margin: 0 0.06em;
+  border-radius: 4px;
   cursor: default;
+  white-space: nowrap;
+  transition:
+    background-color 180ms ease-out,
+    border-color 180ms ease-out;
 }
 
 .richtext-code-pill:hover {
-  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--color-code-fg) 16%, var(--color-surface-2));
+  border-color: color-mix(in srgb, var(--color-code-fg) 42%, transparent);
+}
+
+/* ─── Duration badge ──────────────────────────── */
+/* 400ms, 2.5s, 200μs etc — reads as a metric: bold mono numeral,
+   muted unit suffix. tabular-nums keeps columns of timings aligned. */
+.duration-badge {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.duration-value {
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.95em;
+  letter-spacing: -0.01em;
+}
+
+.duration-unit {
+  color: var(--color-muted);
+  font-size: 0.78em;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin-left: 0.12em;
+  text-transform: lowercase;
+}
+
+/* ─── Percentile metric (p95, p99, p99.9) ─────── */
+/* Lowercase `p` muted, number bold + accent — reads as a stat. */
+.metric-percentile {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.metric-percentile-p {
+  color: var(--color-muted);
+  font-size: 0.84em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin-right: 0.04em;
+}
+
+.metric-percentile-n {
+  color: var(--color-accent);
+  font-weight: 700;
+  font-size: 0.98em;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Multiplier metric (10×, 5×, 100×) ─────── */
+/* Magnitude in text color, `×` in accent — operator carries meaning. */
+.metric-multiplier {
+  display: inline-flex;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.metric-multiplier-n {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 0.98em;
+  letter-spacing: -0.01em;
+}
+
+.metric-multiplier-op {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 1.06em;
+  margin-left: 0.08em;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Big-O complexity (O(n), O(log n), O(n²)) ─── */
+/* Italic-serif `O` for math convention + muted parens + mono arg.
+   Typeset like a textbook, not styled like a runtime expression. */
+.complexity-badge {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+.complexity-o {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: 1.08em;
+  letter-spacing: -0.02em;
+}
+
+.complexity-paren {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+  opacity: 0.75;
+  margin: 0 0.06em;
+}
+
+.complexity-arg {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+/* ─── API endpoint chip ───────────────────────── */
+/* Verb pill + path renders as one cohesive request atom. */
+.api-endpoint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  vertical-align: -0.18em;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  line-height: 1;
+  padding: 0.32em 0.78em 0.32em 0.58em;
+  margin: 0 0.08em;
+  border-radius: 999px;
+  background: var(--api-surface);
+  border: 1px solid var(--api-border);
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease-out,
+    border-color 200ms ease-out;
+}
+
+.api-endpoint:hover {
+  background: color-mix(in srgb, var(--api-accent) 22%, var(--color-surface-2));
+  border-color: color-mix(in srgb, var(--api-accent) 55%, transparent);
+}
+
+.api-endpoint-method {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  font-weight: 700;
+  font-size: 0.92em;
+  letter-spacing: 0.08em;
+  color: var(--api-accent);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.api-endpoint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95em;
+  height: 0.95em;
+  color: var(--api-accent);
+  flex-shrink: 0;
+  line-height: 0;
+  /* Optical nudge: line-center → cap-mid (GET has no descenders). */
+  transform: translateY(-0.04em);
+  filter: drop-shadow(
+    0 0 0.35em color-mix(in srgb, var(--api-accent) 55%, transparent)
+  );
+}
+
+.api-endpoint-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.api-endpoint-path {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.api-endpoint-slash {
+  color: color-mix(in srgb, var(--color-muted) 50%, transparent);
+  margin: 0 0.02em;
+  font-weight: 400;
+}
+
+.api-endpoint-segment {
+  color: var(--color-text);
+}
+
+.api-endpoint-param {
+  color: var(--api-accent);
+  font-style: italic;
+  position: relative;
+  padding: 0 0.05em;
+}
+
+.api-endpoint-param::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.12em;
+  height: 1px;
+  background: color-mix(in srgb, var(--api-accent) 45%, transparent);
+  border-radius: 999px;
+}
+
+.api-endpoint-query {
+  color: var(--color-muted);
+  margin-left: 0.05em;
+}
+
+/* ─── Type badge ──────────────────────────────── */
+/* Reads as "this is a shape", not a runtime value. */
+.type-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05em;
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  padding: 0 0.1em;
+  vertical-align: baseline;
+  white-space: nowrap;
+  position: relative;
+}
+
+.type-chip-marker {
+  color: color-mix(in srgb, var(--color-muted) 75%, transparent);
+  font-weight: 400;
+  font-size: 0.95em;
+  transition: color 220ms ease-out;
+}
+
+.type-chip:hover .type-chip-marker {
+  color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.type-chip-name {
+  color: var(--color-accent);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.type-chip-generic,
+.type-chip-array {
+  color: color-mix(in srgb, var(--color-accent) 65%, var(--color-muted));
+  font-weight: 500;
+  font-size: 0.92em;
+}
+
+.type-chip-array {
+  letter-spacing: -0.08em;
+  margin-left: 0.05em;
+}
+
+/* prefers-reduced-motion: tone down hover transforms/pulses */
+@media (prefers-reduced-motion: reduce) {
+  .api-endpoint,
+  .api-endpoint-icon {
+    transition: none;
+    animation: none !important;
+  }
+}
+
+/* ─── Rich strong: custom SVG tag marker ─────── */
+/* Replaces the wavy underline with a hand-drawn flag/tag SVG
+   that points into the text — distinctive at every lead phrase. */
+.rich-strong {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.rich-strong-marker {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent);
+  margin-right: 0.42em;
+  vertical-align: -0.08em;
+  line-height: 0;
+  filter: drop-shadow(
+    0 0 0.35em color-mix(in srgb, var(--color-accent) 35%, transparent)
+  );
+}
+
+/* ─── Rich arrow: custom SVG glyph ───────────── */
+.rich-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent);
+  padding: 0 0.18em;
+  vertical-align: -0.04em;
+  line-height: 0;
+}
+
+.rich-arrow svg {
+  display: block;
 }
 
 /* ─── Rich link: hover-to-wavy underline ─────── */
@@ -57,10 +369,32 @@ body {
   text-underline-offset: 2px;
 }
 
-/* ─── Rich blockquote: pull-quote with accent ─── */
+.rich-link-external {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-accent);
+  margin-left: 0.2em;
+  vertical-align: -0.06em;
+  line-height: 0;
+  opacity: 0.7;
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.rich-link:hover .rich-link-external {
+  opacity: 1;
+  transform: translate(0.08em, -0.08em);
+}
+
+.rich-link-external svg {
+  display: block;
+}
+
+/* ─── Rich blockquote: pull-quote with editorial mark ─── */
 .rich-blockquote {
-  border-left: 3px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
-  padding: var(--space-3) var(--space-4);
+  position: relative;
+  border-left: 2px solid color-mix(in srgb, var(--color-accent) 32%, transparent);
+  padding: var(--space-4) var(--space-4) var(--space-3)
+    calc(var(--space-4) + 1.9em);
   margin: var(--space-5) 0;
   background: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
   border-radius: 0 var(--radius-1) var(--radius-1) 0;
@@ -69,7 +403,23 @@ body {
 .rich-blockquote p {
   font-family: var(--font-display);
   font-style: italic;
+  margin: 0;
 }
+
+.rich-blockquote p + p {
+  margin-top: var(--space-3);
+}
+
+.rich-blockquote-mark {
+  position: absolute;
+  top: 0.45em;
+  left: calc(var(--space-4) - 0.1em);
+  color: var(--color-accent);
+  opacity: 0.42;
+  line-height: 0;
+  pointer-events: none;
+}
+
 
 /* ─── Rich lists: accent markers ─────────────── */
 .rich-list,
@@ -78,10 +428,30 @@ body {
   margin: var(--space-3) 0;
 }
 
-.rich-list li::marker {
-  color: var(--color-accent);
+/* Unordered: inline-SVG pentagon bullet rendered inside each <li>.
+   Positioning only — entrance is orchestrated by motion.ul's
+   staggerChildren in RichElements.tsx. */
+.rich-list {
+  list-style: none;
 }
 
+.rich-list > .rich-list-item {
+  position: relative;
+}
+
+.rich-list-bullet {
+  position: absolute;
+  left: -1.15em;
+  top: 0.55em;
+  display: inline-flex;
+  color: var(--color-accent);
+  line-height: 0;
+  filter: drop-shadow(
+    0 0 0.25em color-mix(in srgb, var(--color-accent) 30%, transparent)
+  );
+}
+
+/* Ordered: keep the monospace tabular-nums marker treatment. */
 .rich-ordered-list {
   list-style-type: decimal;
 }
@@ -97,6 +467,61 @@ body {
 .rich-list-item {
   padding-left: 0.25em;
   margin-bottom: 0.35em;
+}
+
+/* ─── Rich divider: hand-drawn SVG separator ─── */
+.rich-divider {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: var(--space-6) 0;
+  color: var(--color-border);
+}
+
+
+/* ─── Custom text selection ──────────────────── */
+/* Accent-tinted highlight replaces browser default blue.
+   Code pills get a cyan-tinted selection so they stay visually
+   distinct mid-selection. Text-shadow killed to prevent halo
+   artifacts when selecting glow-styled elements. */
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  color: var(--color-text);
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background: color-mix(in srgb, var(--color-accent) 38%, transparent);
+  color: var(--color-text);
+  text-shadow: none;
+}
+
+.richtext-code-pill::selection,
+.richtext-code-pill *::selection {
+  background: color-mix(in srgb, var(--color-code-fg) 38%, transparent);
+  color: var(--color-text);
+}
+
+/* ─── Rich mark: hand-drawn highlighter pen ──── */
+/* Felt-tip stroke effect via linear gradient through the lower
+   ~40% of the text. The "draw-in" animation is driven by framer-motion
+   in RichElements.tsx (animates background-size on viewport entry).
+   Initial state lives on the inline style from motion; CSS owns only
+   the gradient + box styling. */
+.rich-mark {
+  color: inherit;
+  background-image: linear-gradient(
+    180deg,
+    transparent 55%,
+    color-mix(in srgb, var(--cookbook-timer-warning) 34%, transparent) 55%,
+    color-mix(in srgb, var(--cookbook-timer-warning) 34%, transparent) 92%,
+    transparent 92%
+  );
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  padding: 0 0.16em;
+  margin: 0 0.04em;
+  border-radius: 2px;
 }
 
 /* Tame tap highlight on touch devices */

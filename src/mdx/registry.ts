@@ -7,6 +7,7 @@ import { RichText } from "@/components/ui/RichText";
 import {
   RichStrong,
   RichEmphasis,
+  RichMark,
   RichLink,
   RichBlockquote,
   RichDivider,
@@ -14,6 +15,7 @@ import {
   RichOrderedList,
   RichListItem,
 } from "@/components/ui/RichElements";
+import { SmartCode } from "@/components/ui/richtext-endpoint";
 import { CodeAnnotator } from "@/mdx/shared/CodeAnnotator";
 import { EmbeddablePlayground } from "@/mdx/shared/EmbeddablePlayground";
 import { FlowDiagram } from "@/mdx/shared/FlowDiagram";
@@ -41,8 +43,12 @@ export const sharedComponents: MdxComponentMap = {
   RichText: RichText as unknown as MdxComponent,
   p: RichParagraph as unknown as MdxComponent,
   pre: CodeBlock,
+  // Inline `<code>` (backticks) — routes to endpoint/type/code variants.
+  // Code blocks pass `className="language-*"` and bail out inside SmartCode.
+  code: SmartCode as unknown as MdxComponent,
   strong: RichStrong as unknown as MdxComponent,
   em: RichEmphasis as unknown as MdxComponent,
+  mark: RichMark as unknown as MdxComponent,
   a: RichLink as unknown as MdxComponent,
   blockquote: RichBlockquote as unknown as MdxComponent,
   hr: RichDivider as unknown as MdxComponent,

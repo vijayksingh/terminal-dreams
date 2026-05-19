@@ -729,3 +729,77 @@
   color: var(--color-bg);
   border-color: color-mix(in srgb, var(--color-accent) 82%, white);
 }
+
+/* ── Anchored layout: diagram + floating detail card ─────────────
+ *
+ * The card lives inside the same canvas as the SVG diagram, docked
+ * to the right side. Its vertical center tracks the active node's
+ * center, with --anchor-y springing between steps. A 1.8px accent
+ * connector (drawn inside the SVG by DiagramCanvas) leashes the
+ * active node's right edge to the card's left edge — they read as
+ * one cluster.
+ *
+ * --card-right and --card-width are set inline by the player from
+ * the cardArea config; the SVG draws the connector to the same
+ * x-coordinate so they stay aligned. */
+
+.canvasInner {
+  position: relative;
+  padding: 12px 12px 12px;
+}
+
+.canvasFrame[data-layout="anchored"] .canvasWrap {
+  /* not used in anchored — kept for stacked fallback below */
+  padding: 12px 12px 6px;
+}
+
+.floatingCard {
+  position: absolute;
+  right: var(--card-right, 3%);
+  width: var(--card-width, 38%);
+  /* top is set by motion (animated %) and translateY centers it */
+  transform: translateY(-50%);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-left: 2px solid var(--color-accent);
+  border-radius: var(--radius-1);
+  padding: 12px 14px 11px;
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--color-accent) 16%, transparent),
+    0 10px 30px -14px color-mix(in srgb, var(--color-accent) 55%, transparent),
+    0 2px 6px -2px color-mix(in srgb, var(--color-text) 18%, transparent);
+  z-index: 2;
+  /* Cap height so it never escapes the canvas vertically */
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  /* Slight bevel against the dim canvas surface */
+  backdrop-filter: blur(2px);
+}
+
+.floatingCardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* Narrow viewport → fall back to stacked layout: card drops below
+ * the diagram and spans full width. Keeps the experience usable on
+ * mobile/portrait without forcing a different markup path. */
+@media (max-width: 720px) {
+  .canvasInner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 12px 10px;
+  }
+  .floatingCard {
+    position: relative;
+    right: auto;
+    width: auto;
+    top: auto !important;
+    transform: none;
+    max-height: none;
+    border-left: 1px solid var(--color-border);
+    border-top: 2px solid var(--color-accent);
+  }
+}

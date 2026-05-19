@@ -2,7 +2,7 @@
 
 import { ScanlineOverlay } from "@/components/retro/RetroDecor";
 import type { FdMetroMapData, FdSectionSlug } from "@/lib/frontend-design-types";
-import { SECTIONS, getStopsForSection } from "@/lib/frontend-design-data";
+import { SECTIONS, getStopsForSection, getStopAvailability, type StopAvailability } from "@/lib/frontend-design-data";
 import { useFdProgress } from "@/hooks/use-fd-progress";
 import Link from "next/link";
 import styles from "./frontend-design.module.css";
@@ -21,6 +21,16 @@ const KIND_PREFIX: Record<string, string> = {
   "live-coding": "▶ ",
   "system-design-problem": "✦ ",
 };
+
+function AvailabilityBadge({ availability }: { availability: StopAvailability }) {
+  if (availability === "interactive") {
+    return <span className={styles.stopBadge} data-kind="interactive">interactive</span>;
+  }
+  if (availability === "article-only") {
+    return <span className={styles.stopBadge} data-kind="article">read</span>;
+  }
+  return <span className={styles.stopBadge} data-kind="soon">soon</span>;
+}
 
 export function FrontendDesignLanding({ mapData }: Props) {
   const { isComplete, completedStops, progressForSection } = useFdProgress();
@@ -96,20 +106,28 @@ export function FrontendDesignLanding({ mapData }: Props) {
                 {stops.map((stop) => {
                   const done = isComplete(stop.id);
                   const prefix = KIND_PREFIX[stop.kind] ?? "";
-                  return (
-                    <Link
-                      key={stop.id}
-                      href={`/frontend-design/${stop.slug}`}
-                      className={`${styles.stopLink} ${done ? styles.stopDone : ""}`}
-                      style={{
-                        "--stop-color": col(sec.colorToken),
-                      } as React.CSSProperties}
-                    >
+                  const availability = getStopAvailability(stop.slug);
+                  const isComingSoon = availability === "coming-soon";
+                  const cls = `${styles.stopLink} ${done ? styles.stopDone : ""} ${isComingSoon ? styles.stopComingSoon : ""}`;
+                  const sty = { "--stop-color": col(sec.colorToken) } as React.CSSProperties;
+                  const inner = (
+                    <>
                       {done && <span className={styles.stopCheck}>✓</span>}
                       {!done && prefix && (
                         <span className={styles.stopKindPrefix}>{prefix}</span>
                       )}
-                      {stop.label}
+                      <span className={styles.stopLabel}>{stop.label}</span>
+                      {!done && <AvailabilityBadge availability={availability} />}
+                    </>
+                  );
+
+                  return isComingSoon ? (
+                    <span key={stop.id} className={cls} style={sty}>
+                      {inner}
+                    </span>
+                  ) : (
+                    <Link key={stop.id} href={`/frontend-design/${stop.slug}`} className={cls} style={sty}>
+                      {inner}
                     </Link>
                   );
                 })}

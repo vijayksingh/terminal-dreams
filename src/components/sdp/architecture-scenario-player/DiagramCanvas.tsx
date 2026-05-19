@@ -22,6 +22,17 @@ type DiagramCanvasProps = {
    * doesn't exist without the type split.
    */
   splitEnabled: boolean;
+  /**
+   * For anchored layout: x-coordinate (viewBox units) of the card's
+   * left edge. When provided, a connector line is drawn from the active
+   * node's right edge to this x at the node's vertical center.
+   */
+  cardAnchorX?: number;
+  /**
+   * Layout mode — affects non-active node opacity (anchored uses lower
+   * values so the active cluster reads as the focal point).
+   */
+  layout?: "anchored" | "stacked";
 };
 
 function nodePhase(
@@ -143,6 +154,13 @@ const NODE_OPACITY: Record<NodePhase, number> = {
   visited: 0.9,
 };
 
+const NODE_OPACITY_ANCHORED: Record<NodePhase, number> = {
+  idle: 0.7,
+  future: 0.38,
+  active: 1,
+  visited: 0.65,
+};
+
 const EDGE_STROKE: Record<NodePhase, string> = {
   idle: "color-mix(in srgb, var(--color-muted) 50%, transparent)",
   future: "color-mix(in srgb, var(--color-muted) 30%, transparent)",
@@ -159,10 +177,15 @@ export function DiagramCanvas({
   currentStepIdx,
   reducedMotion,
   splitEnabled,
+  cardAnchorX,
+  layout = "stacked",
 }: DiagramCanvasProps) {
   const nodeMap: Record<string, FlowNode> = Object.fromEntries(
     nodes.map((n) => [n.id, n]),
   );
+
+  const opacityTable =
+    layout === "anchored" ? NODE_OPACITY_ANCHORED : NODE_OPACITY;
 
   // Resolve current step and active edge
   const currentStep = steps[currentStepIdx];
@@ -170,6 +193,18 @@ export function DiagramCanvas({
   const activeEdgeFromTo = prevStep
     ? { from: prevStep.nodeId, to: currentStep.nodeId }
     : null;
+
+  // For anchored layout: geometry for the connector line from active
+  // node's right edge to the card's left edge.
+  const activeNode = currentStep ? nodeMap[currentStep.nodeId] : undefined;
+  const connectorGeom =
+    layout === "anchored" && cardAnchorX != null && activeNode
+      ? {
+          x1: activeNode.x + (activeNode.w ?? 100),
+          y: activeNode.y + (activeNode.h ?? 40) / 2,
+          x2: cardAnchorX,
+        }
+      : null;
 
   // Find geometry for the active payload chip
   let chipGeom: { fromCx: number; fromCy: number; midX: number; midY: number; toCx: number; toCy: number } | null = null;
@@ -270,6 +305,58 @@ export function DiagramCanvas({
           );
         })}
 
+        {/* Leash: connector from active node's right edge to the floating
+            detail card's left edge (anchored layout only). Re-drawn on
+            each step so the line traces fresh from node to card. */}
+        <AnimatePresence mode="wait">
+          {connectorGeom && (
+            <motion.g
+              key={`card-leash-${currentStepIdx}`}
+              aria-hidden
+              initial={reducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={
+                reducedMotion ? { duration: 0 } : { duration: 0.2 }
+              }
+            >
+              <motion.line
+                x1={connectorGeom.x1}
+                y1={connectorGeom.y}
+                x2={connectorGeom.x2}
+                y2={connectorGeom.y}
+                stroke="var(--color-accent)"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                opacity={0.85}
+                initial={reducedMotion ? false : { pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={
+                  reducedMotion
+                    ? { duration: 0 }
+                    : { duration: 0.42, ease: "easeOut", delay: 0.18 }
+                }
+              />
+              <motion.circle
+                cx={connectorGeom.x2}
+                cy={connectorGeom.y}
+                r={2.4}
+                fill="var(--color-accent)"
+                initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={
+                  reducedMotion
+                    ? { duration: 0 }
+                    : { ...SPRING.gentle, delay: 0.42 }
+                }
+                style={{
+                  transformOrigin: `${connectorGeom.x2}px ${connectorGeom.y}px`,
+                }}
+              />
+            </motion.g>
+          )}
+        </AnimatePresence>
+
         {/* Anticipation pulse on the node we just left (storyboard beat A) */}
         <AnimatePresence>
           {prevStep && !reducedMotion && (() => {
@@ -322,7 +409,7 @@ export function DiagramCanvas({
             <motion.g
               key={node.id}
               animate={{
-                opacity: NODE_OPACITY[phase],
+                opacity: opacityTable[phase],
                 scale: phase === "active" && !reducedMotion ? 1.04 : 1,
               }}
               transition={phaseTransition}

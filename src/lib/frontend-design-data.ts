@@ -44,8 +44,8 @@ export const STOPS: FdStop[] = [
   { id: "virt-windowing", sectionSlug: "virtualisation", label: "Windowing Fundamentals", slug: "windowing-fundamentals", order: 1, kind: "article", intersections: ["api-intersection"] },
   { id: "virt-fixed-vs-variable", sectionSlug: "virtualisation", label: "Fixed vs Variable Height Rows", slug: "fixed-vs-variable-height", order: 2, kind: "article", intersections: ["virt-variable-height"] },
   { id: "virt-variable-height", sectionSlug: "virtualisation", label: "Virtual Scroll Implementation", slug: "virtual-scroll-implementation", order: 3, kind: "live-coding", intersections: ["api-resize", "virt-fixed-vs-variable"] },
-  { id: "virt-tree-grid", sectionSlug: "virtualisation", label: "Tree & Grid Virtualization", slug: "tree-grid-virtualization", order: 4, kind: "article", intersections: ["sdp-spreadsheet"] },
-  { id: "virt-canvas-dom", sectionSlug: "virtualisation", label: "Canvas vs DOM Rendering", slug: "canvas-vs-dom", order: 5, kind: "article", intersections: ["sdp-whiteboard"] },
+  { id: "virt-tree-grid", sectionSlug: "virtualisation", label: "Tree & Grid Virtualization", slug: "tree-grid-virtualization", order: 4, kind: "system-design-problem", intersections: ["sdp-spreadsheet"] },
+  { id: "virt-canvas-dom", sectionSlug: "virtualisation", label: "Canvas vs DOM Rendering", slug: "canvas-vs-dom", order: 5, kind: "system-design-problem", intersections: ["sdp-whiteboard"] },
 
   // ── 5. Application State Design ─────────────────────────────────
   { id: "state-search", sectionSlug: "state-design", label: "Search / Access Optimization", slug: "search-access-optimization", order: 1, kind: "article", intersections: ["sdp-autocomplete"] },
@@ -97,6 +97,45 @@ export const STOPS: FdStop[] = [
   { id: "sdp-image-gallery", sectionSlug: "system-design-problems", label: "Design an Image Gallery", slug: "design-image-gallery", order: 12, kind: "system-design-problem", intersections: ["api-intersection", "virt-windowing", "perf-images"] },
   { id: "sdp-booking-platform", sectionSlug: "system-design-problems", label: "Design a Booking Platform", slug: "design-booking-platform", order: 13, kind: "system-design-problem", intersections: ["state-storage", "net-long-polling", "perf-js", "api-intersection"] },
 ];
+
+// Slugs that have full interactive lab implementations
+export const INTERACTIVE_LAB_SLUGS = new Set([
+  "design-image-gallery",
+  "design-booking-platform",
+  "design-news-feed",
+  "design-realtime-chat",
+  "design-autocomplete",
+  "windowing-fundamentals",
+  "fixed-vs-variable-height",
+  "virtual-scroll-implementation",
+  "tree-grid-virtualization",
+  "canvas-vs-dom",
+]);
+
+// Slugs that have published MDX content (may or may not have a lab)
+export const PUBLISHED_CONTENT_SLUGS = new Set([
+  "box-model",
+  "design-image-gallery",
+  "design-booking-platform",
+  "design-news-feed",
+  "design-realtime-chat",
+  "design-autocomplete",
+  "design-drag-drop",
+  "design-notification-system",
+  "windowing-fundamentals",
+  "fixed-vs-variable-height",
+  "virtual-scroll-implementation",
+  "tree-grid-virtualization",
+  "canvas-vs-dom",
+]);
+
+export type StopAvailability = "interactive" | "article-only" | "coming-soon";
+
+export function getStopAvailability(slug: string): StopAvailability {
+  if (INTERACTIVE_LAB_SLUGS.has(slug)) return "interactive";
+  if (PUBLISHED_CONTENT_SLUGS.has(slug)) return "article-only";
+  return "coming-soon";
+}
 
 export function getSectionBySlug(slug: FdSectionSlug): FdSection | undefined {
   return SECTIONS.find((s) => s.slug === slug);

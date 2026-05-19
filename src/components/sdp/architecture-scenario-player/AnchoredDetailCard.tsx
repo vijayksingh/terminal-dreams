@@ -1,34 +1,27 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { SPRING } from "@/lib/motion";
+import { SPRING, TRANSITION } from "@/lib/motion";
 import type { FlowNode } from "@/mdx/shared/flow-diagram";
 import type { ArchPayload, ArchStateEntry } from "./types";
 import { diffRows, hasStateChange, BubbleStateRow } from "./state-diff";
 import styles from "./styles.module.css";
 
-type ActiveNodeBubbleProps = {
-  /** The node this bubble is attached to. */
+type AnchoredDetailCardProps = {
   node: FlowNode | undefined;
-  /** Step caption — what's happening on this beat. */
   caption: string;
-  /** Step counter (1-indexed) and total — shown as "step N of M" in header. */
   stepNumber: number;
   totalSteps: number;
-  /** Inbound payload (type that arrived at this node). */
   payload?: ArchPayload;
-  /** Current state snapshot (if relevant — only Gallery typically). */
   stateAfter?: ArchStateEntry[];
-  /** Previous step's state snapshot for diffing. */
   prevState?: ArchStateEntry[];
-  /** Stable key for AnimatePresence swap between steps. */
   stepKey: string;
-  /** Horizontal anchor in percent (0-100), points the tail at the node. */
-  tailXPercent: number;
   reducedMotion: boolean;
+  /** Vertical center of the card, expressed as percent of canvas height. */
+  anchorYPercent: number;
 };
 
-export function ActiveNodeBubble({
+export function AnchoredDetailCard({
   node,
   caption,
   stepNumber,
@@ -37,53 +30,31 @@ export function ActiveNodeBubble({
   stateAfter,
   prevState,
   stepKey,
-  tailXPercent,
   reducedMotion,
-}: ActiveNodeBubbleProps) {
+  anchorYPercent,
+}: AnchoredDetailCardProps) {
   const rows = stateAfter ? diffRows(stateAfter, prevState ?? []) : [];
   const stateHasChange = hasStateChange(rows);
 
-  return (
-    <div
-      className={styles.bubbleZone}
-      style={{ ["--bubble-tail-x" as string]: `${tailXPercent}%` }}
-    >
-      {/* Connector line from diagram bottom into the bubble top */}
-      <AnimatePresence mode="wait">
-        <motion.span
-          key={`connector-${stepKey}`}
-          aria-hidden
-          className={styles.bubbleConnector}
-          initial={reducedMotion ? false : { scaleY: 0, opacity: 0 }}
-          animate={{ scaleY: 1, opacity: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { scaleY: 0, opacity: 0 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}
-          style={{ transformOrigin: "top" }}
-        />
-      </AnimatePresence>
+  // Clamp so card never escapes the canvas at edge rows.
+  const clampedY = Math.max(8, Math.min(92, anchorYPercent));
 
-      {/* The bubble itself */}
+  return (
+    <motion.div
+      className={styles.floatingCard}
+      animate={{ top: `${clampedY}%` }}
+      transition={reducedMotion ? { duration: 0 } : SPRING.gentle}
+      style={{ top: `${clampedY}%` }}
+    >
       <AnimatePresence mode="wait">
         <motion.div
           key={stepKey}
-          className={styles.bubble}
-          initial={
-            reducedMotion ? false : { opacity: 0, scale: 0.95, y: -4 }
-          }
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={
-            reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: -3 }
-          }
-          transition={reducedMotion ? { duration: 0 } : SPRING.gentle}
-          style={{
-            transformOrigin: `var(--bubble-tail-x) top`,
-          }}
+          className={styles.floatingCardInner}
+          initial={reducedMotion ? false : { opacity: 0, x: -4 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 4 }}
+          transition={reducedMotion ? { duration: 0 } : TRANSITION.crossfade}
         >
-          {/* Tail — small triangle pointing up at the node */}
-          <span aria-hidden className={styles.bubbleTail} />
-          <span aria-hidden className={styles.bubbleTailBorder} />
-
-          {/* Header — node ref + step counter */}
           <div className={styles.bubbleHeader}>
             <span className={styles.bubbleNodeRef}>
               <span className={styles.bubbleArrow}>↑</span>
@@ -95,10 +66,8 @@ export function ActiveNodeBubble({
             </span>
           </div>
 
-          {/* Caption — the step's narration, no longer a separate strip */}
           <p className={styles.bubbleCaption}>{caption}</p>
 
-          {/* Inbound payload section */}
           {payload && (
             <section className={styles.bubbleSection}>
               <header className={styles.bubbleSectionHead}>
@@ -128,7 +97,6 @@ export function ActiveNodeBubble({
             </section>
           )}
 
-          {/* State section — only if something changed this step */}
           {stateHasChange && (
             <section className={styles.bubbleSection}>
               <header className={styles.bubbleSectionHead}>
@@ -147,6 +115,6 @@ export function ActiveNodeBubble({
           )}
         </motion.div>
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

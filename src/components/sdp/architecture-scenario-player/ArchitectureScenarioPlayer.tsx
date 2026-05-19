@@ -7,9 +7,12 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useScenarioPlayer } from "./use-scenario-player";
 import { DiagramCanvas } from "./DiagramCanvas";
 import { ActiveNodeBubble } from "./ActiveNodeBubble";
+import { AnchoredDetailCard } from "./AnchoredDetailCard";
 import { BandwidthMeter } from "./BandwidthMeter";
 import type { ArchitectureScenarioPlayerProps } from "./types";
 import styles from "./styles.module.css";
+
+const DEFAULT_CARD_AREA = { side: "right" as const, widthVB: 200, gapVB: 16 };
 
 export function ArchitectureScenarioPlayer({
   config,
@@ -43,9 +46,22 @@ export function ArchitectureScenarioPlayer({
   const anchorNode = config.nodes.find((n) => n.id === panelStep?.nodeId);
   const viewBoxParts = config.viewBox.split(" ");
   const viewBoxW = parseFloat(viewBoxParts[2] ?? "480") || 480;
+  const viewBoxH = parseFloat(viewBoxParts[3] ?? "168") || 168;
   const tailXPercent = anchorNode
     ? ((anchorNode.x + (anchorNode.w ?? 100) / 2) / viewBoxW) * 100
     : 50;
+
+  const layout = config.layout ?? "stacked";
+  const cardArea = config.cardArea ?? DEFAULT_CARD_AREA;
+  const gapVB = cardArea.gapVB ?? 16;
+  const cardAnchorX = viewBoxW - cardArea.widthVB - gapVB;
+  // Card vertical center tracks the active node's center.
+  const anchorYPercent = anchorNode
+    ? ((anchorNode.y + (anchorNode.h ?? 40) / 2) / viewBoxH) * 100
+    : 50;
+  // CSS percentages for card overlay positioning.
+  const cardRightPercent = (gapVB / viewBoxW) * 100;
+  const cardWidthPercent = (cardArea.widthVB / viewBoxW) * 100;
 
   return (
     <div ref={rootRef} className={styles.root}>
@@ -116,40 +132,88 @@ export function ArchitectureScenarioPlayer({
         </motion.p>
       </AnimatePresence>
 
-      {/* ── Canvas frame: diagram + meter + bubble ─────────────── */}
-      <div className={styles.canvasFrame}>
-        <div className={styles.canvasWrap}>
-          <DiagramCanvas
-            viewBox={config.viewBox}
-            nodes={config.nodes}
-            edges={config.edges}
-            protagonist={config.protagonist}
-            steps={activeSteps}
-            currentStepIdx={stepIdx}
-            reducedMotion={reducedMotion}
-            splitEnabled={splitEnabled}
-          />
-          <div className={styles.meterMount}>
-            <BandwidthMeter
+      {/* ── Canvas frame: diagram + meter + bubble/card ─────────── */}
+      <div
+        className={styles.canvasFrame}
+        data-layout={layout}
+      >
+        {layout === "anchored" ? (
+          <div
+            className={styles.canvasInner}
+            style={{
+              ["--card-right" as string]: `${cardRightPercent}%`,
+              ["--card-width" as string]: `${cardWidthPercent}%`,
+            }}
+          >
+            <DiagramCanvas
+              viewBox={config.viewBox}
+              nodes={config.nodes}
+              edges={config.edges}
+              protagonist={config.protagonist}
               steps={activeSteps}
-              stepIdx={stepIdx}
-              splitEnabled={splitEnabled}
+              currentStepIdx={stepIdx}
               reducedMotion={reducedMotion}
+              splitEnabled={splitEnabled}
+              cardAnchorX={cardAnchorX}
+              layout="anchored"
+            />
+            <div className={styles.meterMount}>
+              <BandwidthMeter
+                steps={activeSteps}
+                stepIdx={stepIdx}
+                splitEnabled={splitEnabled}
+                reducedMotion={reducedMotion}
+              />
+            </div>
+            <AnchoredDetailCard
+              node={anchorNode}
+              caption={panelStep?.caption ?? ""}
+              stepNumber={displayedStepIdx + 1}
+              totalSteps={totalSteps}
+              payload={panelStep?.payload}
+              stateAfter={panelStep?.stateAfter}
+              prevState={panelPrevStep?.stateAfter}
+              stepKey={panelStepKey}
+              reducedMotion={reducedMotion}
+              anchorYPercent={anchorYPercent}
             />
           </div>
-        </div>
-        <ActiveNodeBubble
-          node={anchorNode}
-          caption={panelStep?.caption ?? ""}
-          stepNumber={displayedStepIdx + 1}
-          totalSteps={totalSteps}
-          payload={panelStep?.payload}
-          stateAfter={panelStep?.stateAfter}
-          prevState={panelPrevStep?.stateAfter}
-          stepKey={panelStepKey}
-          tailXPercent={tailXPercent}
-          reducedMotion={reducedMotion}
-        />
+        ) : (
+          <>
+            <div className={styles.canvasWrap}>
+              <DiagramCanvas
+                viewBox={config.viewBox}
+                nodes={config.nodes}
+                edges={config.edges}
+                protagonist={config.protagonist}
+                steps={activeSteps}
+                currentStepIdx={stepIdx}
+                reducedMotion={reducedMotion}
+                splitEnabled={splitEnabled}
+              />
+              <div className={styles.meterMount}>
+                <BandwidthMeter
+                  steps={activeSteps}
+                  stepIdx={stepIdx}
+                  splitEnabled={splitEnabled}
+                  reducedMotion={reducedMotion}
+                />
+              </div>
+            </div>
+            <ActiveNodeBubble
+              node={anchorNode}
+              caption={panelStep?.caption ?? ""}
+              stepNumber={displayedStepIdx + 1}
+              totalSteps={totalSteps}
+              payload={panelStep?.payload}
+              stateAfter={panelStep?.stateAfter}
+              prevState={panelPrevStep?.stateAfter}
+              stepKey={panelStepKey}
+              tailXPercent={tailXPercent}
+              reducedMotion={reducedMotion}
+            />
+          </>
+        )}
       </div>
 
       {/* ── Scrub + controls ──────────────────────────────────── */}

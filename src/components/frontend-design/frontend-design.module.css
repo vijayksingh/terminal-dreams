@@ -186,7 +186,7 @@
 }
 
 .stopLink {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0;
   font-family: var(--font-mono);
@@ -219,6 +219,48 @@
   margin-right: 4px;
   opacity: 0.5;
   font-size: 10px;
+}
+
+.stopLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.stopBadge {
+  margin-left: auto;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.stopBadge[data-kind="interactive"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+.stopBadge[data-kind="article"] {
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-muted) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-muted) 15%, transparent);
+}
+
+.stopBadge[data-kind="soon"] {
+  color: var(--color-muted);
+  opacity: 0.6;
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--color-muted) 20%, transparent);
+}
+
+.stopComingSoon {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
 }
 
 /* ── Section progress ────────────────────────────────────────── */

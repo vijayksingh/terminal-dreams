@@ -18,6 +18,20 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-autocomplete"),
   "design-booking-platform": () =>
     import("@/mdx/frontend-design/design-booking-platform"),
+  "design-news-feed": () =>
+    import("@/mdx/frontend-design/design-news-feed"),
+  "design-realtime-chat": () =>
+    import("@/mdx/frontend-design/design-realtime-chat"),
+  "windowing-fundamentals": () =>
+    import("@/mdx/frontend-design/windowing-fundamentals"),
+  "fixed-vs-variable-height": () =>
+    import("@/mdx/frontend-design/fixed-vs-variable-height"),
+  "virtual-scroll-implementation": () =>
+    import("@/mdx/frontend-design/virtual-scroll-implementation"),
+  "tree-grid-virtualization": () =>
+    import("@/mdx/frontend-design/tree-grid-virtualization"),
+  "canvas-vs-dom": () =>
+    import("@/mdx/frontend-design/canvas-vs-dom"),
 };
 
 function isMdxComponent(value: unknown): value is MdxComponent {

@@ -126,6 +126,12 @@
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
+
+  /* Inline code — cyan-teal, complement of the purple accent so
+     code reads as a distinct token taxonomy, not emphasized prose. */
+  --color-code-fg: oklch(74% 0.09 195);
+  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 8%, var(--color-surface-2));
+  --color-code-border: color-mix(in srgb, var(--color-code-fg) 22%, transparent);
 }
 
 /* ── Dark theme (explicit) ─────────────────────────────────────── */
@@ -190,6 +196,9 @@
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
+  --color-code-fg: oklch(74% 0.09 195);
+  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 8%, var(--color-surface-2));
+  --color-code-border: color-mix(in srgb, var(--color-code-fg) 22%, transparent);
 }
 
 /* ── Light theme ─────────────────────────────────────────────── */
@@ -264,6 +273,9 @@
   --color-success-muted: oklch(92% 0.04 140 / 0.6);
   --color-warning: oklch(68% 0.18 80);
   --color-warning-muted: oklch(92% 0.04 80 / 0.6);
+  --color-code-fg: oklch(46% 0.14 195);
+  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 7%, var(--color-surface-2));
+  --color-code-border: color-mix(in srgb, var(--color-code-fg) 20%, transparent);
 }
 
 /* ── System preference fallback ──────────────────────────────── */
@@ -339,5 +351,8 @@
     --color-success-muted: oklch(92% 0.04 140 / 0.6);
     --color-warning: oklch(68% 0.18 80);
     --color-warning-muted: oklch(92% 0.04 80 / 0.6);
+    --color-code-fg: oklch(46% 0.14 195);
+    --color-code-bg: color-mix(in srgb, var(--color-code-fg) 7%, var(--color-surface-2));
+    --color-code-border: color-mix(in srgb, var(--color-code-fg) 20%, transparent);
   }
 }

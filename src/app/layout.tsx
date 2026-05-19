@@ -44,18 +44,22 @@ export default async function RootLayout({
   ]);
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${firaCode.variable} ${fraunces.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} antialiased`}
-      >
-        {/* Theme init — must run before first paint to prevent flash */}
+      {/* react-grab (dev-only) injects data-locator-hook-* attrs on <head>
+          between SSR and hydration — suppress the mismatch on this node. */}
+      <head suppressHydrationWarning>
+        {/* Theme init — must run before first paint to prevent flash. */}
         <Script src="/theme-init.js" strategy="beforeInteractive" />
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
             crossOrigin="anonymous"
-            strategy="beforeInteractive"
+            async
           />
         )}
+      </head>
+      <body
+        className={`${inter.variable} ${firaCode.variable} ${fraunces.variable} ${GeistMono.variable} ${GeistPixelSquare.variable} antialiased`}
+      >
         <CommandPalette posts={posts} principles={principles} frontendDesign={frontendDesign} />
         {children}
       </body>
