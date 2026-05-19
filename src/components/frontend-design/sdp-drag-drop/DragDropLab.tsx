@@ -400,10 +400,6 @@ function StepControls() {
   }
 }
 
-function StepMessage({ text, severity }: { text: string; severity?: "warning" }) {
-  return <div className={styles.stepMessage} data-severity={severity}>{text}</div>;
-}
-
 function PredictionChallenge({ question, options, correctIndex, explanation }: {
   question: string;
   options: string[];
@@ -495,22 +491,6 @@ function PredictionToggle({ feature, label, question, options, correctIndex, exp
   );
 }
 
-function FeatureToggle({ feature, label }: { feature: string; label: string }) {
-  const { isActive, toggleFeature } = useDragDrop();
-  const on = isActive(feature);
-  const id = useId();
-  return (
-    <div className={styles.toggleStrip}>
-      <div className={styles.toggleRow}>
-        <span id={id} className={styles.toggleLabel}>{label}</span>
-        <button type="button" className={styles.toggleButton} data-on={on ? "true" : undefined} onClick={() => toggleFeature(feature)} aria-pressed={on} aria-labelledby={id}>
-          <span className={styles.toggleKnob} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function PreviewStrategyControls() {
   const { previewStrategy, setPreviewStrategy } = useDragDrop();
   return (
@@ -586,7 +566,6 @@ function KanbanBoard() {
   } = useDragDrop();
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
   const boardRef = useRef<HTMLDivElement>(null);
-  const noMotion = usePrefersReducedMotion();
   const canDrag = activeStep >= 4;
   const showKeyboard = isActive("keyboardDrag");
 
@@ -752,7 +731,7 @@ function KanbanItem({ item, zoneId, isDragging, isSelected, canDrag, showKeyboar
       tabIndex={showKeyboard ? 0 : undefined}
       role={showKeyboard ? "option" : undefined}
       aria-roledescription={showKeyboard ? "draggable item" : undefined}
-      aria-label={showKeyboard ? `${item.label}, in ${zoneId}` : undefined}
+      aria-label={`${item.label}, in ${zoneId}`}
       style={{ borderLeftColor: item.color }}
     >
       <span className={styles.itemLabel}>{item.label}</span>
@@ -1040,17 +1019,55 @@ function KeyboardWidget() {
 }
 
 function TouchWidget() {
+  const [holdPhase, setHoldPhase] = useState<"idle" | "holding" | "dragging">("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const startHold = useCallback(() => {
+    setHoldPhase("holding");
+    setElapsed(0);
+    const start = Date.now();
+    timerRef.current = setInterval(() => {
+      const ms = Date.now() - start;
+      setElapsed(ms);
+      if (ms >= 300) {
+        setHoldPhase("dragging");
+        clearInterval(timerRef.current);
+      }
+    }, 16);
+  }, []);
+
+  const endHold = useCallback(() => {
+    clearInterval(timerRef.current);
+    setHoldPhase("idle");
+    setElapsed(0);
+  }, []);
+
+  useEffect(() => () => clearInterval(timerRef.current), []);
+
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Touch disambiguation</div>
       <div className={styles.touchTimeline}>
-        <div className={styles.touchEvent}><span className={styles.touchTime}>0ms</span> touchstart</div>
-        <div className={styles.touchEvent}><span className={styles.touchTime}>150ms</span> is it a scroll?</div>
-        <div className={styles.touchEvent} data-decision="true"><span className={styles.touchTime}>300ms</span> long-press → drag mode</div>
-        <div className={styles.touchEvent}><span className={styles.touchTime}>→</span> touchmove → update position</div>
+        <div className={styles.touchEvent} data-active={holdPhase !== "idle" ? "true" : undefined}><span className={styles.touchTime}>0ms</span> touchstart</div>
+        <div className={styles.touchEvent} data-active={elapsed >= 150 ? "true" : undefined}><span className={styles.touchTime}>150ms</span> is it a scroll?</div>
+        <div className={styles.touchEvent} data-decision="true" data-active={holdPhase === "dragging" ? "true" : undefined}><span className={styles.touchTime}>300ms</span> long-press → drag mode</div>
+        <div className={styles.touchEvent} data-active={holdPhase === "dragging" ? "true" : undefined}><span className={styles.touchTime}>→</span> touchmove → update position</div>
       </div>
+      <button
+        type="button"
+        className={styles.touchTestButton}
+        onPointerDown={startHold}
+        onPointerUp={endHold}
+        onPointerLeave={endHold}
+        aria-label="Hold to simulate touch drag delay"
+      >
+        {holdPhase === "idle" && "Hold to simulate touch"}
+        {holdPhase === "holding" && `Holding... ${elapsed}ms`}
+        {holdPhase === "dragging" && "Drag mode activated!"}
+      </button>
       <div className={styles.widgetNote}>
-        The 300ms long-press delay disambiguates drag from scroll. Without it, every vertical swipe starts a drag. The trade-off: drag feels sluggish on touch.
+        The 300ms long-press delay disambiguates drag from scroll. Without it, every vertical swipe starts a drag. Try holding the button above to feel the delay.
       </div>
     </div>
   );

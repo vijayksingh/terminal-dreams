@@ -20,15 +20,29 @@ prerequisites: []
 
 ## 01 — The 10,000-item problem
 
-Look at the right panel. Three numbers: items, height per item, total height. **10,000 items &times; 36px = 360,000 pixels** of content. That's roughly 900 screen-heights of scrollable space packed into a single `<div>`.
+Look at the right panel. Three cards: items, height per item, total height. **10,000 items &times; 36px = 360,000 pixels.** That's roughly 900 screen-heights of scrollable space packed into a single `<div>`.
 
-Now look at the tiny accent bar at the top of the red block. That's your viewport — 380 pixels. You can see about 11 items at a time. The other 9,989 are invisible. They're below the fold, above the fold, or scrolled past entirely. No human will ever see more than ~11 items simultaneously.
+Drag the slider and watch the total height recalculate. At 100K items you're asking the browser to manage a container taller than a skyscraper — 3.6 million pixels. Now look at the tiny gold bar at the top of the red block. That's your viewport — 380 pixels. You can see about 11 items at a time.
 
-But here's the question that drives everything in this module: **if those 9,989 items are invisible, why do they exist in the DOM?**
+The naive way to render a list in React is deceptively simple:
 
-The answer, usually, is inertia. The obvious implementation — `items.map(item => <div>{item}</div>)` — creates a DOM node for every item because that's what `.map()` does. Each node enters the layout tree, gets styled, participates in paint, and sits in memory. At 100 items, this is invisible. At 1,000, it's a slight hiccup. At 10,000, it's a problem.
+```tsx
+function NaiveList({ items }: { items: string[] }) {
+  return (
+    <div style={{ height: 400, overflow: "auto" }}>
+      {items.map((item, i) => (
+        <div key={i} style={{ height: 36, padding: "0 12px" }}>
+          {item}
+        </div>
+      ))}
+    </div>
+  );
+}
+```
 
-Drag the slider and watch the total height recalculate. At 100K items, you're asking the browser to manage a `<div>` taller than a skyscraper — 3.6 million pixels — and you can still only see 11 items.
+This creates one DOM node per item. At 100 items, that's invisible. At 1,000, it's a slight hiccup on mount. At 10,000, it's a problem — `.map()` doesn't know which items are visible, so it builds them all. Every node enters the layout tree, gets styled, participates in paint, and sits in memory. The browser dutifully processes all 10,000 elements even though you can only ever see 11.
+
+The question that drives this entire module: **if 9,989 items are invisible, why do they exist in the DOM?** The answer is inertia — `.map()` over an array is the obvious implementation, and nobody questions it until performance tanks.
 
 The next step shows you what that actually costs.
 
@@ -38,19 +52,30 @@ The next step shows you what that actually costs.
 
 ## 02 — Feel the DOM weight
 
-The demo just switched to an actual scrollable list. Every item you see is a real DOM node — 2,000 of them (capped from 10,000 to prevent your browser from locking up). Look at the red badge in the header: **2,000 DOM nodes**.
+The demo switched to a real scrollable list. Every row is a DOM node — 2,000 of them (capped from 10,000 to keep your browser alive). Check the red badge: **2,000 DOM nodes**. These aren't virtual — they're actual elements the browser is tracking.
 
-Scroll it. On a fast machine, it might feel fine. On a phone, or a 2019 laptop, or in a tab with twenty other tabs open, it won't. The problem isn't the scrolling itself — browsers are excellent at scrolling. The problem is that every DOM node:
+Scroll it. On a fast machine, it might feel fine. On a phone, or a 2019 laptop, or a tab with twenty other tabs competing for memory, it won't. Here's why — each DOM node carries real cost:
 
-1. **Occupies memory.** Each node is a C++ object in the browser's rendering engine. At 36px &times; 2,000 items, the DOM tree holds references to 2,000 layout boxes, 2,000 paint records, 2,000 sets of computed styles.
+**Memory.** Every node is a C++ object in the rendering engine. Not just the text content — computed styles, layout boxes, paint records, accessibility tree entries. A single `<div>` with a few CSS properties costs roughly 0.5–1KB. 2,000 nodes: **1–2MB** of render tree overhead, plus their JavaScript wrapper objects.
 
-2. **Participates in layout.** When you resize the window, or a sibling changes height, the browser recalculates positions for every node in the flow. With 2,000 absolutely-positioned nodes, the browser traverses 2,000 elements during each layout pass.
+**Layout.** When you resize the window, or a sibling changes height, the browser recalculates positions for every node in the flow. With absolutely-positioned nodes (which we use), it's cheaper — but the browser still traverses the full tree to determine what changed. Each layout pass over 2,000 nodes takes 4–8ms.
 
-3. **Competes for the frame budget.** At 60fps you have 16.6ms per frame. Layout alone for 2,000 nodes can eat 4-8ms of that budget, leaving almost no room for JavaScript, paint, and compositing.
+**Frame budget.** At 60fps you have 16.6ms per frame. If layout alone eats 6ms, that leaves 10ms for JavaScript, paint, compositing, and garbage collection. With complex rows (images, buttons, badges), each item becomes 5–10 nodes, and 2,000 items becomes 10,000–20,000 DOM nodes — that's where browsers start visibly dropping frames.
 
-Now imagine this is a product catalog with images, prices, and interactive buttons — not plain text rows. Each item becomes 5-10 DOM nodes. A 2,000-item list becomes 10,000-20,000 DOM nodes. That's where browsers start visibly dropping frames.
+```
+Frame budget breakdown at 60fps:
+────────────────────────────────────
+Total per frame:          16.6ms
+JavaScript (scroll handler):  1ms
+Style recalculation:        2ms
+Layout (2,000 nodes):    4-8ms  ← the bottleneck
+Paint:                    1-2ms
+Composite:               0.5ms
+────────────────────────────────────
+Remaining:               3-6ms  (fragile)
+```
 
-The state inspector shows `domNodes: 2000`. In the next step, we'll see why most of them are wasted work.
+The state inspector shows `domNodes: 2000`. If you drag the items slider up, the cap prevents the browser from freezing — but in production, there's no artificial cap. Ship this with 10K items and your users pay for every node.
 
 </section>
 
@@ -58,26 +83,34 @@ The state inspector shows `domNodes: 2000`. In the next step, we'll see why most
 
 ## 03 — Your viewport is a keyhole
 
-A minimap just appeared on the left. Look at it closely — the gold bar is your viewport. The rest of the track represents the total list height. Your viewport is a sliver. A keyhole. You're looking at 11 items through a window that covers **0.1%** of the total scroll height.
+A minimap just appeared on the left. The gold bar is your viewport — a sliver covering **0.1%** of the total scroll height. Everything outside that sliver is invisible to the user.
 
-Scroll the list and watch the minimap. The gold viewport indicator moves, but it barely budges relative to the total height. Meanwhile, every scroll event processes all 2,000 DOM nodes.
+Scroll the list and watch two things: the minimap's gold indicator barely budges, and items inside the viewport get a gold left border. Everything else is dimmed. That dimming represents **wasted work** — DOM nodes that exist, consume memory, participate in layout, but produce zero visible pixels.
 
-Now look at the scroll area. The items inside the viewport are highlighted with a gold left border. Everything else is dimmed. That dimming represents **wasted work** — DOM nodes that exist, take memory, participate in layout, but are completely invisible to the user.
-
-The state inspector now shows `viewportStart` and `viewportEnd` — the index range of items actually visible. It also shows `wastedNodes` — the number of DOM nodes that exist for no visible purpose. Scroll to the middle of the list: `viewportStart: 500`, `viewportEnd: 510`, `wastedNodes: 1989`. Nearly two thousand nodes doing nothing.
+Here's the insight that makes windowing possible. Because every item has a fixed height, you can compute the visible range with pure arithmetic — no DOM measurement needed:
 
 ```tsx
-// What the browser processes every frame:
-for (const node of allNodes) { // 2,000 iterations
-  computeStyle(node);
-  computeLayout(node);
-  paintIfVisible(node); // only ~11 actually paint
-}
+const ITEM_HEIGHT = 36;
+const VIEWPORT_HEIGHT = 380;
+
+// Which item is at the top of the viewport?
+const viewportStart = Math.floor(scrollTop / ITEM_HEIGHT);
+
+// How many items fit in the viewport?
+const visibleCount = Math.ceil(VIEWPORT_HEIGHT / ITEM_HEIGHT);
+
+// Which item is at the bottom?
+const viewportEnd = Math.min(
+  totalItems - 1,
+  viewportStart + visibleCount - 1
+);
 ```
 
-This is the fundamental insight: **the browser doesn't know which items are visible until after it processes all of them**. It dutifully lays out every node, then clips to the viewport and throws away 99.5% of the work.
+No `getBoundingClientRect()`. No `IntersectionObserver`. No traversing the DOM to see which elements are in view. A single `Math.floor` converts a pixel offset to an array index. This is O(1) — the same cost whether you have 100 items or 100,000.
 
-What if we could tell the browser in advance which items to skip?
+Check the state inspector: `viewportStart` and `viewportEnd` update as you scroll. But also look at `wastedNodes` — at scroll position zero, it reads `1989`. Nearly two thousand DOM nodes doing nothing. Scroll to the middle: `viewportStart: 500`, `viewportEnd: 510`, `wastedNodes: 1989`. The waste is constant, regardless of scroll position.
+
+The browser doesn't know which items are visible until after it processes all of them. It dutifully lays out every node, then clips to the viewport and throws away 99.5% of the work. What if we could tell the browser in advance which items to skip?
 
 </section>
 
@@ -89,31 +122,66 @@ A toggle just appeared in the toolbar: **Windowing**. Click it.
 
 Watch three things happen simultaneously:
 
-1. The DOM badge flips from red to green. The number drops from 2,000 to roughly **17**. The list looks and scrolls identically, but 99.2% of the DOM nodes just vanished.
+1. **The DOM badge flips from red to green.** The number drops from 2,000 to roughly **17**. Same list, same scrollbar — 99.2% fewer DOM nodes.
 
-2. The minimap's rendered band (the green region) shrinks from the full track to a tiny sliver — only the items near the viewport are rendered. Everything else is empty space.
+2. **The minimap's rendered band shrinks** from the full track to a tiny green sliver near the viewport. Only items near the scroll position are rendered.
 
-3. The comparison banner at the bottom shows the ratio. Windowed: 17 nodes. Naive: 2,000 nodes. That's **~120&times; fewer DOM nodes** for the same visual result.
+3. **The comparison banner** at the bottom shows the ratio: Windowed 17, Naive 2,000. That's **~120&times; fewer DOM nodes** for identical visual output.
 
-Toggle it off. Back to 2,000. Toggle it on. Back to 17. Same list. Same scrollbar. Same items. Dramatically different cost.
-
-How? The trick has three parts:
-
-**1. A spacer element.** A single empty `<div>` with `height: 360,000px`. This creates the native scrollbar — the browser sees a tall container and renders the correct scroll thumb. No items needed.
-
-**2. Positioned items.** Only the ~17 items near the viewport actually exist in the DOM. Each one is positioned absolutely inside the spacer using `transform: translateY()` at its calculated pixel offset.
-
-**3. A scroll handler.** On every scroll event, we calculate which items should be visible (`Math.floor(scrollTop / itemHeight)`) and mount only those. Items that scroll out of view are unmounted — removed from the DOM entirely.
+Toggle it off — back to 2,000. Toggle it on — back to 17. The illusion is seamless. Here's the complete implementation:
 
 ```tsx
-const startIndex = Math.floor(scrollTop / ITEM_HEIGHT);
-const endIndex = startIndex + Math.ceil(viewportHeight / ITEM_HEIGHT);
-// Only render items[startIndex..endIndex]
+function VirtualList({ items, itemHeight, viewportHeight }: Props) {
+  const [scrollTop, setScrollTop] = useState(0);
+
+  // Total content height — creates the native scrollbar
+  const totalHeight = items.length * itemHeight;
+
+  // Which items are visible?
+  const startIndex = Math.floor(scrollTop / itemHeight);
+  const endIndex = Math.min(
+    items.length - 1,
+    startIndex + Math.ceil(viewportHeight / itemHeight)
+  );
+
+  return (
+    <div
+      style={{ height: viewportHeight, overflow: "auto" }}
+      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+    >
+      {/* Spacer: a single empty div creating the scroll height */}
+      <div style={{ height: totalHeight, position: "relative" }}>
+        {/* Only mount items[startIndex..endIndex] */}
+        {items.slice(startIndex, endIndex + 1).map((item, i) => (
+          <div
+            key={startIndex + i}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: itemHeight,
+              transform: `translateY(${(startIndex + i) * itemHeight}px)`,
+            }}
+          >
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 ```
 
-The result is a contract with the browser: "We'll handle visibility. You just render these 17 nodes." The browser's job shrinks from a 2,000-node layout to a 17-node layout — every single frame.
+Three parts make this work:
 
-Look at `spacerHeight: 360,000px` in the state inspector. That single number is the entire illusion. The scrollbar thinks there are 10,000 items because the container is 360,000px tall. There are actually 17.
+**The spacer.** A single empty `<div>` with `height: 360,000px`. The browser sees a tall container and renders a correct scrollbar. No items needed for the scroll thumb to work — the browser only cares about the container height.
+
+**Positioned items.** Only the ~17 visible items exist in the DOM. Each one uses `position: absolute` plus `transform: translateY()` to sit at its calculated pixel offset inside the spacer. The browser doesn't need to know about the 9,983 items that don't exist — it just paints these 17 at their coordinates.
+
+**The scroll handler.** On every scroll event, we recalculate which items are visible and mount only those. Items that scroll out are unmounted — removed from the DOM entirely. Check `spacerHeight: 360,000px` in the state inspector. That single number is the entire illusion.
+
+**Why `transform`, not `top`.** Setting `top: 18000px` triggers layout — the browser recalculates positions for the element and potentially its siblings. `transform: translateY(18000px)` is compositor-only — the GPU moves an already-painted layer without touching layout or paint. This is the difference between 0.1ms and 4ms per frame.
 
 </section>
 
@@ -121,34 +189,51 @@ Look at `spacerHeight: 360,000px` in the state inspector. That single number is 
 
 ## 05 — The scroll-to-render pipeline
 
-Scroll the list and watch the pipeline visualization that just appeared below the scroller. Four boxes, connected by arrows, updating in real time:
+Scroll the list and watch the pipeline visualization that appeared below the scroller. Four boxes connected by arrows, updating in real time:
 
 **scrollTop** &rarr; **startIdx** &rarr; **mount** &rarr; **DOM**
 
-This is the complete computation that runs on every scroll event. Let's trace it:
-
-1. **scrollTop** — the raw pixel offset from the browser's scroll event. Scroll down a bit and watch this number climb.
-
-2. **startIdx** — `Math.floor(scrollTop / 36)`. This is the key insight of fixed-height windowing: because every item is exactly 36px tall, we can convert a pixel offset to an item index with a single division. No measurement needed. No DOM queries. Pure math.
-
-3. **mount** — the range of items to render: `[startIdx, startIdx + visibleCount]`. These are the only items that will exist in the DOM.
-
-4. **DOM** — the actual number of mounted nodes. This stays constant regardless of scroll position — whether you're at the top, middle, or bottom of a 100,000-item list, the browser handles the same ~17 nodes.
+This is the complete computation that runs every time the user scrolls. Let's trace it with code:
 
 ```tsx
-function onScroll(e) {
+function onScroll(e: React.UIEvent<HTMLDivElement>) {
+  // 1. Read the raw pixel offset
   const scrollTop = e.currentTarget.scrollTop;
-  const start = Math.floor(scrollTop / ITEM_HEIGHT);
-  const end = Math.min(totalItems - 1, start + visibleCount - 1);
-  // React re-renders with items[start..end]
+
+  // 2. Convert pixels to item index — one division, O(1)
+  const startIndex = Math.floor(scrollTop / ITEM_HEIGHT);
+
+  // 3. Compute the mount range
+  const endIndex = Math.min(
+    totalItems - 1,
+    startIndex + visibleCount - 1
+  );
+
+  // 4. React re-renders only items[startIndex..endIndex]
+  // DOM node count stays constant (~17) regardless of list size
+  setScrollTop(scrollTop);
 }
 ```
 
-The `Math.floor` division is why this works at 60fps. It's O(1) — constant time regardless of list size. A million-item list computes the same division as a hundred-item list. No binary search, no DOM measurement, no layout query. One division, one comparison, one render.
+Watch the pipeline boxes as you scroll. `scrollTop` climbs by pixels, `startIdx` jumps in discrete steps (one per item height), `mount` shows the range like `#500–#510`, and `DOM` holds steady at the same count whether you're at the top, middle, or bottom.
 
-Now look at each row's label in the list: `translateY(18000px)`, `translateY(18036px)`, etc. Each item is positioned exactly where it should appear in the scroll space. The browser doesn't need to know about the 9,983 items that don't exist — it just paints these 17 items at their calculated offsets.
+The `Math.floor` division is why this works at 60fps. It's **O(1)** — constant time regardless of list size. A million-item list computes the same single division as a hundred-item list. No binary search through items. No DOM measurement. No layout query. One division, one `Math.min`, one state update.
 
-**Why transforms, not `top/left`:** Setting `top: 18000px` triggers layout — the browser recalculates positions for the element and potentially its siblings. `transform: translateY(18000px)` is compositor-only — the GPU moves an already-painted layer without touching layout or paint. This is the difference between 0.1ms and 4ms per frame.
+Compare this to the naive approach, where the browser runs layout over 2,000+ nodes per frame:
+
+```
+Naive rendering:
+  for each of 2,000 nodes:
+    compute styles → compute layout → check visibility
+  Total: O(n) per frame
+
+Windowed rendering:
+  Math.floor(scrollTop / itemHeight)  → O(1)
+  Mount ~17 nodes at calculated offsets → O(1)
+  Total: O(1) per frame
+```
+
+Now look at the row labels in the list: each shows its `translateY` offset — `translateY(18,000px)`, `translateY(18,036px)`, etc. The browser doesn't care that there's a 17,964px gap between the top of the spacer and the first visible item. It just paints 17 elements at their transforms and calls it done.
 
 </section>
 
@@ -156,28 +241,90 @@ Now look at each row's label in the list: `translateY(18000px)`, `translateY(180
 
 ## 06 — The overscan buffer
 
-An overscan slider just appeared above the scroller. Drag it to **0** and then scroll fast — flick the scroll wheel hard. See the flash? For a fraction of a second, the edges of the viewport go blank before new items appear. That's because the browser scrolled faster than React could mount the next batch of items.
+An overscan slider just appeared. Drag it to **0** and flick the scroll wheel hard — scroll as fast as you can. See the flash? For a fraction of a second, the edges of the viewport go blank before new items appear.
 
-The timeline looks like this:
+The timeline of a fast scroll:
 
-1. Browser scrolls 200px in one frame (fast flick)
-2. React receives the scroll event
-3. React calculates the new visible range
-4. React renders the new items
-5. Browser paints — but between steps 1 and 4, the viewport was empty
+```
+Frame 1: Browser scrolls 200px (native, instant)
+Frame 2: Scroll event fires → React calculates new range
+Frame 3: React renders new items → browser paints
+────────────────────────────────────────────────────
+Gap between Frame 1 and Frame 3: the viewport is empty
+```
 
-Now drag the overscan slider to **3**. Scroll fast again. The flash is gone. Check the state inspector: `overscan: ±3` means we render 3 extra items above and below the viewport. When the browser scrolls faster than React can update, those buffer items are already in the DOM, already painted, already waiting.
+Now drag overscan to **3** and scroll fast again. The flash is gone. Check the state inspector: `overscan: ±3` means we render 3 extra items above and below the viewport. When the browser scrolls faster than React can update, those buffer items are already painted and waiting.
 
-The tradeoff is direct: at `overscan: 3`, we mount 17 + 6 = 23 items instead of 17. That's 35% more DOM nodes, but still 99.8% fewer than naive rendering. The cost is negligible. The benefit — no blank flashes — is immediately visible.
+Here's the one-line change to the mount range calculation:
 
 ```tsx
+// Without overscan — bare viewport
+const renderStart = viewportStart;
+const renderEnd = viewportEnd;
+
+// With overscan — buffered edges
 const renderStart = Math.max(0, viewportStart - overscan);
 const renderEnd = Math.min(totalItems - 1, viewportEnd + overscan);
 ```
 
-Most virtualisation libraries default to 3-5 items of overscan. Too little and fast scrolling reveals blanks. Too much and you're mounting items that defeat the purpose. The sweet spot depends on your scroll behavior: trackpad users generate small, frequent scroll deltas (low overscan is fine). Mouse wheel users generate large, infrequent jumps (higher overscan helps). Programmatic `scrollTo()` calls jump instantly — you'd want to pre-mount the entire target range.
+The complete virtual scroller with overscan, the full implementation you'd ship:
 
-Look at the row labels now. Items inside the viewport show `translateY(...)`. Items in the overscan buffer show `translateY(...) (buffer)` with a blue left border. They exist in the DOM — they just haven't scrolled into view yet. When they do, there's zero delay because they were already rendered.
+```tsx
+function VirtualList({
+  items,
+  itemHeight,
+  viewportHeight,
+  overscan = 3,
+}: VirtualListProps) {
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const totalHeight = items.length * itemHeight;
+  const startIndex = Math.floor(scrollTop / itemHeight);
+  const visibleCount = Math.ceil(viewportHeight / itemHeight);
+  const endIndex = startIndex + visibleCount - 1;
+
+  // Overscan: render extra items above and below
+  const renderStart = Math.max(0, startIndex - overscan);
+  const renderEnd = Math.min(items.length - 1, endIndex + overscan);
+
+  return (
+    <div
+      style={{ height: viewportHeight, overflow: "auto" }}
+      onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+    >
+      <div style={{ height: totalHeight, position: "relative" }}>
+        {Array.from(
+          { length: renderEnd - renderStart + 1 },
+          (_, i) => {
+            const index = renderStart + i;
+            return (
+              <div
+                key={index}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: itemHeight,
+                  transform: `translateY(${index * itemHeight}px)`,
+                }}
+              >
+                {items[index]}
+              </div>
+            );
+          }
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+The tradeoff is direct: at `overscan: 3`, we mount 17 + 6 = 23 items instead of 17. That's 35% more DOM nodes, but still **99.8% fewer** than naive rendering. The cost is negligible. The benefit — no blank flashes — is immediately visible.
+
+Look at the rows with blue left borders — those are the buffer items. They exist in the DOM but haven't scrolled into view yet. When they do, there's zero delay because they were already rendered.
+
+Most virtualisation libraries default to 3–5 items of overscan. Too little and fast scrolling shows blanks. Too much and you defeat the purpose. The sweet spot depends on scroll behavior: trackpad users generate small, frequent deltas (low overscan is fine); mouse wheel users generate large jumps (higher overscan helps); programmatic `scrollTo()` calls jump instantly — pre-mount the entire target range.
 
 This is the complete virtual scroller: a spacer for the scrollbar, positioned items for the viewport, a scroll handler for the math, and an overscan buffer for smooth edges. Four concepts, ~50 lines of core logic, capable of handling hundreds of thousands of items at 60fps.
 
