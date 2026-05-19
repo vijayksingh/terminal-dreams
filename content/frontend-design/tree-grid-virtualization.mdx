@@ -1,0 +1,52 @@
+---
+title: "Tree & Grid Virtualization"
+slug: tree-grid-virtualization
+section: virtualisation
+stopId: virt-tree-grid
+order: 4
+kind: article
+summary: "Trees become flat lists. Grids need two windows. Both extend the same virtualisation fundamentals."
+tags:
+  - virtualisation
+  - tree
+  - grid
+  - data-structures
+intersections:
+  - sdp-spreadsheet
+prerequisites:
+  - virt-windowing
+  - virt-fixed-vs-variable
+---
+
+## Trees Are Lists in Disguise
+
+A file tree looks hierarchical, but a virtual scroller needs a flat array. The solution: **flatten the tree** by walking it depth-first, including only nodes whose parents are expanded. Click folders below to expand and collapse — watch the flat list on the right grow and shrink in real time.
+
+<TreeGridExplorer />
+
+## How Flattening Works
+
+The flattening algorithm is a depth-first walk with one rule: skip a node's children if it's collapsed.
+
+```
+flattenTree(node, expanded, depth):
+  result = [{ node, depth }]
+  if node.children AND expanded.has(node.id):
+    for child in node.children:
+      result.push(...flattenTree(child, expanded, depth + 1))
+  return result
+```
+
+The output is a plain array — exactly what a 1D virtual scroller expects. Each item carries its `depth` for indentation. When the user clicks a folder, the expanded set changes, the flat list is recomputed, and the virtualizer renders from the new array.
+
+This is why libraries like `@tanstack/virtual` don't have a special "tree mode." You flatten the tree yourself and hand the virtualizer a list. The virtualizer doesn't know or care that the data was hierarchical.
+
+## Grids: Two Windows
+
+A grid with 100 rows and 26 columns has 2,600 cells. A viewport might fit 12 rows and 6 columns — 72 cells. The trick: run two independent windowing calculations, one for rows and one for columns. The **intersection** of the two windows determines which cells to mount.
+
+Switch to the Grid tab above and scroll in both directions. The stats show how the row window and column window independently track the scroll position, and only cells inside both windows are rendered.
+
+## Why This Matters
+
+File explorers, JSON viewers, org charts, and expandable tables all use tree virtualization. Spreadsheets, data grids, and kanban boards use 2D grid virtualization. Both patterns reduce to the same fundamentals from the previous stops — the only difference is how you compute the "visible items" list from a more complex data structure.

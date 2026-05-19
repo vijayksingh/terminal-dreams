@@ -1,0 +1,45 @@
+---
+title: "Canvas vs DOM Rendering"
+slug: canvas-vs-dom
+section: virtualisation
+stopId: virt-canvas-dom
+order: 5
+kind: article
+summary: "DOM gives you events and accessibility for free. Canvas skips the rendering pipeline entirely. At scale, the choice defines the architecture."
+tags:
+  - virtualisation
+  - canvas
+  - dom
+  - performance
+  - rendering
+intersections:
+  - sdp-whiteboard
+prerequisites:
+  - virt-windowing
+---
+
+## Two Rendering Pipelines
+
+Every DOM element passes through style calculation, layout, and paint before reaching pixels. Canvas bypasses all three — you draw directly to a pixel buffer. Drag the slider below to scale from 50 to 20,000 elements and watch where each approach breaks.
+
+<CanvasDomExplorer />
+
+## When DOM Wins
+
+Below ~1,000 elements, DOM is the right default. The browser gives you:
+
+- **Native events** — click, hover, focus, and every pointer event work automatically on every element. Canvas requires manual hit-testing: you receive a single click coordinate and must calculate which drawn shape contains it.
+- **Accessibility** — every DOM element participates in the accessibility tree. Screen readers can traverse it, `tabindex` enables keyboard navigation, and `aria-*` attributes describe semantics. Canvas is a single opaque rectangle to assistive technology.
+- **Text selection and CSS** — the browser handles text wrapping, font rendering, selection highlighting, and style inheritance. In Canvas, you implement all of this yourself.
+
+## When Canvas Wins
+
+Above ~5,000 elements, DOM's overhead becomes the bottleneck. Each element's style is recalculated, its box dimensions are laid out, and its pixels are painted — three passes per frame. Canvas skips all three: you call `fillRect()` or `arc()` and the GPU draws pixels immediately.
+
+This is why Google Sheets renders its cells on Canvas, not as `<div>` elements. A 100×100 grid has 10,000 cells. In the DOM, that's 10,000 style calculations and 10,000 layout boxes per frame. On Canvas, it's 10,000 `fillRect` calls — an order of magnitude faster.
+
+## The Hybrid Pattern
+
+Production applications often combine both: Canvas for the high-volume rendering (spreadsheet cells, chart data points, whiteboard shapes) with a thin DOM overlay for interactive elements (selection handles, tooltips, input fields, context menus). The Canvas handles the visual bulk while the DOM handles the interaction surface.
+
+This is the pattern used by Figma, Excalidraw, and Google Sheets. The Collaborative Whiteboard system design problem explores this architecture in depth.

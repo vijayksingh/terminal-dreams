@@ -1,0 +1,50 @@
+---
+title: "Virtual Scroll Implementation"
+slug: virtual-scroll-implementation
+section: virtualisation
+stopId: virt-variable-height
+order: 3
+kind: live-coding
+summary: "Build a virtual scroller step by step — from naive rendering to transform-positioned, overscan-buffered windowing"
+tags:
+  - virtualisation
+  - implementation
+  - transforms
+  - overscan
+intersections:
+  - api-resize
+  - virt-fixed-vs-variable
+prerequisites:
+  - virt-windowing
+  - virt-fixed-vs-variable
+---
+
+## Four Phases of Optimization
+
+A virtual scroller isn't one clever trick — it's four optimizations layered on top of each other. Each phase solves a specific problem introduced by the previous one. Click through the phases below to watch the rendering pipeline evolve from naive to production-ready.
+
+<ScrollPipelineExplorer />
+
+## Phase 1 → 2: From All to Windowed
+
+The first optimization is the most dramatic. Phase 1 renders all 500 items — 500 DOM nodes, all in the document. Phase 2 introduces the **spacer + window** pattern: an empty container with `height: totalItems × itemHeight` fakes the scrollbar, while only the visible items are mounted inside it.
+
+This single change drops DOM nodes from 500 to ~10. The scroll event handler computes `floor(scrollTop / itemHeight)` to find the first visible item, then mounts items from that index through the bottom of the viewport.
+
+## Phase 2 → 3: From Top/Left to Transforms
+
+Phase 2 positions items with `top: Npx` — which triggers a layout recalculation on every scroll. Phase 3 switches to `transform: translateY(Npx)` — which runs entirely on the compositor thread. The browser skips layout and paint, moving the element on the GPU.
+
+The visual result is identical, but the performance difference is significant. On a 60fps display, each frame has 16ms to complete. Layout recalculation can consume 5-10ms of that budget. Transform-only updates take less than 1ms, leaving the rest of the frame budget for JavaScript execution and garbage collection.
+
+## Phase 3 → 4: Overscan Buffer
+
+Phase 3 renders exactly the visible items — nothing more. During fast scrolling, the browser renders a frame before React can mount the new items that should appear at the scroll edge. This produces blank flashes — a visible white gap before the content catches up.
+
+Phase 4 adds an **overscan buffer**: a few extra items above and below the viewport. These items are already in the DOM before they become visible, eliminating the gap. The tradeoff is more DOM nodes (typically 6 extra — 3 above, 3 below), but the visual result is smooth scrolling without any flicker.
+
+## What This Builds Toward
+
+These four phases are the foundation that every virtual scroll library builds on. `react-window` and `@tanstack/virtual` both implement this exact pipeline internally — spacer for scroll height, windowed rendering for DOM efficiency, transform positioning for compositor performance, and overscan for smooth scrolling.
+
+The next stops in this section explore what happens when you need **variable-height items** (Tree & Grid Virtualization) and when the DOM itself becomes the bottleneck (**Canvas vs DOM Rendering**).

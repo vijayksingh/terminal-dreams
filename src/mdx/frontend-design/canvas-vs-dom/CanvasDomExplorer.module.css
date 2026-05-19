@@ -1,0 +1,289 @@
+/* ── Component tokens ─────────────────────────── */
+.root {
+  --cd-dom: oklch(60% 0.18 200);
+  --cd-dom-bg: oklch(60% 0.18 200 / 0.18);
+  --cd-dom-border: oklch(60% 0.18 200 / 0.3);
+  --cd-canvas: oklch(65% 0.18 60);
+  --cd-canvas-bg: oklch(65% 0.18 60 / 0.18);
+  --cd-canvas-border: oklch(65% 0.18 60 / 0.3);
+  --cd-good: oklch(58% 0.18 140);
+  --cd-warn: oklch(65% 0.18 60);
+  --cd-bad: oklch(60% 0.20 25);
+}
+
+/* ── Split layout ─────────────────────────────── */
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--color-border);
+  min-height: 360px;
+}
+
+.pane {
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.paneLabel {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: var(--radius-1);
+  z-index: 1;
+}
+
+.paneLabelDom {
+  composes: paneLabel;
+  background: var(--cd-dom-bg);
+  color: var(--cd-dom);
+  border: 1px solid var(--cd-dom-border);
+}
+
+.paneLabelCanvas {
+  composes: paneLabel;
+  background: var(--cd-canvas-bg);
+  color: var(--cd-canvas);
+  border: 1px solid var(--cd-canvas-border);
+}
+
+/* ── Render containers ────────────────────────── */
+
+.renderArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+}
+
+.domDot {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.canvasEl {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Time overlay ────────────────────────────── */
+
+.timeOverlay {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  z-index: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeGood {
+  color: var(--cd-good);
+}
+
+.timeWarn {
+  color: var(--cd-warn);
+}
+
+.timeBad {
+  color: var(--cd-bad);
+}
+
+/* ── Render time comparison ──────────────────── */
+
+.renderComparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.renderCompRow {
+  display: grid;
+  grid-template-columns: 56px 1fr 72px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.renderCompLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.renderCompTrack {
+  height: 10px;
+  background: var(--color-surface-2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.renderCompBarDom {
+  height: 100%;
+  background: var(--cd-dom);
+  border-radius: 5px;
+  min-width: 4px;
+  transition: width 0.15s;
+}
+
+.renderCompBarCanvas {
+  height: 100%;
+  background: var(--cd-canvas);
+  border-radius: 5px;
+  min-width: 4px;
+  transition: width 0.15s;
+}
+
+.renderCompRatio {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--cd-dom);
+  font-weight: 700;
+  text-align: center;
+  padding: var(--space-1) 0;
+}
+
+/* ── Tradeoff table ───────────────────────────── */
+
+.tradeoffs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--color-border);
+  border-top: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.tradeoffHeader {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-2);
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.tradeoffCell {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.tradeoffCellHighlight {
+  composes: tradeoffCell;
+  background: var(--cd-canvas-bg);
+  font-weight: 700;
+}
+
+.tradeoffCellDomWin {
+  composes: tradeoffCell;
+  background: var(--cd-dom-bg);
+  font-weight: 700;
+}
+
+.tradeoffGood {
+  composes: tradeoffCell;
+  color: var(--cd-good);
+  font-weight: 600;
+}
+
+.tradeoffGoodHighlight {
+  composes: tradeoffCell;
+  color: var(--cd-good);
+  font-weight: 700;
+  background: var(--cd-canvas-bg);
+}
+
+.tradeoffBad {
+  composes: tradeoffCell;
+  color: var(--cd-bad);
+  font-weight: 600;
+}
+
+.tradeoffBadHighlight {
+  composes: tradeoffCell;
+  color: var(--cd-bad);
+  font-weight: 700;
+  background: var(--cd-dom-bg);
+}
+
+/* ── Controls ─────────────────────────────────── */
+
+.ctrl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.ctrl input[type="range"] {
+  flex: 1;
+}
+
+.ctrlVal {
+  min-width: 5em;
+  text-align: right;
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive ───────────────────────────────── */
+
+@media (max-width: 640px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .tradeoffs {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tradeoffHeader:first-child {
+    display: none;
+  }
+
+  .tradeoffCell:first-child,
+  .tradeoffCellHighlight:first-child {
+    grid-column: 1 / -1;
+    background: var(--color-surface-2);
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+
+  .renderCompRow {
+    grid-template-columns: 48px 1fr 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .renderCompBarDom,
+  .renderCompBarCanvas {
+    transition: none;
+  }
+}

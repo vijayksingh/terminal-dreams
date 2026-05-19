@@ -18,128 +18,224 @@ intersections:
   - state-search
   - net-rest-graphql
 prerequisites: []
+demo: design-autocomplete
 ---
 
-## Why Autocomplete Is Harder Than It Looks
+<section id="step-1" className="recipe-step">
 
-Every developer has typed into a search box and watched suggestions appear. The interaction feels simple — type, see results, pick one. But beneath that simplicity hides a cascade of engineering decisions: **when** to fire requests, **how** to cancel stale ones, **where** to cache results, and **what** happens when the network betrays you.
+## 01 — Requirements
 
-An autocomplete widget is a microcosm of frontend system design. It forces you to reason about debouncing (don't spam the server), cancellation (don't render stale data), caching (don't re-fetch what you already know), race conditions (network responses arrive out of order), and keyboard accessibility (the mouse is optional). Get any one of these wrong and the user experience degrades — sometimes silently, sometimes catastrophically.
+"Design an autocomplete search."
 
-## Phase 1: Architecture
+Before writing any code, clarify the scope with your interviewer. The panel on the right shows five capability toggles — each one changes the architecture significantly.
 
-A well-designed autocomplete decomposes into six cooperating subsystems:
+**Debounced input?** Without debounce, typing "javascript" fires 10 requests — one per keystroke. A 300ms quiet period collapses those into 1–2 requests. Below 150ms you still spam; above 500ms the UI feels sluggish. Google uses ~200–300ms, adjusting by typing speed.
 
-1. **DebounceController** — Accepts raw keystroke events and emits stabilized queries. A 200–400ms quiet period prevents firing a request on every single character. The timer resets on each keystroke, so rapid typing produces at most one or two requests instead of ten.
+**Request cancellation?** When the user types "j", then "ja", the response for "j" is stale. Without AbortController, that stale response can arrive *after* the "ja" response and overwrite it. This is the classic autocomplete race condition — invisible, intermittent, and infuriating to debug.
 
-2. **AbortManager** — Wraps `AbortController` to cancel in-flight requests when a newer query supersedes them. Without this, a slow response for "jav" can overwrite the fast response for "javascript" — a classic race condition.
+**Trie caching?** A trie (prefix tree) is the natural data structure here because autocomplete queries *are* prefixes. Each node represents a character; the path from root spells a prefix. Lookup is O(k) where k is prefix length — independent of how many entries the cache holds. A flat Map gives O(1) exact match but cannot answer "which prefixes of this query have cached results?" without scanning every key.
 
-3. **TrieCache** — A prefix tree that stores previously fetched results keyed by the search prefix. When the user types "react" and then "react query", the cache can serve "react" instantly while only fetching the longer prefix from the network.
+**Keyboard navigation?** Arrow keys, Enter, Escape — the combobox pattern. WCAG requires all functionality to be keyboard-operable. Without this, screen reader and keyboard-only users cannot use the autocomplete at all.
 
-    The trie is the natural data structure here because autocomplete queries are themselves prefixes. Each node in the tree represents a single character, and the path from root to any node spells out a prefix. Inserting a new cache entry for "react" creates five nodes (r → e → a → c → t), and a subsequent lookup for "react" simply walks those five edges — O(k) time where k is the prefix length, regardless of how many thousands of entries the cache holds. Compare this to a flat `Map<string, results>`: the Map gives you O(1) for exact matches but cannot answer "what prefixes of this query have cached results?" without iterating every key. The trie answers that question as a natural byproduct of the lookup traversal.
+**Match highlighting?** When the user searches "rea" and gets "React", the "Rea" substring should be visually emphasized. The safe approach splits at the match boundary and wraps in a `<mark>` element. Never use innerHTML — if the query contains `<img onerror=alert(1)>`, you have an XSS vector.
 
-4. **NetworkLayer** — The actual fetch call. It accepts an `AbortSignal`, returns a promise of results, and handles HTTP errors gracefully. In production this would hit a real API; in our demo, it simulates latency with a random 200–800ms delay.
+</section>
 
-5. **ResultRenderer** — Takes the result array and the current query, then renders each result with the matching substring highlighted using `<mark>` elements. This is the XSS-safe alternative to `innerHTML` — never inject user input as raw HTML.
+<section id="step-2" className="recipe-step">
 
-6. **KeyboardNavigator** — Tracks a `highlightedIndex` state. Arrow keys increment and decrement it, Enter selects the highlighted item, Escape closes the dropdown. The active descendant is communicated to screen readers via `aria-activedescendant`.
+## 02 — API Design
 
-<AutocompleteDemo />
+Two endpoints cover the entire autocomplete surface:
 
-## Phase 2: Why These Choices Matter
+**`GET /api/search?q=\{prefix\}&limit=8`** — The core search endpoint. Accepts a prefix string, returns ranked results. The limit parameter prevents unbounded result sets. Response time must be under 200ms for the suggestions to feel instant — above 300ms, the user perceives lag.
 
-### Trie caching makes prefix searches instant
+**`POST /api/search/log`** — Analytics endpoint. When a user selects a result, log which item they picked and its position in the list. This data feeds the ranking algorithm — terms that users frequently select for a given prefix should rank higher in future queries.
 
-A trie (prefix tree) is the natural data structure for autocomplete caching because the queries themselves are prefixes. When the user types "j", "ja", "jav", "java", each is a path from the root. If we cache results at the "java" node, a subsequent search for "java" is a cache hit with zero network cost.
+The type panel shows three data shapes: **SearchResult** (what the API returns), **TrieNode** (how the client caches), and **AutocompleteState** (the React state shape).
 
-The trie also enables a powerful optimization: **prefix subsumption**. If the cache contains results for "java" and the user types "javas", we can filter the cached "java" results client-side instead of hitting the network. This is why the Compare tab shows dramatically fewer requests with caching enabled.
+</section>
 
-The memory cost is modest. Each node is a character plus a map of children. A cache of 100 unique queries might create 400–600 nodes — trivial for a modern browser.
+<section id="step-3" className="recipe-step">
 
-### AbortController prevents race conditions
+## 03 — Architecture
 
-Consider this scenario without cancellation:
+The component tree follows a clear data flow. Play through each scenario to see how keystrokes flow through the system:
 
-```
-User types "j"     → Request A fires (300ms delay)
-User types "ja"    → Request B fires (800ms delay)  
-User types "jav"   → Request C fires (200ms delay)
+**Search flow** — Keystroke enters SearchInput, Controller schedules via DebounceTimer, timer fires, checks TrieCache (miss), AbortManager creates a new controller and passes the signal to NetworkLayer, response comes back, gets cached in the trie, results rendered in ResultList.
 
-Response C arrives first  → renders "jav" results ✓
-Response A arrives second → OVERWRITES with "j" results ✗
-```
+**Cache hit** — Same keystroke enters, same debounce wait, but this time the trie lookup succeeds. NetworkLayer is never touched. Zero latency, zero bandwidth.
 
-Request A's response is stale but arrives after C because the network is unpredictable. Without `AbortController`, the UI flickers to the wrong results. With it, requests A and B are aborted the moment C fires — they never resolve.
+**Race condition** — Two queries fire in quick succession. AbortManager cancels the first before the second fires. Without this, the slower first response would overwrite the faster second response — showing "j" results when the user typed "ja".
 
-The implementation pattern is worth internalizing because it applies far beyond autocomplete:
+**Keyboard navigation** — Arrow keys change `highlightedIndex`, Enter selects, Escape closes. The input retains focus throughout — `aria-activedescendant` points to the active option without moving DOM focus.
 
-```ts
-const controllerRef = useRef<AbortController | null>(null);
+</section>
 
-function search(query: string) {
-  controllerRef.current?.abort();           // cancel previous
-  const controller = new AbortController();
-  controllerRef.current = controller;       // store new
+<section id="step-4" className="recipe-step">
 
-  fetch(`/api/search?q=${query}`, {
-    signal: controller.signal,              // link to fetch
-  }).catch((err) => {
-    if (err.name === "AbortError") return;  // expected, ignore
-    throw err;                              // real error, propagate
-  });
-}
-```
+## 04 — Baseline
 
-The key insight is that `AbortController` is a *cooperative* mechanism. Calling `.abort()` does not kill the HTTP connection immediately — it sets the signal's `aborted` flag and dispatches an `abort` event. The fetch implementation checks this flag and rejects the promise. This means you must always pass the signal to the consumer (fetch, XMLHttpRequest, or a custom async function), and the consumer must respect it. In the demo, the simulated network delay uses `controller.signal.addEventListener("abort", ...)` to clear its timeout — the same pattern a real fetch polyfill would use internally.
+Toggle the feature on to see the raw, unoptimized autocomplete. Every single keystroke immediately fires a network request. Type "javascript" and watch: 10 keystrokes, 10 requests.
 
-### The debounce bar visualizes an invisible concept
+The comparison below shows the problem in stark terms — without optimization, request count equals keystroke count. With debounce + cache, 10 keystrokes cost exactly 1 request the first time and 0 the second.
 
-Debouncing is one of those concepts that every developer understands intellectually but rarely _sees_. The timer bar below the input makes the debounce window tangible: each keystroke resets the fill, and the request only fires when the bar reaches 100%. This transforms an abstract timing concept into a visible state machine.
+The network timeline above will fill with dots rapidly. Each dot is a separate fetch to the server. In production, this would saturate the user's connection and hammer your search infrastructure.
 
-The 300ms debounce value is a sweet spot. Below 150ms, you're still sending too many requests. Above 500ms, the interface feels sluggish. Google's own autocomplete uses approximately 200–300ms, adjusting based on typing speed.
+</section>
 
-## Phase 3: Edge Cases and Attack Vectors
+<section id="step-5" className="recipe-step">
 
-### LRU eviction under memory pressure
+## 05 — Debounce
 
-Our demo's trie grows unboundedly, which is fine for a demo but dangerous in production. A real implementation needs an eviction strategy. The simplest is **LRU (Least Recently Used)**: maintain a doubly-linked list of cache entries ordered by access time, and evict the tail when the cache exceeds a size limit. A typical limit might be 200–500 cached prefixes.
+Toggle on debounce and watch the timer bar appear below the search input. Each keystroke resets the 300ms countdown. The request only fires when the bar reaches 100% — when the user pauses typing.
 
-### Out-of-order response handling
+**Drag the delay slider** to feel the tradeoff. At 50ms, you are still sending too many requests — the debounce is too short to absorb fast typing. At 1000ms, the UI feels unresponsive — suggestions appear a full second after the user stops. The sweet spot is 200–400ms.
 
-Even with `AbortController`, there's a subtle window where a response arrives between the abort call and the abort signal propagating. The defense is a **generation counter**: increment a counter on each new request, capture its value in the closure, and discard any response whose captured value doesn't match the current counter. This is the `capturedId !== requestIdRef.current` guard in the demo.
+The debounce is implemented with `setTimeout` + `clearTimeout`. Each new keystroke clears the previous timer and starts a fresh one. Only when the timer completes undisturbed does the search fire. This is the core insight: debounce converts a stream of rapid events into a single event after the stream ends.
 
-### Rapid typing produces zero requests
+Notice how the metrics bar shows far fewer total requests now. The "Saved" percentage represents network calls avoided by the debounce alone.
 
-When the user types "javascript" quickly (under 300ms total), the debounce controller collapses all ten keystrokes into a single request for "javascript". Combined with caching, a second search for "javascript" produces **zero** network requests. The Compare tab makes this dramatically visible — try typing the same term twice.
+</section>
 
-This is the compounding effect of layering optimizations. Debounce alone reduces ten keystrokes to one request. Trie caching alone eliminates repeated lookups. Together, they create a situation where a user can type a ten-character query, delete it, retype it, and the total network cost is exactly one request. In the Compare tab, the "No Debounce" column shows ten requests for the same input, while "Debounce + Cache" shows one request the first time and zero the second time — a 95% reduction in network traffic from two simple techniques.
+<section id="step-6" className="recipe-step">
 
-### XSS via innerHTML
+## 06 — AbortController
 
-A naive implementation might highlight matches with:
+Toggle on AbortController. Now when you type, each new query aborts the previous in-flight request. Watch the network timeline: aborted requests show as red dots.
 
-```js
-// DANGEROUS — never do this
-item.innerHTML = text.replace(query, `<b>${query}</b>`);
-```
+The implementation pattern is worth memorizing — it appears in every serious frontend application:
 
-If `query` contains `<img src=x onerror=alert(1)>`, you've just introduced a stored XSS vector. The safe approach splits the string at the match boundary and wraps the match in a `<mark>` React element — no raw HTML involved.
+1. Store a `controllerRef` via useRef
+2. On each new search: call `controllerRef.current?.abort()` to cancel previous
+3. Create a new `AbortController`, store it in the ref
+4. Pass `controller.signal` to fetch
+5. Catch `AbortError` silently (it is expected, not an error)
 
-### Network failure degradation
+The key insight: `AbortController` is cooperative. Calling `.abort()` sets the signal's `aborted` flag and dispatches an event. The consumer (fetch) checks this flag and rejects. If you do not pass the signal, abort does nothing.
 
-When the network fails, autocomplete should degrade gracefully: show cached results if available, show a subtle error indicator if not, and never block the user from typing. The search input should remain functional even if suggestions are unavailable. A retry with exponential backoff (1s, 2s, 4s) is appropriate for transient failures, but after 3 failures, stop retrying and let the user submit their query directly.
+</section>
 
-The degradation cascade should follow a predictable order: (1) serve from trie cache if the prefix is cached, (2) attempt the network request with a short timeout (3–5 seconds), (3) on failure, check if any *parent prefix* in the trie has results that could be filtered client-side, (4) if all else fails, show a non-blocking "suggestions unavailable" indicator while keeping the input fully functional. The critical rule is that autocomplete is an *enhancement* — the primary action (submitting a search) must never depend on suggestions loading successfully.
+<section id="step-7" className="recipe-step">
 
-### Real-world applications
+## 07 — Trie Cache
 
-This architecture is not academic — it powers autocomplete at scale across the industry. Google Suggest uses a variant of this pattern with aggressive prefetching: before the user finishes typing, it pre-fetches results for likely completions based on popularity. GitHub's code search uses debounced queries with server-side trie indexes spanning millions of repositories. Algolia and Typesense expose client-side SDKs that implement the debounce-abort-cache pipeline with tunable parameters. The patterns in this demo translate directly to production: swap the simulated delay for a real fetch, replace the in-memory trie with a bounded LRU variant, and the architecture holds.
+Toggle on trie caching. Now search for something, clear the input, and search for the same term again. The second time, the network timeline shows a yellow "cached" dot instead of firing a network request.
 
-## Key Takeaways
+The trie visualizer below the search shows the tree growing in real time as you search. Each node is a character; nodes with a yellow border have cached results stored at that prefix.
 
-1. **Debounce stabilizes input** — A 300ms quiet period reduces request volume by 80–90% during fast typing without perceptible delay
-2. **AbortController eliminates race conditions** — Cancel stale requests before they can overwrite newer results
-3. **Trie caching provides O(k) prefix lookup** — The data structure matches the access pattern, making repeated searches instant
-4. **Never use innerHTML for match highlighting** — Split and wrap with `<mark>` elements to prevent XSS
-5. **Generation counters are the last line of defense** — Even with abort, verify that a response belongs to the current query before rendering it
-6. **Keyboard navigation is not optional** — `aria-activedescendant`, `role="combobox"`, and `role="listbox"` make autocomplete accessible to screen readers and keyboard-only users
+**Why a trie instead of a Map?** A Map gives O(1) exact-key lookup. But autocomplete queries are *prefixes* — when the user types "react", you want to know if "rea" or "re" have cached results that could be filtered client-side. The trie answers this as a natural byproduct of traversal: walk the path r → e → a → c → t, and at each node you can check for cached results. A Map would need to iterate every key to find matching prefixes.
+
+The memory cost is modest: 100 cached queries create roughly 400–600 nodes. Each node is a character plus a Map of children — trivial for a modern browser.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Keyboard Navigation
+
+Toggle keyboard navigation and try it: type a query, then press **↓** to move through results, **↑** to go back, **Enter** to select, **Escape** to close.
+
+The interaction follows the WAI-ARIA combobox pattern. The critical detail is `aria-activedescendant`: instead of moving DOM focus to each option (which would blur the input), the input retains focus and the `aria-activedescendant` attribute points to the ID of the visually highlighted option. Screen readers read the pointed-to element as if it were focused.
+
+This is not a degraded experience — it is a *parallel* interaction mode. Mouse users click; keyboard users arrow. Both get the same result. The widget below shows the four key bindings and their effects.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Generation Counter
+
+The generation counter is a safety net for a subtle edge case. Even with AbortController, there is a tiny window between calling `.abort()` and the signal propagating. If a response arrives in that window, it would render stale data.
+
+The fix: increment a counter on each new request, capture its value in the callback closure. When the response arrives, compare the captured value to the current counter. If they differ, the response is stale — discard it.
+
+This pattern — `const gen = ++genRef.current; ... if (gen !== genRef.current) return;` — is the universal guard against out-of-order async responses. It works regardless of the cancellation mechanism.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Match Highlighting
+
+Toggle highlighting on and type a query. The matching substring in each result is now wrapped in a `<mark>` element with a colored background.
+
+The implementation splits the result string at the match boundary and wraps the middle slice in a React element. This is the XSS-safe alternative to `innerHTML`. React elements are never parsed as HTML — they are plain JavaScript objects that React renders safely.
+
+The dangerous alternative — `element.innerHTML = text.replace(query, "<b>" + query + "</b>")` — is a stored XSS vector. If the query contains `<img src=x onerror=alert(1)>`, the browser executes the script. The `<mark>` approach is immune because React escapes all string content by default.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Network Error Handling
+
+Toggle on error simulation and use the sliders to control network delay and error rate. Watch how the system degrades gracefully:
+
+1. **Serve from trie cache** if the prefix is cached (zero-cost fallback)
+2. **Attempt the network request** with configurable delay
+3. **Filter parent prefix results** client-side if available
+4. **Show "suggestions unavailable"** while keeping input functional
+
+Crank the error rate to 100% and watch: cached queries still work instantly. The search input never becomes unusable — autocomplete is an *enhancement*, not a gate. The primary action (submitting a search) must never depend on suggestions loading.
+
+Try different delay values to understand perceived latency. At 100ms, suggestions feel instant. At 1000ms, the user notices. At 2000ms, they have moved on to their next thought.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Full Accessibility
+
+Toggle full ARIA to see the complete combobox attribute set applied to the search input. The widget below shows every ARIA attribute, which element it applies to, and why.
+
+The six critical attributes: `role="combobox"` on the input, `aria-expanded` reflecting dropdown state, `aria-autocomplete="list"` signaling behavior, `role="listbox"` on the dropdown container, `role="option"` on each result, and `aria-activedescendant` pointing to the keyboard-highlighted option.
+
+This is not an afterthought — it is the difference between an autocomplete that works for 95% of users and one that works for everyone. VoiceOver, JAWS, and NVDA all rely on these attributes to announce the autocomplete behavior correctly.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — LRU Eviction
+
+The trie grows unboundedly — every unique prefix creates new nodes. In production, this is a memory leak. The fix: **LRU (Least Recently Used)** eviction.
+
+Adjust the slider to set the maximum cache entries. The pressure meter shows how full the cache is. When usage exceeds the limit, the least recently accessed prefix is evicted.
+
+A typical limit is 200–500 cached prefixes. Below that, cache misses increase but memory stays bounded. Above that, memory grows but cache hit rates plateau. The sweet spot depends on your user's search patterns — if they repeat the same 20 queries, a cache of 50 is plenty.
+
+The `accessCount` field on each trie node tracks usage. On eviction, walk the trie to find the node with the lowest access count and remove its results (not the node itself — it may be an ancestor of other cached prefixes).
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Compare Mode
+
+Type in the comparison input below and watch three columns update simultaneously:
+
+**No debounce** — every keystroke fires. Type "javascript" and see 10 requests.
+
+**300ms debounce** — only fires after a 300ms pause. Same input produces 1–2 requests.
+
+**Debounce + Cache** — first search fires 1 request. Second search for the same term fires 0. The compounding effect of layering optimizations.
+
+This side-by-side comparison makes the cumulative impact visceral. A user who searches 10 times in a session might generate 100 requests without optimization, 10 with debounce, and 5 with debounce + cache — a 95% reduction from two simple techniques.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Scale
+
+How does the system perform with 100 terms vs 100,000? The data structure choice becomes critical at scale.
+
+**Map** — O(1) exact key lookup. Fast for known queries, useless for prefix search. To find "which cached prefixes match my query?", you scan every key.
+
+**Trie** — O(k) lookup where k is prefix length. Performance is independent of dataset size. Whether the cache holds 100 or 100,000 entries, looking up "react" walks exactly 5 nodes.
+
+**Array.filter** — O(n) scan. At 100 terms, this is fine. At 100,000, you are running 100K string comparisons on every keystroke. With 60fps target, that leaves 16ms per frame — a linear scan of 100K items takes 5–10ms, consuming half your frame budget.
+
+Drag the slider to see how complexity scaling differs. The trie remains constant relative to query length regardless of dataset size — this is why every serious search infrastructure uses prefix trees internally.
+
+</section>

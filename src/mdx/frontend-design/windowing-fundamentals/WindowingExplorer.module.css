@@ -1,0 +1,407 @@
+/* ── Component-scoped tokens ─────────────────── */
+.layout,
+.comparison {
+  --wnd-viewport: oklch(70% 0.18 60);
+  --wnd-viewport-bg: oklch(70% 0.18 60 / 0.25);
+  --wnd-viewport-glow: oklch(70% 0.18 60 / 0.45);
+  --wnd-viewport-shadow: oklch(70% 0.18 60 / 0.5);
+  --wnd-viewport-shadow-soft: oklch(70% 0.18 60 / 0.2);
+  --wnd-overscan: oklch(60% 0.15 200);
+  --wnd-overscan-bg: oklch(60% 0.15 200 / 0.18);
+  --wnd-naive: oklch(60% 0.20 25);
+  --wnd-naive-bg: oklch(60% 0.20 25 / 0.18);
+  --wnd-naive-accent: oklch(60% 0.20 25 / 0.3);
+  --wnd-naive-bar: oklch(60% 0.20 25 / 0.2);
+}
+
+/* ── Comparison banner ────────────────────────── */
+
+.comparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.compRow {
+  display: grid;
+  grid-template-columns: 72px 1fr 96px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.compLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.compTrack {
+  height: 10px;
+  background: var(--color-surface-2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.compBarWindowed {
+  height: 100%;
+  background: var(--wnd-viewport);
+  border-radius: 5px;
+  min-width: 4px;
+  transition: width 0.2s;
+}
+
+.compBarNaive {
+  height: 100%;
+  background: var(--wnd-naive);
+  border-radius: 5px;
+}
+
+.compCount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.compRatio {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--wnd-viewport);
+  font-weight: 700;
+  text-align: center;
+  padding: var(--space-1) 0;
+}
+
+/* ── Layout ───────────────────────────────────── */
+
+.layout {
+  display: grid;
+  grid-template-columns: 56px 1fr 172px;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  min-height: 440px;
+  align-items: start;
+}
+
+/* ── Minimap ──────────────────────────────────── */
+
+.minimap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mmTrack {
+  width: 36px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-1);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.mmRendered {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: var(--wnd-overscan-bg);
+  border-radius: 2px;
+}
+
+.mmRenderedFull {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--wnd-naive-bg);
+}
+
+.mmViewport {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  background: var(--wnd-viewport-glow);
+  border: 2px solid var(--wnd-viewport);
+  border-radius: 3px;
+  box-shadow: 0 0 10px var(--wnd-viewport-shadow),
+              0 0 20px var(--wnd-viewport-shadow-soft);
+}
+
+.mmLabel {
+  text-align: center;
+  font-family: var(--font-mono);
+  line-height: 1.2;
+}
+
+.mmCount {
+  display: block;
+  color: var(--wnd-viewport);
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.mmTotal {
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+/* ── Scroll container ─────────────────────────── */
+
+.scrollerWrap {
+  position: relative;
+}
+
+.scroller {
+  overflow-y: auto;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  scrollbar-width: thin;
+}
+
+.spacer {
+  position: relative;
+}
+
+.row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  border-left: 4px solid transparent;
+}
+
+.rowViewport {
+  composes: row;
+  background: var(--wnd-viewport-bg);
+  border-left-color: var(--wnd-viewport);
+  color: var(--color-text);
+}
+
+.rowOverscan {
+  composes: row;
+  background: var(--wnd-overscan-bg);
+  border-left-color: var(--wnd-overscan);
+  border-left-style: dashed;
+  color: var(--color-muted);
+}
+
+.rowNaive {
+  composes: row;
+  background: var(--wnd-naive-bg);
+  border-left-color: var(--wnd-naive-accent);
+  color: var(--color-muted);
+}
+
+.rowNaiveVisible {
+  composes: row;
+  background: var(--wnd-naive-accent);
+  border-left-color: var(--wnd-naive);
+  color: var(--color-text);
+}
+
+.rowIdx {
+  font-weight: 700;
+  min-width: 5ch;
+}
+
+.rowBar {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--wnd-viewport-bg);
+}
+
+.rowOverscan .rowBar {
+  background: var(--wnd-overscan-bg);
+}
+
+.rowNaive .rowBar,
+.rowNaiveVisible .rowBar {
+  background: var(--wnd-naive-bar);
+}
+
+.rowPos {
+  font-size: 10px;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Naive mode warning ───────────────────────── */
+
+.naiveWarning {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--wnd-naive);
+  background: var(--wnd-naive-bg);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--wnd-naive-accent);
+  line-height: 1.6;
+}
+
+/* ── Stats panel ──────────────────────────────── */
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.statRow:last-child {
+  border-bottom: none;
+}
+
+.statLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.statHighlight {
+  composes: statValue;
+  color: var(--wnd-viewport);
+}
+
+/* ── Pipeline readout ─────────────────────────── */
+
+.pipeline {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  line-height: 1.8;
+}
+
+.pipeStep {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-surface-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.pipeStepVal {
+  color: var(--wnd-viewport);
+  font-weight: 600;
+}
+
+.pipeArrow {
+  color: var(--color-border);
+  font-size: 14px;
+}
+
+/* ── Controls ─────────────────────────────────── */
+
+.ctrl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.ctrl input[type="range"] {
+  flex: 1;
+}
+
+.ctrlVal {
+  min-width: 5em;
+  text-align: right;
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive ───────────────────────────────── */
+
+@media (max-width: 680px) {
+  .layout {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .stats {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .statRow {
+    flex: 1 1 auto;
+    min-width: 100px;
+    border-bottom: none;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .statRow:last-child {
+    border-right: none;
+  }
+
+  .pipeline {
+    font-size: 10px;
+  }
+
+  .compRow {
+    grid-template-columns: 56px 1fr 80px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compBarWindowed {
+    transition: none;
+  }
+
+  .row,
+  .rowViewport,
+  .rowOverscan,
+  .rowNaive,
+  .rowNaiveVisible {
+    transition: none;
+  }
+}

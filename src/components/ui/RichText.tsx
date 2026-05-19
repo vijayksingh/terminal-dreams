@@ -4,6 +4,17 @@ import { motion } from "framer-motion";
 import { type ReactNode, memo } from "react";
 import { SPRING, STAGGER } from "@/lib/motion";
 import { PencilEmphasis } from "./richtext-pencil";
+import {
+  ApiEndpoint,
+  ENDPOINT_RE,
+  DurationBadge,
+  SizeBadge,
+  PercentileBadge,
+  PercentageBadge,
+  MultiplierBadge,
+  ComplexityBadge,
+} from "./richtext-endpoint";
+import { CustomArrow } from "./richtext-icons";
 
 // ─── Types ────────────────────────────────────
 //
@@ -16,7 +27,9 @@ import { PencilEmphasis } from "./richtext-pencil";
 //
 type SegmentType =
   | "text" | "code" | "emphasis" | "keyword"
-  | "arrow" | "boolean" | "prose-number" | "comparison";
+  | "arrow" | "boolean" | "prose-number" | "comparison"
+  | "endpoint" | "duration" | "size"
+  | "percentile" | "percentage" | "multiplier" | "complexity";
 
 type RichTextVariant = "static" | "reveal" | "interactive";
 
@@ -47,11 +60,40 @@ const MATCHERS: MatcherDef[] = [
   // 1. Backtick code — highest priority
   { re: /`([^`]+)`/g, type: "code", display: (m) => m[1] },
 
+  // 1b. HTTP endpoint — verb + path read as a single semantic atom
+  // (must beat the ALL-CAPS matcher below, else `GET` gets pencil-emphasised
+  // while `/api/...` falls back to plain text)
+  { re: /\b(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\/[^\s,;)\]"']+)/g, type: "endpoint" },
+
+  // 1c. Duration — multi-char units only in bare prose. Bare `s`/`m`/`h`
+  // false-positive too aggressively (e.g. "1990s" the decade). Inside
+  // backticks SmartCode handles those via the anchored DURATION_RE.
+  { re: /\b(\d+(?:\.\d+)?)(ms|μs|us|ns)\b/g, type: "duration" },
+
+  // 1d. Storage size — "200 bytes", "2 KB", "36 KB", "1.5 MB".
+  // Conservative case-sensitive units in bare prose; broader inside ticks.
+  { re: /\b(\d+(?:\.\d+)?)\s?(bytes?|KB|MB|GB|TB|KiB|MiB|GiB|TiB)\b/g, type: "size" },
+
+  // 1e. Percentile — "p95", "p99", "p99.9". Tight allowlist + negative
+  // lookahead so "p5.js" doesn't false-positive on the `5`.
+  {
+    re: /\bp(5|10|25|50|75|90|95|99(?:\.9{1,3})?)(?![a-zA-Z\d.])/g,
+    type: "percentile",
+  },
+
+  // 1f. Percentage — "95%", "0.5%", "99.99%". Must win priority over
+  // bare prose-number, else only "95" gets chipped and "%" stays text.
+  { re: /\b(\d+(?:\.\d+)?)%/g, type: "percentage" },
+
+  // 1g. Multiplier — "10×", "5x" (with trailing space or punctuation,
+  // so "100x100" image dims don't false-positive).
+  { re: /\b(\d+(?:\.\d+)?)([×x])(?=\s|$|[,.;)\]])/g, type: "multiplier" },
+
   // 2. Quoted keywords — "sorted array", "two-phase commit"
   { re: /"([^"]{2,})"/g, type: "keyword" },
 
-  // 3. Complexity notation — O(n), O(n²), O(n log n)
-  { re: /O\([^)]+\)/g, type: "code" },
+  // 3. Complexity notation — O(n), O(n²), O(n log n) — math typography
+  { re: /O\([^)]+\)/g, type: "complexity" },
 
   // 4. Dot-access / method calls — ctx.auth, map.get(x), node.left
   { re: /\b[a-zA-Z_]\w+\.\w+(?:\([^)]*\))?/g, type: "code" },
@@ -137,24 +179,14 @@ function parse(text: string): readonly Segment[] {
 
 // ─── Segment styles (CSS custom properties) ───
 
-const S_CODE: React.CSSProperties = {
-  fontFamily: "var(--font-mono)",
-  fontSize: "0.92em",
-  color: "var(--color-accent)",
-};
+// Code styling lives entirely in `.richtext-code-pill` (globals.css) so
+// the cyan-teal code color, bg tint, and border come from one place.
 
 const S_KEYWORD: React.CSSProperties = {
   fontFamily: "var(--font-display)",
   fontStyle: "italic",
   fontSize: "1.02em",
   color: "var(--color-accent)",
-};
-
-const S_ARROW: React.CSSProperties = {
-  color: "var(--color-accent)",
-  fontWeight: 500,
-  padding: "0 0.15em",
-  letterSpacing: "-0.02em",
 };
 
 const S_BOOLEAN: React.CSSProperties = {
@@ -179,13 +211,6 @@ const S_COMPARISON: React.CSSProperties = {
   padding: "0 0.15em",
 };
 
-const ARROW_MAP: Record<string, string> = {
-  "→": "⟶",  // → to ⟶
-  "←": "⟵",  // ← to ⟵
-  "⇒": "⟹",  // ⇒ to ⟹
-  "⇐": "⟸",  // ⇐ to ⟸
-};
-
 // ─── Segment renderer ─────────────────────────
 
 function renderSegment(seg: Segment, variant: RichTextVariant): ReactNode {
@@ -194,8 +219,8 @@ function renderSegment(seg: Segment, variant: RichTextVariant): ReactNode {
   switch (seg.type) {
     case "code":
       return variant === "interactive"
-        ? <motion.code key={k} className="richtext-code-pill" style={S_CODE} whileHover={HOVER_CODE} transition={SPRING.snappy}>{seg.display}</motion.code>
-        : <code key={k} style={S_CODE}>{seg.display}</code>;
+        ? <motion.code key={k} className="richtext-code-pill" whileHover={HOVER_CODE} transition={SPRING.snappy}>{seg.display}</motion.code>
+        : <code key={k} className="richtext-code-pill">{seg.display}</code>;
 
     case "boolean":
       return <span key={k} style={S_BOOLEAN}>{seg.display}</span>;
@@ -211,13 +236,55 @@ function renderSegment(seg: Segment, variant: RichTextVariant): ReactNode {
     }
 
     case "arrow":
-      return <span key={k} style={S_ARROW}>{ARROW_MAP[seg.display] ?? seg.display}</span>;
+      return <CustomArrow key={k} glyph={seg.display} />;
 
     case "comparison":
       return <span key={k} style={S_COMPARISON}>{seg.display}</span>;
 
     case "prose-number":
       return <span key={k} style={S_NUMBER}>{seg.display}</span>;
+
+    case "endpoint": {
+      const m = ENDPOINT_RE.exec(seg.display);
+      if (!m) return seg.display;
+      return <ApiEndpoint key={k} method={m[1]} path={m[2]} />;
+    }
+
+    case "duration": {
+      const m = /^(\d+(?:\.\d+)?)(ms|μs|us|ns)$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <DurationBadge key={k} value={m[1]} unit={m[2]} />;
+    }
+
+    case "size": {
+      const m = /^(\d+(?:\.\d+)?)\s?(bytes?|KB|MB|GB|TB|KiB|MiB|GiB|TiB)$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <SizeBadge key={k} value={m[1]} unit={m[2]} />;
+    }
+
+    case "percentile": {
+      const m = /^p(\d+(?:\.\d+)?)$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <PercentileBadge key={k} value={m[1]} />;
+    }
+
+    case "percentage": {
+      const m = /^(\d+(?:\.\d+)?)%$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <PercentageBadge key={k} value={m[1]} />;
+    }
+
+    case "multiplier": {
+      const m = /^(\d+(?:\.\d+)?)([×x])$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <MultiplierBadge key={k} value={m[1]} op={m[2]} />;
+    }
+
+    case "complexity": {
+      const m = /^O\(([^)]+)\)$/.exec(seg.display);
+      if (!m) return seg.display;
+      return <ComplexityBadge key={k} inner={m[1]} />;
+    }
 
     default:
       return seg.display;

@@ -1,0 +1,48 @@
+---
+title: "Fixed vs Variable Height Rows"
+slug: fixed-vs-variable-height
+section: virtualisation
+stopId: virt-fixed-vs-variable
+order: 2
+kind: article
+summary: "Fixed-height items give O(1) position lookup. Variable heights need prefix sums and binary search."
+tags:
+  - virtualisation
+  - layout
+  - binary-search
+  - performance
+intersections:
+  - virt-variable-height
+prerequisites:
+  - virt-windowing
+---
+
+## Two Worlds of Height Calculation
+
+The windowing technique from the previous stop works perfectly when every item has the same height — position is pure multiplication. But real-world lists contain chat messages, expandable rows, and rich-content cards. The moment items have different heights, position lookup goes from O(1) to O(log n).
+
+Toggle between the two modes below. Watch how the calculation panel changes from a single division to a multi-step binary search.
+
+<HeightStrategyExplorer />
+
+## Fixed Height: Direct Math
+
+When every item is exactly 40px tall, the position of item #200 is `200 × 40 = 8000px`. No data structure needed — one multiplication gives you the exact pixel offset. Scrolling to any position is equally trivial: `floor(scrollTop / 40)` gives you the first visible item.
+
+This is why every virtual list library defaults to fixed-height mode. Libraries like `react-window` require you to pass a `itemSize` number, and they use this direct math internally.
+
+## Variable Height: Prefix Sums
+
+When items have different heights, the position of item #200 depends on the heights of items #0 through #199. You need a **prefix-sum array** — a cumulative offset table where `offsets[i]` equals the sum of all heights before item `i`.
+
+Building this array is O(n) and done once. Looking up a scroll position requires finding which offset range contains the target pixel — a classic binary search on a sorted array, costing O(log n) per lookup.
+
+## The Estimation Problem
+
+There's a catch: you often don't know item heights until they render. Text wraps differently based on container width, images load asynchronously, and content is dynamic. Libraries like `@tanstack/virtual` solve this with a two-phase approach:
+
+1. **Estimate first** — use a default height (say 50px) for all items to create the initial offset array and scrollbar
+2. **Measure after render** — use `ResizeObserver` to capture the actual rendered height of each item
+3. **Correct the offsets** — update the prefix-sum array with measured heights, which shifts the scroll position to account for the difference
+
+This estimation-correction cycle is why variable-height virtual lists sometimes "jump" slightly — the scrollbar adjusts as estimated heights are replaced with measured ones. The Resize Observer stop covers the measurement mechanism in detail.

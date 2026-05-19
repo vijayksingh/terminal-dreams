@@ -1,0 +1,429 @@
+---
+title: "Design a News Feed"
+slug: design-news-feed
+section: system-design-problems
+stopId: sdp-news-feed
+order: 1
+kind: system-design-problem
+summary: "Build a social news feed from scratch — from flat list to real-time, optimistic, virtualized stream"
+tags:
+  - system-design
+  - infinite-scroll
+  - optimistic-ui
+  - virtualization
+  - real-time
+intersections:
+  - virt-windowing
+  - net-long-polling
+  - perf-js
+prerequisites: []
+demo: design-news-feed
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design a news feed."
+
+Before writing any code, narrow the problem. The panel on the right shows five scope questions — toggle them and watch the scope summary change.
+
+**Multiple content types?** Text posts are easy. Adding images means responsive sizing, lazy loading, and aspect ratio management. Links need OG metadata fetching and preview rendering. Polls need a voting UI and real-time results. Each type is a rendering subsystem.
+
+**Reactions and comments?** Likes alone introduce optimistic UI — the heart should turn red before the server confirms. Comments introduce threading, pagination, and potentially real-time updates. Both require separate API endpoints.
+
+**Real-time updates?** New posts arriving while the user is mid-scroll. If you auto-insert, you shift their reading position. If you don't, the feed goes stale. The solution is a queue-and-banner pattern — and it's the kind of detail that separates a competent answer from a great one.
+
+**Algorithmic feed?** Chronological is simple — sort by timestamp. Ranked means you need an engagement scoring formula, and the sort order can change between fetches. The client can't know the ranking server-side; it has to trust the server's order and re-rank locally only within a page.
+
+**Scale: 1K vs 1M posts?** At 1K, everything fits. At 1M, you need virtualization (DOM recycling), cursor pagination, CDN images, and memory management. The architecture must degrade gracefully.
+
+For this walkthrough: **all content types, reactions, real-time via SSE, algorithmic + chronological, scales to 50K.**
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API Design
+
+The right panel shows two tabs — **Endpoints** lists the four routes our feed needs, **Types** shows the data contracts. Click any endpoint card to expand its parameters.
+
+A news feed that supports mixed content, reactions, infinite scroll, and real-time needs four endpoints:
+
+**`GET /api/feed`** is the main timeline — paginated feed items sorted by the requested mode (chronological or ranked). It returns `FeedItem[]`, not full post detail. A FeedItem carries the text, author summary, reaction counts, and type-specific metadata (image URL, link OG data, or poll options). It deliberately omits comments, edit history, and full media — those load on demand when a user expands a post.
+
+**`GET /api/posts/:id`** returns `PostDetail` — comments, share count, edit history, and everything needed for an expanded view. This is fetched only when a user clicks into a specific post. Fetching detail for 20 posts upfront would waste bandwidth on data 95% of users never see.
+
+**`POST /api/posts/:id/react`** toggles a reaction. The response includes the server-authoritative count, which the client uses to reconcile after an optimistic update. If the client optimistically incremented to 43 but the server says 44 (someone else liked it too), the client adopts 44 silently.
+
+**`GET /api/feed/updates`** is an SSE (Server-Sent Events) stream. It pushes new post events to the client without polling. Unlike WebSocket, SSE is unidirectional (server → client), which is exactly what a feed needs — the client doesn't push posts to the server through this channel.
+
+Switch to **Types** to see the split: `FeedItem` (~200 bytes) vs `PostDetail` (~2 KB). This 10× size difference across 20 posts means the split saves 36 KB per page load.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Component Architecture
+
+The right panel shows the component hierarchy with four interactive scenarios. Hover any node to see data flowing between components. Use the scenario selector to watch different user flows animate through the tree.
+
+**Feed** is the single state owner. It holds `posts[]`, `cursor`, `feedMode`, `pendingReactions`, and `newPostQueue`. Every other component receives data via props and communicates back via callbacks.
+
+The architecture has three key structural decisions:
+
+**VirtualList wraps PostCard.** The feed doesn't render PostCards directly — it delegates to VirtualList, which decides which PostCards to mount based on scroll position. This separation means virtualization is an optimization layer you can add or remove without touching PostCard.
+
+**NewPostBanner is a sibling, not a child of VirtualList.** New posts queue in Feed's state. The banner renders the queue count. When clicked, Feed prepends the queue to the post list and clears it. The banner never touches VirtualList — they're independent views of Feed's state.
+
+**PostCard fires callbacks upward.** When a user taps the heart, PostCard fires `onReact(postId, type)` — it doesn't make the API call itself. Feed handles the optimistic update, the network request, and the potential rollback. Centralizing mutations in the state owner prevents inconsistent state across components.
+
+Play the **"Like (failure)"** scenario to see the rollback flow — the most architecturally revealing moment. The UI updates, the server rejects, and the state owner reverses the mutation.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — First Render
+
+Eight posts on the right. Simple flat list, all text-only, no scroll handling. Every post has the same shape: avatar, name, content, reaction counts.
+
+```tsx
+function Feed({ posts }: { posts: FeedItem[] }) {
+  return (
+    <div className="feed">
+      {posts.map(post => (
+        <PostCard key={post.id} post={post} />
+      ))}
+    </div>
+  );
+}
+```
+
+This is the most naive implementation — a `.map()` over an array. No lazy loading, no virtualization, no type-specific rendering. All metrics are green: 32 DOM nodes, 0 image requests, 60 FPS, 400ms TTI.
+
+The code is deliberately simple because it establishes a baseline. Every optimization from here is measured against these numbers. When something regresses, you'll know exactly which step caused it.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Post Type Polymorphism
+
+Toggle "Enable Post Type Polymorphism" on the right. The feed transforms — some posts now have image placeholders, link preview cards, and poll bar charts. Same data, different rendering.
+
+The widget below shows the four post types and what each renders. The key pattern is a discriminated union:
+
+```tsx
+function PostCard({ post }: { post: FeedItem }) {
+  return (
+    <article className="post-card">
+      <PostHeader author={post.author} timestamp={post.createdAt} />
+      <p>{post.content}</p>
+
+      {post.type === "image" && <ImageAttachment media={post.media} />}
+      {post.type === "link" && <LinkPreview og={post.linkPreview} />}
+      {post.type === "poll" && <PollResults poll={post.poll} />}
+
+      <ReactionBar reactions={post.reactions} />
+    </article>
+  );
+}
+```
+
+One component, one `switch` point. Not four separate components (`TextPost`, `ImagePost`, `LinkPost`, `PollPost`) — that fragments the shared header and reaction bar into four copies. The discriminated union keeps the shared parts shared and varies only the content section.
+
+Notice the colored left borders in the demo: purple for image, teal for link, orange for poll. This is a visual hint to the user about content type — and it makes the feed scannable. Users scroll fast; color coding helps them spot the content type they're looking for without reading.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Infinite Scroll
+
+Toggle "Infinite Scroll" on the right. A sentinel element appears at the bottom of the feed — a dashed line with the label "IntersectionObserver sentinel."
+
+```tsx
+const sentinelRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && !loading && cursor) {
+        fetchNextPage(cursor);
+      }
+    },
+    { rootMargin: "200px" }
+  );
+  if (sentinelRef.current) observer.observe(sentinelRef.current);
+  return () => observer.disconnect();
+}, [loading, cursor]);
+```
+
+The sentinel is a zero-height `<div>` placed after the last post. When IntersectionObserver detects it entering the viewport (plus a 200px buffer), it triggers the next page fetch. This fires exactly once per scroll threshold crossing — not once per scroll event.
+
+**Why not a scroll event handler?** A scroll handler fires 60+ times per second during a gesture. Each invocation calculates `scrollHeight - scrollTop - clientHeight` and compares to a threshold. That's a forced layout recalculation per frame. IntersectionObserver runs on the compositor thread — zero main-thread cost.
+
+The `rootMargin: "200px"` means the fetch starts 200px before the user actually reaches the bottom. On a fast connection, the next page arrives before the user sees the sentinel. The feed feels infinite.
+
+The widget below shows a miniature diagram of the viewport, content, and sentinel position. The sentinel is the trigger point — everything above it is content, everything below is unfetched.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Optimistic Likes
+
+Toggle "Optimistic Likes" on the right. Now click the heart on any post. Watch it turn red and the count increment instantly — before any "server" response.
+
+Click a post ending in 3 or 7. The heart turns red, then after ~800ms, the server "rejects" — the heart shakes and reverts, and the count decrements. That shake animation is intentional feedback: something went wrong, here's the rollback.
+
+```tsx
+function toggleLike(postId: string) {
+  // 1. Optimistic: update UI immediately
+  setPosts(prev => prev.map(p =>
+    p.id === postId
+      ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) }
+      : p
+  ));
+  setPending(prev => new Set(prev).add(postId));
+
+  // 2. Server: confirm or reject
+  const res = await fetch(`/api/posts/${postId}/react`, { method: 'POST' });
+  setPending(prev => { const next = new Set(prev); next.delete(postId); return next; });
+
+  if (!res.ok) {
+    // 3. Rollback: reverse the optimistic update
+    setPosts(prev => prev.map(p =>
+      p.id === postId
+        ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? 1 : -1) }
+        : p
+    ));
+    setFailed(prev => new Set(prev).add(postId));
+  }
+}
+```
+
+The three states are: **optimistic** (heart red, count +1, pending dot), **confirmed** (pending clears, UI stays as-is), **rolled back** (heart reverts, count -1, shake animation).
+
+The widget below shows this state machine visually. The optimistic path means the user *never waits* for a network round-trip to see their action reflected. The rollback path means the UI *always corrects itself* when the server disagrees. Both paths are necessary — optimistic without rollback creates ghost state.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Real-time New Posts
+
+Toggle "Real-time New Posts (SSE)" on the right. After a few seconds, a blue banner appears at the top: "1 new post." Wait longer — it updates: "2 new posts," "3 new posts." Click the banner. The new posts slide into the feed from the top.
+
+This is the **queue-and-banner** pattern. New posts from the SSE stream don't auto-insert into the feed — they queue silently until the user chooses to see them.
+
+```tsx
+// SSE connection
+const eventSource = new EventSource('/api/feed/updates?since=' + cursor);
+eventSource.onmessage = (event) => {
+  const newPost = JSON.parse(event.data);
+  setNewPostQueue(prev => [...prev, newPost]);
+};
+
+// Banner click handler
+function insertNewPosts() {
+  setPosts(prev => [...newPostQueue, ...prev]);
+  setNewPostQueue([]);
+}
+```
+
+**Why not auto-insert?** If the user is reading post #5 and three posts suddenly appear above it, their scroll position shifts. Post #5 is now post #8. The user loses their place. For a feed you're passively scrolling, this is annoying. For a feed you're reading carefully, it's hostile.
+
+The banner is a contract with the user: "New content exists. You decide when to see it." Twitter uses this pattern. Instagram uses this pattern. Every feed that respects reading position uses this pattern.
+
+The SSE connection (shown as a green pulsing dot in the widget) is persistent — one HTTP connection, server pushes events as they happen. Unlike polling (one request every N seconds), SSE sends data only when there's something to send. Unlike WebSocket, it's unidirectional — the client doesn't need to send data upstream through this channel.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Feed Algorithm
+
+Toggle "Feed Algorithm" on the right, then switch between **Chronological** and **Engagement Ranked**. Watch the posts reorder. In ranked mode, each post shows an engagement score badge (⚡).
+
+```tsx
+const score = (likes * 1.0 + comments * 2.5 + shares * 3.0)
+  / Math.sqrt(minutesAgo + 1);
+```
+
+The formula is simple: weight each engagement signal, sum them, divide by the square root of age. Newer posts with high engagement rank highest. Old posts with moderate engagement decay. This is a toy version of what production feeds use — real algorithms factor in user affinity, content type preference, and diversity constraints.
+
+**Why comments × 2.5 and shares × 3.0?** Comments require more effort than likes — a user who comments is more engaged. Shares amplify reach — a shared post generates secondary impressions. The weights are empirical, tuned to a specific product's engagement goals.
+
+The ranking table in the widget shows the top 5 posts with their individual signal values and computed scores. Switch back to chronological and the table disappears — chronological feeds don't need scores because the sort key is just `createdAt`.
+
+The hard question isn't "how do you sort" — it's "when do you re-sort." If the user likes a post while in ranked mode, its score changes. Do you immediately re-rank the feed? That would move the post the user just interacted with, which is disorienting. Production feeds freeze the sort order within a session and re-rank only on refresh.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Virtualization
+
+Toggle "Virtualization (DOM Recycling)" on the right. Watch the DOM metric drop from hundreds to about 48.
+
+The **virtual window strip** in the widget shows every post as a dot. Filled dots are real DOM nodes. Empty dots are height placeholders in an offset table. The window is tiny compared to the total.
+
+```tsx
+const offsets = computeOffsets(posts, estimatedRowHeight);
+const startIdx = binarySearch(offsets, scrollTop - buffer);
+const endIdx = binarySearch(offsets, scrollTop + viewportHeight + buffer);
+const visiblePosts = posts.slice(startIdx, endIdx);
+```
+
+Virtualization is a *rendering* optimization, not a data optimization. All posts stay in memory (the state array is intact). Only the visible ones get DOM nodes. When the user scrolls, nodes are recycled — the same `<article>` element that showed post #3 now shows post #15.
+
+This is independent from infinite scroll. Infinite scroll controls *how many posts we fetch*. Virtualization controls *how many posts we render*. You can have one without the other, and a production feed uses both.
+
+The offset table is cheap: 50K entries × 8 bytes = 400 KB. The binary search runs in O(log n). For 50K posts, that's 16 comparisons to find the first visible post. Scroll performance stays at 60 FPS regardless of feed length.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Skeleton Loading
+
+Toggle "Skeleton Loading" on the right. Three shimmer cards appear at the bottom of the feed — avatar circle, text lines pulsing.
+
+Skeletons aren't just "nicer loading spinners." They serve two distinct purposes:
+
+**Layout reservation.** Without skeletons, new posts pop into existence and push everything below them down. With skeletons, the space is already occupied. The transition from shimmer to content is a *replacement*, not an *insertion*. CLS stays at zero.
+
+**Cognitive priming.** The shimmer card's shape — circle on the left, three lines on the right — matches the actual post layout. The user's brain recognizes "a post is coming" before the data arrives. This reduces perceived wait time even when the actual wait time is identical.
+
+The widget shows a side-by-side comparison: a spinner ("Loading...") vs skeleton cards. The spinner communicates "wait." The skeleton communicates "here's what's coming, in this shape, at this position."
+
+```tsx
+function SkeletonCard() {
+  return (
+    <div className="skeleton-card">
+      <div className="skeleton-avatar" />
+      <div className="skeleton-lines">
+        <div className="skeleton-line" style={{ width: "40%" }} />
+        <div className="skeleton-line" style={{ width: "90%" }} />
+        <div className="skeleton-line" style={{ width: "65%" }} />
+      </div>
+    </div>
+  );
+}
+```
+
+The line widths aren't random — they approximate real content distribution. The first line (40%) is the author name. The second (90%) is the first sentence. The third (65%) is the tail. This isn't precise, but it creates a plausible preview.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Rich Content Embedding
+
+Toggle "Rich Content Embedding" on the right. Link posts now show OG preview cards with domain, title, and description. Poll posts show vote bars with percentages.
+
+Link previews require fetching Open Graph metadata from the linked URL — that's a server-side operation (the client can't fetch arbitrary URLs due to CORS). The server extracts `og:title`, `og:description`, and `og:image` when the post is created and stores them as `OGData` on the FeedItem.
+
+```tsx
+{post.type === "link" && post.linkPreview && (
+  <div className="link-preview" style={{ borderColor: post.linkPreview.color }}>
+    <span className="link-domain">{post.linkPreview.domain}</span>
+    <h4>{post.linkPreview.title}</h4>
+    <p>{post.linkPreview.description}</p>
+  </div>
+)}
+```
+
+The colored left border on link previews isn't decorative — it's a scannable signal. Users scrolling fast can identify link posts by color without reading the domain text.
+
+Poll results use horizontal bars with percentage labels. The bars animate their width on mount — a 600ms ease transition from 0% to the final width. This draws the eye and helps users compare options at a glance.
+
+The embedding layer is additive — it renders *inside* the existing PostCard, not instead of it. If the OG data fails to load (server couldn't reach the URL, metadata is missing), the post degrades gracefully to a plain text link. Embedding enriches; it never blocks.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Accessibility
+
+The feed is now semantically annotated for assistive technology.
+
+```html
+<div role="feed" aria-busy="false" aria-label="News feed">
+  <article aria-posinset="1" aria-setsize="200" aria-labelledby="post-1-author">
+    <!-- PostCard content -->
+  </article>
+</div>
+```
+
+**`role="feed"`** tells screen readers this is a scrollable feed of articles. The reader can use feed-specific shortcuts — in NVDA, `F` moves to the next article; in VoiceOver, the rotor groups articles.
+
+**`aria-busy="true"`** during loading prevents the screen reader from announcing intermediate states. When new posts are loading, `aria-busy` goes true. When they arrive, it goes false and the reader announces the new content count.
+
+**`aria-posinset` and `aria-setsize`** communicate position: "Article 1 of 200." Without these, a screen reader user has no sense of how far through the feed they are.
+
+**`aria-live="polite"` on the new post banner** means the screen reader will announce "3 new posts" when the banner updates — but it waits until the user is idle, not interrupting their current reading.
+
+The reaction button uses `aria-pressed` to communicate the toggle state. A screen reader announces "Like button, pressed" or "Like button, not pressed." Without `aria-pressed`, the user can't distinguish liked from unliked posts.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Error Handling
+
+Toggle "Simulate Errors" on the right. Some posts turn into red error cards with retry buttons. Click retry — the post recovers.
+
+The error state machine in the widget shows the full lifecycle:
+
+```
+pending → loading → loaded
+              ↓
+           failed → loading (retry) → loaded
+```
+
+**Post load failure** is the most common error. Individual posts fail due to CDN errors, deleted content, or network timeouts. Each failed post shows a retry button independently — not a global error banner. The user can dismiss or retry individual failures without losing the rest of the feed.
+
+**Reaction failure** (from step 7) is a different error class. It doesn't show as a red card — it manifests as a heart shake and count rollback. The post itself is fine; only the mutation failed. Different error types need different recovery UX.
+
+**SSE disconnection** (not simulated in the demo, but essential in production) triggers a reconnection strategy. The browser's built-in `EventSource` automatically reconnects with exponential backoff. On reconnect, it sends the `Last-Event-Id` header so the server can replay missed events.
+
+```tsx
+async function fetchWithRetry(url: string, attempt = 0): Promise<Response> {
+  try {
+    return await fetch(url);
+  } catch (err) {
+    if (attempt < 3) {
+      await sleep(1000 * Math.pow(2, attempt));
+      return fetchWithRetry(url, attempt + 1);
+    }
+    throw err;
+  }
+}
+```
+
+The exponential backoff (1s → 2s → 4s) prevents retry storms. If the CDN is temporarily down, 50 posts retrying every 100ms creates 500 requests per second — backoff reduces that to ~15 over 7 seconds.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Scaling to 50K
+
+Drag the slider on the right from 50 to 50K. Watch the CWV gauges change color.
+
+**At 500 posts:** the feed works smoothly with virtualization. 48 DOM nodes regardless of total. Infinite scroll fetches 20 per page. No noticeable degradation.
+
+**At 5K posts:** the offset table for virtualization is 40 KB — negligible. The real concern is the in-memory post array. 5K FeedItems at ~200 bytes each is 1 MB of JSON in state. Acceptable, but growing.
+
+**At 50K posts:** memory becomes the bottleneck. 50K × 200 bytes = 10 MB of feed data in memory. If the user scrolls through 30K posts with images, decoded image data could reach 500+ MB. The fix: an LRU eviction cache for decoded images, and lazy disposal of FeedItems beyond a threshold (keep the last 5K in memory, re-fetch older posts if the user scrolls back).
+
+**Cursor vs offset pagination.** Offset pagination (`?page=5&limit=20`) breaks when new posts are inserted — post #100 becomes post #101, and page 5 shows a duplicate. Cursor pagination (`?after=post_99`) is stable under insertions — "give me everything after this post" always returns the correct next page regardless of what was inserted above.
+
+**CDN images.** Every image post's media URL should point to a CDN, not the origin server. `Cache-Control: public, max-age=86400, immutable` for processed images. The feed's LCP element is typically the first image post — serve it from a nearby edge node.
+
+**Code splitting.** The feed algorithm engine (ranking formula, diversity constraints) is only needed in ranked mode. Code-split it behind a dynamic import so chronological feeds don't pay the parse cost.
+
+</section>

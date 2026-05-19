@@ -1,0 +1,393 @@
+/* ── Component tokens ─────────────────────────── */
+.layout,
+.calcPanel {
+  --hs-fixed: oklch(70% 0.18 60);
+  --hs-fixed-bg: oklch(70% 0.18 60 / 0.22);
+  --hs-var: oklch(60% 0.18 200);
+  --hs-var-bg: oklch(60% 0.18 200 / 0.22);
+  --hs-var-muted: oklch(60% 0.12 200 / 0.25);
+  --hs-search: oklch(60% 0.18 200 / 0.35);
+  --hs-target: oklch(70% 0.18 60);
+  --hs-target-bg: oklch(70% 0.18 60 / 0.22);
+  --hs-target-glow: oklch(70% 0.18 60 / 0.4);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  min-height: 500px;
+  align-items: start;
+}
+
+/* ── Scroll area ──────────────────────────────── */
+
+.scrollArea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.scroller {
+  overflow-y: auto;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  scrollbar-width: thin;
+}
+
+.spacer {
+  position: relative;
+}
+
+.item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.itemDefault {
+  composes: item;
+  color: var(--color-muted);
+}
+
+.itemTarget {
+  composes: item;
+  background: var(--hs-target-bg);
+  border-left-color: var(--hs-target);
+  color: var(--color-text);
+}
+
+.itemInSearch {
+  composes: item;
+  background: var(--hs-search);
+  border-left-color: var(--hs-var);
+  color: var(--color-text);
+}
+
+.itemIdx {
+  font-weight: 700;
+  min-width: 3ch;
+}
+
+.itemHeight {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.itemBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hs-var-bg);
+  transition: width 0.15s;
+}
+
+.itemTarget .itemBar {
+  background: var(--hs-target);
+}
+
+.itemHeightLabel {
+  font-size: 11px;
+  color: var(--color-muted);
+  min-width: 4ch;
+  text-align: right;
+}
+
+.itemBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--hs-target);
+  white-space: nowrap;
+}
+
+/* ── Height map ───────────────────────────────── */
+
+.heightMap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.heightMapLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.heightMapBars {
+  display: flex;
+  align-items: flex-end;
+  height: 64px;
+  gap: 1px;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 2px;
+}
+
+.heightMapBar {
+  flex: 1;
+  min-width: 2px;
+  background: var(--hs-var-muted);
+  border-radius: 1px 1px 0 0;
+  transition: background 0.18s, box-shadow 0.18s;
+}
+
+.heightMapBarTarget {
+  composes: heightMapBar;
+  background: var(--hs-target);
+  box-shadow: 0 0 6px var(--hs-target-glow);
+}
+
+.heightMapBarSearch {
+  composes: heightMapBar;
+  background: var(--hs-var);
+}
+
+/* ── Calculation panel ────────────────────────── */
+
+.calcPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.calcSection {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.calcSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.calcBadge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-1);
+  background: var(--hs-fixed-bg);
+  color: var(--hs-fixed);
+}
+
+.calcBadgeVar {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-1);
+  background: var(--hs-var-bg);
+  color: var(--hs-var);
+}
+
+.calcDivider {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.calcNote {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.formulaCode {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.formulaVal {
+  color: var(--hs-fixed);
+  font-weight: 700;
+}
+
+.formulaResult {
+  color: var(--hs-target);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.formulaResultBlock {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--hs-var);
+  padding: var(--space-1) 0;
+}
+
+/* ── Search steps ─────────────────────────────── */
+
+.searchSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.searchStep {
+  display: grid;
+  grid-template-columns: 20px 56px 56px 1fr;
+  gap: var(--space-1);
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px var(--space-1);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.searchStepActive {
+  composes: searchStep;
+  background: var(--hs-target-bg);
+  border-color: var(--hs-target);
+}
+
+.searchStepHidden {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+  padding: 2px var(--space-1);
+  font-style: italic;
+}
+
+.stepNum {
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.stepRange {
+  color: var(--hs-var);
+  font-weight: 600;
+}
+
+.stepMid {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.stepOffset {
+  color: var(--color-muted);
+  font-size: 9px;
+}
+
+/* ── Stepper controls ─────────────────────────── */
+
+.stepperControls {
+  display: flex;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+}
+
+.stepBtn {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 14px;
+  min-height: 44px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--hs-var);
+  background: var(--hs-var-bg);
+  color: var(--hs-var);
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+
+.stepBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.stepBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stepBtnSecondary {
+  composes: stepBtn;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+}
+
+/* ── Contrast summary ─────────────────────────── */
+
+.contrast {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Controls ─────────────────────────────────── */
+
+.ctrl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-muted);
+}
+
+.ctrl input[type="range"] {
+  flex: 1;
+}
+
+.ctrlVal {
+  min-width: 4em;
+  text-align: right;
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Responsive ───────────────────────────────── */
+
+@media (max-width: 680px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .calcPanel {
+    order: -1;
+  }
+
+  .searchStep {
+    grid-template-columns: 16px 48px 48px 1fr;
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .itemBar,
+  .heightMapBar,
+  .stepBtn {
+    transition: none;
+  }
+}

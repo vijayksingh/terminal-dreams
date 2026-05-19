@@ -1,0 +1,286 @@
+---
+title: "Design a Real-time Chat"
+slug: design-realtime-chat
+section: system-design-problems
+stopId: sdp-realtime-chat
+order: 4
+kind: system-design-problem
+summary: "Build a real-time chat from scratch — WebSocket lifecycle, optimistic sends, typing indicators, offline queues, and reconnection"
+tags:
+  - system-design
+  - websocket
+  - real-time
+  - optimistic-ui
+  - offline-first
+intersections:
+  - net-long-polling
+  - state-access
+  - perf-js
+prerequisites: []
+demo: design-realtime-chat
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design a real-time chat."
+
+Before touching WebSockets or message queues, clarify what "real-time" means for your users. The panel on the right shows five scope questions — toggle them to build your requirements surface.
+
+**1:1 and group chats?** 1:1 is a single WebSocket channel with two participants. Group adds member lists, multiple typing indicators ("Bob and Carol are typing..."), and fan-out — a single message needs to reach N clients. The server architecture changes significantly: 1:1 can be a direct channel, group needs a pub/sub model or message broker.
+
+**Delivery receipts?** The three states of a sent message: *sending* (spinner), *sent* (single check — server received), *delivered* (double check — recipient's device received), *read* (blue double check — recipient scrolled to it). Each transition is a WebSocket event flowing backwards from the receiver to the sender.
+
+**Offline message queue?** If a user sends a message while their connection is down, where does it go? The answer is a local queue (IndexedDB or in-memory) that flushes in FIFO order when the WebSocket reconnects. The clientId on each message prevents duplicates if the flush races with a reconnect.
+
+**Typing indicators?** The naive approach sends a WebSocket frame on every keystroke — for a fast typer, that's 5-10 frames per second. A 300ms debounce reduces this to 1-2 frames. A 5-second auto-clear on the receiver prevents stale "is typing..." indicators when someone stops mid-thought.
+
+**Media messages?** Text is a WebSocket frame. Images, files, and voice notes are uploaded via HTTP (multipart/form-data to a CDN) and the WebSocket message carries a URL reference. Mixing binary data into the WebSocket stream creates head-of-line blocking.
+
+For this walkthrough: **group chat (4 users), delivery receipts, offline queue, typing indicators, text only.**
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API Design
+
+The right panel shows **Endpoints** and **Types** tabs. Click any endpoint card to expand its parameters and see where it's used in the component tree.
+
+A real-time chat needs four endpoints — but the critical insight is that three of them are WebSocket frame types, not REST endpoints:
+
+**`GET /api/conversations/:id/messages`** — The only REST endpoint. Fetches paginated message history (cursor-based, newest-first). Used on mount and when the user scrolls up to load older messages. Returns `MessagePage \{ messages, nextCursor \}`.
+
+**`POST /api/conversations/:id/messages`** — Sends a new message. But in practice, this goes through the WebSocket as a `\{ type: "message", payload: \{ content, clientId \} \}` frame. The REST endpoint exists as a fallback when WebSocket is down. The clientId (a UUID generated client-side) is the idempotency key — if the server receives the same clientId twice, it returns the existing message.
+
+**`POST /api/conversations/:id/typing`** — Broadcasts a typing indicator. Again, this is a WebSocket frame: `\{ type: "typing", payload: \{ typing: true \} \}`. The 300ms debounce on the client side is critical — without it, a fast typer sends 10+ frames per second for zero user benefit.
+
+**`POST /api/conversations/:id/read`** — Marks messages as read up to a cursor. Triggered by an IntersectionObserver on the last visible message. This updates the sender's delivery receipt from ✓ to ✓✓ (blue).
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+The right panel shows an interactive architecture diagram. Each scenario walks through data flow step by step — click through them to see state changes at each node.
+
+The architecture has a clear protagonist: **ChatPane** owns all state. WebSocket is a *transport layer*, not a state owner. This distinction matters: the UI should work correctly even when the WebSocket is disconnected (messages queue locally, UI shows "disconnected" but doesn't break).
+
+**Why ChatPane, not a global store?** Chat state is conversation-scoped. Opening a different conversation replaces the message list, typing indicators, and connection context entirely. A global store would require namespacing everything by conversation ID — extra complexity for no benefit.
+
+**WebSocket frame protocol:** Every frame has a `type` field (message, typing, status, ack) and a `seq` number. The sequence number solves out-of-order delivery: if frame #42 arrives before #41, the client buffers #42 until #41 arrives. This is rare with TCP but happens during reconnection when the server replays missed messages.
+
+Try the **"Send message"** scenario with the split toggle: optimistic send shows the message instantly (0ms perceived latency), while blocking send leaves the user staring at nothing for 300-800ms. For a chat app, that difference is the difference between "fast" and "unusable."
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Baseline
+
+The chat view on the right shows a basic message list: six messages from four participants in a group conversation about WebSocket implementation. No delivery indicators, no typing, no real-time updates yet.
+
+This is the starting point — a static message list rendered from an array. The controls show baseline metrics: message count, DOM nodes, and rendering cost.
+
+Notice the layout: own messages align right (blue-tinted), others align left. Each bubble shows the author name and a colored avatar circle. This left/right alignment is the universal chat pattern — it leverages spatial memory so users can scan conversation flow without reading names.
+
+Every feature we add from here modifies this view. The message list persists across steps so you can watch it evolve.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Message List
+
+Toggle the feature to activate the live message list. New messages start arriving every 5 seconds — simulating real-time delivery via WebSocket.
+
+The key decisions in a message list:
+
+**Scroll anchoring:** When a new message arrives, should the list auto-scroll to the bottom? Only if the user is already at the bottom. If they've scrolled up to read history, auto-scrolling yanks them away from what they're reading. The pattern: track `isNearBottom` (within 100px of the scroll end) and conditionally auto-scroll.
+
+**Message ordering:** Messages arrive with a `timestamp` from the server, but network delays mean they can arrive out of order. The client maintains a sorted array by timestamp, not by arrival order. Inserting into a sorted array is O(log n) with binary search — fast enough for even large conversations.
+
+**Key assignment:** Each message has a server-assigned `id` (for confirmed messages) or a `clientId` (for pending). The React key is `id ?? clientId`. When a pending message gets confirmed, the `clientId` is replaced by `id` — but we keep the same DOM node by maintaining a mapping.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Send Message
+
+Toggle the feature and try typing in the compose bar. Hit send or press Enter. Watch the message appear instantly with a sending indicator, then transition to "sent."
+
+**Optimistic sending** is the core UX pattern. The message appears in the list immediately with `status: "sending"` (shown as a spinner or clock icon). When the server ACKs, the status transitions to `"sent"` (single check mark). No loading modal, no disabled input, no waiting.
+
+The implementation has three parts:
+
+1. **Client-side UUID**: `clientId = crypto.randomUUID()`. This is the idempotency key. If the WebSocket frame is sent twice (reconnection race), the server dedupes by clientId.
+
+2. **Immediate append**: The message is added to the local state array with `status: "sending"` before the WebSocket frame is sent. The UI renders it immediately.
+
+3. **ACK reconciliation**: When the server ACK arrives (with the canonical `serverId`), the client finds the message by `clientId`, replaces its ID, and updates the status. The DOM node stays in place — no reorder, no flicker.
+
+What if the send fails? The status transitions to `"failed"` with a retry button. The message stays in the list (not removed) so the user doesn't lose their text.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Delivery Status
+
+Toggle the feature to see delivery status progression on sent messages. Each message shows its current state as an icon:
+
+- ◌ **Sending** — message is in flight, client waiting for ACK
+- ✓ **Sent** — server received and stored the message
+- ✓✓ **Delivered** — recipient's device received the message
+- ✓✓ **Read** (blue) — recipient scrolled to and viewed the message
+
+Each transition is a separate WebSocket event. The server sends a `\{ type: "status", payload: \{ messageId, status \} \}` frame when the delivery state changes. The client updates the matching message in its local array.
+
+**Why not poll for status?** A conversation with 100 messages would need 100 status checks. WebSocket events are push-based — the server only sends when something changes. For a message that's been read, that's exactly 3 events total (sent → delivered → read), spread over minutes or hours.
+
+**The double-check pattern** (WhatsApp, Telegram) is so deeply ingrained in user expectations that deviating from it creates confusion. Grey checks for sent/delivered, blue for read. This is one of the rare cases where "just copy WhatsApp" is the correct design decision.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Typing Indicator
+
+Toggle the feature to see "Bob is typing..." appear below the message list, cycling through different states: Bob alone, Bob and Carol together, then clearing.
+
+The typing indicator seems simple but has three non-obvious design constraints:
+
+**Debounce on send (300ms):** Without debouncing, a fast typer generates 8-12 `typing: true` frames per second. The server broadcasts each one to all participants. For a group of 10, that's 80-120 frames/second of typing events — more traffic than actual messages. A 300ms debounce collapses keystrokes into 1-2 frames per second.
+
+**Auto-clear timeout (5s):** If a user stops typing mid-thought and walks away, the "is typing..." indicator should clear. The client sets a 5-second timeout on each typing event. If no new typing event arrives within 5s, the indicator clears. This prevents the ghost-typing problem where "Bob is typing..." shows for 20 minutes because Bob opened the chat, typed one letter, and left.
+
+**Multiple typers:** "Bob is typing..." is simple. "Bob and Carol are typing..." needs a `typingUsers[]` array. At 3+ typers, collapse to "3 people are typing..." — listing all names is noisy and the names don't matter at that point. The animation is bouncing dots (three dots scaling up and down with staggered delay).
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Reconnection
+
+Toggle the connection state to "disconnected" using the controls. Watch the status bar update, the reconnection attempt counter increment, and the connection restore after exponential backoff.
+
+WebSocket connections drop. Always. Network switches (wifi → cellular), server deploys, load balancer timeouts, laptop sleep/wake — in production, assume every WebSocket will disconnect at least once per session.
+
+**Exponential backoff:** Attempt 1 waits 1s, attempt 2 waits 2s, attempt 3 waits 4s, capped at 30s. This prevents reconnection storms when a server goes down and 10,000 clients all try to reconnect simultaneously. Add jitter (±20%) to spread the retry wave.
+
+**Gap detection on reconnect:** When the WebSocket reconnects, the client sends its last known sequence number. The server responds with all messages since that sequence — a "gap fill." This is why the seq number on every frame matters: it enables the client to know exactly what it missed.
+
+**UI during disconnection:** The status bar turns yellow ("Disconnected — reconnecting..."), the compose bar stays enabled (messages queue locally), and sent messages show a clock icon instead of a check. The user can keep chatting — their messages will flush when the connection restores.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Offline Queue
+
+Toggle the feature to see the offline queue mechanics. When disconnected, messages sent from the compose bar are queued locally instead of being sent through the WebSocket.
+
+The offline queue is the bridge between "connection lost" and "connection restored." It answers the question: what happens to messages the user sends while disconnected?
+
+**Queue structure:** An ordered array of `\{ clientId, content, queuedAt \}` stored in memory (and optionally persisted to IndexedDB for durability across tab refreshes). FIFO ordering ensures messages arrive at the server in the order they were sent.
+
+**Flush protocol:** On reconnect, the client iterates the queue and sends each message as a WebSocket frame. The server processes them in order, ACKing each one. As ACKs arrive, the queue shrinks. If a send fails mid-flush, the remaining messages stay queued.
+
+**Idempotency is essential:** If the connection drops *during* a flush (after some messages were sent but before ACKs arrived), the client will re-send those messages on the next reconnect. The server uses `clientId` to dedupe — same clientId means same message, return the existing one.
+
+**Visual feedback:** Queued messages show a clock icon (⏱) and a "Queued — will send when connected" subtitle. When the flush starts, the icon changes to a spinner. When the ACK arrives, it becomes a check mark. The user watches their messages "come alive" as the queue flushes.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Message Grouping
+
+Toggle the feature to see consecutive messages from the same author collapse into a visual group. The first message in a group shows the full header (avatar, name, timestamp), subsequent messages show only the content bubble with reduced spacing.
+
+Message grouping is a pure rendering optimization with significant visual impact:
+
+**Grouping rules:** Consecutive messages from the same author within a 2-minute window form a group. A reply, a message from someone else, or a 2+ minute gap breaks the group. The 2-minute threshold is standard (Slack, Discord, iMessage all use similar windows).
+
+**DOM reduction:** Without grouping, each of 100 messages renders an avatar (36×36 image), author name, and timestamp. With grouping, only ~30 group headers render — the rest are just content bubbles. That's roughly 70 fewer avatar elements, 70 fewer name renders.
+
+**Timestamp display:** Group headers show the full timestamp ("2:34 PM"). Individual messages within a group show nothing — hovering reveals the exact time in a tooltip. This reduces visual noise dramatically while keeping the information accessible.
+
+**Tail styling:** The first message in a group gets a speech bubble "tail" (the pointed triangle). Continuation messages get a flat edge. This subtle detail helps users visually parse conversation structure even without reading names.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Reactions
+
+Toggle the feature to enable emoji reactions on messages. Click any message bubble to react — each bubble position maps to a different emoji. Selected reactions appear as badges below the message.
+
+Reactions in chat are structurally different from reactions in a feed:
+
+**Scope:** In a feed, a reaction is per-post. In chat, a reaction is per-message. A conversation with 500 messages and 20% reaction rate means 100 reaction objects — each with a `Record‹string, number›` map of emoji counts.
+
+**Optimistic update:** Tapping an emoji immediately increments the count locally. The WebSocket frame `\{ type: "reaction", payload: \{ messageId, emoji \} \}` is sent to the server. The server broadcasts the updated count to all participants. If the server rejects (already reacted), the client rolls back.
+
+**Reaction aggregation:** The reaction badge shows "👍 3 ❤️ 1" — aggregated counts. Tapping the badge shows who reacted. This is a separate query (`GET /messages/:id/reactions`) loaded on demand — fetching reaction authors for every message in the list would be wasteful.
+
+**Keyboard accessibility:** The reaction picker must be reachable via keyboard (focus trap, arrow navigation, Enter to select, Escape to close). Screen readers announce "Add reaction to message from Bob: Hello!" when the picker opens.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Read Receipts
+
+Toggle the feature to see read receipt tracking. The last read position is marked, and sent messages show blue double-checks when the recipient has read them.
+
+Read receipts answer "has the other person seen my message?" — one of the most-requested and most-controversial chat features.
+
+**IntersectionObserver tracking:** An IntersectionObserver watches the last visible message in the viewport. When a message enters the viewport for 1+ second (threshold: 1.0, with a 1s delay to prevent scroll-through counting), the client sends a `read` event with that message ID as the cursor.
+
+**Cursor-based, not per-message:** The read receipt is "I've read up to message X." Not "I've read messages A, B, C, D." This is O(1) storage per user per conversation instead of O(n). When the sender checks if their message was read, they compare: `myMessage.seq ≤ recipient.lastReadSeq`.
+
+**Privacy implications:** Some users don't want others to know when they've read messages. The feature should be opt-out per user (like WhatsApp's "Read receipts" setting). When disabled, the user's `lastReadSeq` is never updated, and they also can't see others' read receipts — it's reciprocal.
+
+**Visual indicator:** Messages below the recipient's read cursor show grey ✓✓. Messages at or above show blue ✓✓. The transition animates subtly (grey → blue fade) when the read event arrives — it's satisfying feedback that the conversation is being received.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Encryption
+
+Toggle the feature to see end-to-end encryption indicators. Each message shows a lock icon, and the encryption status is displayed in the header.
+
+End-to-end encryption (E2E) for chat is a deep topic, but in a frontend system design interview, the key decisions are about the *client-side implications*, not the cryptography:
+
+**Key exchange:** Each user has a public/private key pair. Public keys are exchanged via the server (or a separate key server). The client encrypts each message with the recipient's public key before sending. The server never sees plaintext — it stores and relays ciphertext.
+
+**Client-side performance:** Encrypting a text message is fast (~1ms for AES-256-GCM). But encrypting/decrypting 500 messages on mount (to render the history) takes 500ms. The solution: decrypt in a Web Worker to avoid blocking the main thread, and cache decrypted messages in memory (never in localStorage — that defeats the purpose).
+
+**Message preview in notifications:** With E2E, the server can't generate "Bob: Hey, are you free?" for push notifications because it can't read the message. The notification becomes "Bob sent a message." This is a real UX tradeoff that every encrypted chat app faces.
+
+**Key rotation and device management:** If a user adds a new device, they need the decryption key. This is the "key backup" problem — solved by either a server-side encrypted backup (password-protected) or cross-device key transfer (QR code scanning, like WhatsApp/Signal).
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Scale
+
+Drag the slider to increase the concurrent user count and message volume. Watch the metrics shift: WebSocket latency increases, message throughput changes, and the architecture must adapt.
+
+Scaling a real-time chat system has different bottlenecks than scaling a feed:
+
+**WebSocket connection limits:** Each WebSocket is a persistent TCP connection. A single server process can handle ~50K connections (limited by file descriptors and memory). For 1M concurrent users, you need 20+ servers with a load balancer that supports sticky sessions (the WebSocket must stay on the same server for its lifetime).
+
+**Message fan-out:** In a 1:1 chat, one message = one delivery. In a group of 100, one message = 100 deliveries. In a large group (10K members, like Discord servers), fan-out becomes the bottleneck. The solution is a pub/sub system (Redis Pub/Sub, Kafka) that decouples the sender from the fan-out logic.
+
+**Presence at scale:** "Who is online?" seems simple for 4 users. For 50K users in a community, maintaining and broadcasting presence state is expensive. The pattern: batch presence updates (every 30s), use probabilistic data structures (Bloom filters) for approximate online counts, and only show individual presence for users in the current conversation.
+
+**Message storage:** Chat messages are write-heavy and read-seldom (most messages are read once, shortly after sending). The storage pattern: recent messages in Redis (fast reads for active conversations), older messages in a time-series database (Cassandra, ScyllaDB), and archive/search in Elasticsearch.
+
+</section>
