@@ -499,11 +499,13 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
   const [priceOverrides, setPriceOverrides] = useState<Map<string, number>>(new Map());
   const [realtimeEvents, setRealtimeEvents] = useState<{ time: string; label: string; type: string }[]>([]);
   const priceTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const rtStartRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isActive("realtime") || activeStep < 11) {
       clearInterval(priceTimerRef.current);
+      clearTimeout(flashTimerRef.current);
       setPriceFlash(null);
       setRealtimeEvents([]);
       return;
@@ -526,7 +528,8 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
         return next;
       });
       setPriceFlash(l.id);
-      setTimeout(() => setPriceFlash(null), 1200);
+      clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = setTimeout(() => setPriceFlash(null), 1200);
 
       const elapsed = ((Date.now() - rtStartRef.current) / 1000).toFixed(1);
       setRealtimeEvents(prev => {
@@ -534,7 +537,10 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
         return [event, ...prev].slice(0, 8);
       });
     }, 4000);
-    return () => clearInterval(priceTimerRef.current);
+    return () => {
+      clearInterval(priceTimerRef.current);
+      clearTimeout(flashTimerRef.current);
+    };
   }, [isActive, activeStep, listings]);
 
   useEffect(() => {
@@ -566,6 +572,7 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
       setViewMode("detail");
     }
     if (activeStep === 6) setCalendarOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedListing intentionally excluded to avoid loop
   }, [activeStep, listings.length]);
 
   const pricedListings = useMemo(() => {
@@ -620,7 +627,7 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     return e;
   }, [activeStep, phase, viewMode, filteredListings.length, isActive, searchQuery, priceRange, checkIn, checkOut, selectedListing, bookingStep]);
 
-  const value: BookingContextValue = {
+  const value: BookingContextValue = useMemo(() => ({
     activeStep, phase,
     scopeEnabled, toggleScope,
     listings: pricedListings, filteredListings,
@@ -641,7 +648,19 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     hoveredMarker, setHoveredMarker,
     featureToggles, toggleFeature, isActive,
     loadedSet, priceFlash, realtimeEvents, metrics, stateEntries,
-  };
+  }), [
+    activeStep, phase, scopeEnabled, toggleScope,
+    pricedListings, filteredListings,
+    searchQuery, handleSearchQuery, debouncedQuery, isSearching,
+    selectedTypes, toggleType, priceRange, setPriceRange,
+    guestCount, setGuestCount, checkIn, checkOut, setDateRange,
+    calendarOpen, setCalendarOpen, selectedListing, selectListing,
+    viewMode, setViewMode, bookingStep, setBookingStep,
+    bookingConfirmed, setBookingConfirmed, guestDetails, setGuestDetails,
+    bookingError, setBookingError, simulateConflict, setSimulateConflict,
+    hoveredMarker, setHoveredMarker, featureToggles, toggleFeature, isActive,
+    loadedSet, priceFlash, realtimeEvents, metrics, stateEntries,
+  ]);
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;
 }

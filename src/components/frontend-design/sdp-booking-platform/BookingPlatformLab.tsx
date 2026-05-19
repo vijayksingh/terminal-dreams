@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
   BookingProvider,
@@ -25,6 +26,7 @@ import styles from "./BookingPlatformLab.module.css";
 
 export function BookingPlatformLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
+  const noMotion = usePrefersReducedMotion();
 
   return (
     <BookingProvider activeStep={activeStep}>
@@ -32,17 +34,21 @@ export function BookingPlatformLab({ activeStep }: { activeStep: number }) {
         <StepBar activeStep={activeStep} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
+            noMotion ? (
+              <PlanningView activeStep={activeStep} />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`planning-${activeStep}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={TRANSITION.enterCard}
+                >
+                  <PlanningView activeStep={activeStep} />
+                </motion.div>
+              </AnimatePresence>
+            )
           ) : (
             <BookingEvolution />
           )}
@@ -66,13 +72,15 @@ const STEP_LABELS = [
 
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
-    <div className={styles.stepBar}>
+    <div className={styles.stepBar} role="list" aria-label="Build steps">
       {STEP_LABELS.map((label, i) => (
         <span
           key={i}
+          role="listitem"
           className={styles.stepDot}
           data-active={i + 1 <= activeStep ? "true" : undefined}
           data-current={i + 1 === activeStep ? "true" : undefined}
+          aria-current={i + 1 === activeStep ? "step" : undefined}
         >
           {label}
         </span>
@@ -91,6 +99,14 @@ function PlanningView({ activeStep }: { activeStep: number }) {
   return <ComponentTreeView />;
 }
 
+const BOOKING_SCOPE_COMPLEXITY: Record<string, { loc: number; components: number }> = {
+  "instant-book": { loc: 90, components: 2 },
+  "multi-currency": { loc: 60, components: 1 },
+  "dynamic-pricing": { loc: 110, components: 2 },
+  "map-search": { loc: 150, components: 3 },
+  reviews: { loc: 80, components: 2 },
+};
+
 function RequirementsView() {
   const { scopeEnabled, toggleScope } = useBooking();
   const summary = useMemo(() => {
@@ -98,6 +114,16 @@ function RequirementsView() {
     return SCOPE_ITEMS.filter(s => scopeEnabled.has(s.id))
       .map(s => s.label.replace("?", ""))
       .join(" + ");
+  }, [scopeEnabled]);
+  const complexity = useMemo(() => {
+    let loc = 220;
+    let components = 4;
+    scopeEnabled.forEach(id => {
+      const c = BOOKING_SCOPE_COMPLEXITY[id];
+      if (c) { loc += c.loc; components += c.components; }
+    });
+    const grade = loc < 350 ? "Low" : loc < 550 ? "Medium" : "High";
+    return { loc, components, grade };
   }, [scopeEnabled]);
 
   return (
@@ -131,22 +157,49 @@ function RequirementsView() {
         <div className={styles.scopeLabel}>Scope</div>
         <div className={styles.scopeValue}>{summary}</div>
       </div>
+      <div className={styles.complexityMeter} aria-live="polite">
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Est. LOC</span>
+          <span className={styles.complexityValue}>{complexity.loc}</span>
+        </div>
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Components</span>
+          <span className={styles.complexityValue}>{complexity.components}</span>
+        </div>
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Complexity</span>
+          <span className={styles.complexityValue} data-grade={complexity.grade.toLowerCase()}>{complexity.grade}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Step 2: API Design ──────────────────────────────────────────────
 
+const BK_API_TABS = ["endpoints", "types"] as const;
+
 function ApiDesignView() {
   const [tab, setTab] = useState<"endpoints" | "types">("endpoints");
 
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const idx = BK_API_TABS.indexOf(tab);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const next = BK_API_TABS[(idx + (e.key === "ArrowRight" ? 1 : BK_API_TABS.length - 1)) % BK_API_TABS.length];
+      setTab(next);
+    }
+  }, [tab]);
+
   return (
     <div className={styles.planningPanel}>
-      <div className={styles.panelTabs}>
-        <button type="button" className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} onClick={() => setTab("endpoints")}>Endpoints</button>
-        <button type="button" className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} onClick={() => setTab("types")}>Types</button>
+      <div className={styles.panelTabs} role="tablist" aria-label="API design views" onKeyDown={handleTabKeyDown}>
+        <button type="button" role="tab" id="bk-tab-endpoints" aria-selected={tab === "endpoints"} aria-controls="bk-panel-endpoints" tabIndex={tab === "endpoints" ? 0 : -1} className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} onClick={() => setTab("endpoints")}>Endpoints</button>
+        <button type="button" role="tab" id="bk-tab-types" aria-selected={tab === "types"} aria-controls="bk-panel-types" tabIndex={tab === "types" ? 0 : -1} className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} onClick={() => setTab("types")}>Types</button>
       </div>
-      {tab === "endpoints" ? <EndpointCards /> : <TypeCards category="api" />}
+      <div role="tabpanel" id={`bk-panel-${tab}`} aria-labelledby={`bk-tab-${tab}`}>
+        {tab === "endpoints" ? <EndpointCards /> : <TypeCards category="api" />}
+      </div>
     </div>
   );
 }
@@ -160,22 +213,26 @@ function EndpointCards() {
         const key = `${ep.method}-${ep.path}`;
         const isOpen = expanded === key;
         return (
-          <button
+          <div
             key={key}
-            type="button"
             className={styles.endpointCard}
             data-expanded={isOpen ? "true" : undefined}
-            onClick={() => setExpanded(isOpen ? null : key)}
           >
-            <div className={styles.endpointHeader}>
+            <button
+              type="button"
+              className={styles.endpointHeader}
+              onClick={() => setExpanded(isOpen ? null : key)}
+              aria-expanded={isOpen}
+              aria-controls={`bk-ep-${key}`}
+            >
               <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
               <span className={styles.endpointPath}>{ep.path}</span>
               <span className={styles.endpointChevron}>{isOpen ? "▾" : "▸"}</span>
-            </div>
-            <div className={styles.endpointDesc}>{ep.description}</div>
-            <div className={styles.endpointUsedBy}>{ep.usedBy}</div>
+            </button>
             {isOpen && (
-              <div className={styles.endpointDetail}>
+              <div className={styles.endpointDetail} id={`bk-ep-${key}`} role="region" aria-label={`${ep.method} ${ep.path} details`}>
+                <p className={styles.endpointDesc}>{ep.description}</p>
+                <div className={styles.endpointUsedBy}>{ep.usedBy}</div>
                 {ep.params.length > 0 && (
                   <>
                     <div className={styles.endpointDetailLabel}>Parameters</div>
@@ -194,7 +251,7 @@ function EndpointCards() {
                 <div className={styles.responseType}>{ep.responseType}</div>
               </div>
             )}
-          </button>
+          </div>
         );
       })}
     </div>
@@ -258,36 +315,45 @@ function TypeCard({ typeDef }: { typeDef: TypeDef }) {
 
 function BookingEvolution() {
   const { activeStep, stateEntries } = useBooking();
+  const noMotion = usePrefersReducedMotion();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+    <div className={styles.evolutionStack}>
       <MetricsBar />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeStep}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-        >
-          <StepControls />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepControls />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeStep}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={TRANSITION.enterCard}
+          >
+            <StepControls />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       <BookingView />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`widget-${activeStep}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <StepWidget />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepWidget />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`widget-${activeStep}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={TRANSITION.enterCard}
+          >
+            <StepWidget />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       <StateInspector entries={stateEntries} title="Booking State" />
     </div>
@@ -299,7 +365,7 @@ function BookingEvolution() {
 function MetricsBar() {
   const { metrics } = useBooking();
   return (
-    <div className={styles.metricsBar}>
+    <div className={styles.metricsBar} role="status" aria-label="Simulated performance metrics">
       <MetricCard label="DOM" value={metrics.domNodes} bad={metrics.domNodes > 200} good={metrics.domNodes <= 100} />
       <MetricCard label="Network" value={metrics.networkReqs} bad={metrics.networkReqs > 25} good={metrics.networkReqs <= 10} />
       <MetricCard label="Latency" value={metrics.searchLatency} bad={metrics.searchLatency === "320ms"} good={metrics.searchLatency === "48ms"} />
@@ -324,24 +390,62 @@ function StepControls() {
   const { activeStep } = useBooking();
 
   switch (activeStep) {
-    case 4: return <StepMessage text="8 listings. Basic card grid. No interactivity yet." />;
-    case 5: return <StepMessage text="Search bar and filters appear. Type or filter to narrow results." />;
+    case 4: return <PredictionChallenge question="You're rendering 8 listing cards. What data does each card minimally need?" options={["Just name + price — users will click for details", "Name, price, location, rating, image URL", "Full listing object including amenities and reviews", "Everything — prefetch all data to avoid detail-view loading"]} correctIndex={1} explanation="The card needs name, price, location, rating, and image URL — enough to make a decision without clicking. Amenities and reviews belong in the detail view (fetched on demand). Prefetching everything wastes bandwidth and delays initial render." />;
+    case 5: return <PredictionChallenge question="Adding live search to 8 listings. What happens to search latency?" options={["Negligible — 8 items is nothing", "~50ms — DOM queries add up", "~320ms — filtering triggers full re-render"]} correctIndex={0} explanation="At 8 listings, even naive filtering is instant. The problem appears at scale — try adding more filters and watch step 12." />;
     case 6: return <StepMessage text="Date picker opens. Select check-in and check-out dates." />;
     case 7: return <StepMessage text="Click a listing card to see the detail panel." />;
-    case 8: return <StepMessage text="Availability calendar shows per-day pricing." />;
+    case 8: return <PredictionChallenge question="Pricing varies by day. Where should dynamic prices be computed?" options={["Client — user sees instant updates", "Server — single source of truth", "Both — server is authority, client previews"]} correctIndex={2} explanation="Real booking platforms compute server-side for accuracy but show client-side estimates for responsiveness. The price you see while browsing is a preview — the server confirms at checkout." />;
     case 9: return <StepMessage text="Click 'Book Now' to enter the checkout flow." />;
-    case 10: return <StepMessage text="Map appears alongside the listing grid." />;
-    case 11: return <StepMessage text="Live indicators: price changes, booking activity." severity="warning" />;
-    case 12: return <StepMessage text="Search debounce, skeleton loading, cached results." />;
-    case 13: return <StepMessage text="Layout adapts to mobile breakpoint." />;
-    case 14: return <StepMessage text="Error states: network failure, booking conflicts." severity="warning" />;
-    case 15: return <StepMessage text="Production: i18n, currency, performance budgets." />;
+    case 10: return <PredictionChallenge question="Adding a map alongside the listing grid. What's the biggest UX risk?" options={["Map and list get out of sync", "Double rendering tanks performance", "Map steals 50% of screen space"]} correctIndex={0} explanation="Bidirectional sync is the hard problem. Hovering a map pin must highlight the listing card and vice versa. Without shared state (hoveredMarker), they feel like two unrelated views." />;
+    case 11: return <PredictionChallenge question="Two users view the same listing. User A books it. What should User B see?" options={["Nothing — they'll find out at checkout", "A toast saying 'just booked' with no price change", "Price flash + availability update via push event", "Page auto-redirects to the next listing"]} correctIndex={2} explanation="Real-time price flash + availability is the standard. Optimistic UI shows the old price briefly, then the push event corrects it. This prevents double-bookings without forcing full page reloads." />;
+    case 12: return <PredictionChallenge question="Users type in the search box. When should you fire the search query?" options={["Every keystroke (0ms)", "After 150ms pause", "After 300ms pause", "On Enter key only"]} correctIndex={2} explanation="300ms is the sweet spot — fast enough to feel responsive, slow enough to batch most word completions. 150ms still fires mid-word. Enter-only breaks the 'instant filter' mental model." />;
+    case 13: return <PredictionChallenge question="On mobile, you have a listing grid + map. What's the best layout approach?" options={["Stack vertically — grid on top, map below", "Tabs — toggle between list view and map view", "Collapse map into a floating button that opens an overlay", "Keep side-by-side but at 50/50"]} correctIndex={2} explanation="Airbnb's pattern: the map becomes a floating 'Map' button on mobile. The full grid uses the screen width. Tapping 'Map' opens a full-screen overlay. Tabs add a mode-switch cognitive load. Stacking wastes half the viewport on a tiny map." />;
+    case 14: return <PredictionChallenge question="User clicks 'Confirm Booking' but the server returns 409 Conflict. What happened?" options={["Invalid credit card", "Session expired", "Another guest booked the same dates", "Server rate-limited the request"]} correctIndex={2} explanation="409 Conflict means the resource state changed between read and write. In booking, this is a race condition — two users selected the same dates, but only one can win. The UI should show the conflict, re-fetch availability, and let the user pick new dates." />;
+    case 15: return <PredictionChallenge question="Your platform supports 12 currencies. Where should currency conversion happen?" options={["Client-side — faster display, no extra API calls", "Server-side — single source of truth for exchange rates", "CDN edge — cached rates closest to user", "Both client and server — preview on client, confirm on server"]} correctIndex={3} explanation="Client shows a preview conversion for instant feedback using cached rates. Server is the authority — the final booking price is always server-computed with real-time exchange rates. This is the same optimistic pattern as pricing: client previews, server confirms." />;
     default: return null;
   }
 }
 
 function StepMessage({ text, severity }: { text: string; severity?: "warning" }) {
   return <div className={styles.stepMessage} data-severity={severity}>{text}</div>;
+}
+
+function PredictionChallenge({ question, options, correctIndex, explanation }: {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.prediction}>
+      <div className={styles.predictionQ}>{question}</div>
+      <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
+        {options.map((opt, i) => (
+          <button
+            key={i}
+            type="button"
+            className={styles.predictionOption}
+            data-correct={revealed && i === correctIndex ? "true" : undefined}
+            data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+            onClick={() => !revealed && setSelected(i)}
+            disabled={revealed}
+            role="radio"
+            aria-checked={selected === i}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      {revealed && (
+        <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
+          {selected === correctIndex ? "✓ " : "✗ "}{explanation}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Main booking view ───────────────────────────────────────────────
@@ -373,6 +477,7 @@ function SearchBarUI() {
           type="text"
           className={styles.searchInput}
           placeholder="Where to?"
+          aria-label="Search listings by location or name"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
         />
@@ -380,13 +485,15 @@ function SearchBarUI() {
           type="button"
           className={styles.searchDateBtn}
           onClick={() => setCalendarOpen(!calendarOpen)}
+          aria-expanded={calendarOpen}
+          aria-label="Select dates"
         >
           {checkIn && checkOut ? `${checkIn.slice(5)} → ${checkOut.slice(5)}` : "Dates"}
         </button>
         <div className={styles.guestControl}>
-          <button type="button" className={styles.guestBtn} onClick={() => setGuestCount(Math.max(1, guestCount - 1))}>-</button>
-          <span className={styles.guestCount}>{guestCount}</span>
-          <button type="button" className={styles.guestBtn} onClick={() => setGuestCount(Math.min(10, guestCount + 1))}>+</button>
+          <button type="button" className={styles.guestBtn} aria-label="Fewer guests" onClick={() => setGuestCount(Math.max(1, guestCount - 1))}>-</button>
+          <span className={styles.guestCount} aria-live="polite" aria-label={`${guestCount} guests`}>{guestCount}</span>
+          <button type="button" className={styles.guestBtn} aria-label="More guests" onClick={() => setGuestCount(Math.min(10, guestCount + 1))}>+</button>
         </div>
       </div>
 
@@ -407,6 +514,7 @@ function FilterChips() {
           type="button"
           className={styles.filterChip}
           data-active={selectedTypes.has(t) ? "true" : undefined}
+          aria-pressed={selectedTypes.has(t)}
           onClick={() => toggleType(t)}
         >
           {t}
@@ -455,11 +563,11 @@ function MiniCalendar() {
   }, [checkIn, checkOut, setDateRange]);
 
   return (
-    <div className={styles.calendar}>
+    <div className={styles.calendar} role="group" aria-label="Date picker">
       <div className={styles.calendarNav}>
-        <button type="button" onClick={() => setViewMonth(m => Math.max(5, m - 1))} className={styles.calendarArrow}>{"◀"}</button>
+        <button type="button" onClick={() => setViewMonth(m => Math.max(5, m - 1))} className={styles.calendarArrow} aria-label="Previous month">{"◀"}</button>
         <span className={styles.calendarMonth}>{MONTH_NAMES[viewMonth]} 2026</span>
-        <button type="button" onClick={() => setViewMonth(m => Math.min(11, m + 1))} className={styles.calendarArrow}>{"▶"}</button>
+        <button type="button" onClick={() => setViewMonth(m => Math.min(11, m + 1))} className={styles.calendarArrow} aria-label="Next month">{"▶"}</button>
       </div>
       <div className={styles.calendarDayNames}>
         {DAY_NAMES.map(d => <span key={d} className={styles.dayNameCell}>{d}</span>)}
@@ -481,6 +589,7 @@ function MiniCalendar() {
               data-checkout={isCheckOut ? "true" : undefined}
               onClick={() => handleDayClick(day.date, day.available)}
               disabled={!day.available}
+              aria-label={`${MONTH_NAMES[viewMonth]} ${day.day}, $${day.price} per night${!day.available ? ", unavailable" : ""}${isCheckIn ? ", check-in" : ""}${isCheckOut ? ", check-out" : ""}`}
             >
               <span className={styles.dayNumber}>{day.day}</span>
               <span className={styles.dayPrice}>${day.price}</span>
@@ -503,6 +612,9 @@ function SearchResultsView() {
 
   return (
     <div className={showMap ? styles.splitLayout : styles.gridLayout}>
+      <div className={styles.srOnly} role="status" aria-live="polite">
+        {filteredListings.length} listings found
+      </div>
       <div className={styles.listingGrid}>
         {filteredListings.map(listing => {
           const loaded = loadedSet.has(listing.id);
@@ -550,7 +662,11 @@ function ListingCard({ listing, highlighted, flashing, onClick, onHover }: {
       className={styles.listingCard}
       data-highlighted={highlighted ? "true" : undefined}
       data-flashing={flashing ? "true" : undefined}
+      role="button"
+      tabIndex={0}
+      aria-label={`${listing.name}, ${listing.location}, $${listing.pricePerNight} per night, ${listing.rating} stars`}
       onClick={onClick}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       onMouseEnter={() => onHover?.(listing.id)}
       onMouseLeave={() => onHover?.(null)}
     >
@@ -581,9 +697,8 @@ function MiniMap() {
 
   return (
     <div className={styles.mapContainer}>
-      <svg viewBox="0 0 400 300" className={styles.mapSvg}>
+      <svg viewBox="0 0 400 300" className={styles.mapSvg} role="img" aria-label="Map showing listing locations">
         <rect x="0" y="0" width="400" height="300" fill="var(--color-surface)" rx="4" />
-        {/* Grid lines */}
         {[100, 200, 300].map(x => <line key={`gx${x}`} x1={x} y1="0" x2={x} y2="300" stroke="var(--color-border)" strokeWidth="0.5" opacity="0.3" />)}
         {[75, 150, 225].map(y => <line key={`gy${y}`} x1="0" y1={y} x2="400" y2={y} stroke="var(--color-border)" strokeWidth="0.5" opacity="0.3" />)}
 
@@ -592,10 +707,22 @@ function MiniMap() {
           return (
             <g
               key={listing.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`${listing.name}, $${listing.pricePerNight}`}
               onMouseEnter={() => setHoveredMarker(listing.id)}
               onMouseLeave={() => setHoveredMarker(null)}
+              onFocus={() => setHoveredMarker(listing.id)}
+              onBlur={() => setHoveredMarker(null)}
               onClick={() => {
                 if (isActive("detailView")) {
+                  selectListing(listing);
+                  setViewMode("detail");
+                }
+              }}
+              onKeyDown={e => {
+                if ((e.key === "Enter" || e.key === " ") && isActive("detailView")) {
+                  e.preventDefault();
                   selectListing(listing);
                   setViewMode("detail");
                 }
@@ -744,11 +871,11 @@ function AvailabilityCalendar({ listing }: { listing: Listing }) {
   }, [checkIn, checkOut, setDateRange]);
 
   return (
-    <div className={styles.availCalendar}>
+    <div className={styles.availCalendar} role="group" aria-label="Availability calendar">
       <div className={styles.calendarNav}>
-        <button type="button" onClick={() => setViewMonth(m => Math.max(5, m - 1))} className={styles.calendarArrow}>{"◀"}</button>
+        <button type="button" onClick={() => setViewMonth(m => Math.max(5, m - 1))} className={styles.calendarArrow} aria-label="Previous month">{"◀"}</button>
         <span className={styles.calendarMonth}>{MONTH_NAMES[viewMonth]} 2026</span>
-        <button type="button" onClick={() => setViewMonth(m => Math.min(11, m + 1))} className={styles.calendarArrow}>{"▶"}</button>
+        <button type="button" onClick={() => setViewMonth(m => Math.min(11, m + 1))} className={styles.calendarArrow} aria-label="Next month">{"▶"}</button>
       </div>
       <div className={styles.calendarDayNames}>
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => <span key={d} className={styles.dayNameCell}>{d}</span>)}
@@ -772,6 +899,7 @@ function AvailabilityCalendar({ listing }: { listing: Listing }) {
               data-price-tier={priceTier}
               onClick={() => handleDayClick(day.date, day.available)}
               disabled={!day.available}
+              aria-label={`${MONTH_NAMES[viewMonth]} ${day.day}, $${day.price} per night${!day.available ? ", unavailable" : ""}${day.date === checkIn ? ", check-in" : ""}${day.date === checkOut ? ", check-out" : ""}`}
             >
               <span className={styles.dayNumber}>{day.day}</span>
               <span className={styles.dayPrice}>${day.price}</span>
@@ -1039,7 +1167,7 @@ function RealtimeWidget() {
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Event stream (live)</div>
-      <div className={styles.eventList}>
+      <div className={styles.eventList} role="log" aria-live="polite" aria-label="Realtime price events">
         {realtimeEvents.length === 0 ? (
           <div className={styles.eventRow} data-type="info">
             <span className={styles.eventTime}>—</span>
@@ -1103,8 +1231,8 @@ function ErrorWidget() {
         type="button"
         className={styles.filterChip}
         data-active={simulateConflict ? "true" : undefined}
+        aria-pressed={simulateConflict}
         onClick={() => setSimulateConflict(!simulateConflict)}
-        style={{ marginTop: "var(--space-2)" }}
       >
         {simulateConflict ? "✓ " : ""}Simulate booking conflict
       </button>

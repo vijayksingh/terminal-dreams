@@ -308,11 +308,6 @@ type GalleryContextValue = {
     lcpMs: number;
   };
 
-  // Scroll state (virtualization)
-  scrollTop: number;
-  setScrollTop: (v: number) => void;
-  viewportHeight: number;
-
   // State inspector
   stateEntries: StateEntry[];
 };
@@ -367,10 +362,6 @@ export function GalleryProvider({
   // Scale (step 15)
   const [scaleLevel, setScaleLevel] = useState(100);
   const [paginationMode, setPaginationMode] = useState<"infinite" | "pages">("infinite");
-
-  // Virtualization scroll
-  const [scrollTop, setScrollTop] = useState(0);
-  const viewportHeight = 280;
 
   // Image count depends on step
   const imageCount = useMemo(() => {
@@ -560,9 +551,6 @@ export function GalleryProvider({
       paginationMode,
       setPaginationMode,
       metrics,
-      scrollTop,
-      setScrollTop,
-      viewportHeight,
       stateEntries,
     }),
     [
@@ -574,7 +562,7 @@ export function GalleryProvider({
       lightboxOpen, lightboxIndex, openLightbox, closeLightbox,
       lightboxNext, lightboxPrev, focusedElement, a11yAnnouncement,
       scaleLevel, paginationMode,
-      metrics, scrollTop, viewportHeight, stateEntries,
+      metrics, stateEntries,
     ]
   );
 

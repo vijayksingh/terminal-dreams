@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
   GalleryProvider,
@@ -25,6 +26,7 @@ import styles from "./ImageGalleryLab.module.css";
 
 export function ImageGalleryLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
+  const noMotion = usePrefersReducedMotion();
 
   return (
     <GalleryProvider activeStep={activeStep}>
@@ -32,17 +34,21 @@ export function ImageGalleryLab({ activeStep }: { activeStep: number }) {
         <StepBar activeStep={activeStep} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
+            noMotion ? (
+              <PlanningView activeStep={activeStep} />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`planning-${activeStep}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={TRANSITION.enterCard}
+                >
+                  <PlanningView activeStep={activeStep} />
+                </motion.div>
+              </AnimatePresence>
+            )
           ) : (
             <GalleryEvolution />
           )}
@@ -66,13 +72,15 @@ const STEP_LABELS = [
 
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
-    <div className={styles.stepBar}>
+    <div className={styles.stepBar} role="list" aria-label="Build steps">
       {STEP_LABELS.map((label, i) => (
         <span
           key={i}
+          role="listitem"
           className={styles.stepDot}
           data-active={i + 1 <= activeStep ? "true" : undefined}
           data-current={i + 1 === activeStep ? "true" : undefined}
+          aria-current={i + 1 === activeStep ? "step" : undefined}
         >
           {label}
         </span>
@@ -91,6 +99,14 @@ function PlanningView({ activeStep }: { activeStep: number }) {
   return <ComponentTreeView />;
 }
 
+const GALLERY_SCOPE_COMPLEXITY: Record<string, { loc: number; components: number }> = {
+  layout: { loc: 120, components: 2 },
+  upload: { loc: 150, components: 3 },
+  scale: { loc: 180, components: 2 },
+  mobile: { loc: 60, components: 1 },
+  search: { loc: 90, components: 2 },
+};
+
 function RequirementsView() {
   const { scopeEnabled, toggleScope } = useGallery();
   const summary = useMemo(() => {
@@ -98,6 +114,16 @@ function RequirementsView() {
     return SCOPE_ITEMS.filter((s) => scopeEnabled.has(s.id))
       .map((s) => s.label.replace("?", ""))
       .join(" + ");
+  }, [scopeEnabled]);
+  const complexity = useMemo(() => {
+    let loc = 160;
+    let components = 3;
+    scopeEnabled.forEach(id => {
+      const c = GALLERY_SCOPE_COMPLEXITY[id];
+      if (c) { loc += c.loc; components += c.components; }
+    });
+    const grade = loc < 300 ? "Low" : loc < 500 ? "Medium" : "High";
+    return { loc, components, grade };
   }, [scopeEnabled]);
 
   return (
@@ -131,27 +157,53 @@ function RequirementsView() {
         <div className={styles.scopeLabel}>Scope</div>
         <div className={styles.scopeValue}>{summary}</div>
       </div>
+      <div className={styles.complexityMeter} aria-live="polite">
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Est. LOC</span>
+          <span className={styles.complexityValue}>{complexity.loc}</span>
+        </div>
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Components</span>
+          <span className={styles.complexityValue}>{complexity.components}</span>
+        </div>
+        <div className={styles.complexityRow}>
+          <span className={styles.complexityLabel}>Complexity</span>
+          <span className={styles.complexityValue} data-grade={complexity.grade.toLowerCase()}>{complexity.grade}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Step 2: API Design (tabbed: Endpoints | Types) ─────────────────
 
+const IG_API_TABS = ["endpoints", "types"] as const;
+
 function ApiDesignView() {
   const [tab, setTab] = useState<"endpoints" | "types">("endpoints");
 
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const idx = IG_API_TABS.indexOf(tab);
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const next = IG_API_TABS[(idx + (e.key === "ArrowRight" ? 1 : IG_API_TABS.length - 1)) % IG_API_TABS.length];
+      setTab(next);
+    }
+  }, [tab]);
+
   return (
     <div className={styles.planningPanel}>
-      <div className={styles.panelTabs}>
-        <button type="button" className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} onClick={() => setTab("endpoints")}>
+      <div className={styles.panelTabs} role="tablist" aria-label="API design views" onKeyDown={handleTabKeyDown}>
+        <button type="button" role="tab" id="ig-tab-endpoints" aria-selected={tab === "endpoints"} aria-controls="ig-panel-endpoints" tabIndex={tab === "endpoints" ? 0 : -1} className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} onClick={() => setTab("endpoints")}>
           Endpoints
         </button>
-        <button type="button" className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} onClick={() => setTab("types")}>
+        <button type="button" role="tab" id="ig-tab-types" aria-selected={tab === "types"} aria-controls="ig-panel-types" tabIndex={tab === "types" ? 0 : -1} className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} onClick={() => setTab("types")}>
           Types
         </button>
       </div>
-
-      {tab === "endpoints" ? <EndpointCards /> : <TypeCards category="api" />}
+      <div role="tabpanel" id={`ig-panel-${tab}`} aria-labelledby={`ig-tab-${tab}`}>
+        {tab === "endpoints" ? <EndpointCards /> : <TypeCards category="api" />}
+      </div>
     </div>
   );
 }
@@ -165,23 +217,26 @@ function EndpointCards() {
         const key = `${ep.method}-${ep.path}`;
         const isOpen = expanded === key;
         return (
-          <button
+          <div
             key={key}
-            type="button"
             className={styles.endpointCard}
             data-expanded={isOpen ? "true" : undefined}
-            onClick={() => setExpanded(isOpen ? null : key)}
           >
-            <div className={styles.endpointHeader}>
+            <button
+              type="button"
+              className={styles.endpointHeader}
+              onClick={() => setExpanded(isOpen ? null : key)}
+              aria-expanded={isOpen}
+              aria-controls={`ig-ep-${key}`}
+            >
               <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
               <span className={styles.endpointPath}>{ep.path}</span>
               <span className={styles.endpointChevron}>{isOpen ? "▾" : "▸"}</span>
-            </div>
-            <div className={styles.endpointDesc}>{ep.description}</div>
-            <div className={styles.endpointUsedBy}>{ep.usedBy}</div>
-
+            </button>
             {isOpen && (
-              <div className={styles.endpointDetail}>
+              <div className={styles.endpointDetail} id={`ig-ep-${key}`} role="region" aria-label={`${ep.method} ${ep.path} details`}>
+                <p className={styles.endpointDesc}>{ep.description}</p>
+                <div className={styles.endpointUsedBy}>{ep.usedBy}</div>
                 {ep.params.length > 0 && (
                   <>
                     <div className={styles.endpointDetailLabel}>Parameters</div>
@@ -200,7 +255,7 @@ function EndpointCards() {
                 <div className={styles.responseType}>{ep.responseType}</div>
               </div>
             )}
-          </button>
+          </div>
         );
       })}
     </div>
@@ -270,41 +325,46 @@ function TypeCard({ typeDef }: { typeDef: TypeDef }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function GalleryEvolution() {
-  const { activeStep, metrics, stateEntries } = useGallery();
+  const { activeStep, stateEntries } = useGallery();
+  const noMotion = usePrefersReducedMotion();
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
-      {/* Persistent metrics bar */}
+    <div className={styles.evolutionStack}>
       <MetricsBar />
 
-      {/* Step-specific controls above gallery */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeStep}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-        >
-          <StepControls />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepControls />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeStep}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={TRANSITION.enterCard}
+          >
+            <StepControls />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
-      {/* Persistent gallery */}
       <PersistentGallery />
 
-      {/* Step-specific widget below gallery */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`widget-${activeStep}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-        >
-          <StepWidget />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepWidget />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`widget-${activeStep}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={TRANSITION.enterCard}
+          >
+            <StepWidget />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       <StateInspector entries={stateEntries} title="Gallery State" />
     </div>
@@ -318,7 +378,7 @@ function MetricsBar() {
   if (activeStep < 4) return null;
 
   return (
-    <div className={styles.metricsBar}>
+    <div className={styles.metricsBar} role="status" aria-label="Simulated performance metrics">
       <MetricCard label="DOM" value={metrics.domNodes} bad={metrics.domNodes > 50} good={metrics.domNodes <= 25} />
       <MetricCard label="Network" value={metrics.networkReqs} bad={metrics.networkReqs > 50} good={metrics.networkReqs <= 20} />
       <MetricCard label="Memory" value={`${metrics.memoryMB}MB`} bad={metrics.memoryMB > 10} good={metrics.memoryMB <= 2} />
@@ -344,15 +404,15 @@ function StepControls() {
 
   switch (activeStep) {
     case 4: return <StepMessage text="20 images. Everything works. All metrics green." />;
-    case 5: return <StepMessage text="500 images. Same code. Watch the metrics turn red." severity="warning" />;
+    case 5: return <PredictionChallenge question="Same code, but now 500 images instead of 20. Which metric degrades most?" options={["DOM nodes — 500 divs overload the tree", "Network — 500 concurrent HTTP requests", "Memory — 500 decoded bitmaps in RAM", "All three degrade roughly equally"]} correctIndex={3} explanation="Every metric degrades linearly with image count. DOM, network, and memory all scale at O(n) because there's no lazy loading, virtualization, or budget. That's the point — naive approaches break at scale everywhere simultaneously." />;
     case 6: return <ReserveSpaceToggle />;
     case 7: return <LayoutModeToggle />;
-    case 8: return <FeatureToggleControl feature="lazyLoading" label="Lazy Loading (IntersectionObserver)" />;
-    case 9: return <FeatureToggleControl feature="placeholders" label="Blur Placeholders" />;
-    case 10: return <FeatureToggleControl feature="virtualization" label="Virtualization (DOM recycling)" />;
+    case 8: return <PredictionToggle feature="lazyLoading" label="Lazy Loading (IntersectionObserver)" question="With lazy loading, how many images load initially?" options={["All 500 — lazy just defers decode", "~20 — only viewport images", "0 — nothing loads until scroll"]} correctIndex={1} explanation="IntersectionObserver fires for elements currently in (or near) the viewport. With rootMargin: 100px, roughly 20 images load immediately. The other 480 wait until you scroll near them." />;
+    case 9: return <PredictionToggle feature="placeholders" label="Blur Placeholders (LQIP)" question="What does a blur placeholder prevent while images load?" options={["Layout shift — reserves space", "White flash — shows color intent", "Both — reserves space AND shows color"]} correctIndex={2} explanation="Blur placeholders (LQIP) serve two purposes: they reserve the exact aspect-ratio space (preventing CLS) AND show a blurred color preview so the page doesn't flash white. The blur is a tiny ~40-byte inline data URL decoded from the BlurHash." />;
+    case 10: return <PredictionToggle feature="virtualization" label="Virtualization (DOM recycling)" question="Virtualization removes off-screen DOM nodes. What's the trade-off?" options={["Scroll jank — recycling takes time", "No Cmd+F — browser can't search invisible text", "Memory still high — images stay decoded"]} correctIndex={1} explanation="The browser's Find (Cmd+F) only searches the live DOM. Virtualized content doesn't exist in the tree, so it's invisible to native search. This is the fundamental trade-off of DOM recycling." />;
     case 11: return <ResponsiveControls />;
-    case 12: return <StepMessage text="Lightbox: a modal overlay with its own image resolution. The grid shows 200px thumbs — the lightbox fetches 800px+ via a separate API call." />;
-    case 13: return <StepMessage text="Focus trap: Tab cycles only within the lightbox. Without this, pressing Tab sends focus behind the overlay — invisible to sighted users, confusing for screen readers." />;
+    case 12: return <PredictionChallenge question="The grid shows 200px thumbnails. User clicks one to open a lightbox. What resolution should it load?" options={["Same 200px — already cached, instant", "Always 1200px — one size fits all", "Viewport-dependent — 800px on mobile, 1600px on 4K", "Original resolution — maximum quality"]} correctIndex={2} explanation="Serving viewport-dependent sizes avoids wasting bandwidth on mobile (800px is sharp enough) and avoids blurriness on 4K displays (1600px+). The srcset pattern: the lightbox uses a separate API call with width hints, not the thumbnail URL." />;
+    case 13: return <PredictionChallenge question="The lightbox is open. User presses Tab. Without a focus trap, what happens?" options={["Nothing — modal has no focusable elements", "Focus moves to the next lightbox button (prev/next/close)", "Focus jumps behind the overlay to the gallery grid", "Focus goes to the browser address bar"]} correctIndex={2} explanation="Without a focus trap, Tab follows the DOM order and lands on elements behind the overlay — completely invisible to sighted users and confusing for screen readers. The fix: intercept Tab, cycle focus among prev/next/close buttons, and never let it escape the modal." />;
     case 14: return <FeatureToggleControl feature="errorHandling" label="Simulate Network Errors" />;
     case 15: return <ScaleControls />;
     default: return null;
@@ -363,6 +423,91 @@ function StepMessage({ text, severity }: { text: string; severity?: "warning" })
   return (
     <div className={styles.stepMessage} data-severity={severity}>
       {text}
+    </div>
+  );
+}
+
+function PredictionChallenge({ question, options, correctIndex, explanation }: {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.prediction}>
+      <div className={styles.predictionQ}>{question}</div>
+      <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
+        {options.map((opt, i) => (
+          <button
+            key={i}
+            type="button"
+            className={styles.predictionOption}
+            data-correct={revealed && i === correctIndex ? "true" : undefined}
+            data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+            onClick={() => !revealed && setSelected(i)}
+            disabled={revealed}
+            role="radio"
+            aria-checked={selected === i}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      {revealed && (
+        <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
+          {selected === correctIndex ? "✓ " : "✗ "}{explanation}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PredictionToggle({ feature, label, question, options, correctIndex, explanation }: {
+  feature: string;
+  label: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}) {
+  const { isActive, toggleFeature } = useGallery();
+  const [selected, setSelected] = useState<number | null>(null);
+  const on = isActive(feature);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.toggleStrip}>
+      <ToggleRow label={label} on={on} onToggle={() => toggleFeature(feature)} />
+      {!on && (
+        <div className={styles.prediction}>
+          <div className={styles.predictionQ}>{question}</div>
+          <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
+            {options.map((opt, i) => (
+              <button
+                key={i}
+                type="button"
+                className={styles.predictionOption}
+                data-correct={revealed && i === correctIndex ? "true" : undefined}
+                data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+                onClick={() => !revealed && setSelected(i)}
+                disabled={revealed}
+                role="radio"
+                aria-checked={selected === i}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          {revealed && (
+            <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
+              {selected === correctIndex ? "✓ " : "✗ "}{explanation} Toggle the feature to verify.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -384,11 +529,13 @@ function ReserveSpaceToggle() {
 function LayoutModeToggle() {
   const { layoutMode, setLayoutMode } = useGallery();
   return (
-    <div className={styles.layoutModes}>
+    <div className={styles.layoutModes} role="radiogroup" aria-label="Layout mode">
       {(["uniform", "css-columns", "css-grid"] as LayoutMode[]).map((mode) => (
         <button
           key={mode}
           type="button"
+          role="radio"
+          aria-checked={layoutMode === mode}
           className={styles.layoutModeButton}
           data-active={layoutMode === mode ? "true" : undefined}
           onClick={() => setLayoutMode(mode)}
@@ -403,7 +550,7 @@ function LayoutModeToggle() {
 }
 
 function FeatureToggleControl({ feature, label }: { feature: string; label: string }) {
-  const { isActive, toggleFeature, metrics } = useGallery();
+  const { isActive, toggleFeature } = useGallery();
   const on = isActive(feature);
   return (
     <div className={styles.toggleStrip}>
@@ -418,11 +565,13 @@ function ResponsiveControls() {
     <div className={styles.responsiveControls}>
       <div className={styles.responsiveSelect}>
         <span className={styles.responsiveSelectLabel}>Device</span>
-        <div className={styles.responsiveSelectGroup}>
+        <div className={styles.responsiveSelectGroup} role="radiogroup" aria-label="Device type">
           {(["mobile", "tablet", "desktop"] as DeviceType[]).map((d) => (
             <button
               key={d}
               type="button"
+              role="radio"
+              aria-checked={deviceType === d}
               className={styles.responsiveOption}
               data-active={deviceType === d ? "true" : undefined}
               onClick={() => setDeviceType(d)}
@@ -434,11 +583,13 @@ function ResponsiveControls() {
       </div>
       <div className={styles.responsiveSelect}>
         <span className={styles.responsiveSelectLabel}>Format</span>
-        <div className={styles.responsiveSelectGroup}>
+        <div className={styles.responsiveSelectGroup} role="radiogroup" aria-label="Image format">
           {(["jpeg", "webp", "avif"] as ImageFormat[]).map((f) => (
             <button
               key={f}
               type="button"
+              role="radio"
+              aria-checked={imageFormat === f}
               className={styles.responsiveOption}
               data-active={imageFormat === f ? "true" : undefined}
               onClick={() => setImageFormat(f)}
@@ -487,9 +638,11 @@ function ScaleControls() {
       <div className={styles.scaleMarks}>
         <span>100</span><span>1K</span><span>10K</span><span>100K</span>
       </div>
-      <div className={styles.paginationToggle}>
+      <div className={styles.paginationToggle} role="radiogroup" aria-label="Pagination mode">
         <button
           type="button"
+          role="radio"
+          aria-checked={paginationMode === "infinite"}
           className={styles.layoutModeButton}
           data-active={paginationMode === "infinite" ? "true" : undefined}
           onClick={() => setPaginationMode("infinite")}
@@ -498,6 +651,8 @@ function ScaleControls() {
         </button>
         <button
           type="button"
+          role="radio"
+          aria-checked={paginationMode === "pages"}
           className={styles.layoutModeButton}
           data-active={paginationMode === "pages" ? "true" : undefined}
           onClick={() => setPaginationMode("pages")}
@@ -512,10 +667,11 @@ function ScaleControls() {
 // ── Toggle row ──────────────────────────────────────────────────────
 
 function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  const id = useId();
   return (
     <div className={styles.toggleRow}>
-      <span className={styles.toggleLabel}>{label}</span>
-      <button type="button" className={styles.toggleButton} data-on={on ? "true" : undefined} onClick={onToggle} aria-pressed={on}>
+      <span id={id} className={styles.toggleLabel}>{label}</span>
+      <button type="button" className={styles.toggleButton} data-on={on ? "true" : undefined} onClick={onToggle} aria-pressed={on} aria-labelledby={id}>
         <span className={styles.toggleKnob} />
       </button>
     </div>
@@ -535,6 +691,9 @@ function PersistentGallery() {
   } = useGallery();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevBtnRef = useRef<HTMLButtonElement>(null);
+  const nextBtnRef = useRef<HTMLButtonElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   const showMasonry = activeStep >= 7 && layoutMode !== "uniform";
   const showIndex = activeStep === 7;
@@ -558,7 +717,10 @@ function PersistentGallery() {
     return styles.cssGridMasonry;
   }, [showMasonry, layoutMode]);
 
-  // Lightbox keyboard
+  const btnRefs = useMemo(() => ({
+    prev: prevBtnRef, next: nextBtnRef, close: closeBtnRef,
+  }), []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (!lightboxOpen) return;
@@ -572,14 +734,16 @@ function PersistentGallery() {
         const nextIdx = e.shiftKey
           ? (idx - 1 + order.length) % order.length
           : (idx + 1) % order.length;
-        setFocusedElement(order[nextIdx]);
+        const nextEl = order[nextIdx];
+        setFocusedElement(nextEl);
+        btnRefs[nextEl].current?.focus();
       }
     },
-    [lightboxOpen, closeLightbox, lightboxNext, lightboxPrev, focusedElement, setFocusedElement]
+    [lightboxOpen, closeLightbox, lightboxNext, lightboxPrev, focusedElement, setFocusedElement, btnRefs]
   );
 
   useEffect(() => {
-    if (lightboxOpen && containerRef.current) containerRef.current.focus();
+    if (lightboxOpen) closeBtnRef.current?.focus();
   }, [lightboxOpen]);
 
   const currentImage = images[lightboxIndex];
@@ -588,10 +752,8 @@ function PersistentGallery() {
     <div
       ref={containerRef}
       onKeyDown={handleKeyDown}
-      tabIndex={canOpenLightbox ? 0 : undefined}
-      style={{ outline: "none" }}
-      role={canOpenLightbox ? "region" : undefined}
-      aria-label={canOpenLightbox ? "Image gallery" : undefined}
+      role="region"
+      aria-label="Image gallery"
     >
       <div className={styles.galleryContainer}>
         <div className={styles.galleryScroll}>
@@ -606,6 +768,7 @@ function PersistentGallery() {
               const thumbH = !showMasonry ? 200 : Math.round(thumbW / img.aspectRatio);
               const picsumUrl = `https://picsum.photos/seed/g${img.index}/${thumbW}/${thumbH}`;
 
+              const isClickable = canOpenLightbox && !hasError;
               return (
                 <div
                   key={img.id}
@@ -615,10 +778,14 @@ function PersistentGallery() {
                     minHeight: !showMasonry ? "28px" : showReserveSpace ? undefined : "40px",
                     gridRow: rowSpan ? `span ${rowSpan}` : undefined,
                   }}
-                  onClick={canOpenLightbox && !hasError ? () => openLightbox(img.index) : undefined}
+                  role={isClickable && !hasError ? "button" : undefined}
+                  tabIndex={isClickable && !hasError ? 0 : undefined}
+                  aria-label={isClickable && !hasError ? `Open image ${img.index + 1} in lightbox` : undefined}
+                  onClick={isClickable && !hasError ? () => openLightbox(img.index) : undefined}
+                  onKeyDown={isClickable && !hasError ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLightbox(img.index); } } : undefined}
                 >
                   {hasError ? (
-                    <div className={styles.imageCardError} onClick={() => retryImage(img.id)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); retryImage(img.id); }}} role="button" tabIndex={0}><span>⟳ Retry</span></div>
+                    <div className={styles.imageCardError} onClick={(e) => { e.stopPropagation(); retryImage(img.id); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); retryImage(img.id); }}} role="button" tabIndex={0} aria-label={`Retry loading image ${img.index + 1}`}><span>⟳ Retry</span></div>
                   ) : !isLoaded && showLazy ? (
                     showPlaceholders ? (
                       <div className={styles.imageCardPlaceholder}>
@@ -670,7 +837,7 @@ function PersistentGallery() {
 
       {/* Lightbox overlay */}
       {lightboxOpen && currentImage && canOpenLightbox && (
-        <div className={styles.lightboxOverlay} role="dialog" aria-modal="true" aria-label={`Image ${lightboxIndex + 1} of ${images.length}`}>
+        <div className={styles.lightboxOverlay} role="dialog" aria-modal="true" aria-label={`Image ${lightboxIndex + 1} of ${images.length}`} onClick={(e) => { if (e.target === e.currentTarget) closeLightbox(); }}>
           <div className={styles.lightboxInner}>
             <div className={styles.lightboxContent}>
               <img
@@ -680,15 +847,18 @@ function PersistentGallery() {
               />
             </div>
             <div className={styles.lightboxControls}>
-              <button type="button" className={styles.lightboxButton} data-focused={focusedElement === "prev" ? "true" : undefined} onClick={lightboxPrev}>Prev</button>
-              <button type="button" className={styles.lightboxButton} data-focused={focusedElement === "next" ? "true" : undefined} onClick={lightboxNext}>Next</button>
-              <button type="button" className={styles.lightboxButton} data-focused={focusedElement === "close" ? "true" : undefined} onClick={closeLightbox}>Close</button>
+              <button ref={prevBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "prev" ? "true" : undefined} onClick={lightboxPrev} aria-label="Previous image">Prev</button>
+              <button ref={nextBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "next" ? "true" : undefined} onClick={lightboxNext} aria-label="Next image">Next</button>
+              <button ref={closeBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "close" ? "true" : undefined} onClick={closeLightbox} aria-label="Close lightbox">Close</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* A11y panel (step 13) */}
+      <div className={styles.srOnly} aria-live="assertive" role="status">
+        {a11yAnnouncement}
+      </div>
+
       {activeStep === 13 && a11yAnnouncement && (
         <div className={styles.a11yPanel}>
           <div className={styles.a11yPanelLabel}>Screen Reader</div>
