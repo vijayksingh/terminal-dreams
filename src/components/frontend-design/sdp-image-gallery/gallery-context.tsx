@@ -265,6 +265,7 @@ type GalleryContextValue = {
   imageCount: number;
   loadedSet: Set<string>;
   errorSet: Set<string>;
+  retryImage: (id: string) => void;
 
   // Feature toggles (one per step)
   featureToggled: Record<string, boolean>;
@@ -381,27 +382,55 @@ export function GalleryProvider({
 
   const images = useMemo(() => generateImages(imageCount), [imageCount]);
 
-  // Loaded set — depends on lazy loading
-  const loadedSet = useMemo(() => {
-    if (imageCount === 0) return new Set<string>();
-    if (!isActive("lazyLoading")) {
-      return new Set(images.map((i) => i.id));
-    }
-    const visible = Math.min(Math.ceil(viewportHeight / 60) * 3 + 6, imageCount);
-    return new Set(images.slice(0, visible).map((i) => i.id));
-  }, [imageCount, images, viewportHeight, isActive]);
+  // Loaded set — progressive loading when lazy loading is active
+  const [lazyLoadedSet, setLazyLoadedSet] = useState<Set<string>>(new Set());
+  const loadTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  // Error set — depends on error handling step
-  const errorSet = useMemo(() => {
-    if (!isActive("errorHandling")) return new Set<string>();
+  useEffect(() => {
+    if (imageCount === 0) { setLazyLoadedSet(new Set()); return; }
+    if (!isActive("lazyLoading")) {
+      setLazyLoadedSet(new Set(images.map(i => i.id)));
+      return;
+    }
+    const initial = Math.min(6, imageCount);
+    setLazyLoadedSet(new Set(images.slice(0, initial).map(i => i.id)));
+    let loaded = initial;
+    clearInterval(loadTimerRef.current);
+    loadTimerRef.current = setInterval(() => {
+      loaded += 3;
+      const batch = Math.min(loaded, imageCount);
+      setLazyLoadedSet(new Set(images.slice(0, batch).map(i => i.id)));
+      if (batch >= imageCount) clearInterval(loadTimerRef.current);
+    }, 200);
+    return () => clearInterval(loadTimerRef.current);
+  }, [imageCount, images, isActive]);
+
+  const loadedSet = lazyLoadedSet;
+
+  // Error set — stateful so retry can remove entries
+  const [errorSet, setErrorSet] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!isActive("errorHandling")) {
+      setErrorSet(new Set());
+      return;
+    }
     const errors = new Set<string>();
     images.forEach((img) => {
       if (img.index % 5 === 2 || img.index % 7 === 3) {
         errors.add(img.id);
       }
     });
-    return errors;
+    setErrorSet(errors);
   }, [images, isActive]);
+
+  const retryImage = useCallback((id: string) => {
+    setErrorSet(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
 
   // Reset per-step state on step transitions
   const prevStepRef = useRef(activeStep);
@@ -507,6 +536,7 @@ export function GalleryProvider({
       imageCount,
       loadedSet,
       errorSet,
+      retryImage,
       featureToggled,
       toggleFeature,
       isActive,
@@ -538,7 +568,7 @@ export function GalleryProvider({
     [
       activeStep, phase,
       scopeEnabled, toggleScope,
-      images, imageCount, loadedSet, errorSet,
+      images, imageCount, loadedSet, errorSet, retryImage,
       featureToggled, toggleFeature, isActive,
       layoutMode, deviceType, imageFormat,
       lightboxOpen, lightboxIndex, openLightbox, closeLightbox,

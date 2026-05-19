@@ -7,9 +7,7 @@ import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
   GalleryProvider,
   useGallery,
-  getPhase,
   SCOPE_ITEMS,
-  TOTAL_STEPS,
   RESPONSIVE_DATA,
   API_ENDPOINTS,
   DATA_MODELS,
@@ -316,10 +314,9 @@ function GalleryEvolution() {
 // ── Metrics bar ─────────────────────────────────────────────────────
 
 function MetricsBar() {
-  const { activeStep, metrics, imageCount } = useGallery();
+  const { activeStep, metrics } = useGallery();
   if (activeStep < 4) return null;
 
-  const isSmall = imageCount <= 20;
   return (
     <div className={styles.metricsBar}>
       <MetricCard label="DOM" value={metrics.domNodes} bad={metrics.domNodes > 50} good={metrics.domNodes <= 25} />
@@ -354,8 +351,8 @@ function StepControls() {
     case 9: return <FeatureToggleControl feature="placeholders" label="Blur Placeholders" />;
     case 10: return <FeatureToggleControl feature="virtualization" label="Virtualization (DOM recycling)" />;
     case 11: return <ResponsiveControls />;
-    case 12: return <StepMessage text="Click any image to open the lightbox." />;
-    case 13: return <StepMessage text="Focus trap active. Tab cycles within the lightbox." />;
+    case 12: return <StepMessage text="Lightbox: a modal overlay with its own image resolution. The grid shows 200px thumbs — the lightbox fetches 800px+ via a separate API call." />;
+    case 13: return <StepMessage text="Focus trap: Tab cycles only within the lightbox. Without this, pressing Tab sends focus behind the overlay — invisible to sighted users, confusing for screen readers." />;
     case 14: return <FeatureToggleControl feature="errorHandling" label="Simulate Network Errors" />;
     case 15: return <ScaleControls />;
     default: return null;
@@ -531,7 +528,7 @@ function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
 
 function PersistentGallery() {
   const {
-    activeStep, images, imageCount, loadedSet, errorSet,
+    activeStep, images, imageCount, loadedSet, errorSet, retryImage,
     layoutMode, isActive, lightboxOpen, lightboxIndex,
     openLightbox, closeLightbox, lightboxNext, lightboxPrev,
     focusedElement, setFocusedElement, a11yAnnouncement,
@@ -621,7 +618,7 @@ function PersistentGallery() {
                   onClick={canOpenLightbox && !hasError ? () => openLightbox(img.index) : undefined}
                 >
                   {hasError ? (
-                    <div className={styles.imageCardError}><span>Retry</span></div>
+                    <div className={styles.imageCardError} onClick={() => retryImage(img.id)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); retryImage(img.id); }}} role="button" tabIndex={0}><span>⟳ Retry</span></div>
                   ) : !isLoaded && showLazy ? (
                     showPlaceholders ? (
                       <div className={styles.imageCardPlaceholder}>
@@ -988,7 +985,7 @@ function ErrorStatesWidget() {
       </div>
       {on && (
         <p className={styles.widgetNote}>
-          {errorSet.size} of {imageCount} images failed. Each shows a retry button. Exponential backoff: 1s → 4s → 16s → give up.
+          {errorSet.size} of {imageCount} images failed. Click any red card to retry — it removes the image from the error set and re-renders as loaded.
         </p>
       )}
     </div>
