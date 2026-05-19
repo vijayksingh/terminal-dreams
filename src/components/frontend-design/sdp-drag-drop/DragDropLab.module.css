@@ -385,7 +385,7 @@
 
 .stepMessage[data-severity="warning"] {
   border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 6%, transparent);
+  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
 }
 
 /* ── Toggle strip ────────────────────────────────────────────── */
@@ -484,7 +484,7 @@
 
 .strategyOption[data-active="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .strategyName {
@@ -601,7 +601,7 @@
 
 .column[data-drag-over="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
 .columnHeader {
@@ -668,7 +668,7 @@
 
 .kanbanItem[data-selected="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .itemLabel {
@@ -827,7 +827,7 @@
 
 .comparisonCard[data-active="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .comparisonName {
@@ -1145,6 +1145,11 @@
   border-color: var(--color-accent);
 }
 
+.touchTestButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .touchTestButton:active {
   background: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface-2));
   border-color: var(--color-accent);
@@ -1171,6 +1176,11 @@
   cursor: grab;
   will-change: transform;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.constraintDot:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
 .constraintDot:active {
@@ -1259,6 +1269,11 @@
   flex: 1;
   min-height: 44px;
   accent-color: var(--color-accent);
+}
+
+.scaleSlider:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .scaleSliderValue {
