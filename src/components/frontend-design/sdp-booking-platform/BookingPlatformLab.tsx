@@ -7,17 +7,15 @@ import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
   BookingProvider,
   useBooking,
-  getPhase,
   SCOPE_ITEMS,
-  TOTAL_STEPS,
   API_ENDPOINTS,
   DATA_MODELS,
-  FEATURE_UNLOCK,
   MONTH_NAMES,
   PROPERTY_TYPES,
   generateMonthDays,
   type Listing,
   type TypeDef,
+  type GuestDetails,
 } from "./booking-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { BOOKING_PLATFORM_ARCH_CONFIG } from "./architecture-scenarios";
@@ -353,7 +351,7 @@ function BookingView() {
 
   return (
     <div className={styles.bookingContainer}>
-      {isActive("filters") && <SearchBarUI />}
+      {isActive("filters") && viewMode !== "booking" && <SearchBarUI />}
       <div className={styles.viewArea}>
         {viewMode === "search" && <SearchResultsView />}
         {viewMode === "detail" && <DetailView />}
@@ -366,11 +364,11 @@ function BookingView() {
 // ── Search bar ──────────────────────────────────────────────────────
 
 function SearchBarUI() {
-  const { searchQuery, setSearchQuery, guestCount, setGuestCount, checkIn, checkOut, calendarOpen, setCalendarOpen, isActive, setDateRange } = useBooking();
+  const { searchQuery, setSearchQuery, isSearching, guestCount, setGuestCount, checkIn, checkOut, calendarOpen, setCalendarOpen, isActive, setDateRange, viewMode } = useBooking();
 
   return (
     <div className={styles.searchSection}>
-      <div className={styles.searchBar}>
+      <div className={styles.searchBar} data-searching={isSearching ? "true" : undefined}>
         <input
           type="text"
           className={styles.searchInput}
@@ -392,7 +390,7 @@ function SearchBarUI() {
         </div>
       </div>
 
-      {calendarOpen && isActive("datePicker") && <MiniCalendar />}
+      {calendarOpen && viewMode === "search" && <MiniCalendar />}
       <FilterChips />
     </div>
   );
@@ -499,7 +497,7 @@ function MiniCalendar() {
 const PICSUM_LIMIT = 24;
 
 function SearchResultsView() {
-  const { filteredListings, loadedSet, isActive, selectListing, setViewMode, hoveredMarker, setHoveredMarker } = useBooking();
+  const { filteredListings, loadedSet, isActive, isSearching, selectListing, setViewMode, hoveredMarker, setHoveredMarker, priceFlash } = useBooking();
   const showMap = isActive("mapView");
   const showSkeleton = isActive("searchOptimization");
 
@@ -519,6 +517,7 @@ function SearchResultsView() {
               key={listing.id}
               listing={listing}
               highlighted={isHovered}
+              flashing={priceFlash === listing.id}
               onHover={showMap ? setHoveredMarker : undefined}
               onClick={() => {
                 if (isActive("detailView")) {
@@ -535,9 +534,10 @@ function SearchResultsView() {
   );
 }
 
-function ListingCard({ listing, highlighted, onClick, onHover }: {
+function ListingCard({ listing, highlighted, flashing, onClick, onHover }: {
   listing: Listing;
   highlighted: boolean;
+  flashing?: boolean;
   onClick: () => void;
   onHover?: (id: string | null) => void;
 }) {
@@ -549,6 +549,7 @@ function ListingCard({ listing, highlighted, onClick, onHover }: {
     <div
       className={styles.listingCard}
       data-highlighted={highlighted ? "true" : undefined}
+      data-flashing={flashing ? "true" : undefined}
       onClick={onClick}
       onMouseEnter={() => onHover?.(listing.id)}
       onMouseLeave={() => onHover?.(null)}
@@ -565,7 +566,7 @@ function ListingCard({ listing, highlighted, onClick, onHover }: {
         <div className={styles.cardLocation}>{listing.location}</div>
         <div className={styles.cardName}>{listing.name}</div>
         <div className={styles.cardBottom}>
-          <span className={styles.cardPrice}>${listing.pricePerNight}<span>/night</span></span>
+          <span className={styles.cardPrice} data-flash={flashing ? "true" : undefined}>${listing.pricePerNight}<span>/night</span></span>
           <span className={styles.cardRating}>{"★"} {listing.rating}</span>
         </div>
       </div>
@@ -657,51 +658,67 @@ function DetailView() {
 
   return (
     <div className={styles.detailView}>
-      <button type="button" className={styles.backButton} onClick={() => setViewMode("search")}>
-        {"←"} Back to search
-      </button>
-
-      <div className={styles.detailImage}>
-        <img src={picsumUrl} alt={listing.name} className={styles.detailImg} loading="lazy" />
-      </div>
-
-      <div className={styles.detailHeader}>
-        <h3 className={styles.detailName}>{listing.name}</h3>
-        <div className={styles.detailMeta}>
-          {listing.location} {"·"} {listing.propertyType}
-          {listing.superhost && <span className={styles.superhostBadge}>Superhost</span>}
+      <div className={styles.detailHero}>
+        <div className={styles.detailImage}>
+          <img src={picsumUrl} alt={listing.name} className={styles.detailImg} loading="lazy" />
         </div>
-        <div className={styles.detailRating}>
-          {"★"} {listing.rating} ({listing.reviewCount} reviews)
-        </div>
-      </div>
-
-      <div className={styles.detailStats}>
-        <span>{listing.bedrooms || "Studio"} {listing.bedrooms ? "bed" : ""}</span>
-        <span>{"·"}</span>
-        <span>{listing.bathrooms} bath</span>
-        <span>{"·"}</span>
-        <span>{listing.maxGuests} guests</span>
-      </div>
-
-      <div className={styles.amenityList}>
-        {listing.amenities.map(a => <span key={a} className={styles.amenityChip}>{a}</span>)}
-      </div>
-
-      {isActive("availability") && <AvailabilityCalendar listing={listing} />}
-
-      {isActive("bookingFlow") && nights > 0 && (
-        <div className={styles.priceBox}>
-          <div className={styles.priceRow}><span>{nights} nights {"×"} ${listing.pricePerNight}</span><span>${nights * listing.pricePerNight}</span></div>
-          <div className={styles.priceRow}><span>Cleaning fee</span><span>$75</span></div>
-          <div className={styles.priceRow}><span>Service fee</span><span>${Math.round(nights * listing.pricePerNight * 0.15)}</span></div>
-          <div className={styles.priceDivider} />
-          <div className={styles.priceTotal}><span>Total</span><span>${nights * listing.pricePerNight + 75 + Math.round(nights * listing.pricePerNight * 0.15)}</span></div>
-          <button type="button" className={styles.bookButton} onClick={() => { setBookingStep(1); setViewMode("booking"); }}>
-            Book Now
+        <div className={styles.detailHeroInfo}>
+          <button type="button" className={styles.backButton} onClick={() => setViewMode("search")}>
+            {"←"} Back
           </button>
+          <h3 className={styles.detailName}>{listing.name}</h3>
+          <div className={styles.detailMeta}>
+            {listing.location} {"·"} {listing.propertyType}
+            {listing.superhost && <span className={styles.superhostBadge}>Superhost</span>}
+          </div>
+          <div className={styles.detailRating}>
+            {"★"} {listing.rating} ({listing.reviewCount} reviews)
+          </div>
         </div>
-      )}
+      </div>
+
+      <div className={styles.detailBody}>
+        <div className={styles.detailLeft}>
+          <div className={styles.detailStats}>
+            <span>{listing.bedrooms || "Studio"} {listing.bedrooms ? "bed" : ""}</span>
+            <span>{"·"}</span>
+            <span>{listing.bathrooms} bath</span>
+            <span>{"·"}</span>
+            <span>{listing.maxGuests} guests</span>
+          </div>
+          <div className={styles.amenityList}>
+            {listing.amenities.map(a => <span key={a} className={styles.amenityChip}>{a}</span>)}
+          </div>
+          {isActive("availability") && <AvailabilityCalendar listing={listing} />}
+        </div>
+
+        <div className={styles.detailRight}>
+          <div className={styles.priceBox}>
+            <div className={styles.priceBoxHeader}>
+              <span className={styles.pricePerNight}>${listing.pricePerNight}</span>
+              <span className={styles.pricePerNightLabel}>/ night</span>
+            </div>
+            {nights > 0 && (
+              <>
+                <div className={styles.priceDivider} />
+                <div className={styles.priceRow}><span>{nights} nights {"×"} ${listing.pricePerNight}</span><span>${nights * listing.pricePerNight}</span></div>
+                <div className={styles.priceRow}><span>Cleaning fee</span><span>$75</span></div>
+                <div className={styles.priceRow}><span>Service fee</span><span>${Math.round(nights * listing.pricePerNight * 0.15)}</span></div>
+                <div className={styles.priceDivider} />
+                <div className={styles.priceTotal}><span>Total</span><span>${nights * listing.pricePerNight + 75 + Math.round(nights * listing.pricePerNight * 0.15)}</span></div>
+              </>
+            )}
+            {nights === 0 && (
+              <div className={styles.priceHint}>Select dates to see total</div>
+            )}
+            {isActive("bookingFlow") && nights > 0 && (
+              <button type="button" className={styles.bookButton} onClick={() => { setBookingStep(1); setViewMode("booking"); }}>
+                Book Now
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -775,7 +792,7 @@ function AvailabilityCalendar({ listing }: { listing: Listing }) {
 // ── Booking flow ────────────────────────────────────────────────────
 
 function BookingFlowView() {
-  const { bookingStep, setBookingStep, bookingConfirmed, setBookingConfirmed, selectedListing, setViewMode, checkIn, checkOut } = useBooking();
+  const { bookingStep, setBookingStep, bookingConfirmed, setBookingConfirmed, selectedListing, setViewMode, checkIn, checkOut, guestDetails, setGuestDetails, bookingError, setBookingError, simulateConflict, setSimulateConflict } = useBooking();
   if (!selectedListing) return null;
 
   const listing = selectedListing;
@@ -800,10 +817,10 @@ function BookingFlowView() {
         <div className={styles.bookingStepContent}>
           <h4 className={styles.bookingStepTitle}>Guest Details</h4>
           <div className={styles.formGrid}>
-            <label className={styles.formField}><span>First Name</span><input type="text" placeholder="Jane" readOnly /></label>
-            <label className={styles.formField}><span>Last Name</span><input type="text" placeholder="Smith" readOnly /></label>
-            <label className={styles.formField}><span>Email</span><input type="email" placeholder="jane@example.com" readOnly /></label>
-            <label className={styles.formField}><span>Phone</span><input type="tel" placeholder="+1 555-0123" readOnly /></label>
+            <label className={styles.formField}><span>First Name</span><input type="text" placeholder="Jane" value={guestDetails.firstName} onChange={e => setGuestDetails({ ...guestDetails, firstName: e.target.value })} /></label>
+            <label className={styles.formField}><span>Last Name</span><input type="text" placeholder="Smith" value={guestDetails.lastName} onChange={e => setGuestDetails({ ...guestDetails, lastName: e.target.value })} /></label>
+            <label className={styles.formField}><span>Email</span><input type="email" placeholder="jane@example.com" value={guestDetails.email} onChange={e => setGuestDetails({ ...guestDetails, email: e.target.value })} /></label>
+            <label className={styles.formField}><span>Phone</span><input type="tel" placeholder="+1 555-0123" value={guestDetails.phone} onChange={e => setGuestDetails({ ...guestDetails, phone: e.target.value })} /></label>
           </div>
           <div className={styles.bookingActions}>
             <button type="button" className={styles.bookingBackBtn} onClick={() => setViewMode("detail")}>{"←"} Back</button>
@@ -830,15 +847,46 @@ function BookingFlowView() {
           </div>
           <div className={styles.bookingActions}>
             <button type="button" className={styles.bookingBackBtn} onClick={() => setBookingStep(1)}>{"←"} Back</button>
-            <button type="button" className={styles.bookingNextBtn} onClick={() => { setBookingStep(3); setBookingConfirmed(true); }}>Confirm Booking {"→"}</button>
+            <button type="button" className={styles.bookingNextBtn} onClick={() => {
+              if (simulateConflict) {
+                setBookingError({ type: "conflict", message: "These dates were just booked by another guest.", alternativeDates: checkIn ? (() => { const d = new Date(checkIn); d.setDate(d.getDate() + 3); const ci = d.toISOString().slice(0, 10); d.setDate(d.getDate() + 3); return `${ci} → ${d.toISOString().slice(0, 10)}`; })() : "Jun 18 → Jun 21" });
+              } else {
+                setBookingError(null);
+                setBookingStep(3);
+                setBookingConfirmed(true);
+              }
+            }}>Confirm Booking {"→"}</button>
           </div>
         </div>
       )}
 
-      {bookingStep === 3 && (
+      {bookingError && (
+        <div className={styles.bookingStepContent}>
+          <div className={styles.conflictPanel}>
+            <div className={styles.conflictIcon}>{"✕"}</div>
+            <h4 className={styles.conflictTitle}>{bookingError.message}</h4>
+            {bookingError.alternativeDates && (
+              <div className={styles.conflictAlt}>
+                <span className={styles.conflictAltLabel}>Available alternative:</span>
+                <span className={styles.conflictAltDates}>{bookingError.alternativeDates}</span>
+              </div>
+            )}
+            <div className={styles.bookingActions}>
+              <button type="button" className={styles.bookingBackBtn} onClick={() => { setBookingError(null); setViewMode("detail"); }}>Choose new dates</button>
+              <button type="button" className={styles.bookingNextBtn} onClick={() => { setBookingError(null); setSimulateConflict(false); setBookingStep(3); setBookingConfirmed(true); }}>Book alternative</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bookingStep === 3 && !bookingError && (
         <div className={styles.bookingStepContent}>
           <div className={styles.confirmationPanel}>
-            <div className={styles.confirmCheck}>{"✓"}</div>
+            <div className={styles.confirmCheck}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
             <h4 className={styles.confirmTitle}>Booking Confirmed</h4>
             <div className={styles.confirmCode}>BK-7823AF</div>
             <div className={styles.confirmDetails}>
@@ -879,7 +927,8 @@ function StepWidget() {
 }
 
 function FilterStatsWidget() {
-  const { listings, filteredListings, selectedTypes } = useBooking();
+  const { listings, filteredListings, selectedTypes, isActive } = useBooking();
+  const debounced = isActive("searchOptimization");
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Filter impact</div>
@@ -887,7 +936,9 @@ function FilterStatsWidget() {
         <div className={styles.statRow}><span>Total listings</span><span>{listings.length}</span></div>
         <div className={styles.statRow}><span>After filters</span><span>{filteredListings.length}</span></div>
         <div className={styles.statRow}><span>Active type filters</span><span>{selectedTypes.size || "none"}</span></div>
+        <div className={styles.statRow}><span>Search debounce</span><span style={{ color: debounced ? "var(--color-success)" : "var(--color-warning)" }}>{debounced ? "300ms" : "off (instant)"}</span></div>
       </div>
+      {!debounced && <div className={styles.widgetNote}>Every keystroke re-filters immediately. At scale, this blocks the main thread. Step 12 adds debounce.</div>}
     </div>
   );
 }
@@ -984,22 +1035,24 @@ function MapStatsWidget() {
 }
 
 function RealtimeWidget() {
-  const events = [
-    { time: "0.0s", label: "WS connected", type: "info" },
-    { time: "1.2s", label: "Price change: Tuscan Farmhouse $210 → $235", type: "price" },
-    { time: "2.8s", label: "Booked: Glass Cabin (Jun 20-23)", type: "booking" },
-    { time: "4.1s", label: "Price change: Cave Suite $275 → $260", type: "price" },
-  ];
+  const { realtimeEvents } = useBooking();
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Event stream</div>
+      <div className={styles.widgetTitle}>Event stream (live)</div>
       <div className={styles.eventList}>
-        {events.map((e, i) => (
-          <div key={i} className={styles.eventRow} data-type={e.type}>
-            <span className={styles.eventTime}>{e.time}</span>
-            <span>{e.label}</span>
+        {realtimeEvents.length === 0 ? (
+          <div className={styles.eventRow} data-type="info">
+            <span className={styles.eventTime}>—</span>
+            <span>Waiting for connection...</span>
           </div>
-        ))}
+        ) : (
+          realtimeEvents.map((e, i) => (
+            <div key={`${e.time}-${i}`} className={styles.eventRow} data-type={e.type}>
+              <span className={styles.eventTime}>{e.time}</span>
+              <span>{e.label}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -1029,6 +1082,7 @@ function CacheWidget() {
 }
 
 function ErrorWidget() {
+  const { simulateConflict, setSimulateConflict } = useBooking();
   const errors = [
     { scenario: "Network timeout on search", recovery: "Retry with exponential backoff (1s, 2s, 4s)" },
     { scenario: "Double-booking conflict", recovery: "Show conflict dialog, suggest alternative dates" },
@@ -1045,6 +1099,15 @@ function ErrorWidget() {
           </div>
         ))}
       </div>
+      <button
+        type="button"
+        className={styles.filterChip}
+        data-active={simulateConflict ? "true" : undefined}
+        onClick={() => setSimulateConflict(!simulateConflict)}
+        style={{ marginTop: "var(--space-2)" }}
+      >
+        {simulateConflict ? "✓ " : ""}Simulate booking conflict
+      </button>
     </div>
   );
 }

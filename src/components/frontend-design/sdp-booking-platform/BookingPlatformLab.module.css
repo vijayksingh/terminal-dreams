@@ -3,16 +3,18 @@
 .labRoot {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
   font-family: var(--font-mono);
   min-height: 0;
+  height: 100%;
 }
 
 .scrollArea {
-  flex: 1 1 0;
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
-  padding: var(--space-2);
+  padding: var(--space-3);
 }
 
 /* ── Step bar ──────────────────────────────────────────────── */
@@ -20,16 +22,19 @@
 .stepBar {
   display: flex;
   gap: 2px;
-  padding: var(--space-2) var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
   flex-wrap: wrap;
+  background: var(--color-surface);
+  border-bottom: 2px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .stepDot {
-  font-size: 0.6rem;
-  font-weight: 600;
-  padding: 2px 5px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 3px 6px;
   border-radius: 3px;
-  background: var(--color-surface);
+  background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
   transition: all 150ms ease;
@@ -45,6 +50,13 @@
   background: var(--color-accent);
   color: var(--color-bg);
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 12%, transparent); }
 }
 
 /* ── Planning panels ───────────────────────────────────────── */
@@ -76,13 +88,17 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
   cursor: pointer;
   text-align: left;
   transition: all 150ms ease;
+}
+
+.checkItem:hover {
+  border-color: var(--color-accent);
 }
 
 .checkItem[data-checked="true"] {
@@ -100,27 +116,32 @@
   justify-content: center;
   flex-shrink: 0;
   margin-top: 1px;
-  color: var(--color-success);
-  transition: border-color 150ms ease;
 }
 
 .checkItem[data-checked="true"] .checkToggle {
   border-color: var(--color-success);
+  background: var(--color-success);
+  color: var(--color-bg);
 }
 
 .checkLabel {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--color-text);
+  line-height: 1.3;
 }
 
 .checkDesc {
   font-size: 0.65rem;
   color: var(--color-muted);
   margin: 2px 0 0;
+  line-height: 1.4;
 }
 
 .scopeSummary {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
@@ -129,47 +150,59 @@
 
 .scopeLabel {
   font-size: 0.6rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--color-muted);
-  margin-bottom: 4px;
+  flex-shrink: 0;
 }
 
 .scopeValue {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
+  font-weight: 600;
   color: var(--color-text);
-  font-weight: 500;
 }
 
-/* ── Panel tabs ────────────────────────────────────────────── */
+/* ── API panel tabs ───────────────────────────────────────── */
 
 .panelTabs {
   display: flex;
-  gap: 2px;
-  border-bottom: 2px solid var(--color-border);
-  padding-bottom: 0;
+  gap: 0;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
 }
 
 .panelTab {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: var(--space-1) var(--space-3);
+  flex: 1;
+  padding: var(--space-2);
   border: none;
-  background: none;
+  background: var(--color-surface);
   color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
   transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panelTab:hover:not([data-active="true"]) {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.panelTab + .panelTab {
+  border-left: 2px solid var(--color-border);
 }
 
 .panelTab[data-active="true"] {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
 }
 
-/* ── Endpoint cards ────────────────────────────────────────── */
+/* ── Endpoint cards ───────────────────────────────────────── */
 
 .endpointList {
   display: flex;
@@ -178,16 +211,17 @@
 }
 
 .endpointCard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  text-align: left;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   cursor: pointer;
-  text-align: left;
-  transition: border-color 150ms ease;
+  transition: all 100ms ease;
+}
+
+.endpointCard:hover {
+  border-color: var(--color-text);
 }
 
 .endpointCard[data-expanded="true"] {
@@ -201,74 +235,100 @@
 }
 
 .methodBadge {
-  font-size: 0.55rem;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
 }
 
-.methodBadge[data-method="GET"] { background: color-mix(in srgb, var(--diagram-layer-1) 20%, transparent); color: var(--diagram-layer-1); }
-.methodBadge[data-method="POST"] { background: color-mix(in srgb, var(--diagram-layer-4) 20%, transparent); color: var(--diagram-layer-4); }
-.methodBadge[data-method="DELETE"] { background: color-mix(in srgb, var(--color-error) 20%, transparent); color: var(--color-error); }
+.methodBadge[data-method="GET"] {
+  background: color-mix(in srgb, var(--color-success) 20%, var(--color-surface));
+  color: var(--color-success);
+}
+
+.methodBadge[data-method="POST"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 20%, var(--color-surface));
+  color: var(--diagram-layer-5);
+}
+
+.methodBadge[data-method="DELETE"] {
+  background: color-mix(in srgb, var(--color-error) 20%, var(--color-surface));
+  color: var(--color-error);
+}
 
 .endpointPath {
-  font-size: 0.7rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: var(--color-text);
   flex: 1;
 }
 
 .endpointChevron {
-  font-size: 0.65rem;
-  color: var(--color-muted);
-}
-
-.endpointDesc {
   font-size: 0.6rem;
   color: var(--color-muted);
 }
 
+.endpointDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+
 .endpointUsedBy {
-  font-size: 0.55rem;
-  color: var(--diagram-layer-2);
-  font-style: italic;
+  font-size: 0.6rem;
+  color: var(--color-accent);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .endpointDetail {
   margin-top: var(--space-2);
   padding-top: var(--space-2);
   border-top: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 
 .endpointDetailLabel {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-muted);
+  margin-bottom: 4px;
+  margin-top: var(--space-1);
+}
+
+.endpointDetailLabel:first-child {
+  margin-top: 0;
 }
 
 .paramGrid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .paramRow {
   display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
+  grid-template-columns: 80px 80px 1fr;
   gap: var(--space-1);
-  font-size: 0.6rem;
+  font-size: 0.62rem;
+  padding: 2px 0;
 }
 
-.paramName { color: var(--color-text); font-weight: 600; }
-.paramType { color: var(--diagram-layer-5); }
-.paramNote { color: var(--color-muted); }
+.paramName {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.paramType {
+  color: var(--diagram-layer-5);
+  font-weight: 600;
+}
+
+.paramNote {
+  color: var(--color-muted);
+}
 
 .responseType {
   font-size: 0.65rem;
@@ -276,40 +336,43 @@
   color: var(--diagram-layer-5);
 }
 
-/* ── Type cards ────────────────────────────────────────────── */
+/* ── Type cards ───────────────────────────────────────────── */
 
 .typeCardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
 
 .typeCard {
   border: 1px solid var(--color-border);
-  border-top-width: 3px;
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
+  border-top: 3px solid;
+  border-radius: var(--radius-2);
   padding: var(--space-2);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  background: var(--color-surface);
+  min-width: 0;
+}
+
+.typeCard:first-child {
+  grid-row: span 2;
 }
 
 .typeCardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 4px;
 }
 
 .typeCardName {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
 .typeCardCategory {
   font-size: 0.55rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -317,6 +380,7 @@
 .typeCardExtends {
   font-size: 0.6rem;
   color: var(--color-muted);
+  margin-bottom: var(--space-1);
 }
 
 .typeCardExtends span {
@@ -327,67 +391,78 @@
 .typeCardFields {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
 }
 
 .typeFieldRow {
   display: flex;
-  gap: var(--space-1);
-  font-size: 0.58rem;
-  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 0.62rem;
+  padding: 2px 0;
 }
 
-.typeFieldName { color: var(--color-text); font-weight: 500; }
-.typeFieldType { color: var(--diagram-layer-5); }
+.typeFieldName { color: var(--color-text); font-weight: 600; }
+.typeFieldType { color: var(--diagram-layer-5); font-weight: 500; }
 .typeFieldNote { color: var(--color-muted); font-style: italic; }
 
 /* ── Metrics bar ───────────────────────────────────────────── */
 
 .metricsBar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-2);
 }
 
 .metricCard {
-  flex: 1;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
   text-align: center;
 }
 
 .metricLabel {
-  font-size: 0.55rem;
-  font-weight: 600;
+  font-size: 0.56rem;
+  font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.1em;
 }
 
 .metricValue {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--color-text);
+  margin-top: 2px;
 }
 
-.metricValue[data-status="bad"] { color: var(--color-error); }
-.metricValue[data-status="good"] { color: var(--color-success); }
+.metricValue[data-status="bad"] { color: var(--color-error); animation: metricFlash 400ms ease-out; }
+.metricValue[data-status="good"] { color: var(--color-success); animation: metricFlash 400ms ease-out; }
+
+@keyframes metricFlash {
+  0% { transform: scale(1.3); opacity: 0.6; }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
 
 /* ── Step message ──────────────────────────────────────────── */
 
 .stepMessage {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--color-text);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
   border-radius: var(--radius-1);
   background: var(--color-surface);
+  line-height: 1.4;
 }
 
 .stepMessage[data-severity="warning"] {
-  border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 8%, var(--color-surface));
+  border-left-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-surface));
 }
 
 /* ── Booking container ─────────────────────────────────────── */
@@ -395,11 +470,11 @@
 .bookingContainer {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .viewArea {
-  min-height: 300px;
+  min-height: 200px;
 }
 
 /* ── Search bar ────────────────────────────────────────────── */
@@ -413,20 +488,21 @@
 .searchBar {
   display: flex;
   gap: 1px;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-2);
+  border: 2px solid var(--color-text);
+  border-radius: 28px;
   overflow: hidden;
   background: var(--color-border);
 }
 
 .searchInput {
   flex: 1;
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 16px;
   border: none;
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 500;
   outline: none;
   min-width: 0;
 }
@@ -436,13 +512,13 @@
 }
 
 .searchDateBtn {
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 14px;
   border: none;
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.68rem;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: background 100ms ease;
@@ -455,20 +531,20 @@
 .guestControl {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 var(--space-2);
+  gap: 6px;
+  padding: 0 12px;
   background: var(--color-surface);
 }
 
 .guestBtn {
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--color-border);
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
   border-radius: 50%;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -477,14 +553,15 @@
 }
 
 .guestBtn:hover {
+  border-color: var(--color-text);
   background: var(--color-surface-2);
 }
 
 .guestCount {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   color: var(--color-text);
-  min-width: 14px;
+  min-width: 16px;
   text-align: center;
 }
 
@@ -492,22 +569,26 @@
 
 .filterRow {
   display: flex;
-  gap: var(--space-1);
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .filterChip {
-  font-size: 0.6rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
-  border: 1px solid var(--color-border);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
   background: var(--color-surface);
-  color: var(--color-muted);
+  color: var(--color-text);
   cursor: pointer;
   text-transform: capitalize;
-  transition: all 100ms ease;
+  transition: all 150ms ease;
+}
+
+.filterChip:hover {
+  border-color: var(--color-text);
 }
 
 .filterChip[data-active="true"] {
@@ -524,14 +605,14 @@
 }
 
 .priceLabel {
-  font-size: 0.6rem;
-  color: var(--color-muted);
-  font-weight: 600;
-  min-width: 32px;
+  font-size: 0.65rem;
+  color: var(--color-text);
+  font-weight: 700;
+  min-width: 34px;
 }
 
 .rangeInput {
-  width: 60px;
+  width: 64px;
   accent-color: var(--color-accent);
   cursor: pointer;
 }
@@ -540,9 +621,9 @@
 
 .calendar,
 .availCalendar {
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
-  padding: var(--space-2);
+  padding: var(--space-3);
   background: var(--color-surface);
 }
 
@@ -554,23 +635,24 @@
 }
 
 .calendarArrow {
-  border: none;
-  background: none;
-  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 3px;
-  transition: color 100ms ease;
+  padding: 4px 8px;
+  border-radius: var(--radius-1);
+  transition: all 100ms ease;
 }
 
 .calendarArrow:hover {
-  color: var(--color-text);
+  background: var(--color-surface-2);
+  border-color: var(--color-text);
 }
 
 .calendarMonth {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
@@ -582,11 +664,11 @@
 }
 
 .dayNameCell {
-  font-size: 0.55rem;
-  font-weight: 600;
+  font-size: 0.58rem;
+  font-weight: 700;
   color: var(--color-muted);
   text-align: center;
-  padding: 2px 0;
+  padding: 4px 0;
 }
 
 .calendarGrid {
@@ -596,25 +678,25 @@
 }
 
 .dayEmpty {
-  aspect-ratio: 1;
+  padding: 6px 0;
 }
 
 .dayCell {
-  aspect-ratio: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 3px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-1);
   background: transparent;
   cursor: pointer;
   transition: all 100ms ease;
-  padding: 2px;
+  padding: 6px 2px;
 }
 
 .dayCell:hover:not([data-blocked="true"]) {
   background: var(--color-surface-2);
+  border-color: var(--color-border);
 }
 
 .dayCell[data-blocked="true"] {
@@ -625,12 +707,20 @@
 
 .dayCell[data-selected="true"] {
   background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .dayCell[data-checkin="true"],
 .dayCell[data-checkout="true"] {
   background: var(--color-accent);
   color: var(--color-bg);
+  border-color: var(--color-accent);
+  animation: datePop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes datePop {
+  0% { transform: scale(0.8); }
+  100% { transform: scale(1); }
 }
 
 .dayCell[data-checkin="true"] .dayPrice,
@@ -648,28 +738,29 @@
 }
 
 .dayNumber {
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 700;
   line-height: 1;
 }
 
 .dayPrice {
-  font-size: 0.45rem;
+  font-size: 0.48rem;
   color: var(--color-muted);
   line-height: 1;
+  font-weight: 600;
 }
 
 .priceLegend {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin-top: var(--space-2);
-  padding-top: var(--space-1);
+  padding-top: var(--space-2);
   border-top: 1px solid var(--color-border);
 }
 
 .priceLegend span {
-  font-size: 0.55rem;
-  font-weight: 600;
+  font-size: 0.58rem;
+  font-weight: 700;
 }
 
 .priceLegend span[data-tier="low"] { color: var(--color-success); }
@@ -686,43 +777,50 @@
 .splitLayout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .listingGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 /* ── Listing card ──────────────────────────────────────────── */
 
 .listingCard {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
   overflow: hidden;
   background: var(--color-surface);
   cursor: pointer;
   transition: all 150ms ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .listingCard:hover {
   border-color: var(--color-text);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.listingCard:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 80ms ease;
 }
 
 .listingCard[data-highlighted="true"] {
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
 .cardImage {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
-  background: var(--color-surface-2);
+  background: oklch(72% 0.08 240);
 }
 
 .cardImg {
@@ -741,33 +839,35 @@
 
 .superhostBadge {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  font-size: 0.5rem;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 3px;
+  top: 8px;
+  left: 8px;
+  font-size: 0.52rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-1);
   background: var(--color-bg);
   color: var(--color-text);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .cardInfo {
-  padding: var(--space-2);
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .cardLocation {
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   color: var(--color-muted);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .cardName {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -778,42 +878,41 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .cardPrice {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 .cardPrice span {
-  font-weight: 400;
+  font-weight: 500;
   color: var(--color-muted);
-  font-size: 0.6rem;
+  font-size: 0.62rem;
 }
 
 .cardRating {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--color-accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ── Skeleton card ─────────────────────────────────────────── */
 
 .skeletonCard {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
   overflow: hidden;
   background: var(--color-surface);
-  padding: var(--space-2);
 }
 
 .skeletonImg {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  background: var(--color-surface-2);
-  border-radius: 3px;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(110deg, var(--color-surface-2) 30%, var(--color-surface) 50%, var(--color-surface-2) 70%);
+  background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
@@ -821,8 +920,8 @@
   height: 10px;
   width: 80%;
   background: var(--color-surface-2);
-  border-radius: 2px;
-  margin-top: var(--space-2);
+  border-radius: 3px;
+  margin: 10px 12px 0;
   animation: shimmer 1.5s ease-in-out infinite 0.1s;
 }
 
@@ -830,21 +929,21 @@
   height: 10px;
   width: 50%;
   background: var(--color-surface-2);
-  border-radius: 2px;
-  margin-top: 4px;
+  border-radius: 3px;
+  margin: 4px 12px 12px;
   animation: shimmer 1.5s ease-in-out infinite 0.2s;
 }
 
 @keyframes shimmer {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Mini map ──────────────────────────────────────────────── */
 
 .mapContainer {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
   overflow: hidden;
   background: var(--color-surface);
 }
@@ -860,18 +959,26 @@
 .detailView {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+}
+
+.detailHero {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--space-3);
+  align-items: start;
 }
 
 .backButton {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 700;
   color: var(--color-accent);
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
   padding: 0;
+  margin-bottom: 2px;
 }
 
 .backButton:hover {
@@ -880,10 +987,10 @@
 
 .detailImage {
   width: 100%;
-  aspect-ratio: 16 / 10;
-  border-radius: var(--radius-1);
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-2);
   overflow: hidden;
-  background: var(--color-surface-2);
+  background: oklch(72% 0.08 240);
 }
 
 .detailImg {
@@ -894,39 +1001,61 @@
   filter: sepia(0.35) saturate(1.5) hue-rotate(190deg) brightness(0.88);
 }
 
-.detailHeader {
+.detailHeroInfo {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .detailName {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
   color: var(--color-text);
   margin: 0;
+  line-height: 1.2;
 }
 
 .detailMeta {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--color-muted);
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  font-weight: 500;
 }
 
 .detailRating {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--color-accent);
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.detailBody {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.detailLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.detailRight {
+  position: sticky;
+  top: var(--space-3);
 }
 
 .detailStats {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-2);
   font-size: 0.65rem;
   color: var(--color-text);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .amenityList {
@@ -936,10 +1065,10 @@
 }
 
 .amenityChip {
-  font-size: 0.55rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
@@ -948,52 +1077,84 @@
 /* ── Price box ─────────────────────────────────────────────── */
 
 .priceBox {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
   padding: var(--space-3);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+}
+
+.priceBoxHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.pricePerNight {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.pricePerNightLabel {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.priceHint {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  font-style: italic;
 }
 
 .priceRow {
   display: flex;
   justify-content: space-between;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--color-text);
 }
 
 .priceDivider {
   height: 1px;
   background: var(--color-border);
-  margin: var(--space-1) 0;
 }
 
 .priceTotal {
   display: flex;
   justify-content: space-between;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 .bookButton {
   margin-top: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: 10px var(--space-3);
   border: none;
-  border-radius: var(--radius-1);
+  border-radius: var(--radius-2);
   background: var(--color-accent);
   color: var(--color-bg);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   cursor: pointer;
   transition: opacity 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .bookButton:hover {
   opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.bookButton:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 /* ── Booking flow ──────────────────────────────────────────── */
@@ -1013,8 +1174,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 700;
   color: var(--color-muted);
 }
 
@@ -1027,15 +1188,15 @@
 }
 
 .progressDot {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   border: 2px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.55rem;
-  font-weight: 700;
+  font-size: 0.58rem;
+  font-weight: 800;
 }
 
 .bookingProgressStep[data-active="true"] .progressDot {
@@ -1046,6 +1207,12 @@
   background: var(--color-accent);
   color: var(--color-bg);
   border-color: var(--color-accent);
+  animation: progressPop 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes progressPop {
+  0% { transform: scale(0.7); }
+  100% { transform: scale(1); }
 }
 
 .bookingStepContent {
@@ -1055,8 +1222,8 @@
 }
 
 .bookingStepTitle {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--color-text);
   margin: 0;
 }
@@ -1074,19 +1241,27 @@
 }
 
 .formField span {
-  font-size: 0.6rem;
-  font-weight: 600;
+  font-size: 0.62rem;
+  font-weight: 700;
   color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .formField input {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: 8px 10px;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
+}
+
+.formField input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 .bookingActions {
@@ -1096,59 +1271,75 @@
 }
 
 .bookingBackBtn {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  padding: 8px 16px;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
   color: var(--color-text);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   cursor: pointer;
+  transition: all 100ms ease;
+}
+
+.bookingBackBtn:hover {
+  border-color: var(--color-text);
 }
 
 .bookingNextBtn {
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 16px;
   border: none;
   border-radius: var(--radius-1);
   background: var(--color-accent);
   color: var(--color-bg);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.7rem;
+  font-weight: 800;
   cursor: pointer;
+  transition: opacity 100ms ease;
+}
+
+.bookingNextBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.bookingNextBtn:active {
+  transform: translateY(1px);
 }
 
 .bookingSummaryCard {
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   padding: var(--space-3);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .summaryListing {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 .summaryDates {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--color-muted);
+  font-weight: 500;
 }
 
 .mockCard {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
+  padding: 10px 16px;
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   color: var(--color-text);
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 /* ── Confirmation panel ────────────────────────────────────── */
@@ -1157,40 +1348,57 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-4);
   text-align: center;
 }
 
 .confirmCheck {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--color-success);
   color: var(--color-bg);
-  font-size: 1.2rem;
-  font-weight: 700;
+  font-size: 1.4rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: confirmPop 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes confirmPop {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.confirmCheck svg {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: checkDraw 400ms ease-out 300ms forwards;
+}
+
+@keyframes checkDraw {
+  to { stroke-dashoffset: 0; }
 }
 
 .confirmTitle {
-  font-size: 0.9rem;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   color: var(--color-text);
   margin: 0;
 }
 
 .confirmCode {
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: var(--color-accent);
   letter-spacing: 0.15em;
 }
 
 .confirmDetails {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--color-muted);
   display: flex;
   flex-direction: column;
@@ -1198,25 +1406,25 @@
 }
 
 .confirmTotal {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 /* ── Widgets ───────────────────────────────────────────────── */
 
 .widgetPanel {
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
 }
 
 .widgetTitle {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--color-muted);
   margin-bottom: var(--space-2);
 }
@@ -1228,7 +1436,7 @@
 }
 
 .widgetNote {
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   color: var(--color-muted);
   font-style: italic;
   margin-top: var(--space-1);
@@ -1237,12 +1445,12 @@
 .statRow {
   display: flex;
   justify-content: space-between;
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--color-text);
 }
 
 .statRow span:last-child {
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* ── Priority list widget ──────────────────────────────────── */
@@ -1250,25 +1458,26 @@
 .priorityList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .priorityItem {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--color-text);
+  font-weight: 500;
 }
 
 .priorityNumber {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-bg);
-  font-size: 0.55rem;
-  font-weight: 700;
+  font-size: 0.58rem;
+  font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1280,7 +1489,7 @@
 .funnelList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .funnelRow {
@@ -1291,26 +1500,27 @@
 }
 
 .funnelBar {
-  height: 16px;
-  border-radius: 2px;
+  height: 18px;
+  border-radius: 3px;
   background: var(--color-surface-2);
   min-width: 4px;
   transition: all 300ms ease;
 }
 
 .funnelBar[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 30%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--color-accent) 35%, var(--color-surface-2));
 }
 
 .funnelLabel {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--color-text);
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .funnelPct {
-  font-size: 0.6rem;
-  font-weight: 700;
+  font-size: 0.65rem;
+  font-weight: 800;
   color: var(--color-muted);
   margin-left: auto;
 }
@@ -1320,16 +1530,23 @@
 .eventList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .eventRow {
   display: flex;
   gap: var(--space-2);
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--color-text);
-  padding: 3px var(--space-1);
-  border-left: 2px solid var(--color-border);
+  padding: 4px var(--space-2);
+  border-left: 3px solid var(--color-border);
+  font-weight: 500;
+  animation: eventSlideIn 300ms ease-out;
+}
+
+@keyframes eventSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .eventRow[data-type="price"] { border-left-color: var(--diagram-layer-4); }
@@ -1337,9 +1554,9 @@
 .eventRow[data-type="info"] { border-left-color: var(--diagram-layer-5); }
 
 .eventTime {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-muted);
-  min-width: 28px;
+  min-width: 32px;
 }
 
 /* ── Cache widget ──────────────────────────────────────────── */
@@ -1354,23 +1571,24 @@
   display: grid;
   grid-template-columns: 1fr auto auto;
   gap: var(--space-2);
-  font-size: 0.6rem;
-  padding: 3px var(--space-1);
-  border-radius: 2px;
+  font-size: 0.65rem;
+  padding: 4px var(--space-2);
+  border-radius: 3px;
 }
 
-.cacheRow[data-status="HIT"] { background: color-mix(in srgb, var(--color-success) 10%, transparent); }
-.cacheRow[data-status="MISS"] { background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+.cacheRow[data-status="HIT"] { background: color-mix(in srgb, var(--color-success) 12%, transparent); }
+.cacheRow[data-status="MISS"] { background: color-mix(in srgb, var(--color-error) 12%, transparent); }
 
 .cacheQuery {
   color: var(--color-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .cacheStatus {
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .cacheRow[data-status="HIT"] .cacheStatus { color: var(--color-success); }
@@ -1378,8 +1596,9 @@
 
 .cacheTtl {
   color: var(--color-muted);
-  min-width: 28px;
+  min-width: 30px;
   text-align: right;
+  font-weight: 600;
 }
 
 /* ── Error widget ──────────────────────────────────────────── */
@@ -1398,15 +1617,16 @@
 .errorItem:last-child { border-bottom: none; }
 
 .errorScenario {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   color: var(--color-error);
 }
 
 .errorRecovery {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--color-text);
-  margin-top: 2px;
+  margin-top: 3px;
+  font-weight: 500;
 }
 
 /* ── CWV widget ────────────────────────────────────────────── */
@@ -1414,24 +1634,24 @@
 .vitalsList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .vitalRow {
   display: grid;
-  grid-template-columns: 40px 60px 1fr;
+  grid-template-columns: 44px 64px 1fr;
   gap: var(--space-2);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   align-items: center;
 }
 
 .vitalLabel {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text);
 }
 
 .vitalValue {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--color-text);
 }
 
@@ -1441,4 +1661,120 @@
 
 .vitalTarget {
   color: var(--color-muted);
+  font-weight: 500;
+}
+
+/* ── Conflict panel ──────────────────────────────────────────── */
+
+.conflictPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-3);
+  border: 2px solid var(--color-error);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+  text-align: center;
+  animation: conflictShake 400ms ease-out;
+}
+
+@keyframes conflictShake {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-3px); }
+  60% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+.conflictIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-error);
+  color: var(--color-bg);
+  font-size: 1.2rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conflictTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-error);
+  margin: 0;
+}
+
+.conflictAlt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.conflictAltLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.conflictAltDates {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+/* ── Price flash animation ───────────────────────────────────── */
+
+.listingCard[data-flashing="true"] {
+  border-color: var(--diagram-layer-4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-4) 25%, transparent);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.cardPrice[data-flash="true"] {
+  color: var(--diagram-layer-4);
+  animation: priceFlash 1.2s ease-out;
+}
+
+@keyframes priceFlash {
+  0% { color: var(--diagram-layer-4); transform: scale(1.15); }
+  50% { color: var(--diagram-layer-4); }
+  100% { color: var(--color-text); transform: scale(1); }
+}
+
+/* ── Searching indicator ─────────────────────────────────────── */
+
+.searchBar[data-searching="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+  .metricValue[data-status="bad"],
+  .metricValue[data-status="good"] { animation: none; }
+  .confirmCheck { animation: none; }
+  .confirmCheck svg { animation: none; stroke-dashoffset: 0; }
+  .conflictPanel { animation: none; }
+  .eventRow { animation: none; }
+  .dayCell[data-checkin="true"],
+  .dayCell[data-checkout="true"] { animation: none; }
+  .bookingProgressStep[data-current="true"] .progressDot { animation: none; }
+  .listingCard:hover { transform: none; }
+  .listingCard:active { transform: none; }
+  .bookButton:hover { transform: none; }
+  .bookButton:active { transform: none; }
+  .bookingNextBtn:hover { transform: none; }
+  .bookingNextBtn:active { transform: none; }
 }

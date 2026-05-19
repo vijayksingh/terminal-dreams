@@ -345,6 +345,21 @@ export function generateMonthDays(year: number, month: number, listing: Listing)
   return days;
 }
 
+// ── Extra types ─────────────────────────────────────────────────
+
+export type GuestDetails = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
+export type BookingError = {
+  type: "conflict" | "payment" | "network";
+  message: string;
+  alternativeDates?: string;
+} | null;
+
 // ── Context ─────────────────────────────────────────────────────
 
 type BookingContextValue = {
@@ -359,6 +374,8 @@ type BookingContextValue = {
 
   searchQuery: string;
   setSearchQuery: (q: string) => void;
+  debouncedQuery: string;
+  isSearching: boolean;
   selectedTypes: Set<string>;
   toggleType: (t: string) => void;
   priceRange: [number, number];
@@ -381,6 +398,12 @@ type BookingContextValue = {
   setBookingStep: (s: number) => void;
   bookingConfirmed: boolean;
   setBookingConfirmed: (b: boolean) => void;
+  guestDetails: GuestDetails;
+  setGuestDetails: (d: GuestDetails) => void;
+  bookingError: BookingError;
+  setBookingError: (e: BookingError) => void;
+  simulateConflict: boolean;
+  setSimulateConflict: (b: boolean) => void;
 
   hoveredMarker: string | null;
   setHoveredMarker: (id: string | null) => void;
@@ -390,6 +413,8 @@ type BookingContextValue = {
   isActive: (feature: string) => boolean;
 
   loadedSet: Set<string>;
+  priceFlash: string | null;
+  realtimeEvents: { time: string; label: string; type: string }[];
 
   metrics: { domNodes: number; networkReqs: number; searchLatency: string; cls: number };
   stateEntries: StateEntry[];
@@ -413,10 +438,40 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     setScopeEnabled(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }, []);
 
+  const [featureToggles, setFeatureToggles] = useState<Record<string, boolean>>({});
+  const toggleFeature = useCallback((f: string) => {
+    setFeatureToggles(prev => ({ ...prev, [f]: !prev[f] }));
+  }, []);
+  const isActive = useCallback((feature: string) => {
+    const unlock = FEATURE_UNLOCK[feature];
+    if (!unlock) return false;
+    if (activeStep > unlock) return true;
+    if (activeStep === unlock) return featureToggles[feature] ?? false;
+    return false;
+  }, [activeStep, featureToggles]);
+
   const listingCount = activeStep <= 3 ? 0 : activeStep === 4 ? 8 : 24;
   const listings = useMemo(() => generateListings(listingCount), [listingCount]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const handleSearchQuery = useCallback((q: string) => {
+    setSearchQuery(q);
+    if (isActive("searchOptimization")) {
+      setIsSearching(true);
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        setDebouncedQuery(q);
+        setIsSearching(false);
+      }, 300);
+    } else {
+      setDebouncedQuery(q);
+    }
+  }, [isActive]);
+
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const toggleType = useCallback((t: string) => {
     setSelectedTypes(s => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; });
@@ -435,19 +490,56 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
 
   const [bookingStep, setBookingStep] = useState(1);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [guestDetails, setGuestDetails] = useState<GuestDetails>({ firstName: "", lastName: "", email: "", phone: "" });
+  const [bookingError, setBookingError] = useState<BookingError>(null);
+  const [simulateConflict, setSimulateConflict] = useState(false);
   const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
 
-  const [featureToggles, setFeatureToggles] = useState<Record<string, boolean>>({});
-  const toggleFeature = useCallback((f: string) => {
-    setFeatureToggles(prev => ({ ...prev, [f]: !prev[f] }));
-  }, []);
-  const isActive = useCallback((feature: string) => {
-    const unlock = FEATURE_UNLOCK[feature];
-    if (!unlock) return false;
-    if (activeStep > unlock) return true;
-    if (activeStep === unlock) return featureToggles[feature] ?? false;
-    return false;
-  }, [activeStep, featureToggles]);
+  const [priceFlash, setPriceFlash] = useState<string | null>(null);
+  const [priceOverrides, setPriceOverrides] = useState<Map<string, number>>(new Map());
+  const [realtimeEvents, setRealtimeEvents] = useState<{ time: string; label: string; type: string }[]>([]);
+  const priceTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const rtStartRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!isActive("realtime") || activeStep < 11) {
+      clearInterval(priceTimerRef.current);
+      setPriceFlash(null);
+      setRealtimeEvents([]);
+      return;
+    }
+    rtStartRef.current = Date.now();
+    setRealtimeEvents([{ time: "0.0s", label: "WS connected", type: "info" }]);
+
+    priceTimerRef.current = setInterval(() => {
+      const idx = Math.floor(Math.random() * listings.length);
+      const l = listings[idx];
+      if (!l) return;
+      let oldPrice = 0;
+      let newPrice = 0;
+      setPriceOverrides(prev => {
+        oldPrice = prev.get(l.id) ?? l.pricePerNight;
+        const delta = Math.random() > 0.5 ? Math.round(oldPrice * 0.12) : -Math.round(oldPrice * 0.08);
+        newPrice = Math.max(50, oldPrice + delta);
+        const next = new Map(prev);
+        next.set(l.id, newPrice);
+        return next;
+      });
+      setPriceFlash(l.id);
+      setTimeout(() => setPriceFlash(null), 1200);
+
+      const elapsed = ((Date.now() - rtStartRef.current) / 1000).toFixed(1);
+      setRealtimeEvents(prev => {
+        const event = { time: `${elapsed}s`, label: `${l.name} $${oldPrice} → $${newPrice}`, type: "price" };
+        return [event, ...prev].slice(0, 8);
+      });
+    }, 4000);
+    return () => clearInterval(priceTimerRef.current);
+  }, [isActive, activeStep, listings]);
+
+  useEffect(() => {
+    setPriceOverrides(new Map());
+  }, [listingCount]);
 
   // Loading simulation
   const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set());
@@ -476,16 +568,25 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     if (activeStep === 6) setCalendarOpen(true);
   }, [activeStep, listings.length]);
 
+  const pricedListings = useMemo(() => {
+    if (priceOverrides.size === 0) return listings;
+    return listings.map(l => {
+      const override = priceOverrides.get(l.id);
+      return override !== undefined ? { ...l, pricePerNight: override } : l;
+    });
+  }, [listings, priceOverrides]);
+
   const filteredListings = useMemo(() => {
-    if (!isActive("filters")) return listings;
-    return listings.filter(l => {
-      if (searchQuery && !l.name.toLowerCase().includes(searchQuery.toLowerCase()) && !l.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (!isActive("filters")) return pricedListings;
+    const q = debouncedQuery.toLowerCase();
+    return pricedListings.filter(l => {
+      if (q && !l.name.toLowerCase().includes(q) && !l.location.toLowerCase().includes(q)) return false;
       if (selectedTypes.size > 0 && !selectedTypes.has(l.propertyType)) return false;
       if (l.pricePerNight < priceRange[0] || l.pricePerNight > priceRange[1]) return false;
       if (l.maxGuests < guestCount) return false;
       return true;
     });
-  }, [listings, isActive, searchQuery, selectedTypes, priceRange, guestCount]);
+  }, [pricedListings, isActive, debouncedQuery, selectedTypes, priceRange, guestCount]);
 
   const metrics = useMemo(() => {
     const showOpt = isActive("searchOptimization");
@@ -507,6 +608,9 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     ];
     if (isActive("filters")) {
       e.push({ label: "searchQuery", value: searchQuery || "(empty)" });
+      if (isActive("searchOptimization") && searchQuery !== debouncedQuery) {
+        e.push({ label: "debounced", value: debouncedQuery || "(pending)", highlight: true });
+      }
       e.push({ label: "priceRange", value: `$${priceRange[0]}-$${priceRange[1]}` });
     }
     if (checkIn) e.push({ label: "checkIn", value: checkIn });
@@ -519,8 +623,9 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
   const value: BookingContextValue = {
     activeStep, phase,
     scopeEnabled, toggleScope,
-    listings, filteredListings,
-    searchQuery, setSearchQuery,
+    listings: pricedListings, filteredListings,
+    searchQuery, setSearchQuery: handleSearchQuery,
+    debouncedQuery, isSearching,
     selectedTypes, toggleType,
     priceRange, setPriceRange,
     guestCount, setGuestCount,
@@ -530,9 +635,12 @@ export function BookingProvider({ activeStep, children }: { activeStep: number; 
     viewMode, setViewMode,
     bookingStep, setBookingStep,
     bookingConfirmed, setBookingConfirmed,
+    guestDetails, setGuestDetails,
+    bookingError, setBookingError,
+    simulateConflict, setSimulateConflict,
     hoveredMarker, setHoveredMarker,
     featureToggles, toggleFeature, isActive,
-    loadedSet, metrics, stateEntries,
+    loadedSet, priceFlash, realtimeEvents, metrics, stateEntries,
   };
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;
