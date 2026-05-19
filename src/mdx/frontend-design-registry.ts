@@ -16,14 +16,14 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-notification-system"),
   "design-autocomplete": () =>
     import("@/mdx/frontend-design/design-autocomplete"),
+  "design-spreadsheet": () =>
+    import("@/mdx/frontend-design/design-spreadsheet"),
   "design-booking-platform": () =>
     import("@/mdx/frontend-design/design-booking-platform"),
   "design-news-feed": () =>
     import("@/mdx/frontend-design/design-news-feed"),
   "design-realtime-chat": () =>
     import("@/mdx/frontend-design/design-realtime-chat"),
-  "windowing-fundamentals": () =>
-    import("@/mdx/frontend-design/windowing-fundamentals"),
   "fixed-vs-variable-height": () =>
     import("@/mdx/frontend-design/fixed-vs-variable-height"),
   "virtual-scroll-implementation": () =>

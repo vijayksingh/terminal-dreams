@@ -17,8 +17,8 @@ import {
   type MessageStatus,
   type TypeDef,
 } from "./chat-context";
-import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
-import { CHAT_ARCH_CONFIG } from "./architecture-scenarios";
+import { ChatScenarioStage } from "./scenario-stage/ChatScenarioStage";
+import { CHAT_SCENARIOS } from "./scenario-stage/scenes";
 import styles from "./ChatLab.module.css";
 
 function avatarColor(hue: number): string {
@@ -281,7 +281,7 @@ function EndpointCards() {
 function ComponentTreeView() {
   return (
     <div className={styles.planningPanel}>
-      <ArchitectureScenarioPlayer config={CHAT_ARCH_CONFIG} />
+      <ChatScenarioStage scenarios={CHAT_SCENARIOS} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { NewsFeedLab } from "./sdp-news-feed/NewsFeedLab";
 import { ChatLab } from "./sdp-chat/ChatLab";
 import { AutocompleteLab } from "./sdp-autocomplete/AutocompleteLab";
 import { DragDropLab } from "./sdp-drag-drop/DragDropLab";
+import { SpreadsheetLab } from "./sdp-spreadsheet/SpreadsheetLab";
 import { WindowingLab } from "./sdp-windowing/WindowingLab";
 
 function Placeholder({ label }: { label: string }) {
@@ -135,6 +136,15 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <DragDropLab activeStep={activeStep} />
+    ),
+  },
+  "design-spreadsheet": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <SpreadsheetLab activeStep={activeStep} />
     ),
   },
 };

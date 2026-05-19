@@ -1,0 +1,261 @@
+---
+title: "Design a Spreadsheet"
+slug: design-spreadsheet
+section: system-design-problems
+stopId: sdp-spreadsheet
+order: 5
+kind: system-design-problem
+summary: "Design a spreadsheet with virtual grid rendering, formula parsing, dependency DAG, change propagation, and collaborative editing"
+tags:
+  - system-design
+  - spreadsheet
+  - virtual-grid
+  - formula-engine
+  - dependency-graph
+  - topological-sort
+  - collaboration
+intersections:
+  - virt-windowing
+  - state-search
+  - perf-javascript
+prerequisites: []
+demo: design-spreadsheet
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design a spreadsheet application."
+
+Before touching the grid, scope the problem. The panel on the right shows five capability dimensions — each one multiplies architectural complexity.
+
+**Formula engine?** Without formulas, a spreadsheet is a glorified HTML table. The engine must parse expressions like `=SUM(B2:B10)` into an AST, resolve cell references, and evaluate. The parser needs to handle operator precedence, nested functions, and range expansions. Google Sheets supports 400+ functions — in an interview, supporting basic arithmetic, cell references, and SUM/AVERAGE is sufficient to demonstrate the architecture.
+
+**Multi-select?** A single active cell is trivial — one `{row, col}` in state. Range selection (click + Shift-click, click-drag) requires a `{start, end}` pair with dynamic visual highlighting of the enclosed rectangle. Multi-select (Cmd-click) adds a `Selection[]` array. Cut/Copy/Paste behavior changes with multi-select — you need to handle non-contiguous ranges.
+
+**Virtual grid?** A 1,000×26 sheet has 26,000 cells. Rendering all of them creates 26,000 DOM nodes — the browser will visibly stutter on scroll. Virtual grid renders only the ~100 cells visible in the viewport, recycling DOM nodes as the user scrolls. This is the same windowing technique used by react-window, but in two dimensions.
+
+**Formatting?** Cell formatting (bold, currency, date formats, conditional coloring) adds a `CellFormat` type that travels through the pipeline: raw → compute → format → display. The formatter must not affect the underlying computed value — `$149.95` displays but `149.95` participates in formulas.
+
+**Collaboration?** Real-time multi-user editing is the hardest dimension. Two users editing the same cell simultaneously must converge to the same result. Last-Writer-Wins (LWW) is simplest but drops edits. Operational Transform (OT) preserves intent but requires a centralized server. CRDTs allow peer-to-peer convergence but increase payload size.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API Design
+
+Four endpoints cover the spreadsheet surface:
+
+**`GET /api/sheet/:id`** — Load the full sheet state: sparse cell map (only non-empty cells), column widths, row heights, and sheet metadata. A 10,000-cell sheet with 2,000 filled cells sends ~40KB — the sparse representation avoids transmitting 8,000 empty cells.
+
+**`PUT /api/sheet/:id/cell/:cellId`** — Update a single cell's raw value. The server re-evaluates the formula graph and returns the updated cell plus all transitively affected cells. This round-trip must complete in under 200ms for the edit to feel instant.
+
+**`POST /api/sheet/:id/batch`** — Bulk update for paste operations. Pasting a 50×10 block into the grid sends 500 cell updates — one PUT per cell would be 500 requests. The batch endpoint accepts an array of `{cellId, raw}` pairs and returns all affected cells in a single response.
+
+**`POST /api/sheet/:id/formula/deps`** — Debug endpoint: given a cell ID, returns its full dependency tree (direct deps, transitive deps, and dependents). Used by the formula auditing UI to visualize which cells are affected by a change.
+
+The type panel shows four data shapes: **CellData** (raw + computed + format), **SheetState** (the sparse map), **ViewportRect** (which cells are visible), and **FormulaToken** (the AST node type).
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+The architecture scenario player above traces three critical flows through six collaborating modules:
+
+**VirtualGrid** sits at the top — it owns the viewport, handles scroll events, and maps screen coordinates to cell addresses. It only renders cells within the visible rectangle, recycling DOM nodes as the user scrolls. When the CellStore notifies of a value change, the grid checks whether the changed cell is in the viewport before updating the DOM.
+
+**CellEditor** manages the inline editing experience — the `<input>` that appears when you double-click a cell. It captures the raw string (which might be text, a number, or a formula starting with `=`) and commits it to the FormulaEngine on Enter. The formula bar at the top always shows the raw content of the selected cell.
+
+**FormulaEngine** is the computational core. When it receives a raw string starting with `=`, it tokenizes the expression into a stream of refs, operators, function calls, and literals, then builds an AST. Evaluation walks the AST, resolving cell references by reading computed values from the CellStore. The engine memoizes results — it only re-evaluates when a dependency changes.
+
+**DepGraph (DAG)** tracks which cells depend on which. When D2 contains `=B2*C2`, the graph records `D2.deps = [B2, C2]` and `B2.dependents = [D2]`, `C2.dependents = [D2]`. When a cell changes, the graph walks the dependents tree, marks them dirty, and produces a topological sort — the order in which cells must be recalculated so each cell's dependencies are fresh before it evaluates.
+
+**SelectionManager** handles click, Shift-click, and Ctrl-click to track active cell, range selections, and multi-selections. It feeds the grid's visual highlighting and determines which cells are affected by clipboard operations.
+
+**CellStore** is the single source of truth — a sparse Map from cell ID to `{raw, computed, formula, deps, format}`. The store is sparse because a 100×26 grid has 2,600 possible cells but most are empty. Only cells with actual content exist in the map.
+
+Watch the "Edit a formula cell" scenario to trace data from grid click → cell editor → formula engine → dependency graph → cell store → grid re-render. Then try "Change propagation" to see how modifying B2 cascades through the DAG to update D2 and D5.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Grid Rendering
+
+The foundation of any spreadsheet is the grid. A naive `<table>` with 26 columns and 100 rows creates 2,600 `<td>` elements — manageable, but a 1,000-row sheet creates 26,000 DOM nodes and the browser starts to struggle.
+
+The demo grid renders a small dataset to focus on the cell rendering pipeline: column headers (A, B, C, D), row numbers, and cell values. Each cell reads from the CellStore — if a cell has a formula, it displays the computed result, not the raw expression. Error states (`#CIRCULAR!`, `#REF!`, `#DIV/0!`) render in the cell with error styling.
+
+The grid is a CSS Grid with `grid-template-columns: 56px repeat(N, 1fr)` — the first column is the row header, the rest are equal-width data columns. This is simpler than the `position: absolute` approach used by Google Sheets, but scales well up to ~100 columns.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Cell Editing
+
+Double-click a cell to enter edit mode. The raw content appears in an `<input>` overlaying the cell — if the cell contains `=B2*C2`, you see the formula, not `149.95`. Press Enter to commit, Escape to cancel.
+
+The editing state machine has three states: **viewing** (display computed value), **editing** (show raw in input), and **committing** (validate → recalculate → update store). The transition from editing → committing triggers the formula engine: if the raw value starts with `=`, parse it; otherwise, store it as a literal.
+
+Tab and Shift-Tab move to adjacent cells. Arrow keys move when not editing. Enter commits and moves down. These keyboard shortcuts match Excel/Google Sheets conventions — users have decades of muscle memory here.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Formula Engine
+
+The formula engine converts `=B2*C2` into `149.95` through three stages:
+
+**Tokenization** splits the raw string into tokens: `=` (formula marker), `B2` (cell reference), `*` (operator), `C2` (cell reference). The tokenizer classifies each token by type: `ref`, `op`, `fn`, `lit`, `range`. A range like `B2:B10` is a single token that the evaluator expands into individual cell references.
+
+**Parsing** builds an AST from the token stream. For `=B2*C2`, the AST is a multiply node with two ref children. For `=SUM(B2:B4) + 10`, the AST is an add node with a function-call child (SUM) and a literal child (10). Operator precedence follows standard math: `*` and `/` bind tighter than `+` and `-`.
+
+**Evaluation** walks the AST bottom-up: leaf refs look up computed values from the CellStore, operators apply arithmetic, functions aggregate their arguments. If any referenced cell has an error, the error propagates — `=B2+1` where B2 is `#CIRCULAR!` evaluates to `#REF!`.
+
+Try entering formulas in the demo grid: `=B2*C2` multiplies two cells, `=SUM(D2:D4)` sums a range, `=B2+10` adds a literal. Watch the formula token visualization highlight each token type.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Dependency DAG
+
+Every formula creates dependency edges. `=B2*C2` in cell D2 means D2 depends on B2 and C2. The dependency graph (DAG — directed acyclic graph) tracks these relationships bidirectionally: `D2.deps = [B2, C2]` and `B2.dependents = [D2]`.
+
+The graph must be acyclic. If D2 contains `=D2+1`, that's a self-reference — a cycle of length 1. If A1 contains `=B1` and B1 contains `=A1`, that's a cycle of length 2. Before registering new dependencies, the engine runs a DFS from the cell being edited to check if any transitive dependency leads back to itself. If it does → `#CIRCULAR!` error, and the formula is rejected.
+
+The DAG visualization shows dependency edges between cells. When you edit a cell, watch the graph update: new edges appear for new dependencies, old edges disappear when a formula changes. The cycle detection animation traces the DFS path — green for safe paths, red when the cycle is detected.
+
+Toggle the dependency graph feature to see the difference: without it, changing B2 requires a full recalculation of every formula in the sheet. With it, only B2's transitive dependents (D2, D5) are recalculated.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Change Propagation
+
+When B2 changes from 29.99 to 39.99, the system must recalculate D2 (`=B2*C2`) and D5 (`=SUM(D2:D4)`) — but in the right order. If D5 recalculates before D2, it reads stale data.
+
+**Topological sort** solves this. The algorithm walks B2's dependents tree, collects all dirty cells, then sorts them so each cell appears after all its dependencies. Result: `[B2, D2, D5]`. Recalculating in this order guarantees each cell reads fresh values.
+
+The propagation metric shows how many cells are recalculated vs. how many exist. In a 2,600-cell sheet where B2 has 2 transitive dependents, only 3 cells recalculate — 99.9% of the sheet is untouched. Without the DAG, a naive approach recalculates all 2,600 cells on every edit.
+
+This is the core performance insight: the dependency graph trades memory (storing edges) for computation (skipping unchanged cells). A sheet with 10,000 cells and 1,000 formulas might have 3,000 dependency edges — a few KB of memory to save recalculating 9,000 cells on every keystroke.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Selection Model
+
+Selection in a spreadsheet is more complex than in a text editor because it's two-dimensional. The selection model handles four modes:
+
+**Single cell** — Click selects one cell. The simplest case: `activeCell = {row, col}`.
+
+**Range** — Click + drag or Click + Shift-click selects a rectangular region. Stored as `{start: {row, col}, end: {row, col}}`. The visual highlight fills the rectangle between start and end, normalized so start is always top-left.
+
+**Multi-range** — Cmd/Ctrl + click adds a new range to the selection. Stored as `Selection[]`. Copy must concatenate all selected ranges. Formatting applies to all selected cells.
+
+**Column/row** — Clicking a column header selects the entire column. Stored as `{type: 'column', index: number}`. Row headers work similarly.
+
+The selection feeds three downstream systems: the **visual highlight** (blue overlay on selected cells), **clipboard operations** (cut/copy affect selected cells), and **formatting commands** (bold/currency apply to the selection).
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Virtual Grid
+
+A 1,000-row × 26-column spreadsheet has 26,000 cells. Rendering all of them creates 26,000 DOM nodes — each with event listeners, computed styles, and layout participation. Scroll performance degrades visibly above ~5,000 nodes.
+
+Virtual grid renders only the cells visible in the viewport — typically ~100 (10 rows × 10 columns). As the user scrolls, cells exiting the viewport are recycled: their DOM nodes are repositioned and repopulated with data from newly visible cells.
+
+The viewport is defined by `{startRow, endRow, startCol, endCol}` — computed from scroll position and cell dimensions. On each scroll event, the grid recalculates the viewport, diffs against the previous viewport, and updates only the cells that changed.
+
+Toggle the virtual grid feature in the demo: watch the "cells in DOM" counter drop from 2,600 to ~80. Scroll the grid and notice the counter stays constant — cells are recycled, not created. The performance bar chart shows the rendering cost: 26,000 real DOM nodes vs. 80 recycled nodes.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Formatting Pipeline
+
+Cell formatting transforms a computed value into a display string without altering the underlying data. The pipeline is: **raw** → **compute** → **format** → **display**.
+
+`29.99` with currency format becomes `$29.99`. `0.157` with percentage format becomes `15.7%`. `45321` with date format becomes `2024-01-15`. The formatter reads the CellFormat object: `{type: 'currency', currency: 'USD', decimals: 2}`.
+
+The critical invariant: formatting is display-only. `$29.99` in a cell still participates in `=B2*C2` as `29.99`. If a formula references a formatted cell, it reads the computed value (number), not the display string. Breaking this invariant causes subtle bugs: `=SUM(B2:B4)` would try to sum `"$29.99" + "$49.99"` and produce `#VALUE!`.
+
+The format pipeline demo shows the three stages for a sample value: raw input → computed value → formatted display. Toggle between number, currency, percentage, and date formats to see how the same underlying value renders differently.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Undo/Redo
+
+Undo in a spreadsheet must reverse not just the cell edit but all its propagated effects. Changing B2 from 29.99 to 39.99 updates D2 (149.95 → 199.95) and D5 (449.82 → 549.82). Undo must restore all three cells.
+
+The undo stack stores **operations**, not snapshots. Each operation records: `{cellId, prevRaw, nextRaw, affectedCells: [{id, prevComputed, nextComputed}]}`. Undo replays `prevRaw` and restores all affected computed values. This is more space-efficient than storing full sheet snapshots — a single edit operation is ~100 bytes vs. ~40KB for a full snapshot.
+
+Redo pushes the operation onto a redo stack. Any new edit clears the redo stack — you can't redo after making a new change. Ctrl+Z triggers undo, Ctrl+Shift+Z triggers redo. The undo depth is typically capped at 100 operations.
+
+Toggle the undo/redo feature and make several edits. Watch the undo depth counter increment. Press undo to see all propagated values revert atomically — D2 and D5 snap back to their previous values in the same frame as B2.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Clipboard
+
+Copy and paste in a spreadsheet must handle formula references intelligently. When you copy D2 (`=B2*C2`) and paste it into D3, the formula should become `=B3*C3` — the references shift relative to the paste offset. This is **relative referencing**.
+
+**Absolute references** (`=$B$2*$C$2`) don't shift when pasted. **Mixed references** (`=$B2*C$2`) lock one dimension. The clipboard must parse each cell reference in the formula, check its reference type, and adjust accordingly.
+
+The clipboard data format is a 2D array of cell values. For a single cell, it's `[[value]]`. For a 3×2 range, it's `[[a,b],[c,d],[e,f]]`. The format preserves the rectangular structure so the paste target knows the dimensions.
+
+Cut differs from copy: after paste, cut clears the source cells. If the source cells had dependents, those dependents now reference empty cells and may produce `#REF!` errors.
+
+The clipboard demo lets you select cells and see the internal clipboard representation — raw values and how formulas would be adjusted for different paste targets.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Performance
+
+Three techniques keep a large spreadsheet responsive:
+
+**Batched recalculation** — When pasting 500 cells, don't recalculate after each cell. Collect all dirty cells, deduplicate, topological sort once, and recalculate in a single pass. The demo shows the difference: naive (500 recalc passes) vs. batched (1 recalc pass).
+
+**Web Worker evaluation** — Formula evaluation is CPU-bound and can block the main thread. Move the FormulaEngine to a Web Worker: the main thread sends raw values, the worker returns computed results via `postMessage`. The UI stays responsive during heavy recalculation. The tradeoff: structured clone serialization adds latency for each message.
+
+**Sparse storage** — A Map with 2,000 entries uses less memory than a 2D array with 26,000 cells (24,000 of which are empty). Iteration over non-empty cells is O(filled) instead of O(total). The sparse map also makes serialization efficient — only non-empty cells are sent to the server.
+
+Toggle between naive and batched recalculation in the demo. Watch the "recalc time" metric: naive scales linearly with paste size, batched stays nearly constant. The bar chart makes the O(n²) vs. O(n) difference visceral.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Collaboration
+
+Real-time collaboration is the capstone challenge. Two users editing cell B2 simultaneously must converge to the same result. Three strategies, increasing in complexity:
+
+**Last-Writer-Wins (LWW)** — Each edit carries a timestamp. The latest timestamp wins. Simple to implement (compare timestamps, keep the larger one) but silently drops edits. If Alice types "39.99" at t=100 and Bob types "49.99" at t=101, Alice's edit vanishes without notification. Acceptable for low-conflict scenarios.
+
+**Operational Transform (OT)** — The Google Docs approach. Each edit is an operation: `{cellId: "B2", type: "set", value: "39.99", baseVersion: 42}`. The server transforms concurrent operations against each other so both clients converge. OT requires a centralized server to determine operation order. The transform function for spreadsheet cells is simpler than for text (cell edits don't have positional conflicts), but range operations (insert row, delete column) need careful transformation.
+
+**CRDTs** — Conflict-free Replicated Data Types allow peer-to-peer convergence without a central server. Each cell value is a Last-Writer-Wins Register (LWW-Register) with a Lamport timestamp. Concurrent edits are resolved deterministically by comparing timestamps, then actor IDs as tiebreaker. CRDTs increase payload size (each value carries metadata) but eliminate the need for an OT server.
+
+The collaboration demo simulates two concurrent edits on the same cell and shows how each strategy resolves the conflict. Toggle between LWW, OT, and CRDT to see the tradeoffs in action: simplicity vs. correctness vs. infrastructure cost.
+
+<SpreadsheetDemo />
+
+</section>

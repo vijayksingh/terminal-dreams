@@ -482,11 +482,20 @@ function PredictionChallenge({ question, options, correctIndex, explanation }: {
           </button>
         ))}
       </div>
-      {revealed && (
-        <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
-          {selected === correctIndex ? "✓ " : "✗ "}{explanation}
-        </div>
-      )}
+      <AnimatePresence>
+        {revealed && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={TRANSITION.enterCard}
+            className={styles.predictionResult}
+            data-correct={selected === correctIndex ? "true" : undefined}
+          >
+            {selected === correctIndex ? "✓ " : "✗ "}{explanation}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

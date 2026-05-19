@@ -1193,8 +1193,19 @@ function ConstraintWidget() {
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onKeyDown={(e) => {
+            const step = mode === "gridSnap" ? GRID : 8;
+            const delta = { x: 0, y: 0 };
+            if (e.key === "ArrowRight") delta.x = step;
+            else if (e.key === "ArrowLeft") delta.x = -step;
+            else if (e.key === "ArrowDown") delta.y = step;
+            else if (e.key === "ArrowUp") delta.y = -step;
+            else return;
+            e.preventDefault();
+            setPos(prev => clamp({ x: prev.x + delta.x, y: prev.y + delta.y }, prev));
+          }}
           role="slider"
-          aria-label="Draggable dot — demonstrates constraint modes"
+          aria-label="Draggable dot — use arrow keys or drag to move"
           aria-valuetext={`x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`}
           tabIndex={0}
         />
@@ -1243,13 +1254,25 @@ function UndoWidget() {
 function ScaleWidget() {
   const [itemCount, setItemCount] = useState(50);
   const [renderMs, setRenderMs] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    container.textContent = "";
     const start = performance.now();
-    const nodes = document.querySelectorAll("[data-scale-item]");
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < itemCount; i++) {
+      const div = document.createElement("div");
+      div.className = styles.scaleItem!;
+      div.textContent = `Item ${i + 1}`;
+      frag.appendChild(div);
+    }
+    container.appendChild(frag);
     requestAnimationFrame(() => {
       setRenderMs(Math.round((performance.now() - start) * 10) / 10);
     });
+    return () => { container.textContent = ""; };
   }, [itemCount]);
 
   const domNodes = itemCount;
@@ -1283,10 +1306,11 @@ function ScaleWidget() {
           <span className={styles.scaleMetricLabel}>DOM nodes (virtualized)</span>
         </div>
         <div className={styles.scaleMetric}>
-          <span className={styles.scaleMetricValue}>{renderMs}ms</span>
+          <span className={styles.scaleMetricValue} data-status={renderMs > 16 ? "warning" : undefined}>{renderMs}ms</span>
           <span className={styles.scaleMetricLabel}>Render time</span>
         </div>
       </div>
+      <div ref={containerRef} className={styles.scaleItemContainer} aria-hidden="true" />
       <div className={styles.scaleBarChart}>
         <div className={styles.scaleBar} data-type="naive" style={{ width: `${Math.min(100, (domNodes / 5000) * 100)}%` }}>
           <span>{domNodes.toLocaleString()} DOM</span>
@@ -1296,7 +1320,7 @@ function ScaleWidget() {
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Drag the slider to feel the scaling wall. At 2K+ items, naive rendering bogs down. Virtualization caps DOM nodes at ~60 regardless of data size.
+        Drag the slider — at 2K+ items, render time exceeds the 16ms frame budget. Virtualization caps DOM nodes at ~60 regardless of data size.
       </div>
     </div>
   );
