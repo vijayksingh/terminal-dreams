@@ -1,17 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ArchScenario } from "./types";
+import type { ArchScenario, ArchStep } from "./types";
 
 const DEFAULT_STEP_MS = 1500;
+/** Panels lag the diagram by this much so cause (chip flying) precedes effect (state/type updates). */
+const PANEL_LAG_MS = 500;
 
 export type ScenarioPlayerState = {
   scenarioIdx: number;
   stepIdx: number;
+  displayedStepIdx: number;
   isPlaying: boolean;
   isComplete: boolean;
   scenario: ArchScenario;
+  /**
+   * The step list currently being played — equals `scenario.steps` when
+   * splitEnabled is true, or `scenario.stepsWithoutSplit` when false.
+   * Consumers should use this instead of `scenario.steps` directly.
+   */
+  activeSteps: ArchStep[];
   totalSteps: number;
+  splitEnabled: boolean;
 };
 
 export type ScenarioPlayerControls = {
@@ -23,6 +33,8 @@ export type ScenarioPlayerControls = {
   stepBack: () => void;
   replay: () => void;
   scrubTo: (stepIdx: number) => void;
+  setSplitEnabled: (enabled: boolean) => void;
+  toggleSplit: () => void;
 };
 
 export type UseScenarioPlayerOptions = {
@@ -44,22 +56,34 @@ export function useScenarioPlayer(
 
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
+  const [displayedStepIdx, setDisplayedStepIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [splitEnabled, setSplitEnabledState] = useState(true);
   const hasAutoPlayedRef = useRef(false);
 
   const scenario = scenarios[scenarioIdx] ?? scenarios[0];
-  const totalSteps = scenario.steps.length;
+
+  // ── Active step list: depends on which split mode we're in ──
+  const activeSteps: ArchStep[] = useMemo(
+    () =>
+      splitEnabled
+        ? scenario.steps
+        : (scenario.stepsWithoutSplit ?? scenario.steps),
+    [splitEnabled, scenario],
+  );
+
+  const totalSteps = activeSteps.length;
   const isComplete = stepIdx >= totalSteps - 1;
-  const currentStep = scenario.steps[stepIdx];
+  const currentStep = activeSteps[stepIdx];
   const stepMs = currentStep?.duration ?? stepDuration;
 
   // ── Reduced motion: jump to final frame, never tick ──
   useEffect(() => {
     if (reducedMotion) {
       setPlaying(false);
-      setStepIdx(scenario.steps.length - 1);
+      setStepIdx(activeSteps.length - 1);
     }
-  }, [reducedMotion, scenario]);
+  }, [reducedMotion, activeSteps]);
 
   // ── Auto-play once on viewport entry ──
   useEffect(() => {
@@ -101,10 +125,21 @@ export function useScenarioPlayer(
     return () => clearTimeout(t);
   }, [playing, reducedMotion, isComplete, stepIdx, totalSteps, stepMs]);
 
+  // ── Panel lag: displayedStepIdx catches up to stepIdx after PANEL_LAG_MS ──
+  useEffect(() => {
+    if (reducedMotion) {
+      setDisplayedStepIdx(stepIdx);
+      return;
+    }
+    const t = setTimeout(() => setDisplayedStepIdx(stepIdx), PANEL_LAG_MS);
+    return () => clearTimeout(t);
+  }, [stepIdx, reducedMotion]);
+
   // ── Controls ──
   const selectScenario = useCallback((idx: number) => {
     setScenarioIdx(idx);
     setStepIdx(0);
+    setDisplayedStepIdx(0);
     setPlaying(false);
   }, []);
 
@@ -135,14 +170,31 @@ export function useScenarioPlayer(
     [totalSteps],
   );
 
+  const setSplitEnabled = useCallback((enabled: boolean) => {
+    setSplitEnabledState(enabled);
+    setStepIdx(0);
+    setDisplayedStepIdx(0);
+    setPlaying(false);
+  }, []);
+
+  const toggleSplit = useCallback(() => {
+    setSplitEnabledState((s) => !s);
+    setStepIdx(0);
+    setDisplayedStepIdx(0);
+    setPlaying(false);
+  }, []);
+
   return useMemo(
     () => ({
       scenarioIdx,
       stepIdx,
+      displayedStepIdx,
       isPlaying: playing,
       isComplete,
       scenario,
+      activeSteps,
       totalSteps,
+      splitEnabled,
       selectScenario,
       play,
       pause,
@@ -151,14 +203,19 @@ export function useScenarioPlayer(
       stepBack,
       replay,
       scrubTo,
+      setSplitEnabled,
+      toggleSplit,
     }),
     [
       scenarioIdx,
       stepIdx,
+      displayedStepIdx,
       playing,
       isComplete,
       scenario,
+      activeSteps,
       totalSteps,
+      splitEnabled,
       selectScenario,
       play,
       pause,
@@ -167,6 +224,8 @@ export function useScenarioPlayer(
       stepBack,
       replay,
       scrubTo,
+      setSplitEnabled,
+      toggleSplit,
     ],
   );
 }

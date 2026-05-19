@@ -6,8 +6,8 @@ import { TRANSITION } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useScenarioPlayer } from "./use-scenario-player";
 import { DiagramCanvas } from "./DiagramCanvas";
-import { TypePreviewCard } from "./TypePreviewCard";
-import { StateDiffPanel } from "./StateDiffPanel";
+import { ActiveNodeBubble } from "./ActiveNodeBubble";
+import { BandwidthMeter } from "./BandwidthMeter";
 import type { ArchitectureScenarioPlayerProps } from "./types";
 import styles from "./styles.module.css";
 
@@ -24,10 +24,28 @@ export function ArchitectureScenarioPlayer({
     reducedMotion,
   });
 
-  const { scenario, stepIdx, scenarioIdx, totalSteps, isPlaying } = player;
-  const currentStep = scenario.steps[stepIdx];
-  const prevStep = stepIdx > 0 ? scenario.steps[stepIdx - 1] : undefined;
-  const stepKey = `${scenario.id}-${stepIdx}`;
+  const {
+    scenario,
+    activeSteps,
+    stepIdx,
+    displayedStepIdx,
+    scenarioIdx,
+    totalSteps,
+    isPlaying,
+    splitEnabled,
+  } = player;
+
+  const panelStep = activeSteps[displayedStepIdx];
+  const panelPrevStep =
+    displayedStepIdx > 0 ? activeSteps[displayedStepIdx - 1] : undefined;
+  const panelStepKey = `${scenario.id}-${splitEnabled ? "split" : "nosplit"}-${displayedStepIdx}`;
+
+  const anchorNode = config.nodes.find((n) => n.id === panelStep?.nodeId);
+  const viewBoxParts = config.viewBox.split(" ");
+  const viewBoxW = parseFloat(viewBoxParts[2] ?? "480") || 480;
+  const tailXPercent = anchorNode
+    ? ((anchorNode.x + (anchorNode.w ?? 100) / 2) / viewBoxW) * 100
+    : 50;
 
   return (
     <div ref={rootRef} className={styles.root}>
@@ -52,6 +70,38 @@ export function ArchitectureScenarioPlayer({
         })}
       </div>
 
+      {/* ── Split toggle pill ──────────────────────────────────── */}
+      <div
+        className={styles.splitToggle}
+        role="radiogroup"
+        aria-label="Architecture mode"
+      >
+        <span className={styles.splitToggleLabel}>Mode</span>
+        <div className={styles.splitToggleTrack}>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={splitEnabled}
+            className={styles.splitToggleOption}
+            data-active={splitEnabled ? "true" : undefined}
+            onClick={() => player.setSplitEnabled(true)}
+          >
+            with split
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={!splitEnabled}
+            className={styles.splitToggleOption}
+            data-active={!splitEnabled ? "true" : undefined}
+            data-mode="nosplit"
+            onClick={() => player.setSplitEnabled(false)}
+          >
+            without split
+          </button>
+        </div>
+      </div>
+
       {/* ── Scenario blurb ─────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         <motion.p
@@ -66,47 +116,38 @@ export function ArchitectureScenarioPlayer({
         </motion.p>
       </AnimatePresence>
 
-      {/* ── Step caption ───────────────────────────────────────── */}
-      <div className={styles.captionStrip}>
-        <span className={styles.captionStep}>
-          {String(stepIdx + 1).padStart(2, "0")} <span className={styles.captionSlash}>/</span> {String(totalSteps).padStart(2, "0")}
-        </span>
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={stepKey}
-            className={styles.captionText}
-            initial={reducedMotion ? false : { opacity: 0, y: 3 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
-            transition={reducedMotion ? { duration: 0 } : TRANSITION.crossfade}
-          >
-            {currentStep?.caption}
-          </motion.span>
-        </AnimatePresence>
-      </div>
-
-      {/* ── Diagram canvas ─────────────────────────────────────── */}
-      <DiagramCanvas
-        viewBox={config.viewBox}
-        nodes={config.nodes}
-        edges={config.edges}
-        protagonist={config.protagonist}
-        steps={scenario.steps}
-        currentStepIdx={stepIdx}
-        reducedMotion={reducedMotion}
-      />
-
-      {/* ── Two-panel layout: type preview | state diff ─────── */}
-      <div className={styles.panelGrid}>
-        <TypePreviewCard
-          payload={currentStep?.payload}
-          stepKey={stepKey}
-          reducedMotion={reducedMotion}
-        />
-        <StateDiffPanel
-          current={currentStep?.stateAfter}
-          previous={prevStep?.stateAfter}
-          stepKey={stepKey}
+      {/* ── Canvas frame: diagram + meter + bubble ─────────────── */}
+      <div className={styles.canvasFrame}>
+        <div className={styles.canvasWrap}>
+          <DiagramCanvas
+            viewBox={config.viewBox}
+            nodes={config.nodes}
+            edges={config.edges}
+            protagonist={config.protagonist}
+            steps={activeSteps}
+            currentStepIdx={stepIdx}
+            reducedMotion={reducedMotion}
+            splitEnabled={splitEnabled}
+          />
+          <div className={styles.meterMount}>
+            <BandwidthMeter
+              steps={activeSteps}
+              stepIdx={stepIdx}
+              splitEnabled={splitEnabled}
+              reducedMotion={reducedMotion}
+            />
+          </div>
+        </div>
+        <ActiveNodeBubble
+          node={anchorNode}
+          caption={panelStep?.caption ?? ""}
+          stepNumber={displayedStepIdx + 1}
+          totalSteps={totalSteps}
+          payload={panelStep?.payload}
+          stateAfter={panelStep?.stateAfter}
+          prevState={panelPrevStep?.stateAfter}
+          stepKey={panelStepKey}
+          tailXPercent={tailXPercent}
           reducedMotion={reducedMotion}
         />
       </div>
@@ -123,7 +164,7 @@ export function ArchitectureScenarioPlayer({
           ←
         </button>
         <div className={styles.scrubTrack} role="group" aria-label="Step scrub">
-          {scenario.steps.map((_, i) => {
+          {activeSteps.map((_, i) => {
             const visited = i < stepIdx;
             const active = i === stepIdx;
             return (
@@ -157,10 +198,6 @@ export function ArchitectureScenarioPlayer({
           {isPlaying ? "❚❚" : stepIdx >= totalSteps - 1 ? "↻" : "▶"}
         </button>
       </div>
-
-      {config.footnote && (
-        <p className={styles.footnote}>{config.footnote}</p>
-      )}
     </div>
   );
 }

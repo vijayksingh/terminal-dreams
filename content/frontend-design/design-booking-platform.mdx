@@ -16,9 +16,19 @@ demo: design-booking-platform
 
 ## Step 1 — Requirements
 
-Design a property booking platform. Users search listings by location and dates, view listing details, check availability, and book stays.
+"Design a property booking platform."
 
-**Scope it:** Not everything belongs in v1. Toggle features below — each one multiplies complexity. A booking platform without map search is still a booking platform.
+Before sketching a single component, narrow the problem. The panel on the right shows five scope questions. Toggle them and watch the scope summary change — each "yes" doesn't add a feature, it multiplies the system's surface area.
+
+**Instant book vs. request-to-book?** Instant book means you need distributed availability locks — two users clicking "Book" on the same dates at the same millisecond. Request-to-book is simpler (optimistic, resolve conflicts async), but the UX is worse. Most interviewers expect instant book because the locking problem is more interesting.
+
+**Multi-currency?** Not just display formatting. You need conversion rates that update, rounding rules that differ per currency (JPY has no decimals), and the decision of whether to store prices in a base currency and convert at display time or store per-currency prices. The display-time approach is simpler but introduces exchange rate drift — a price shown yesterday at $185 might display as $191 today.
+
+**Dynamic pricing?** Weekend rates, seasonal surges, event-based demand. This means the search card price (`$185/night`) is a *base rate*, and the actual per-night price depends on which dates the user selects. The card price becomes a white lie that the calendar has to correct.
+
+**Map search?** Geo-indexed queries, viewport-based re-querying, marker clustering. Each is a subsystem.
+
+For this walkthrough: **instant book, single currency, dynamic pricing, map search, reviews.**
 
 </section>
 
@@ -26,9 +36,21 @@ Design a property booking platform. Users search listings by location and dates,
 
 ## Step 2 — API Design
 
-Five endpoints cover the core booking flows. Notice how `/api/search` returns lightweight `ListingSummary` objects for the grid, while `/api/listings/:id` returns the full `ListingDetail` only when the user clicks through.
+The right panel has two tabs. **Endpoints** shows the five API routes. **Types** shows the data contracts. Click any endpoint to expand its parameters.
 
-**The tension:** Search needs to support compound filters (location + dates + guests + price range + property type) without N+1 queries or sending the full listing payload for every result. Response shaping is the answer — the API returns the minimum data each view needs.
+A booking platform that supports search, detail views, availability calendars, and checkout needs five endpoints — not one "get everything" call:
+
+**`GET /api/search`** returns `ListingSummary[]` — the lightest possible projection. A summary carries the thumbnail URL, price, rating, and coordinates for the map pin. It deliberately excludes amenities, description, host info, and reviews. Those live in `ListingDetail`, fetched only when a user clicks into a specific listing. With 24 results on screen, sending full detail for each would mean ~120 KB of unused JSON per search.
+
+**`GET /api/listings/:id`** returns `ListingDetail`. Notice it *extends* `ListingSummary` — the grid card data is a strict subset, so the detail view can render immediately from cached summary data while the full detail loads. Title and price appear instantly; amenities and reviews arrive a beat later.
+
+**`GET /api/listings/:id/availability`** returns per-day pricing and blocked dates for a date range. This is a separate endpoint because availability changes per-minute (other users are booking) while listing details change per-day. Different cache lifetimes demand different endpoints.
+
+**`POST /api/bookings`** creates a reservation. The payload includes an `idempotencyKey` — a client-generated UUID that the server uses to deduplicate. If the network drops after the server processes the booking but before the client receives the response, the client retries with the same key and gets the original result instead of a double-booking.
+
+**`GET /api/listings/:id/reviews`** is paginated separately because review data is large and below-the-fold. Loading 200 reviews upfront would block the detail view's LCP.
+
+Switch to the **Types** tab. The key distinction: `ListingSummary` (8 fields, ~200 bytes) vs `ListingDetail` (20+ fields, ~2 KB). This 10x size difference is why the split exists.
 
 </section>
 
@@ -36,9 +58,19 @@ Five endpoints cover the core booking flows. Notice how `/api/search` returns li
 
 ## Step 3 — Component Architecture
 
-`SearchPage` is the single state owner. Props flow down to display components; callbacks bubble user events back up. The API layer is only touched by the state owner — child components never fetch directly.
+The right panel shows the component hierarchy. Hover any node to see data flowing through the connections. Use the scenario selector to watch three different user flows animate through the architecture.
 
-**Key decision:** DetailPanel and BookingForm are siblings under SearchPage, not nested. This means switching between search, detail, and booking views is a state change in SearchPage, not a route change. Keeps the component tree flat and the back-button instant.
+**SearchPage** is the single state owner — it holds the search results, selected listing, booking state, and all filter values. Every other component is a controlled child that receives data via props and communicates back via callbacks.
+
+**Key decision:** `DetailPanel` and `BookingForm` are siblings under `SearchPage`, not children of `ListingCard`. Switching between search, detail, and booking views is a state change (`viewMode: 'search' | 'detail' | 'booking'`), not a route change. This keeps three guarantees:
+
+1. The back button is instant — search results are still in state, not re-fetched
+2. Booking state survives a "back to search" round-trip
+3. No parent-child data threading through intermediate components
+
+Watch the **"Book a stay"** scenario. The booking request travels from `BookingForm` up through a callback to `SearchPage`, which calls the API, then flows the confirmation back down. `BookingForm` never touches the network directly. This constraint makes error handling centralized — every API failure passes through one component.
+
+The two dashed lines (callbacks) are the only upward communication channels. If you need more than ~5 callbacks bubbling up, that's a signal to introduce a context or reducer — but for a booking platform, the callback count stays manageable.
 
 </section>
 
@@ -46,9 +78,29 @@ Five endpoints cover the core booking flows. Notice how `/api/search` returns li
 
 ## Step 4 — First Render: Listing Cards
 
-Eight listings. Each card shows a thumbnail, property name, location, price per night, and rating. No interactivity yet — just proving the data shape works from API to pixel.
+Eight listings on the right. Each card renders from a single `ListingSummary` — the lightest projection from step 2. Thumbnail, name, location, price, rating. Nothing else.
 
-**The pattern:** Each card renders from a `ListingSummary` — the same lightweight type the search API returns. We never request `ListingDetail` until the user clicks a specific card.
+```tsx
+function ListingCard({ listing }: { listing: ListingSummary }) {
+  return (
+    <div className="listing-card">
+      <img src={listing.thumbnailUrl} alt={listing.name} loading="lazy" />
+      <div className="card-info">
+        <span className="location">{listing.location}</span>
+        <h3>{listing.name}</h3>
+        <span className="price">${listing.pricePerNight}/night</span>
+        <span className="rating">★ {listing.rating}</span>
+      </div>
+    </div>
+  );
+}
+```
+
+This is deliberately minimal. No filters. No interactivity. No click handlers. The card is a pure function of data — given a `ListingSummary`, it renders pixels. We're proving that the API contract from step 2 actually maps to UI without any impedance mismatch.
+
+Look at the metrics bar: 8 DOM nodes, 8 network requests, low latency, zero CLS. These are the baseline numbers. Every feature we add from here either keeps them stable or degrades them — and when they degrade, we'll know exactly which feature caused it.
+
+The `loading="lazy"` on the img is doing quiet work. The browser only fetches images that are in or near the viewport. At 8 cards in a 2-column grid, all are visible, so all load immediately. But when we scale to 24 listings in step 5, the below-fold cards won't trigger network requests until the user scrolls. Native lazy loading, no JavaScript required.
 
 </section>
 
@@ -56,9 +108,32 @@ Eight listings. Each card shows a thumbnail, property name, location, price per 
 
 ## Step 5 — Search and Filtering
 
-The search bar appears with location input, date display, and guest count. Filter chips let you narrow by property type. A price range slider caps the ceiling.
+Type "Bali" into the search bar. The grid shrinks from 24 cards to the matches. Clear it — back to 24. Toggle "villa" in the filter chips. Adjust the price slider. Every filter change re-renders the grid instantly.
 
-**The tension:** Every filter change re-renders the grid. With compound filters, the question isn't *if* to debounce, but *what* to debounce. Text input: debounce 300ms. Chip toggles: immediate. Price slider: debounce on release. URL state sync ensures refreshing preserves the filter state.
+With 24 listings, client-side filtering is trivial — a `.filter()` over an array finishes in microseconds. But the design decisions we make now prepare for the server case at 200K listings:
+
+```tsx
+// Three debounce strategies for three input types
+const debouncedSearch = useMemo(
+  () => debounce((q: string) => setSearchQuery(q), 300),
+  []
+);
+
+// Text: 300ms debounce (user is still typing)
+<input onChange={e => debouncedSearch(e.target.value)} />
+
+// Chips: immediate (discrete toggle, no "in-progress" state)
+<button onClick={() => toggleType("villa")} />
+
+// Slider: debounce on release (continuous input)
+<input type="range" onMouseUp={e => setPriceRange([0, e.target.value])} />
+```
+
+Why three strategies? Text input fires on every keystroke — debouncing prevents 15 API calls while typing "Beach Bungalow." Chip toggles are binary — the user expects instant feedback. Price sliders are continuous — firing on every pixel of drag would create 200+ calls. Debounce-on-release waits for the final value.
+
+The filter state lives in URL search params (`?q=bali&type=villa&maxPrice=300`). Refresh the page and the filters persist. Copy the URL and share it — the recipient sees the same filtered results. This is URL-as-state, and it's non-negotiable for search interfaces. Without it, the back button destroys filter state, and bookmarked searches are impossible.
+
+Notice the widget below: it shows total listings, filtered count, and active filters. This isn't just debugging — the user needs to know *why* they see 3 results instead of 24. "No results" with hidden active filters is one of the most common search UX failures.
 
 </section>
 
@@ -66,9 +141,28 @@ The search bar appears with location input, date display, and guest count. Filte
 
 ## Step 6 — Date Range Picker
 
-Click "Dates" to open the calendar. Select check-in first, then check-out. Blocked dates are greyed out. Prices appear below each day number.
+Click "Dates" to open the calendar. Pick a check-in date, then a check-out. Notice the price below each day number — weekends are higher. Blocked dates are greyed out and unclickable.
 
-**The tension:** Date math is deceptively complex. Check-out must be after check-in. Minimum stay rules (2 nights for cabins, 3 for villas) constrain which check-out dates are valid. And all dates are in the *listing's* timezone, not the user's — a midnight boundary bug waiting to happen.
+Date math looks simple until you encounter the edge cases:
+
+```tsx
+function isValidCheckout(checkIn: string, checkOut: string, listing: Listing): boolean {
+  const nights = daysBetween(checkIn, checkOut);
+  if (nights < 1) return false;              // same-day checkout
+  if (nights < listing.minStay) return false; // minimum stay rule
+  // Check every night in range is available
+  return getDateRange(checkIn, checkOut)
+    .every(date => availability[date]?.available);
+}
+```
+
+**Minimum stay rules** are the first surprise. Cabins require 2 nights, villas 3. After selecting a check-in date, check-out dates within the minimum stay range should be disabled — not just greyed but actually unselectable. Otherwise the user fills out the entire booking form only to learn their dates are invalid at the server validation step.
+
+**The midnight boundary problem.** All dates in the calendar are calendar dates in the listing's timezone, not UTC timestamps. A user in New York booking a villa in Bali sees Bali dates. If you store dates as UTC timestamps, "June 15" in New York (UTC-4) and "June 15" in Bali (UTC+8) are 12 hours apart. The fix: store dates as date strings (`YYYY-MM-DD`), never as timestamps. The timezone is implicit — it's always the listing's timezone.
+
+The calendar also sets the stage for step 8: each day already shows a price. Right now they're deterministic (base rate × weekend multiplier × seasonal factor). In step 8, these prices come from an availability API that knows about demand, events, and competitor pricing.
+
+Watch the Date Math widget below — it tracks check-in, check-out, and computed nights. Try selecting dates in the wrong order (check-out before check-in). The calendar resets to a clean state: check-out becomes the new check-in. No error dialog, no "invalid date range" toast. The state machine simply doesn't permit invalid states.
 
 </section>
 
@@ -76,9 +170,23 @@ Click "Dates" to open the calendar. Select check-in first, then check-out. Block
 
 ## Step 7 — Listing Detail View
 
-Click any card. The detail panel renders: hero image, property info, amenities, rating. The "back to search" link returns instantly because search results are still in state.
+Click any card. The detail panel renders with a hero image, property info, amenities, and rating. Now click "Back to search" — notice how the search results are still there, instantly. No loading spinner, no re-fetch. That's the sibling architecture from step 3 paying off.
 
-**The tension:** Content loading priority matters. The hero image is the LCP element — it loads first. Title and price render from the already-cached `ListingSummary`. Amenities and reviews can lazy-load below the fold. This isn't just performance — it's perceived speed.
+The detail view demonstrates **content loading priority** — what appears first matters more than what appears at all:
+
+```
+Priority 1: Hero image (LCP element — largest contentful paint)
+Priority 2: Title + price (from cached ListingSummary — instant)
+Priority 3: Rating + host badge (trust signals above the fold)
+Priority 4: Amenities (below fold, can lazy-render)
+Priority 5: Reviews (separate API call, paginated, loaded on scroll)
+```
+
+The hero image is the LCP element for this view. It loads first because it's the only `<img>` without `loading="lazy"`. Title and price render from the `ListingSummary` that was already fetched for the search card — zero additional network cost. The `ListingDetail` API call adds amenities, description, and host info, but the view is usable before that call returns.
+
+This is the difference between *actual* speed and *perceived* speed. If the detail API takes 400ms, but the hero image and title appear in 50ms from cache, the view feels instant. The amenities arriving 400ms later below the fold is invisible to the user.
+
+The "back to search" behavior is the litmus test for your architecture. If clicking back triggers a re-fetch and shows a spinner, your state management is wrong. `SearchPage` owns both views — toggling `viewMode` from `'detail'` back to `'search'` just re-renders the grid from state that never left memory.
 
 </section>
 
@@ -86,9 +194,24 @@ Click any card. The detail panel renders: hero image, property info, amenities, 
 
 ## Step 8 — Availability and Dynamic Pricing
 
-The availability calendar appears in the detail view. Each day shows its price, color-coded: green for normal, orange for mid-range, red for peak. Blocked dates are struck through.
+Open a listing detail. The availability calendar appears with per-day pricing, color-coded by tier: green is below average, orange is mid-range, red is peak. Blocked dates show struck-through.
 
-**The tension:** Dynamic pricing means the price shown on the search card might differ from the calendar price for specific dates. Weekend rates are 1.3x base. Seasonal surges add another 5% per cycle. The UI must show the *per-night* price on the calendar while computing the *total* for the selected range.
+The price on the search card said `$185/night`. But the calendar shows Thursday at $185, Friday at $240, Saturday at $240, Sunday at $194. The card price was a base rate — the *actual* cost depends on which dates you pick.
+
+```tsx
+function computeNightlyRate(listing: Listing, date: Date): number {
+  const base = listing.pricePerNight;
+  const isWeekend = [5, 6].includes(date.getDay());
+  const seasonalFactor = 1 + (date.getMonth() % 5) * 0.05;
+  return Math.round(base * (isWeekend ? 1.3 : 1) * seasonalFactor);
+}
+```
+
+Real platforms use ML models for pricing. We use a deterministic formula so the demo is reproducible — but the UI challenge is identical: the search card shows one number, the calendar shows another, and the user needs to understand why.
+
+**The price breakdown** below the calendar resolves this tension. Select a date range and watch it compute: 3 nights × varying rates + cleaning fee ($75) + service fee (15% of subtotal) = total. Every line item is visible. No hidden fees appearing at checkout — that's a dark pattern that erodes trust and violates regulations in the EU (PSD2) and several US states.
+
+This step reveals why the availability endpoint is separate from listing detail. Availability changes per-minute (other users are booking right now). Listing details change per-day at most. Caching them together would mean either stale availability (dangerous — leads to booking conflicts) or constant cache invalidation of stable data (wasteful). Different volatility = different endpoints = different cache TTLs.
 
 </section>
 
@@ -96,9 +219,40 @@ The availability calendar appears in the detail view. Each day shows its price, 
 
 ## Step 9 — Booking Checkout Flow
 
-"Book Now" enters a three-step checkout: guest details, payment summary, confirmation. The progress indicator shows where you are. Price breakdown shows nightly rate, cleaning fee, service fee, and total.
+Click "Book Now" from the detail view. A three-step checkout begins: Guest Details, Payment Summary, Confirmation. The progress indicator at the top shows where you are.
 
-**The tension:** Multi-step forms need careful state management. Going back must preserve entered data. The payment step must validate before allowing confirmation. And the "Confirm Booking" call is a POST that should be idempotent — double-clicking shouldn't double-book.
+Fill in the guest details. Now click "Continue" to payment, then click "Back." Your name and email are still there. This is the minimum viable guarantee of a multi-step form: **navigation doesn't destroy state.**
+
+```tsx
+// All three steps share a single state object
+const [booking, setBooking] = useState<BookingState>({
+  step: 'guests',
+  guestDetails: { firstName: '', lastName: '', email: '', phone: '' },
+  confirmed: false,
+});
+
+// Step transitions only change the step field
+function goToPayment() {
+  setBooking(prev => ({ ...prev, step: 'payment' }));
+}
+```
+
+Each step is a view of the same `BookingState` object, not a separate form with its own state. Going forward appends data; going backward reveals data that's already there. The "Confirm Booking" button is the only mutation that touches the server.
+
+Watch the **Conversion Funnel** widget. It shows industry-average drop-off rates: 100% view a listing → 62% select dates → 38% start checkout → 28% enter details → 15% confirm. Every step loses users. Every unnecessary field, every confusing label, every extra click costs revenue. This is why the checkout is three steps, not five. Guest details and payment are the minimum — address collection happens post-confirmation (the host needs it, the booking system doesn't).
+
+**Idempotency** is the silent requirement. The user clicks "Confirm Booking." The network is slow. They click again. Without protection, that's two bookings. The fix: generate a UUID client-side before the first click. Send it as `idempotencyKey` in the POST body. The server checks: if this key already processed, return the original result. No duplicate. No race condition.
+
+```tsx
+const idempotencyKey = useRef(crypto.randomUUID());
+
+async function confirmBooking() {
+  const res = await fetch('/api/bookings', {
+    method: 'POST',
+    body: JSON.stringify({ ...booking, idempotencyKey: idempotencyKey.current }),
+  });
+}
+```
 
 </section>
 
@@ -106,9 +260,23 @@ The availability calendar appears in the detail view. Each day shows its price, 
 
 ## Step 10 — Map-Based Search
 
-The grid splits into a list + map layout. Each listing appears as a marker positioned geographically. Hover a marker to see the price tooltip. Hover a card to highlight its marker.
+The grid splits into a list + map layout. Hover a listing card — its map marker pulses. Hover a map marker — the card highlights. This bi-directional sync is driven by a single `hoveredId` state shared between the list and map components.
 
-**The tension:** Bi-directional sync between list and map. Panning the map should re-query visible listings (viewport-based search). Marker clustering prevents overlap when listings are close. And the list must scroll to the corresponding card when a marker is clicked — smooth, not jarring.
+```tsx
+const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+// Both components read and write the same state
+<ListingGrid onHover={setHoveredId} highlighted={hoveredId} />
+<MapView onMarkerHover={setHoveredId} highlighted={hoveredId} />
+```
+
+The hard question isn't "how do you connect them" — it's what happens when the user pans the map. Should the list re-filter to show only listings visible in the current map viewport? If yes, the list length changes every time you drag. That's **viewport-based search**.
+
+Viewport-based search requires a fundamentally different query: instead of `GET /api/search?location=Bali`, it's `GET /api/search?bounds=south,west,north,east`. The server needs a spatial index (PostGIS, Elasticsearch geo_bounding_box) to answer this efficiently. Text search is O(n) with inverted indexes. Spatial search is O(log n) with R-trees.
+
+**Marker clustering** prevents visual noise when listings overlap. At zoom level 12, three listings in the same neighborhood become a single circle with "3" inside. At zoom level 15, they separate into individual pins. The clustering algorithm (usually k-means or grid-based) runs client-side on the current viewport's listings.
+
+The Map Stats widget shows: visible markers, cluster threshold, and the debounce strategy for re-querying on pan (300ms — identical to the search text debounce, for the same reason).
 
 </section>
 
@@ -116,9 +284,34 @@ The grid splits into a list + map layout. Each listing appears as a marker posit
 
 ## Step 11 — Real-Time Updates
 
-Live indicators appear: price changes flash on cards, "Booked 3 times today" counters show social proof. A WebSocket event stream delivers updates.
+Watch the event stream widget on the right. Price changes flash through: "Tuscan Farmhouse $210 → $235." A booking notification: "Glass Cabin booked Jun 20-23." These arrive via WebSocket, not polling.
 
-**The tension:** Stale prices are a liability. If a user sees $185 on the card but the price changed to $235 before they click "Book," that's a broken trust moment. Real-time updates via WebSocket keep prices current, but you need to handle the race condition: what if the price changes *during* checkout?
+The event stream demonstrates why real-time matters for a booking platform — and why it creates a design problem that polling doesn't:
+
+```tsx
+// WebSocket message handler
+ws.onmessage = (event) => {
+  const update = JSON.parse(event.data);
+  switch (update.type) {
+    case 'price_change':
+      updateListingPrice(update.listingId, update.newPrice);
+      break;
+    case 'booking':
+      markDatesUnavailable(update.listingId, update.dates);
+      break;
+  }
+};
+```
+
+**The mid-checkout price change problem.** A user starts checkout at $185/night. While they're filling in guest details, the price changes to $235. Three options:
+
+1. **Lock the price at click time.** The user pays $185 regardless. Simple UX, but the host loses $50/night. Most platforms use this with a 15-minute lock window.
+2. **Show the live price.** The total updates mid-checkout. Honest, but the shifting number erodes trust. "Did I misread the price?"
+3. **Show both.** "Price when you started: $185. Current price: $235. Your locked rate expires in 12:00." Transparent, but adds UI complexity.
+
+Airbnb uses option 1 with a silent lock. Booking.com uses option 3 with a visible countdown. Both are valid — the interview answer is knowing the tradeoffs, not picking one.
+
+**Social proof** ("Booked 3 times today," "5 people viewing this listing") is also real-time data, but it's a display concern, not a correctness concern. Showing a stale "3 bookings" as "4 bookings" isn't harmful. Showing a stale available date as bookable *is* harmful — it leads to checkout failure. Different real-time data has different staleness tolerances.
 
 </section>
 
@@ -126,9 +319,28 @@ Live indicators appear: price changes flash on cards, "Booked 3 times today" cou
 
 ## Step 12 — Search Performance
 
-Search input debounces at 300ms. Skeleton cards show during loading. Cached results serve instantly on back-navigation. URL parameters sync filter state for shareable links.
+Type in the search bar and watch the slight delay before results update — that's the 300ms debounce from step 5, now visible. The skeleton cards that flash during loading aren't a loading spinner; they're a *layout reservation* — the grid shape stays stable while content arrives.
 
-**The tension:** Perceived performance vs. actual performance. A 320ms search feels slow with a blank grid. Skeleton cards + stale-while-revalidate makes the same 320ms feel instant. The cache strategy: search results cached by query hash, listing details cached by ID, availability *never* cached (it changes per-minute).
+```tsx
+function SearchResults({ query }: { query: string }) {
+  const { data, isLoading, isStale } = useSearchResults(query);
+
+  if (isLoading && !isStale) return <SkeletonGrid count={8} />;
+  if (isStale) return <StaleResults data={data} />; // show old data, dimmed
+
+  return <ListingGrid listings={data} />;
+}
+```
+
+The cache strategy has three tiers with different TTLs:
+
+**Search results** — cached by query hash, TTL: 5 minutes. The same search a minute later serves from cache. But "Bali villa $100-200" and "Bali villa $100-250" are *different* cache keys. The tradeoff: granular caching means more cache misses but more accurate results.
+
+**Listing details** — cached by ID, TTL: 1 hour. Property descriptions, amenities, and host info change rarely. Cache aggressively.
+
+**Availability** — **never cached.** Availability changes per-minute as other users book. Serving stale availability leads to the worst UX failure in a booking platform: a user selects dates, fills in details, enters payment, clicks confirm... and gets "These dates are no longer available." Every step of trust-building, destroyed by a cache hit.
+
+The **stale-while-revalidate** pattern (visible in the cache widget) shows cached results immediately while fetching fresh data in the background. If the fresh results are identical, nothing changes. If they differ, the grid updates with a subtle fade. The user never sees a loading spinner for a repeated search — the 320ms fetch happens behind the stale data.
 
 </section>
 
@@ -136,9 +348,38 @@ Search input debounces at 300ms. Skeleton cards show during loading. Cached resu
 
 ## Step 13 — Mobile Responsive
 
-The layout adapts: single-column cards, collapsed search bar, bottom-sheet filters, toggle between list and map (not side-by-side). Touch targets grow to 44px minimum.
+The layout adapts to narrow viewports. Cards stack to a single column. The search bar collapses into a summary chip that expands on tap. Filters become a bottom sheet with a drag handle. The map takes the full viewport with a floating card carousel at the bottom.
 
-**The tension:** Mobile isn't just "smaller." The filter panel becomes a bottom sheet with a drag handle. The map takes the full viewport with a floating card overlay. Date pickers need larger tap targets. And the booking flow must work on a 320px-wide screen without horizontal scroll.
+```css
+/* Cards: 2-column grid → single column */
+@media (max-width: 768px) {
+  .listing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Map + list: side-by-side → stacked with toggle */
+@media (max-width: 768px) {
+  .split-layout {
+    grid-template-columns: 1fr;
+  }
+  .map-container {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+  }
+}
+```
+
+Mobile isn't "smaller desktop." Three structural changes are required:
+
+**Touch targets.** Every button, chip, and calendar day must be at least 44×44 CSS pixels (WCAG 2.5.8). The desktop calendar days are 28×28 with 2px gap — fine for a mouse cursor, unusable for a thumb. Mobile calendar cells grow to 44×44 with 4px gap.
+
+**The list-map toggle.** On desktop, list and map sit side-by-side. On mobile, they can't — a 360px screen can't split two ways. Instead: a toggle button switches between list view and full-screen map. On the map view, a horizontally-scrollable card strip at the bottom shows the listing for the selected marker. Tap a card to navigate to detail.
+
+**Booking flow on 320px.** The two-column form grid from step 9 becomes single-column. The price breakdown moves from a sidebar to an expandable accordion above the confirm button. The "Back" button becomes a left-arrow in the header bar, not a text link that competes for horizontal space.
+
+The 44px rule is the most commonly violated mobile constraint. Check your calendar: if a day cell is smaller than your fingertip, you will mis-tap. And a mis-tap on a date picker doesn't just frustrate — it selects the wrong dates, which the user might not notice until checkout.
 
 </section>
 
@@ -146,9 +387,39 @@ The layout adapts: single-column cards, collapsed search bar, bottom-sheet filte
 
 ## Step 14 — Error Handling
 
-Network timeout on search → retry with exponential backoff. Double-booking conflict → suggest alternative dates. Payment declined → preserve form state, highlight the card field.
+Three failure modes, three completely different recovery strategies. The error widget on the right shows each scenario and its recovery path.
 
-**The tension:** Each error type needs a different recovery. Network errors are transient — auto-retry is safe. Booking conflicts are permanent — showing stale availability is worse than showing an error. Payment failures need human judgment — keep the form filled, let the user fix and retry. The error boundary around the booking flow must not nuke the search results in state.
+**Network timeout on search** is transient — the server is probably fine. Auto-retry with exponential backoff: 1s, 2s, 4s. After three failures, show a retry button. The key constraint: the retry must not discard the current filter state. If the user typed "Bali" and selected "villa," those filters must survive the error.
+
+```tsx
+async function searchWithRetry(params: SearchParams, attempt = 0): Promise<Listing[]> {
+  try {
+    return await fetchSearch(params);
+  } catch (err) {
+    if (attempt < 3) {
+      await sleep(1000 * Math.pow(2, attempt));
+      return searchWithRetry(params, attempt + 1);
+    }
+    throw err; // surface to UI after 3 attempts
+  }
+}
+```
+
+**Double-booking conflict** is permanent — those dates are gone. The availability API returns `409 Conflict`. The recovery: show the conflict clearly ("These dates were just booked by another guest"), then offer alternatives. You already have the calendar data from step 8 — scan forward for the next available range that meets the minimum stay requirement and suggest it. "How about Jun 18-21 instead?"
+
+**Payment declined** needs human judgment — the system can't fix it. Keep every form field populated. Highlight only the payment field. Show the specific decline reason if the gateway provides one ("Insufficient funds" vs "Card expired" require different user actions). The critical constraint: the error boundary around `BookingForm` must NOT unmount `SearchPage`. If a payment failure clears the search results from memory, that's a cascading failure — the user loses their search context because a credit card was declined.
+
+```tsx
+// Error boundary wraps BookingForm, NOT SearchPage
+<SearchPage>
+  <ListingGrid />
+  <ErrorBoundary fallback={<BookingError />}>
+    <BookingForm />
+  </ErrorBoundary>
+</SearchPage>
+```
+
+Each error type maps to a state machine transition. Network errors go `loading → failed → loading (retry)`. Booking conflicts go `confirming → conflict → selecting_dates`. Payment declines go `confirming → payment_error → confirming (same state, highlighted field)`. If your state machine doesn't have explicit transitions for these, the UI will do something undefined — usually the worst possible thing.
 
 </section>
 
@@ -156,8 +427,26 @@ Network timeout on search → retry with exponential backoff. Double-booking con
 
 ## Step 15 — Scaling to Global
 
-Multi-currency display, i18n for all UI strings, timezone-aware date handling, CDN for listing images, performance budgets. LCP under 2.5s, INP under 200ms, CLS under 0.1.
+The CWV widget on the right shows the production targets: LCP under 2.5s, INP under 200ms, CLS under 0.1. These aren't aspirational — they're the thresholds Google uses for search ranking. A booking platform that fails Core Web Vitals loses organic traffic.
 
-**The tension at scale:** 2M+ listings across 190 countries. Search must be geo-indexed (PostGIS or Elasticsearch). Images need a CDN with responsive variants (srcset). Pricing must handle currency conversion *at display time* (not storage). And A/B testing the booking flow means the checkout must be instrumented without adding 50ms to INP.
+**2M+ listings across 190 countries.** The search endpoint can't scan all of them. You need a spatial index (PostGIS with `ST_DWithin` or Elasticsearch `geo_bounding_box`) that narrows to a geographic region before applying text and filter predicates. Without it, a search for "Bali villa" scans 2M rows instead of 50K.
+
+**CDN for listing images.** Every thumbnail on the search card is a network request. At 24 cards × 4 regions × 100 concurrent users = 9,600 image requests per second. These must serve from edge caches (CloudFront, Cloudflare) with `Cache-Control: public, max-age=86400, immutable`. The origin server should never handle image traffic in production.
+
+```tsx
+// Responsive images with CDN variants
+<img
+  srcSet={`${cdnBase}/${id}/400.webp 400w, ${cdnBase}/${id}/800.webp 800w`}
+  sizes="(max-width: 768px) 100vw, 50vw"
+  src={`${cdnBase}/${id}/400.webp`}
+  alt={listing.name}
+/>
+```
+
+**Currency conversion at display time.** Store all prices in USD (or the host's local currency). Convert to the viewer's currency using a rate table that refreshes every 15 minutes. Round per currency convention: USD to 2 decimals, JPY to 0, BHD to 3. Never store converted prices — exchange rates drift, and you'll have inconsistent totals across users.
+
+**Performance budgets.** The search page JS bundle must stay under 200 KB compressed. The booking flow adds a payment SDK (~80 KB) — load it only when the user clicks "Book Now," not on search page render. Code-split the map (Mapbox GL is ~150 KB) so it loads when the map tab activates, not on initial page load.
+
+A/B testing the booking flow means the checkout must be instrumented. Every step transition, every field interaction, every error encounter needs a tracking event. The constraint: analytics must not block INP. Fire events via `navigator.sendBeacon()` or `requestIdleCallback()` — never synchronously in a click handler.
 
 </section>

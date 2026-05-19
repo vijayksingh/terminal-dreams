@@ -16,6 +16,12 @@ type DiagramCanvasProps = {
   steps: ArchStep[];
   currentStepIdx: number;
   reducedMotion: boolean;
+  /**
+   * When false (counterfactual mode), the API node's sublabel renders
+   * with strikethrough on the `/:id` portion — the endpoint that
+   * doesn't exist without the type split.
+   */
+  splitEnabled: boolean;
 };
 
 function nodePhase(
@@ -152,6 +158,7 @@ export function DiagramCanvas({
   steps,
   currentStepIdx,
   reducedMotion,
+  splitEnabled,
 }: DiagramCanvasProps) {
   const nodeMap: Record<string, FlowNode> = Object.fromEntries(
     nodes.map((n) => [n.id, n]),
@@ -263,6 +270,37 @@ export function DiagramCanvas({
           );
         })}
 
+        {/* Anticipation pulse on the node we just left (storyboard beat A) */}
+        <AnimatePresence>
+          {prevStep && !reducedMotion && (() => {
+            const sourceNode = nodeMap[prevStep.nodeId];
+            if (!sourceNode) return null;
+            const sw = sourceNode.w ?? 100;
+            const sh = sourceNode.h ?? 40;
+            return (
+              <motion.rect
+                key={`anticipation-${currentStepIdx}-${prevStep.nodeId}`}
+                x={sourceNode.x}
+                y={sourceNode.y}
+                width={sw}
+                height={sh}
+                rx={7}
+                fill="none"
+                stroke="var(--color-accent)"
+                strokeWidth={2}
+                initial={{ opacity: 0.65, scale: 1 }}
+                animate={{ opacity: 0, scale: 1.18 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.45, ease: "easeOut" }}
+                style={{
+                  transformOrigin: `${sourceNode.x + sw / 2}px ${sourceNode.y + sh / 2}px`,
+                  pointerEvents: "none",
+                }}
+              />
+            );
+          })()}
+        </AnimatePresence>
+
         {/* Nodes */}
         {nodes.map((node) => {
           const phase = nodePhase(node.id, steps, currentStepIdx);
@@ -271,6 +309,14 @@ export function DiagramCanvas({
           const w = node.w ?? 100;
           const h = node.h ?? 40;
           const filterId = phase === "active" ? "url(#aspe-glow)" : undefined;
+          // Beat C: the target node ramps up only when the chip arrives.
+          // Visited (just-left) and others react instantly.
+          const isBecomingActive = phase === "active";
+          const phaseTransition = reducedMotion
+            ? { duration: 0 }
+            : isBecomingActive
+              ? { ...SPRING.gentle, delay: 0.3 }
+              : SPRING.quick;
 
           return (
             <motion.g
@@ -279,7 +325,7 @@ export function DiagramCanvas({
                 opacity: NODE_OPACITY[phase],
                 scale: phase === "active" && !reducedMotion ? 1.04 : 1,
               }}
-              transition={reducedMotion ? { duration: 0 } : SPRING.quick}
+              transition={phaseTransition}
               style={{ transformOrigin: `${node.x + w / 2}px ${node.y + h / 2}px` }}
             >
               <rect
@@ -310,16 +356,35 @@ export function DiagramCanvas({
               >
                 {node.label}
               </text>
-              {node.sublabel && (
-                <text
-                  x={node.x + 9}
-                  y={node.y + 19}
-                  className={styles.nodeSublabel}
-                  fill="var(--color-muted)"
-                >
-                  {node.sublabel}
-                </text>
-              )}
+              {node.sublabel &&
+                (node.id === "api" && !splitEnabled ? (
+                  // Counterfactual: strike through the /:id endpoint to
+                  // signal that the split-driven endpoint no longer exists.
+                  <text
+                    x={node.x + 9}
+                    y={node.y + 19}
+                    className={styles.nodeSublabel}
+                    fill="var(--color-muted)"
+                  >
+                    /gallery ·{" "}
+                    <tspan
+                      textDecoration="line-through"
+                      fill="color-mix(in srgb, var(--color-muted) 60%, transparent)"
+                    >
+                      /:id
+                    </tspan>{" "}
+                    · /srcset
+                  </text>
+                ) : (
+                  <text
+                    x={node.x + 9}
+                    y={node.y + 19}
+                    className={styles.nodeSublabel}
+                    fill="var(--color-muted)"
+                  >
+                    {node.sublabel}
+                  </text>
+                ))}
             </motion.g>
           );
         })}

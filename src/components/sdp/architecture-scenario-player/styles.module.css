@@ -1,10 +1,32 @@
-/* ── Root ────────────────────────────────────────────────────────── */
+/* ── Design tokens scoped to the widget ──────────────────────────
+ *
+ *  --aspe-font          : body font (Geist Mono)
+ *  --aspe-font-display  : ornamental (Geist Pixel Square) for eyebrow
+ *                         labels, step counters, tab numbers
+ *
+ *  Type scale (4 sizes, 4 roles):
+ *    --aspe-text-micro : eyebrow labels
+ *    --aspe-text-xs    : body, code, table rows
+ *    --aspe-text-sm    : caption, field names, headings inside cards
+ *    --aspe-text-md    : type-name & section headlines
+ */
 
 .root {
+  --aspe-font: var(--font-geist-mono, var(--font-mono));
+  --aspe-font-display: var(
+    --font-geist-pixel-square,
+    var(--font-geist-mono, var(--font-mono))
+  );
+
+  --aspe-text-micro: 0.62rem;
+  --aspe-text-xs: 0.74rem;
+  --aspe-text-sm: 0.82rem;
+  --aspe-text-md: 0.92rem;
+
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  font-family: var(--font-mono);
+  font-family: var(--aspe-font);
   color: var(--color-text);
 }
 
@@ -13,55 +35,55 @@
 .scenarioTabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .scenarioTab {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: 9px;
+  padding: 9px 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
+  border-radius: var(--radius-1);
   background: var(--color-surface);
   color: var(--color-muted);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-family: var(--aspe-font);
+  font-size: var(--aspe-text-xs);
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
-    transform 160ms ease;
-  letter-spacing: -0.01em;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  letter-spacing: -0.005em;
+  min-width: 0;
 }
 
 .scenarioTab:hover {
-  border-color: color-mix(in srgb, var(--diagram-layer-9) 50%, var(--color-border));
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, var(--color-border));
   color: var(--color-text);
 }
 
 .scenarioTab[data-active="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
   color: var(--color-text);
-  box-shadow: 0 0 0 1px var(--color-accent), 0 6px 18px -10px
-    color-mix(in srgb, var(--color-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
 }
 
 .scenarioTabIndex {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 18px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.6rem;
+  font-family: var(--aspe-font-display);
+  font-size: 9px;
   font-weight: 700;
   border-radius: 999px;
   background: var(--color-bg);
   color: var(--color-muted);
   border: 1px solid var(--color-border);
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .scenarioTab[data-active="true"] .scenarioTabIndex {
@@ -76,58 +98,238 @@
   text-overflow: ellipsis;
 }
 
+/* ── Split toggle pill ──────────────────────────────────────────── */
+
+.splitToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.splitToggleLabel {
+  font-family: var(--aspe-font-display);
+  font-size: var(--aspe-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.splitToggleTrack {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.splitToggleOption {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--aspe-font);
+  font-size: var(--aspe-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+  letter-spacing: -0.005em;
+}
+
+.splitToggleOption:hover {
+  color: var(--color-text);
+}
+
+.splitToggleOption[data-active="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.splitToggleOption[data-active="true"][data-mode="nosplit"] {
+  background: var(--color-error, #e5534b);
+  color: var(--color-bg);
+}
+
 /* ── Blurb ──────────────────────────────────────────────────────── */
 
 .scenarioBlurb {
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.5;
+  font-size: var(--aspe-text-xs);
+  line-height: 1.55;
   color: var(--color-muted);
-  font-style: italic;
+  max-width: 64ch;
 }
 
-/* ── Caption strip ──────────────────────────────────────────────── */
+/* ── Canvas frame (holds diagram + bubble together) ─────────────── */
 
-.captionStrip {
+.canvasFrame {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--diagram-layer-9) 4%, var(--color-surface));
-  min-height: 2.2rem;
-}
-
-.captionStep {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  color: var(--diagram-layer-9);
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.captionSlash {
-  color: var(--color-muted);
-  margin: 0 1px;
-  font-weight: 400;
-}
-
-.captionText {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--color-text);
-  letter-spacing: -0.005em;
-}
-
-/* ── Canvas ─────────────────────────────────────────────────────── */
-
-.canvasWrap {
+  flex-direction: column;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
-  padding: var(--space-2);
+  overflow: hidden;
+}
+
+.canvasWrap {
+  position: relative;
+  padding: 12px 12px 6px;
+}
+
+.meterMount {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+/* ── Bandwidth meter ─────────────────────────────────────────────── */
+
+.meter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 132px;
+  padding: 7px 10px 8px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 80%, var(--color-surface));
+  border: 1px solid var(--color-border);
+  font-family: var(--aspe-font);
+}
+
+.meter[data-severity="warn"] {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+
+.meter[data-severity="alarm"] {
+  border-color: color-mix(in srgb, var(--color-error, #e5534b) 60%, var(--color-border));
+  background: color-mix(in srgb, var(--color-error, #e5534b) 6%, var(--color-bg));
+}
+
+.meterHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.meterLabel {
+  font-family: var(--aspe-font-display);
+  font-size: var(--aspe-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.meterHintBtn {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--aspe-font);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.meterHintBtn:hover,
+.meterHintBtn:focus-visible {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.meterValue {
+  font-family: var(--aspe-font);
+  font-size: var(--aspe-text-md);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.meterTrack {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--color-border) 70%, transparent);
+  overflow: hidden;
+}
+
+.meterFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: var(--color-accent);
+  border-radius: inherit;
+}
+
+.meterFill[data-severity="ok"] {
+  background: var(--color-accent);
+}
+
+.meterFill[data-severity="warn"] {
+  background: color-mix(in srgb, var(--color-accent) 70%, var(--color-error, #e5534b));
+}
+
+.meterFill[data-severity="alarm"] {
+  background: var(--color-error, #e5534b);
+}
+
+.meterHint {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 190px;
+  padding: 8px 10px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--color-text) 30%, transparent);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.meterHintLine {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--aspe-text-xs);
+  color: var(--color-text);
+}
+
+.meterHintLine span:first-child {
+  font-weight: 600;
+}
+
+.meterHintLine span:last-child {
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.meterHintNote {
+  margin: 4px 0 0;
+  font-size: var(--aspe-text-micro);
+  color: var(--color-muted);
+  font-style: italic;
+  line-height: 1.5;
 }
 
 .canvasSvg {
@@ -137,277 +339,306 @@
 }
 
 .nodeLabel {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--aspe-font);
+  font-size: 7.6px;
   font-weight: 600;
   letter-spacing: -0.01em;
   pointer-events: none;
 }
 
 .nodeSublabel {
-  font-family: var(--font-mono);
-  font-size: 8.2px;
+  font-family: var(--aspe-font);
+  font-size: 6.4px;
   font-weight: 400;
   pointer-events: none;
 }
 
 .chipLabel {
-  font-family: var(--font-mono);
-  font-size: 8.4px;
+  font-family: var(--aspe-font);
+  font-size: 6.6px;
   font-weight: 700;
   fill: var(--color-accent);
   letter-spacing: -0.005em;
   pointer-events: none;
 }
 
-/* ── Panel grid ─────────────────────────────────────────────────── */
+/* ── Bubble zone (lives below diagram, inside canvasFrame) ──────── */
 
-.panelGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-2);
-}
-
-@media (max-width: 720px) {
-  .panelGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ── Type preview card ──────────────────────────────────────────── */
-
-.typeCardSlot {
+.bubbleZone {
   position: relative;
+  padding: 18px 14px 14px;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 50%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 2%, var(--color-surface));
   min-height: 9rem;
 }
 
-.typeCard {
+/* Vertical connector from diagram bottom into the bubble's tail */
+.bubbleConnector {
+  position: absolute;
+  top: -1px;
+  left: var(--bubble-tail-x, 50%);
+  transform: translateX(-50%);
+  width: 1.5px;
+  height: 14px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-accent) 60%, transparent),
+    var(--color-accent)
+  );
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+/* The bubble itself */
+.bubble {
+  position: relative;
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-top: 2px solid var(--color-accent);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-1);
+  padding: 14px 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  height: 100%;
+  gap: 10px;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--color-accent) 14%, transparent),
+    0 6px 18px -12px color-mix(in srgb, var(--color-accent) 50%, transparent);
 }
 
-.typeCardHead {
+/* Tail — a small downward triangle that "points at" the node.
+   Two layered triangles: the border one (under) and the fill one (over). */
+.bubbleTail,
+.bubbleTailBorder {
+  position: absolute;
+  left: var(--bubble-tail-x, 50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.bubbleTailBorder {
+  top: -8px;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid var(--color-accent);
+}
+
+.bubbleTail {
+  top: -6px;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid var(--color-bg);
+}
+
+/* ── Bubble header (node ref + step counter) ──────────────────── */
+
+.bubbleHeader {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.typeCardKind {
-  font-size: 0.55rem;
+.bubbleNodeRef {
+  font-family: var(--aspe-font-display);
+  font-size: var(--aspe-text-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.typeCardName {
-  font-size: 0.84rem;
+.bubbleArrow {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+.bubbleStepCount {
+  font-family: var(--aspe-font-display);
+  font-size: var(--aspe-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bubbleSlash {
+  color: color-mix(in srgb, var(--color-muted) 60%, transparent);
+  margin: 0 1px;
+}
+
+/* ── Bubble caption ───────────────────────────────────────────── */
+
+.bubbleCaption {
+  margin: 0;
+  font-size: var(--aspe-text-sm);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+  max-width: 60ch;
+}
+
+/* ── Bubble sections (payload, state) ────────────────────────── */
+
+.bubbleSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.bubbleSectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.bubbleSectionLabel {
+  font-family: var(--aspe-font-display);
+  font-size: var(--aspe-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: var(--color-muted);
+}
+
+.bubbleSectionTitle {
+  font-size: var(--aspe-text-md);
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
 }
 
-.typeCardExtends {
-  font-size: 0.62rem;
+.bubbleSectionExtends {
+  font-size: var(--aspe-text-micro);
   color: var(--color-muted);
 }
 
-.typeCardExtends em {
+.bubbleSectionExtends em {
   font-style: normal;
   color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
-.typeCardBody {
+/* ── Field rows (used by both payload & state sections) ──────── */
+
+.bubbleFields {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
 
-.typeRow {
+.bubbleField {
   display: grid;
-  grid-template-columns: minmax(64px, auto) auto 1fr;
-  gap: 8px;
+  grid-template-columns: minmax(80px, auto) 1fr;
+  gap: 12px;
   align-items: baseline;
-  font-size: 0.7rem;
-  line-height: 1.4;
+  font-size: var(--aspe-text-xs);
+  line-height: 1.5;
 }
 
-.typeFieldName {
+.bubbleFieldName {
   font-weight: 600;
   color: var(--color-text);
 }
 
-.typeFieldType {
+.bubbleFieldType {
   color: var(--color-accent);
 }
 
-.typeFieldNote {
+.bubbleFieldNote {
+  display: block;
   color: var(--color-muted);
-  font-size: 0.62rem;
+  font-size: var(--aspe-text-micro);
   font-style: italic;
+  margin-top: 1px;
+  grid-column: 2;
 }
 
-.typeSample {
-  margin: 0;
-  padding: var(--space-2);
-  background: var(--color-bg);
-  border-radius: var(--radius-1);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  line-height: 1.5;
-  color: var(--color-text);
-  border: 1px dashed color-mix(in srgb, var(--color-border) 80%, transparent);
-  white-space: pre-wrap;
-  overflow-x: auto;
-}
+/* ── State diff rows ──────────────────────────────────────────── */
 
-.typeCardEmpty {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: 100%;
-  padding: var(--space-3);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  font-size: 0.7rem;
-  color: var(--color-muted);
-  font-style: italic;
-}
-
-.typeCardEmptyDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-muted);
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-/* ── State diff panel ──────────────────────────────────────────── */
-
-.statePanel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-top: 2px solid var(--diagram-layer-9);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  min-height: 9rem;
-}
-
-.statePanelHead {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.statePanelKind {
-  font-size: 0.55rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--diagram-layer-9);
-}
-
-.statePanelBody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stateRow {
+.bubbleStateRow {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(64px, auto) auto 1fr;
-  gap: 6px;
+  grid-template-columns: minmax(80px, auto) 1fr;
+  gap: 12px;
   align-items: baseline;
-  font-size: 0.7rem;
-  line-height: 1.45;
-  padding: 2px 0;
+  font-size: var(--aspe-text-xs);
+  line-height: 1.5;
+  padding: 2px 0 2px 8px;
   border-left: 2px solid transparent;
-  padding-left: 6px;
-  margin-left: -8px;
+  margin-left: -10px;
+  transition: border-left-color 280ms ease;
 }
 
-.stateRow[data-kind="changed"] {
-  border-left-color: var(--color-accent);
+.bubbleStateRow[data-kind="changed"] {
+  border-left-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
 }
 
-.stateRow[data-kind="added"] {
-  border-left-color: var(--diagram-layer-9);
+.bubbleStateRow[data-kind="added"] {
+  border-left-color: color-mix(in srgb, var(--diagram-layer-9) 55%, transparent);
 }
 
-.stateRow[data-kind="removed"] {
+.bubbleStateRow[data-kind="removed"] {
   border-left-color: var(--color-muted);
   opacity: 0.55;
 }
 
-.stateRow[data-kind="same"] {
+.bubbleStateRow[data-kind="same"] {
   opacity: 0.55;
 }
 
-.stateKey {
-  font-weight: 600;
-  color: var(--color-text);
+.bubbleStateFlash {
+  position: absolute;
+  left: -10px;
+  top: 1px;
+  bottom: 1px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--color-accent);
+  pointer-events: none;
 }
 
-.stateColon {
-  color: var(--color-muted);
+.bubbleStateRow[data-kind="added"] .bubbleStateFlash {
+  background: var(--diagram-layer-9);
 }
 
-.stateValueGroup {
+.bubbleStateValueGroup {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.stateValue {
+.bubbleStateValue {
   color: var(--color-text);
 }
 
-.stateValueNew {
+.bubbleStateValueNew {
   color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
-.stateValueOld {
+.bubbleStateValueOld {
   color: var(--color-muted);
   text-decoration: line-through;
   text-decoration-color: color-mix(in srgb, var(--color-muted) 70%, transparent);
 }
 
-.stateArrow {
+.bubbleStateArrow {
   color: var(--color-accent);
   font-weight: 700;
-}
-
-.statePanelEmpty {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.7rem;
-  color: var(--color-muted);
-  font-style: italic;
-}
-
-.statePanelEmptyDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-muted);
-  opacity: 0.6;
 }
 
 /* ── Scrub bar ─────────────────────────────────────────────────── */
@@ -415,21 +646,21 @@
 .scrubBar {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
+  gap: 10px;
+  padding: 4px 0;
 }
 
 .scrubTrack {
   display: flex;
-  gap: 5px;
+  gap: 6px;
   flex: 1;
   align-items: center;
   justify-content: center;
 }
 
 .scrubDot {
-  width: 9px;
-  height: 9px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   border: 1.25px solid var(--color-border);
   background: var(--color-surface);
@@ -451,8 +682,8 @@
 .scrubDot[data-state="active"] {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  transform: scale(1.35);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  transform: scale(1.4);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
 .controlBtn,
@@ -466,11 +697,12 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
+  font-family: var(--aspe-font);
+  font-size: var(--aspe-text-sm);
   cursor: pointer;
   transition: all 150ms ease;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .controlBtn:hover:not(:disabled),
@@ -488,22 +720,12 @@
   background: var(--color-accent);
   color: var(--color-bg);
   border-color: var(--color-accent);
-  font-size: 0.68rem;
+  font-size: var(--aspe-text-xs);
   font-weight: 700;
 }
 
 .controlBtnPrimary:hover {
-  background: color-mix(in srgb, var(--color-accent) 80%, white);
+  background: color-mix(in srgb, var(--color-accent) 82%, white);
   color: var(--color-bg);
-  border-color: color-mix(in srgb, var(--color-accent) 80%, white);
-}
-
-/* ── Footnote ─────────────────────────────────────────────────── */
-
-.footnote {
-  margin: 0;
-  font-size: 0.66rem;
-  color: var(--color-muted);
-  line-height: 1.55;
-  font-style: italic;
+  border-color: color-mix(in srgb, var(--color-accent) 82%, white);
 }

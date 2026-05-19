@@ -31,6 +31,12 @@ export type ArchPayload = {
   type: ArchTypeDef;
   /** A short JSON-ish sample value, displayed line by line. */
   sample?: string[];
+  /**
+   * Approximate bytes-on-the-wire for this payload, in KB. Used by the
+   * bandwidth meter to make the cost of "without split" visceral.
+   * Defaults to 0 (no network transfer — props/callbacks).
+   */
+  weightKB?: number;
 };
 
 // ── State diff entries ──────────────────────────────────────────────
@@ -74,7 +80,15 @@ export type ArchScenario = {
   label: string;
   /** One-line description shown below the tab strip. */
   blurb: string;
+  /** Step list for the canonical "with split" architecture. */
   steps: ArchStep[];
+  /**
+   * Optional alternative step list for the "without split" counterfactual.
+   * When provided, the widget uses this list whenever the split toggle is
+   * off. When undefined, the widget falls back to `steps` for both modes
+   * (used when the scenario plays identically regardless of the split).
+   */
+  stepsWithoutSplit?: ArchStep[];
 };
 
 // ── Widget config ───────────────────────────────────────────────────
