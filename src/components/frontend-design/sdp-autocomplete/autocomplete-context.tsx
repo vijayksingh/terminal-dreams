@@ -342,9 +342,6 @@ type AutocompleteContextValue = {
   setLruMaxSize: (n: number) => void;
   lastEviction: { count: number; ts: number } | null;
 
-  // Compare mode
-  compareActive: boolean;
-  setCompareActive: (v: boolean) => void;
 };
 
 const AutocompleteContext = createContext<AutocompleteContextValue | null>(null);
@@ -401,7 +398,8 @@ export function AutocompleteProvider({
   const [trie, setTrie] = useState<TrieState>(createTrie);
   const [lruMaxSize, setLruMaxSize] = useState(50);
   const [lastEviction, setLastEviction] = useState<{ count: number; ts: number } | null>(null);
-  const [compareActive, setCompareActive] = useState(false);
+
+
 
   const trieRef = useRef(trie);
   trieRef.current = trie;
@@ -727,8 +725,6 @@ export function AutocompleteProvider({
       lruMaxSize,
       setLruMaxSize,
       lastEviction,
-      compareActive,
-      setCompareActive,
     }),
     [
       activeStep, phase, scopeEnabled, toggleScope,
@@ -738,7 +734,7 @@ export function AutocompleteProvider({
       requests, networkDelayMs, networkErrorRate,
       trie, totalRequests, abortedRequests, cacheHits, networkSaved,
       handleInput, handleKeyDown, handleSelect, clearAll,
-      stateEntries, lruMaxSize, lastEviction, compareActive,
+      stateEntries, lruMaxSize, lastEviction,
     ]
   );
 

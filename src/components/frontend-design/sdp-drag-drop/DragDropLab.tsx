@@ -66,26 +66,34 @@ const STEP_LABELS = [
   "R", "A", "C",
   "Ptr", "Prv", "Hit", "Reord",
   "Anim", "rAF", "X",
-  "⌨", "👆", "Snap",
-  "↩", "∞",
+  "Kb", "Tch", "Snap",
+  "Undo", "Scl",
+];
+
+const STEP_TITLES = [
+  "Requirements", "API Design", "Architecture",
+  "Pointer Events", "Preview Strategy", "Hit Testing", "Reorder",
+  "Animation", "rAF Throttle", "Cross-Container",
+  "Keyboard", "Touch", "Constraints",
+  "Undo/Redo", "Scale",
 ];
 
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
-    <div className={styles.stepBar} role="list" aria-label="Build steps">
+    <nav className={styles.stepBar} aria-label="Build steps">
       {STEP_LABELS.map((label, i) => (
         <span
           key={i}
-          role="listitem"
           className={styles.stepDot}
           data-active={i + 1 <= activeStep ? "true" : undefined}
           data-current={i + 1 === activeStep ? "true" : undefined}
           aria-current={i + 1 === activeStep ? "step" : undefined}
+          aria-label={`Step ${i + 1}: ${STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
         >
           {label}
         </span>
       ))}
-    </div>
+    </nav>
   );
 }
 
@@ -385,8 +393,8 @@ function StepControls() {
 
   switch (activeStep) {
     case 4: return <PredictionChallenge question="Why use pointer events instead of mouse events for drag & drop?" options={["Pointer events have better browser support", "Pointer events unify mouse, touch, and pen input", "Pointer events fire faster than mouse events", "There is no difference — they are aliases"]} correctIndex={1} explanation="Pointer events are a superset — one API handles mouse, touch, and pen. With mouse events, you'd need separate touch event handlers. Pointer events also provide setPointerCapture(), which ensures events keep arriving even if the cursor leaves the element." />;
-    case 5: return <PreviewStrategyControls />;
-    case 6: return <HitTestControls />;
+    case 5: return <PredictionGatedWidget question="You're building a Kanban board with rich cards (images, avatars, badges). Which preview strategy avoids layout jank during drag?" options={["DOM clone — cloneNode(true) follows cursor", "Canvas rasterization — toDataURL snapshot", "React portal — render a lightweight overlay component"]} correctIndex={2} explanation="A DOM clone copies the entire subtree including images and event listeners, which is expensive. Canvas rasterization requires CORS-clean images. A React portal renders a minimal preview component without cloning DOM — lightest on the main thread."><PreviewStrategyControls /></PredictionGatedWidget>;
+    case 6: return <PredictionGatedWidget question="Three hit-test strategies: center-point containment, area overlap, and closest edge. Which works best for narrow columns?" options={["Center-point — simplest to implement", "Area overlap — handles edge cases", "Closest edge — degrades gracefully for thin targets"]} correctIndex={2} explanation="Narrow columns have small areas, making center containment miss often (the pointer center is rarely inside a thin column). Area overlap requires computing intersection rectangles. Closest edge measures distance to the nearest column edge — it always finds the nearest target regardless of column width."><HitTestControls /></PredictionGatedWidget>;
     case 7: return <PredictionChallenge question="When you reorder items, where should the state update happen?" options={["During drag — move items as pointer moves", "On drop — batch the splice at pointerup", "Optimistic — update immediately, reconcile on server response"]} correctIndex={1} explanation="Updating during drag causes O(n) re-renders per frame. Batch the splice on drop — the user sees a drop indicator during drag, and the state updates once. Server reconciliation comes later at scale." />;
     case 8: return <PredictionToggle feature="placeholder" label="Animated Placeholder" question="Without a drop indicator, how does the user know where the item will land?" options={["They guess based on cursor position", "The gap between items shows the insertion point", "They can't — it's a blind drop"]} correctIndex={2} explanation="Without a visual indicator, users have no spatial feedback about insertion position. The drop indicator (an animated line between items) makes the target slot explicit. This is the difference between frustrating and fluid drag & drop." />;
     case 9: return <PredictionChallenge question="Pointer events fire up to 120 times per second. How should you handle this?" options={["Process every event for accuracy", "Debounce with 100ms delay", "Throttle to rAF (16ms budget)"]} correctIndex={2} explanation="rAF throttling gives you one update per visual frame — the display can't show faster than 60fps anyway. Debouncing adds latency. Processing every event wastes CPU on invisible intermediate states." />;
@@ -434,6 +442,48 @@ function PredictionChallenge({ question, options, correctIndex, explanation }: {
           {selected === correctIndex ? "✓ " : "✗ "}{explanation}
         </div>
       )}
+    </div>
+  );
+}
+
+function PredictionGatedWidget({ question, options, correctIndex, explanation, children }: {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  children: React.ReactNode;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.toggleStrip}>
+      <div className={styles.prediction}>
+        <div className={styles.predictionQ}>{question}</div>
+        <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
+          {options.map((opt, i) => (
+            <button
+              key={i}
+              type="button"
+              className={styles.predictionOption}
+              data-correct={revealed && i === correctIndex ? "true" : undefined}
+              data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+              onClick={() => !revealed && setSelected(i)}
+              disabled={revealed}
+              role="radio"
+              aria-checked={selected === i}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        {revealed && (
+          <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
+            {selected === correctIndex ? "✓ " : "✗ "}{explanation}
+          </div>
+        )}
+      </div>
+      {revealed && children}
     </div>
   );
 }
@@ -1074,18 +1124,83 @@ function TouchWidget() {
 }
 
 function ConstraintWidget() {
-  const { isActive } = useDragDrop();
-  const on = isActive("constraints");
+  const [mode, setMode] = useState<"free" | "axisLock" | "bounds" | "gridSnap">("free");
+  const [pos, setPos] = useState({ x: 80, y: 60 });
+  const boxRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const GRID = 16;
+  const BOX_W = 140;
+  const BOX_H = 120;
+  const DOT_SIZE = 24;
+
+  const clamp = useCallback((raw: { x: number; y: number }, initial: { x: number; y: number }) => {
+    let { x, y } = raw;
+    if (mode === "axisLock") {
+      const dx = Math.abs(x - initial.x);
+      const dy = Math.abs(y - initial.y);
+      if (dx > dy) y = initial.y; else x = initial.x;
+    }
+    if (mode === "bounds") {
+      x = Math.max(0, Math.min(BOX_W - DOT_SIZE, x));
+      y = Math.max(0, Math.min(BOX_H - DOT_SIZE, y));
+    }
+    if (mode === "gridSnap") {
+      x = Math.round(x / GRID) * GRID;
+      y = Math.round(y / GRID) * GRID;
+    }
+    return { x, y };
+  }, [mode]);
+
+  const initialPos = useRef(pos);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    dragging.current = true;
+    initialPos.current = pos;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [pos]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging.current || !boxRef.current) return;
+    const rect = boxRef.current.getBoundingClientRect();
+    const raw = { x: e.clientX - rect.left - DOT_SIZE / 2, y: e.clientY - rect.top - DOT_SIZE / 2 };
+    setPos(clamp(raw, initialPos.current));
+  }, [clamp]);
+
+  const onPointerUp = useCallback(() => { dragging.current = false; }, []);
+
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Constraints & snapping</div>
-      <div className={styles.constraintList}>
-        <div className={styles.constraintRow}><span className={styles.constraintType}>Axis lock</span><span>Restrict to horizontal or vertical</span></div>
-        <div className={styles.constraintRow}><span className={styles.constraintType}>Bounds</span><span>Clamp to parent container rect</span></div>
-        <div className={styles.constraintRow}><span className={styles.constraintType}>Grid snap</span><span>Round to nearest 8px grid</span></div>
+      <div className={styles.strategyGroup} role="radiogroup" aria-label="Constraint mode">
+        {(["free", "axisLock", "bounds", "gridSnap"] as const).map(m => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m}
+            className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
+            onClick={() => setMode(m)}>
+            <span className={styles.strategyName}>{m === "axisLock" ? "axis lock" : m === "gridSnap" ? "grid snap" : m}</span>
+          </button>
+        ))}
+      </div>
+      <div ref={boxRef} className={styles.constraintBox} style={{ width: BOX_W, height: BOX_H }}>
+        {mode === "gridSnap" && Array.from({ length: Math.floor(BOX_W / GRID) + 1 }, (_, i) => (
+          <div key={`v${i}`} className={styles.gridLine} style={{ left: i * GRID, top: 0, width: 1, height: BOX_H }} />
+        )).concat(Array.from({ length: Math.floor(BOX_H / GRID) + 1 }, (_, i) => (
+          <div key={`h${i}`} className={styles.gridLine} style={{ left: 0, top: i * GRID, width: BOX_W, height: 1 }} />
+        )))}
+        <div
+          className={styles.constraintDot}
+          style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, width: DOT_SIZE, height: DOT_SIZE }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          role="slider"
+          aria-label="Draggable dot — demonstrates constraint modes"
+          aria-valuetext={`x: ${Math.round(pos.x)}, y: ${Math.round(pos.y)}`}
+          tabIndex={0}
+        />
       </div>
       <div className={styles.widgetNote}>
-        Constraints are applied in the updateDrag handler before setting state. Grid snap: Math.round(x / gridSize) * gridSize.
+        Drag the dot. {mode === "free" ? "No constraints — full freedom." : mode === "axisLock" ? "Locked to the dominant axis (horizontal or vertical)." : mode === "bounds" ? "Clamped to the container bounds." : "Snapping to 16px grid intervals."}
       </div>
     </div>
   );
@@ -1126,26 +1241,62 @@ function UndoWidget() {
 }
 
 function ScaleWidget() {
+  const [itemCount, setItemCount] = useState(50);
+  const [renderMs, setRenderMs] = useState(0);
+
+  useEffect(() => {
+    const start = performance.now();
+    const nodes = document.querySelectorAll("[data-scale-item]");
+    requestAnimationFrame(() => {
+      setRenderMs(Math.round((performance.now() - start) * 10) / 10);
+    });
+  }, [itemCount]);
+
+  const domNodes = itemCount;
+  const virtualizedNodes = Math.min(itemCount, 60);
+
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Scaling to 10K items</div>
-      <div className={styles.scaleGrid}>
-        <div className={styles.scaleCard}>
-          <div className={styles.scaleCardTitle}>Virtualize columns</div>
-          <div className={styles.scaleCardDesc}>Only render items in the viewport + 1 buffer row. Recycle DOM nodes on scroll.</div>
+      <div className={styles.scaleSliderRow}>
+        <label className={styles.scaleSliderLabel} htmlFor="scale-slider">Items:</label>
+        <input
+          id="scale-slider"
+          type="range"
+          min={50}
+          max={5000}
+          step={50}
+          value={itemCount}
+          onChange={(e) => setItemCount(Number(e.target.value))}
+          className={styles.scaleSlider}
+          aria-valuetext={`${itemCount} items`}
+        />
+        <span className={styles.scaleSliderValue}>{itemCount.toLocaleString()}</span>
+      </div>
+      <div className={styles.scaleMetrics}>
+        <div className={styles.scaleMetric}>
+          <span className={styles.scaleMetricValue} data-status={domNodes > 500 ? "warning" : domNodes > 2000 ? "error" : "good"}>{domNodes.toLocaleString()}</span>
+          <span className={styles.scaleMetricLabel}>DOM nodes (naive)</span>
         </div>
-        <div className={styles.scaleCard}>
-          <div className={styles.scaleCardTitle}>Batch API calls</div>
-          <div className={styles.scaleCardDesc}>Queue reorders during drag, flush on drop. One PATCH instead of per-move.</div>
+        <div className={styles.scaleMetric}>
+          <span className={styles.scaleMetricValue} data-status="good">{virtualizedNodes}</span>
+          <span className={styles.scaleMetricLabel}>DOM nodes (virtualized)</span>
         </div>
-        <div className={styles.scaleCard}>
-          <div className={styles.scaleCardTitle}>Optimistic updates</div>
-          <div className={styles.scaleCardDesc}>Update UI immediately, reconcile on server ACK. Rollback on conflict.</div>
+        <div className={styles.scaleMetric}>
+          <span className={styles.scaleMetricValue}>{renderMs}ms</span>
+          <span className={styles.scaleMetricLabel}>Render time</span>
         </div>
-        <div className={styles.scaleCard}>
-          <div className={styles.scaleCardTitle}>Offline queue</div>
-          <div className={styles.scaleCardDesc}>IndexedDB stores pending ops. Service worker replays on reconnect.</div>
+      </div>
+      <div className={styles.scaleBarChart}>
+        <div className={styles.scaleBar} data-type="naive" style={{ width: `${Math.min(100, (domNodes / 5000) * 100)}%` }}>
+          <span>{domNodes.toLocaleString()} DOM</span>
         </div>
+        <div className={styles.scaleBar} data-type="virtual" style={{ width: `${(virtualizedNodes / 5000) * 100}%` }}>
+          <span>{virtualizedNodes} DOM</span>
+        </div>
+      </div>
+      <div className={styles.widgetNote}>
+        Drag the slider to feel the scaling wall. At 2K+ items, naive rendering bogs down. Virtualization caps DOM nodes at ~60 regardless of data size.
       </div>
     </div>
   );

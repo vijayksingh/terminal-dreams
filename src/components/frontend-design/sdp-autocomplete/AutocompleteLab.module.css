@@ -610,6 +610,85 @@
   outline-offset: 2px;
 }
 
+/* ── Prediction challenge ──────────────────────────────────────── */
+
+.prediction {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-1);
+}
+
+.predictionQ {
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.predictionOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.predictionOption {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.predictionOption:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-2));
+}
+
+.predictionOption:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 2px;
+}
+
+.predictionOption[data-correct="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface-2));
+}
+
+.predictionOption[data-wrong="true"] {
+  border-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface-2));
+}
+
+.predictionOption:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.predictionResult {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--color-surface-2));
+}
+
+.predictionResult[data-correct="true"] {
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface-2));
+}
+
 /* ── Search container ────────────────────────────────────────────── */
 
 .searchContainer {

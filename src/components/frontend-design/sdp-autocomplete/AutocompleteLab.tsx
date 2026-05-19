@@ -376,6 +376,121 @@ function MetricsBar() {
 
 // ── Step controls ──────────────────────────────────────────────────
 
+// ── Prediction challenges per step ────────────────────────────────
+
+const STEP_PREDICTIONS: Record<number, { question: string; options: string[]; correctIndex: number; explanation: string }> = {
+  4: {
+    question: "You type 'react' at 80 WPM (one char every ~150ms). Without debounce, how many fetch requests fire?",
+    options: ["1 — only the final query matters", "5 — one per keystroke", "2 — browser batches rapid inputs"],
+    correctIndex: 1,
+    explanation: "Without debounce, every keystroke fires a fetch. Typing 'react' sends 5 requests: 'r', 're', 'rea', 'reac', 'react'. Only the last result matters — the other 4 waste bandwidth and can cause race conditions.",
+  },
+  5: {
+    question: "At 300ms debounce delay, typing 'react' at 80 WPM triggers how many fetch requests?",
+    options: ["5 — debounce doesn't reduce count", "1 — all keystrokes within the delay window are collapsed", "3 — debounce fires every 2 characters"],
+    correctIndex: 1,
+    explanation: "Debounce waits until the user stops typing for 300ms before firing. At 150ms between keystrokes, the timer resets on each key. Only after the final 'react' + 300ms silence does one request fire.",
+  },
+  6: {
+    question: "Request A (100ms latency) and Request B (300ms latency) are in flight. The user types more, making B stale. Without AbortController, whose results render?",
+    options: ["A's — it resolves first", "B's — it was sent last so it wins", "Whichever resolves last — could be stale B"],
+    correctIndex: 2,
+    explanation: "Without abort, both requests complete independently. If B resolves last (which is likely since it's slower), its stale results overwrite A's fresh results. This is the race condition: a slower, stale request 'wins' by arriving late.",
+  },
+  7: {
+    question: "You search 'rea' (cached), then search 'react' (not cached). How many network requests does 'react' need?",
+    options: ["0 — 'rea' cache contains 'react' results", "1 — 'react' is a new prefix, needs a fresh request", "2 — one for 'reac', one for 'react'"],
+    correctIndex: 1,
+    explanation: "A trie cache stores results per exact prefix. 'rea' results may CONTAIN items matching 'react', but the cache key is the exact prefix. A prefix-aware trie can filter locally if the parent prefix was a superset, but naive caching requires a new request.",
+  },
+  8: {
+    question: "For keyboard navigation in a combobox dropdown, what happens when the user presses ArrowDown at the last item?",
+    options: ["Nothing — stay at the last item", "Wrap to the first item", "Close the dropdown"],
+    correctIndex: 0,
+    explanation: "WAI-ARIA Combobox pattern specifies that ArrowDown at the last option does NOT wrap — it stays at the last item. This prevents disorientation for screen reader users who would lose their position context. ArrowUp at the first item similarly stays put.",
+  },
+  9: {
+    question: "The user types 'rea', deletes to 're', then types 'red'. Three requests fire. Request 1 ('rea') resolves last due to server load. What displays?",
+    options: ["Results for 'rea' — it resolved last", "Results for 'red' — it's the current query", "Results for 're' — it's the shortest match"],
+    correctIndex: 1,
+    explanation: "A generation counter tags each request with a monotonic sequence number. The response handler checks: if response.generation < currentGeneration, discard it. Only the latest generation's results are displayed, regardless of resolution order.",
+  },
+  10: {
+    question: "User searches 'scr' and results include 'JavaScript'. How should the match be highlighted?",
+    options: ["Highlight the entire word 'JavaScript'", "Highlight 'scr' substring within 'JavaScript'", "Bold the entire result item"],
+    correctIndex: 1,
+    explanation: "Substring highlighting: find where the query appears within each result and wrap that range with a <mark> element. 'Java<mark>Scr</mark>ipt' shows the user exactly WHY this result matched. Use case-insensitive matching for the search, preserve original casing in display.",
+  },
+  11: {
+    question: "Network is down but 'rea' is cached in the trie. User searches 'rea'. What should happen?",
+    options: ["Show an error state immediately", "Show cached results with a 'offline' indicator", "Show nothing — cache is not a substitute for fresh data"],
+    correctIndex: 1,
+    explanation: "Graceful degradation: check the cache first. If cached results exist, show them with a subtle indicator that they may be stale. Only show an error state if both the network AND cache miss. The fallback cascade is: network → cache → stale results → error state.",
+  },
+  12: {
+    question: "Which ARIA role pattern should an autocomplete search use?",
+    options: ["role='search' with role='list' for results", "role='combobox' with aria-autocomplete='list'", "role='textbox' with role='menu' for results"],
+    correctIndex: 1,
+    explanation: "WAI-ARIA specifies role='combobox' for an input that controls a popup list. aria-autocomplete='list' indicates the popup provides completions. The results list uses role='listbox' with role='option' children. aria-activedescendant tracks the highlighted item without moving DOM focus.",
+  },
+  13: {
+    question: "The trie cache has 100 entries and a max of 50. Which eviction strategy minimizes cache misses for autocomplete?",
+    options: ["FIFO — remove oldest entries first", "LRU — remove least recently used entries", "LFU — remove least frequently used entries"],
+    correctIndex: 1,
+    explanation: "LRU (Least Recently Used) works best for autocomplete because search patterns are temporal: users search related terms in clusters. Recently accessed prefixes are likely to be accessed again. LFU would keep historically popular prefixes that may no longer be relevant to the current session.",
+  },
+  14: {
+    question: "In 'compare mode' showing before/after optimization metrics side by side — what's the key metric to highlight?",
+    options: ["Total bytes transferred", "Number of requests saved by debounce + cache", "Time from first keystroke to final results displayed"],
+    correctIndex: 2,
+    explanation: "Time-to-results is the user-perceived metric. It captures the combined effect of debounce delay, network latency, cache hits, and rendering time. Bytes transferred and request counts are implementation details — the user cares about 'how long until I see suggestions.'",
+  },
+  15: {
+    question: "Scaling autocomplete to 1M items in the dataset. Which approach avoids sending 1M entries to the client?",
+    options: ["Load all items upfront, search client-side with a trie", "Server-side search with cursor-based pagination", "Use a Web Worker to index items in the background"],
+    correctIndex: 1,
+    explanation: "At 1M items, client-side indexing requires ~50-100MB of memory and seconds of initialization. Server-side search with pagination keeps the client light: the server runs the trie/inverted index query and returns only the top N results per request. The trie cache on the client stores recent server responses, not the full dataset.",
+  },
+};
+
+function PredictionChallenge({ question, options, correctIndex, explanation }: {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.prediction}>
+      <div className={styles.predictionQ}>{question}</div>
+      <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
+        {options.map((opt, i) => (
+          <button
+            key={i}
+            type="button"
+            className={styles.predictionOption}
+            data-correct={revealed && i === correctIndex ? "true" : undefined}
+            data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+            onClick={() => !revealed && setSelected(i)}
+            disabled={revealed}
+            role="radio"
+            aria-checked={selected === i}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      {revealed && (
+        <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
+          {selected === correctIndex ? "✓ " : "✗ "}{explanation}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StepControls() {
   const ctx = useAutocomplete();
   const { activeStep, isActive, featureToggled, toggleFeature } = ctx;
@@ -409,8 +524,21 @@ function StepControls() {
     compareMode: "Compare mode",
   };
 
+  const prediction = STEP_PREDICTIONS[activeStep];
+
   return (
     <div className={styles.stepControls}>
+      {/* Prediction challenge for current step */}
+      {prediction && (
+        <PredictionChallenge
+          key={activeStep}
+          question={prediction.question}
+          options={prediction.options}
+          correctIndex={prediction.correctIndex}
+          explanation={prediction.explanation}
+        />
+      )}
+
       {/* Feature toggle for current step */}
       {feature && activeStep <= 14 && (
         <button
@@ -689,13 +817,15 @@ function NetworkTimeline() {
           <span className={styles.networkEmpty}>Type to see requests...</span>
         )}
         {requests.map((req) => (
-          <div
+          <button
             key={req.id}
+            type="button"
             className={styles.networkDot}
             style={{ background: statusColors[req.status] }}
             onMouseEnter={() => setHoveredId(req.id)}
             onMouseLeave={() => setHoveredId(null)}
             onClick={() => setHoveredId(prev => prev === req.id ? null : req.id)}
+            aria-label={`${req.term}: ${req.status}${req.duration ? `, ${req.duration}ms` : ""}`}
           >
             {hoveredId === req.id && (
               <div className={styles.dotTooltip} role="tooltip">
@@ -704,7 +834,7 @@ function NetworkTimeline() {
                 {req.duration && <span>{req.duration}ms</span>}
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
       <div className={styles.networkLegend}>

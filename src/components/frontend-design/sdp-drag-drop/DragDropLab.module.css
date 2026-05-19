@@ -103,7 +103,7 @@
 
 .checkItem[data-checked="true"] {
   border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .checkToggle {
@@ -1058,24 +1058,38 @@
   border-color: var(--color-accent);
 }
 
-/* ── Constraint list ─────────────────────────────────────────── */
+/* ── Constraint sandbox ─────────────────────────────────────── */
 
-.constraintList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+.constraintBox {
+  position: relative;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface-2);
+  margin-top: var(--space-2);
+  overflow: hidden;
+  touch-action: none;
 }
 
-.constraintRow {
-  display: flex;
-  gap: var(--space-2);
-  font-size: 0.7rem;
+.constraintDot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: grab;
+  will-change: transform;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
 }
 
-.constraintType {
-  font-weight: 700;
-  color: var(--color-accent);
-  min-width: 80px;
+.constraintDot:active {
+  cursor: grabbing;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+.gridLine {
+  position: absolute;
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
+  pointer-events: none;
 }
 
 /* ── Undo stack ──────────────────────────────────────────────── */
@@ -1131,33 +1145,99 @@
   justify-content: center;
 }
 
-.undoButton:hover { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.undoButton:hover { background: color-mix(in srgb, var(--color-accent) 16%, transparent); }
 .undoButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 /* ── Scale grid ──────────────────────────────────────────────── */
 
-.scaleGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.scaleSliderRow {
+  display: flex;
+  align-items: center;
   gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
-.scaleCard {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+.scaleSliderLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 44px;
 }
 
-.scaleCardTitle {
+.scaleSlider {
+  flex: 1;
+  min-height: 44px;
+  accent-color: var(--color-accent);
+}
+
+.scaleSliderValue {
   font-size: 0.75rem;
   font-weight: 800;
-  margin-bottom: 4px;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.scaleCardDesc {
+.scaleMetrics {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.scaleMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.scaleMetricValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.scaleMetricValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.scaleMetricValue[data-status="warning"] {
+  color: var(--color-warning);
+}
+
+.scaleMetricValue[data-status="error"] {
+  color: var(--color-error);
+}
+
+.scaleMetricLabel {
   font-size: 0.625rem;
   color: var(--color-muted);
-  line-height: 1.5;
+}
+
+.scaleBarChart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scaleBar {
+  height: 24px;
+  border-radius: var(--radius-1);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-bg);
+  min-width: 60px;
+  transition: width 300ms ease;
+}
+
+.scaleBar[data-type="naive"] {
+  background: var(--color-error);
+}
+
+.scaleBar[data-type="virtual"] {
+  background: var(--color-success);
 }
 
 /* ── SR-only ─────────────────────────────────────────────────── */
