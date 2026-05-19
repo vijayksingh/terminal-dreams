@@ -1,0 +1,2845 @@
+/* ── ChatLab ──────────────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Step indicator bar ──────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepList {
+  display: contents;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 3px;
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-5);
+  border-color: color-mix(in srgb, var(--diagram-layer-5) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-5);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-5) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-5) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-5) 12%, transparent); }
+}
+
+/* ── Scroll area ─────────────────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Section headings ────────────────────────────────────────────── */
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-3) 0 var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading:first-child {
+  margin-top: 0;
+}
+
+/* ── Planning panel ──────────────────────────────────────────────── */
+
+.planningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Step 1: Requirements checklist ──────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.checkItem:hover {
+  border-color: var(--diagram-layer-5);
+}
+
+.checkItem[data-checked="true"] {
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 6%, var(--color-surface));
+}
+
+.checkToggle {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  transition: all 150ms ease;
+  color: transparent;
+}
+
+.checkItem[data-checked="true"] .checkToggle {
+  border-color: var(--diagram-layer-5);
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+}
+
+.checkLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.checkDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.scopeSummary {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.scopeLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+.scopeValue {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.complexityMeter {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.complexityRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.complexityLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.complexityValue {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.complexityValue[data-grade="low"] { color: var(--color-success); }
+.complexityValue[data-grade="medium"] { color: var(--color-warning); }
+.complexityValue[data-grade="high"] { color: var(--color-error); }
+
+/* ── Panel tabs ──────────────────────────────────────────────────── */
+
+.panelTabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+
+.panelTab {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panelTab:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.panelTab:hover:not([data-active="true"]) {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.panelTab[data-active="true"] {
+  border-color: var(--diagram-layer-5);
+  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-surface));
+}
+
+/* ── Endpoint cards ──────────────────────────────────────────────── */
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  transition: border-color 150ms ease;
+  text-align: left;
+}
+
+.endpointCard:has(.endpointHeader:hover),
+.endpointCard[data-expanded="true"] {
+  border-color: var(--diagram-layer-5);
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  min-height: 44px;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  text-align: left;
+}
+
+.endpointHeader:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.methodBadge {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.methodBadge[data-method="GET"] {
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));
+  color: var(--color-success);
+}
+
+.methodBadge[data-method="POST"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 15%, var(--color-surface));
+  color: var(--diagram-layer-5);
+}
+
+.methodBadge[data-method="DELETE"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  color: var(--color-error);
+}
+
+.endpointPath {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.endpointChevron {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.endpointDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.endpointUsedBy {
+  font-size: 0.625rem;
+  color: var(--diagram-layer-5);
+  opacity: 0.7;
+}
+
+.endpointDetail {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointDetailLabel {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.paramGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paramRow {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr;
+  gap: var(--space-2);
+  padding: 3px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.625rem;
+  align-items: center;
+}
+
+.paramName {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.paramType {
+  font-family: var(--font-mono);
+  color: var(--diagram-layer-5);
+}
+
+.paramNote {
+  color: var(--color-muted);
+}
+
+.responseType {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--diagram-layer-5);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--diagram-layer-5);
+  border-radius: var(--radius-1);
+  display: inline-block;
+}
+
+/* ── Type cards ──────────────────────────────────────────────────── */
+
+.typeCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.typeCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.typeCard:first-child {
+  grid-row: span 2;
+}
+
+.typeCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.typeCardName {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.typeCardCategory {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.typeCardExtends {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+
+.typeCardExtends span {
+  color: var(--diagram-layer-5);
+  font-weight: 600;
+}
+
+.typeCardFields {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.typeFieldRow {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 2px;
+  padding: 2px 0;
+  font-size: 0.625rem;
+}
+
+.typeFieldName {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.typeFieldType {
+  color: var(--diagram-layer-5);
+}
+
+.typeFieldNote {
+  grid-column: 1 / -1;
+  color: var(--color-muted);
+  font-size: 0.625rem;
+  padding-left: 92px;
+}
+
+/* ── Metrics bar ─────────────────────────────────────────────────── */
+
+.metricsBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.metricCard {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.metricValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.metricValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.metricValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+/* ── Evolution layout ───────────────────────────────────────────── */
+
+.evolutionLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Step controls ───────────────────────────────────────────────── */
+
+.toggleStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toggleLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.toggleButton {
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  cursor: pointer;
+  position: relative;
+  transition: all 200ms ease;
+  flex-shrink: 0;
+  padding: 12px 4px;
+  box-sizing: content-box;
+  min-width: 44px;
+}
+
+.toggleButton[data-on="true"] {
+  border-color: var(--diagram-layer-5);
+  background: var(--diagram-layer-5);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  transition: all 200ms ease;
+}
+
+.toggleButton[data-on="true"] .toggleKnob {
+  left: 18px;
+  background: var(--color-bg);
+}
+
+/* ── Step 4: Baseline controls ──────────────────────────────────── */
+
+.baselineControls {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.baselineHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.baselineBadge {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+  padding: 2px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.1em;
+}
+
+.baselineCount {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+}
+
+.baselineGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.baselineStat {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.baselineStatValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.baselineStatValue[data-status="good"] { color: var(--color-success); }
+.baselineStatValue[data-status="warn"] { color: var(--diagram-layer-4); }
+.baselineStatValue[data-status="bad"] { color: var(--color-error); }
+
+.baselineStatLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.baselineNote {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Step 5: Stream info ──────────────────────────────────────────── */
+
+.streamInfo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.streamStat {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.streamStatValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--diagram-layer-5);
+}
+
+.streamStatLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Step 6: Send tracker ─────────────────────────────────────────── */
+
+.sendTracker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.sendTrackerStat {
+  text-align: center;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.sendTrackerValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.sendTrackerValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.sendTrackerLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Step 7: Delivery pipeline ────────────────────────────────────── */
+
+.deliveryPipeline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-success) 3%, var(--color-bg));
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.deliveryStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1) var(--space-2);
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-1);
+  background: none;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.deliveryStage:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.deliveryIcon {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+.deliveryStage[data-status="read"] .deliveryIcon {
+  color: var(--diagram-layer-0);
+}
+
+.deliveryLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.deliveryCount {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.deliveryArrow {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.deliverySimControls {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.deliverySimButton {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--diagram-layer-5);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
+  color: var(--diagram-layer-5);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex: 1;
+}
+
+.deliverySimButton:hover {
+  background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent);
+}
+
+.deliverySimButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.deliverySimButton[data-secondary="true"] {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-muted);
+}
+
+.deliverySimButton[data-secondary="true"]:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.deliveryStage[data-active="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 20%, transparent);
+  border-color: var(--diagram-layer-5);
+  transform: scale(1.05);
+  transition: all 200ms ease;
+}
+
+/* ── Step 8: Typing info ──────────────────────────────────────────── */
+
+/* ── Step 9: Reconnection ─────────────────────────────────────────── */
+
+.reconnectControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.connectionButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.connectionButton {
+  flex: 1;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.connectionButton[data-active="true"][data-variant="good"] {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+}
+
+.connectionButton[data-active="true"][data-variant="bad"] {
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--color-bg));
+}
+
+.backoffTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.backoffHeader {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.backoffSteps {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.backoffStep {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all 200ms ease;
+}
+
+.backoffStep[data-active="true"] {
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 6%, var(--color-bg));
+}
+
+.backoffStep[data-final="true"] {
+  border-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg));
+}
+
+.backoffAttempt {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--diagram-layer-5);
+}
+
+.backoffDelay {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.backoffStep[data-final="true"] .backoffDelay {
+  color: var(--color-error);
+}
+
+.backoffLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 10: Queue info ──────────────────────────────────────────── */
+
+/* ── Step 14: Encryption pipeline ─────────────────────────────────── */
+
+.encryptionPipeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.encryptionPipeline > :first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 30%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-5) 3%, var(--color-bg));
+  font-size: 0.625rem;
+  color: var(--color-text);
+}
+
+.encryptionStep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.encryptionDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-success);
+}
+
+.encryptionArrow {
+  color: var(--color-muted);
+  font-size: 0.625rem;
+}
+
+.encryptionTradeoffs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.encryptionTradeoff {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.encryptionTradeoffIcon {
+  font-weight: 800;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.encryptionTradeoffIcon[data-good="true"] {
+  color: var(--color-success);
+}
+
+.encryptionTradeoffIcon[data-good="false"] {
+  color: var(--color-error);
+}
+
+/* ── Scale controls ──────────────────────────────────────────────── */
+
+.scaleControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.scaleSliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scaleSliderLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.scaleSliderValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--diagram-layer-5);
+}
+
+.scaleSliderInput {
+  width: 100%;
+  accent-color: var(--diagram-layer-5);
+  min-height: 44px;
+}
+
+.scaleMarks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+/* ── Virtualization warning ────────────────────────────────────────── */
+
+.virtualizationWarning {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-4) 40%, transparent);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--diagram-layer-4) 6%, var(--color-surface));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.virtualizationHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--diagram-layer-4);
+}
+
+.virtualizationIcon {
+  font-size: 0.75rem;
+}
+
+.virtualizationBody {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.virtualizationComparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.virtualizationCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.virtualizationColLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.virtualizationColValue {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.virtualizationColValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.virtualizationColValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Widget cards (below chat)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.widgetCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.widgetBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetNote {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Delivery status lifecycle widget ────────────────────────────── */
+
+.statusLifecycle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lifecycleStep {
+  display: grid;
+  grid-template-columns: 24px 70px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.625rem;
+  position: relative;
+  opacity: 0.4;
+  transition: all 200ms ease;
+}
+
+.lifecycleStep[data-active="true"] { opacity: 1; }
+
+.lifecycleStep[data-current="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 30%, transparent);
+}
+
+.lifecycleIcon {
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+.lifecycleStep[data-blue="true"] .lifecycleIcon {
+  color: var(--diagram-layer-0);
+}
+
+.lifecycleStep[data-active="true"] .lifecycleIcon {
+  color: var(--diagram-layer-5);
+}
+
+.lifecycleLabel {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lifecycleDesc {
+  color: var(--color-muted);
+}
+
+.lifecycleArrow {
+  position: absolute;
+  right: var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.625rem;
+}
+
+.lifecycleActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* old backoff visualization removed — replaced with interactive backoff below */
+
+/* ── E2E encryption widget ────────────────────────────────────────── */
+
+.e2eDemo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.e2eSide {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.e2eLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+}
+
+.e2eInput {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-text);
+}
+
+.e2eInput:focus-visible {
+  outline: 2px solid transparent;
+  border-color: var(--diagram-layer-5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-5) 20%, transparent);
+}
+
+.e2eWire {
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--color-error) 4%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--color-error) 25%, transparent);
+  border-radius: var(--radius-1);
+  text-align: center;
+}
+
+.e2eWireLabel {
+  font-size: 0.625rem;
+  color: var(--color-error);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.e2eCiphertext {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  word-break: break-all;
+}
+
+.e2eDecryptBtn {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  min-height: 44px;
+  transition: all 150ms ease;
+}
+
+.e2eDecryptBtn:hover { border-color: var(--diagram-layer-5); }
+.e2eDecryptBtn:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+
+.e2eNote {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ── Scroll anchor widget ─────────────────────────────────────────── */
+
+.scrollSandbox {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+}
+
+.scrollContainer {
+  height: 100px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scrollMsg {
+  font-size: 0.625rem;
+  padding: 4px var(--space-2);
+  background: var(--color-bg);
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+.scrollBadge {
+  position: absolute;
+  bottom: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px var(--space-3);
+  background: var(--diagram-layer-0);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.scrollBadge:focus-visible { outline: 2px solid var(--color-text); outline-offset: 2px; }
+
+.scrollDecision {
+  margin-top: var(--space-2);
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: 4px var(--space-2);
+  border-radius: 3px;
+}
+
+.scrollDecision[data-near="true"] { color: var(--color-success); }
+
+/* ── Debounce explainer widget ──────────────────────────────────── */
+
+.debounceSliderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.debounceSliderLabel {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-text);
+  min-width: 120px;
+  font-variant-numeric: tabular-nums;
+}
+
+.debounceSimRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.debounceIndicator {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  transition: all 200ms ease;
+}
+
+.debounceIndicator[data-typing="true"] {
+  color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
+}
+
+.debounceStats {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.debounceRating { font-weight: 600; }
+.debounceRating[data-status="good"] { color: var(--color-success); }
+.debounceRating[data-status="bad"] { color: var(--color-error); }
+.debounceRating[data-status="warn"] { color: var(--diagram-layer-3); }
+
+/* ── Queue flush widget ─────────────────────────────────────────── */
+
+.queueVis {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 40px;
+}
+
+.flushEmpty {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-style: italic;
+  padding: var(--space-2);
+}
+
+.flushItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--space-2);
+  border-radius: 3px;
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  transition: all 200ms ease;
+}
+
+.flushItem[data-status="queued"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-3) 30%, transparent);
+}
+
+.flushItem[data-status="flushing"] {
+  background: color-mix(in srgb, var(--diagram-layer-0) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-0) 30%, transparent);
+}
+
+.flushItem[data-status="acked"] {
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+.flushItemId { color: var(--color-text); font-weight: 600; }
+
+.flushItemStatus {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.flushItem[data-status="acked"] .flushItemStatus { color: var(--color-success); }
+
+.queueActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ── Backoff widget ─────────────────────────────────────────────── */
+
+.backoffBars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 80px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.backoffBarItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.backoffBar {
+  width: 100%;
+  min-height: 8px;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: all 300ms ease;
+}
+
+.backoffBarItem[data-active="true"] .backoffBar {
+  background: var(--diagram-layer-5);
+}
+
+.backoffBarItem[data-current="true"] .backoffBar {
+  background: var(--diagram-layer-4);
+  animation: barPulse 1s ease-in-out infinite;
+}
+
+@keyframes barPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.backoffBarLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.backoffInfo {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  margin-top: var(--space-1);
+  min-height: 1.4em;
+}
+
+.backoffActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ── Send phases widget ──────────────────────────────────────────── */
+
+.sendPhases {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sendPhase {
+  display: grid;
+  grid-template-columns: 24px 56px 1fr;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: 3px;
+  font-size: 0.625rem;
+  background: var(--color-bg);
+  opacity: 0.35;
+  transition: all 200ms ease;
+}
+
+.sendPhase[data-active="true"] { opacity: 1; }
+.sendPhase[data-current="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 25%, transparent);
+}
+
+.sendPhase[data-failed="true"] {
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+}
+
+.sendPhaseIcon { font-size: 0.7rem; }
+.sendPhaseLabel { font-weight: 700; color: var(--color-text); }
+.sendPhaseDesc { color: var(--color-muted); font-size: 0.625rem; }
+
+.sendActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ── Reaction widget ──────────────────────────────────────────────── */
+
+.reactionBar {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.reactionBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-size: 0.625rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+  min-height: 44px;
+}
+
+.reactionBtn:hover { border-color: var(--diagram-layer-5); }
+.reactionBtn:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+
+.reactionBtn[data-active="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 12%, transparent);
+  border-color: var(--diagram-layer-5);
+}
+
+.reactionBtn[data-rollback="true"] {
+  animation: reactionShake 300ms ease;
+}
+
+@keyframes reactionShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.reactionCount {
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.reactionModelNote {
+  margin-top: var(--space-2);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  min-height: 1.4em;
+}
+
+/* ── Read receipt widget ──────────────────────────────────────────── */
+
+.receiptMessages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.receiptMsg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: 0.625rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  min-height: 44px;
+}
+
+.receiptMsg:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+
+.receiptMsg[data-read="true"] {
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 25%, transparent);
+}
+
+.receiptMsg[data-cursor="true"] {
+  border-color: var(--diagram-layer-0);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-0) 20%, transparent);
+}
+
+.receiptMsgText { color: var(--color-text); }
+.receiptCheck { color: var(--diagram-layer-0); font-weight: 800; }
+
+.receiptStats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-2);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.receiptSaving {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+/* ── sim buttons (shared) ───────────────────────────────────────── */
+
+.simButton {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--diagram-layer-5);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
+  color: var(--diagram-layer-5);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.simButton:hover { background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent); }
+.simButton:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+.simButton:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.simButtonSecondary {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.simButtonSecondary:hover { background: var(--color-bg); }
+.simButtonSecondary:focus-visible { outline: 2px solid var(--color-text); outline-offset: 2px; }
+.simButtonSecondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── slider (shared) ────────────────────────────────────────────── */
+
+.slider {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--diagram-layer-5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Chat container (the persistent chat view)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.chatContainer {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Connection status bar ────────────────────────────────────────── */
+
+.connectionBar {
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-align: center;
+  overflow: hidden;
+}
+
+.connectionBar[data-state="disconnected"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  color: var(--color-error);
+}
+
+.connectionBar[data-state="connecting"] {
+  background: color-mix(in srgb, var(--diagram-layer-4) 15%, var(--color-surface));
+  color: var(--diagram-layer-4);
+}
+
+/* ── Message scroll ───────────────────────────────────────────────── */
+
+.messageScroll {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ── Message row ──────────────────────────────────────────────────── */
+
+.messageRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  max-width: 85%;
+}
+
+.messageRow[data-own="true"] {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.messageRow[data-group-start="true"] {
+  margin-top: var(--space-2);
+}
+
+/* ── Avatar ────────────────────────────────────────────────────────── */
+
+.msgAvatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-bg);
+  font-weight: 800;
+  font-size: 0.625rem;
+  flex-shrink: 0;
+}
+
+.msgAvatarSpacer {
+  width: 24px;
+  flex-shrink: 0;
+}
+
+/* ── Bubble ────────────────────────────────────────────────────────── */
+
+.msgBubbleWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.msgAuthor {
+  font-size: 0.625rem;
+  font-weight: 700;
+  margin-left: var(--space-2);
+  margin-bottom: 1px;
+}
+
+.msgBubbleRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.msgBubble {
+  position: relative;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  cursor: default;
+  transition: background 150ms ease;
+}
+
+.msgBubble[data-own="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--diagram-layer-5) 25%, var(--color-border));
+  border-radius: 12px 12px 4px 12px;
+}
+
+.msgBubble[data-pending="true"] {
+  opacity: 0.7;
+}
+
+.msgBubble:hover {
+  background: var(--color-surface-2);
+}
+
+.msgReactTrigger {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 0.68rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.4;
+  transition: opacity 150ms ease;
+  min-height: 44px;
+  min-width: 44px;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.msgBubbleRow:hover .msgReactTrigger,
+.msgReactTrigger:focus-visible {
+  opacity: 1;
+}
+
+.msgReactTrigger:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.msgLock {
+  font-size: 0.625rem;
+  opacity: 0.5;
+}
+
+.msgContent {
+  font-size: 0.68rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.msgTime {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.msgStatus {
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.msgStatus[data-read="true"] {
+  color: var(--diagram-layer-0);
+}
+
+/* ── Message reactions ─────────────────────────────────────────────── */
+
+.msgReactions {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+  padding-left: var(--space-2);
+}
+
+.msgReactionBadge {
+  font-size: 0.625rem;
+  padding: 6px 12px;
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.msgReactionBadge:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.msgReactionBadge:hover {
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-surface));
+}
+
+/* ── Typing indicator ──────────────────────────────────────────────── */
+
+.typingIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-left: 32px;
+}
+
+.typingDots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.typingDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.typingDot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingDot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.typingText {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ── Compose bar ──────────────────────────────────────────────────── */
+
+.composeBar {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.composeBar[data-disabled="true"] {
+  opacity: 0.5;
+}
+
+.composeInput {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  transition: border-color 150ms ease;
+}
+
+.composeInput:focus-visible {
+  border-color: var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.composeInput:disabled {
+  cursor: not-allowed;
+}
+
+.sendButton {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--diagram-layer-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+}
+
+.sendButton:hover:not(:disabled) {
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+  border-color: var(--diagram-layer-5);
+}
+
+.sendButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   New bespoke control styles (iteration 2)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Step 5: Scroll anchor toggle ─────────────────────────────────── */
+
+.scrollAnchorToggle {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.scrollAnchorButton {
+  flex: 1;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.scrollAnchorButton[data-active="true"][data-variant="good"] {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+}
+
+.scrollAnchorButton[data-active="true"][data-variant="bad"] {
+  border-color: var(--diagram-layer-4);
+  color: var(--diagram-layer-4);
+  background: color-mix(in srgb, var(--diagram-layer-4) 8%, var(--color-bg));
+}
+
+/* ── Step 8: Debounce slider ──────────────────────────────────────── */
+
+.debounceSlider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.debounceSliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.debounceSliderLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.debounceSliderValue {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--diagram-layer-5);
+}
+
+.debounceSliderValue[data-spammy="true"] {
+  color: var(--color-error);
+}
+
+.debounceSliderInput {
+  width: 100%;
+  accent-color: var(--diagram-layer-5);
+  min-height: 44px;
+}
+
+.debounceSliderMarks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.typingMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.typingMetric {
+  text-align: center;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.typingMetricValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.typingMetricValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.typingMetricValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.typingMetricValue[data-active="true"] {
+  color: var(--diagram-layer-5);
+}
+
+.typingMetricLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.spammyWarning {
+  font-size: 0.625rem;
+  color: var(--color-error);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-error) 5%, var(--color-bg));
+  text-align: center;
+}
+
+/* ── Step 10: Offline queue demo ──────────────────────────────────── */
+
+.offlineDemo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  justify-content: center;
+}
+
+.offlineDemoStep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-1);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  transition: all 200ms ease;
+}
+
+.offlineDemoStep[data-active="true"] {
+  color: var(--diagram-layer-5);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-bg));
+}
+
+.offlineDemoNumber {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.offlineDemoStep[data-active="true"] .offlineDemoNumber {
+  border-color: var(--diagram-layer-5);
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+}
+
+.offlineDemoText {
+  white-space: nowrap;
+}
+
+.offlineDemoArrow {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.queueVisual {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.queueVisualHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.queueVisualCount {
+  font-size: 0.625rem;
+  font-weight: 800;
+}
+
+.queueVisualCount[data-status="warn"] {
+  color: var(--diagram-layer-4);
+}
+
+.queueVisualCount[data-status="good"] {
+  color: var(--color-success);
+}
+
+.queueItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  font-size: 0.625rem;
+  background: color-mix(in srgb, var(--diagram-layer-4) 5%, var(--color-bg));
+}
+
+.queueItemIcon {
+  font-size: 0.72rem;
+}
+
+.queueItemContent {
+  flex: 1;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queueItemPos {
+  font-weight: 700;
+  color: var(--color-muted);
+  font-size: 0.625rem;
+}
+
+.queueEmpty {
+  padding: var(--space-3) var(--space-2);
+  text-align: center;
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ── Step 11: Grouping comparison ─────────────────────────────────── */
+
+.groupingSimulation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groupingSimHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.groupingSimLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.groupingSimButton {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--diagram-layer-5);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
+  color: var(--diagram-layer-5);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.groupingSimButton:hover {
+  background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent);
+}
+
+.groupingSimButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.groupingSimMessages {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 80px;
+}
+
+.groupingSimEmpty {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-align: center;
+  padding: var(--space-3) 0;
+}
+
+.groupingSimMsg {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: var(--radius-1);
+  transition: background 200ms ease;
+}
+
+.groupingSimMsg[data-grouped="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 6%, transparent);
+}
+
+.groupingSimAvatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--color-bg);
+}
+
+.groupingSimAvatarSpacer {
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.groupingSimContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.groupingSimAuthor {
+  font-size: 0.625rem;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.groupingSimGap {
+  font-size: 0.625rem;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.groupingSimText {
+  font-size: 0.625rem;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.groupingSimRule {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.groupingStats {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.groupingStat {
+  text-align: center;
+  padding: var(--space-1);
+}
+
+.groupingStatValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.groupingStatValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.groupingStatLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  display: block;
+}
+
+/* ── Step 12: Emoji picker ────────────────────────────────────────── */
+
+.emojiPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.emojiPickerLabel {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.emojiPickerRow {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.emojiPickerButton {
+  font-size: 1rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emojiPickerButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.emojiPickerButton[data-active="true"] {
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-bg));
+  transform: scale(1.15);
+}
+
+.emojiPickerButton:hover {
+  transform: scale(1.1);
+}
+
+.reactionPipeline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-4) 30%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-4) 3%, var(--color-bg));
+  font-size: 0.625rem;
+  color: var(--color-text);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.reactionPipelineStep {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+}
+
+.reactionPipelineIcon {
+  font-size: 0.72rem;
+}
+
+.reactionPipelineArrow {
+  color: var(--color-muted);
+  font-size: 0.625rem;
+}
+
+.reactionStats {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+/* ── Step 13: Read receipt visual ─────────────────────────────────── */
+
+.readReceiptVisual {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.readProgressBar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.readProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--diagram-layer-0);
+  transition: width 400ms ease;
+}
+
+.readProgressLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.625rem;
+  color: var(--color-muted);
+}
+
+.advanceReadButton {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--diagram-layer-5);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-bg));
+  color: var(--diagram-layer-5);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.advanceReadButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+.advanceReadButton:hover:not(:disabled) {
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+}
+
+.advanceReadButton:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.readReceiptInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.readReceiptInfoRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.625rem;
+}
+
+.readReceiptGrey {
+  color: var(--color-muted);
+}
+
+.readReceiptBlue {
+  color: var(--diagram-layer-0);
+  font-weight: 600;
+}
+
+/* old static widget CSS removed — replaced with interactive versions above */
+
+/* ── Baseline transport comparison ────────────────────────────────── */
+
+.transportPicker {
+  display: flex;
+  gap: 4px;
+}
+
+.transportButton {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.transportButton[data-active="true"] {
+  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
+  color: var(--diagram-layer-5);
+}
+
+.transportButton:hover {
+  border-color: var(--diagram-layer-5);
+}
+
+.transportButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+/* ── Focus-visible styles ─────────────────────────────────────────── */
+
+.toggleButton:focus-visible,
+.connectionButton:focus-visible,
+.scrollAnchorButton:focus-visible,
+.sendButton:focus-visible,
+.endpointHeader:focus-visible,
+.checkItem:focus-visible,
+.backoffStep:focus-visible,
+.msgBubble:focus-visible {
+  outline: 2px solid var(--diagram-layer-5);
+  outline-offset: 2px;
+}
+
+/* ── Touch target minimums (WCAG 2.2) ───────────────────────────── */
+
+.checkItem {
+  min-height: 44px;
+}
+
+.endpointCard {
+  min-height: 44px;
+}
+
+.connectionButton {
+  min-height: 44px;
+}
+
+.scrollAnchorButton {
+  min-height: 44px;
+}
+
+/* ── Own typing feedback ───────────────────────────────────────── */
+
+.ownTypingFeedback {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-3);
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+.ownTypingIndicator {
+  font-weight: 700;
+  color: var(--color-muted);
+  transition: color 200ms ease;
+}
+
+.ownTypingIndicator[data-typing="true"] {
+  color: var(--diagram-layer-5);
+}
+
+.ownTypingStats {
+  font-family: var(--font-mono);
+}
+
+/* ── Virtualization widget ──────────────────────────────────────── */
+
+.virtComparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.virtCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+}
+
+.virtColLabel {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.virtDomCount {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.virtDomCount[data-status="bad"] { color: var(--color-error); }
+.virtDomCount[data-status="good"] { color: var(--color-success); }
+
+.virtFpsBar {
+  width: 100%;
+  height: 12px;
+  background: var(--color-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.virtFpsFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.virtFpsFill[data-status="good"] { background: var(--color-success); }
+.virtFpsFill[data-status="warn"] { background: var(--diagram-layer-4); }
+.virtFpsFill[data-status="bad"] { background: var(--color-error); }
+
+.virtFpsValue {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.virtFpsValue[data-status="good"] { color: var(--color-success); }
+.virtFpsValue[data-status="warn"] { color: var(--diagram-layer-4); }
+.virtFpsValue[data-status="bad"] { color: var(--color-error); }
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .typingDot { animation: none; opacity: 0.6; }
+  .stepDot[data-current="true"] { animation: none; }
+  .backoffBarItem[data-current="true"] .backoffBar { animation: none; }
+  .reactionBtn[data-rollback="true"] { animation: none; }
+  .lifecycleStep { transition: none; }
+  .sendPhase { transition: none; }
+  .flushItem { transition: none; }
+  .readProgressFill { transition: none; }
+  .virtFpsFill { transition: none; }
+  .debounceIndicator { transition: none; }
+  .toggleButton { transition: none; }
+  .toggleKnob { transition: none; }
+  .emojiPickerButton { transition: none; }
+  .emojiPickerButton[data-active="true"] { transform: none; }
+  .emojiPickerButton:hover { transform: none; }
+  .deliveryStage { transition: none; }
+  .deliveryStage[data-active="true"] { transform: none; }
+  .backoffBar { transition: none; }
+  .connectionButton { transition: none; }
+  .checkItem { transition: none; }
+  .checkToggle { transition: none; }
+  .msgBubble { transition: none; }
+  .msgReactTrigger { transition: none; opacity: 1; }
+}
+
+@media (hover: none) {
+  .msgReactTrigger { opacity: 0.6; }
+}

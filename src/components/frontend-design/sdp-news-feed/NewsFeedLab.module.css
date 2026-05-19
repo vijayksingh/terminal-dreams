@@ -1,0 +1,2194 @@
+/* ── NewsFeedLab ──────────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Step indicator bar ──────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 3px;
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-9);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+}
+
+/* ── Scroll area ─────────────────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Section headings ────────────────────────────────────────────── */
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-3) 0 var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading:first-child {
+  margin-top: 0;
+}
+
+/* ── Planning panel ──────────────────────────────────────────────── */
+
+.planningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Step 1: Requirements checklist ──────────────────────────────── */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.checkItem:hover {
+  border-color: var(--diagram-layer-9);
+}
+
+.checkItem[data-checked="true"] {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
+}
+
+.checkToggle {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-1);
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  transition: all 150ms ease;
+  color: transparent;
+}
+
+.checkItem[data-checked="true"] .checkToggle {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+  color: var(--color-bg);
+}
+
+.checkLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.checkDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.scopeSummary {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.scopeLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+.scopeValue {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ── Panel tabs ──────────────────────────────────────────────────── */
+
+.panelTabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+
+.panelTab {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panelTab:hover:not([data-active="true"]) {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.panelTab[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+}
+
+/* ── Endpoint cards ──────────────────────────────────────────────── */
+
+.endpointList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointCard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: border-color 150ms ease;
+  text-align: left;
+}
+
+.endpointCard:hover,
+.endpointCard[data-expanded="true"] {
+  border-color: var(--diagram-layer-9);
+}
+
+.endpointHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.methodBadge {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.methodBadge[data-method="GET"] {
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-surface));
+  color: var(--color-success);
+}
+
+.methodBadge[data-method="POST"] {
+  background: color-mix(in srgb, var(--diagram-layer-9) 15%, var(--color-surface));
+  color: var(--diagram-layer-9);
+}
+
+.methodBadge[data-method="DELETE"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  color: var(--color-error);
+}
+
+.endpointPath {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.endpointChevron {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.endpointDesc {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.endpointUsedBy {
+  font-size: 0.6rem;
+  color: var(--diagram-layer-9);
+  opacity: 0.7;
+}
+
+.endpointDetail {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.endpointDetailLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.paramGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.paramRow {
+  display: grid;
+  grid-template-columns: 80px 80px 1fr;
+  gap: var(--space-2);
+  padding: 3px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.62rem;
+  align-items: center;
+}
+
+.paramName {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.paramType {
+  font-family: var(--font-mono);
+  color: var(--diagram-layer-5);
+}
+
+.paramNote {
+  color: var(--color-muted);
+}
+
+.responseType {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--diagram-layer-9);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--diagram-layer-9);
+  border-radius: var(--radius-1);
+  display: inline-block;
+}
+
+/* ── Type cards ──────────────────────────────────────────────────── */
+
+.typeCardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.typeCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.typeCard:first-child {
+  grid-row: span 2;
+}
+
+.typeCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.typeCardName {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.typeCardCategory {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.typeCardExtends {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  margin-bottom: var(--space-2);
+}
+
+.typeCardExtends span {
+  color: var(--diagram-layer-5);
+  font-weight: 600;
+}
+
+.typeCardFields {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.typeFieldRow {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 2px;
+  padding: 2px 0;
+  font-size: 0.62rem;
+}
+
+.typeFieldName {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.typeFieldType {
+  color: var(--diagram-layer-5);
+}
+
+.typeFieldNote {
+  grid-column: 1 / -1;
+  color: var(--color-muted);
+  font-size: 0.56rem;
+  padding-left: 92px;
+}
+
+/* ── Metrics bar ─────────────────────────────────────────────────── */
+
+.metricsBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.metricCard {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.metricLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.metricValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.metricValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.metricValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+/* ── Evolution layout ───────────────────────────────────────────── */
+
+.evolutionLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Step controls ───────────────────────────────────────────────── */
+
+/* ── Step 4: Baseline controls ──────────────────────────────────── */
+
+.baselineControls {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.baselineHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.baselineBadge {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+  padding: 2px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.1em;
+}
+
+.baselineCount {
+  font-size: 0.68rem;
+  color: var(--color-muted);
+}
+
+.baselineGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.baselineStat {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.baselineStatValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.baselineStatValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.baselineStatLabel {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.baselineNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Step 4: Baseline widget ────────────────────────────────────── */
+
+.baselineComparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.baselineCompareCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.baselineCompareLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.baselineCompareItem {
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: 0.62rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.baselineCompareItem[data-status="good"] {
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+}
+
+.baselineCompareItem[data-status="bad"] {
+  color: var(--color-error);
+  border-color: color-mix(in srgb, var(--color-error) 30%, var(--color-border));
+}
+
+/* ── Step 5: Post type chips ────────────────────────────────────── */
+
+.postTypeChips {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.postTypeChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.postTypeChip[data-active="true"] {
+  border-color: var(--chip-color);
+  color: var(--chip-color);
+  background: color-mix(in srgb, var(--chip-color) 8%, var(--color-bg));
+}
+
+.postTypeChipIcon {
+  font-size: 0.72rem;
+}
+
+.postTypeChipCount {
+  font-size: 0.5rem;
+  opacity: 0.6;
+}
+
+.typeFilteredTag {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* ── Step 6: Batch progress ─────────────────────────────────────── */
+
+.batchProgress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.batchBar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.batchBarFill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--diagram-layer-0);
+  transition: width 400ms ease;
+}
+
+.batchLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.batchCompare {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.batchCompareItem {
+  text-align: center;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.batchCompareValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.batchCompareValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.batchCompareLabel {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Step 7: Like tracker ───────────────────────────────────────── */
+
+.likeTracker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.likeTrackerStat {
+  text-align: center;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.likeTrackerValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.likeTrackerValue[data-status="good"] {
+  color: var(--color-success);
+}
+
+.likeTrackerValue[data-status="bad"] {
+  color: var(--color-error);
+}
+
+.likeTrackerLabel {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ── Step 10: DOM compare ───────────────────────────────────────── */
+
+.domCompare {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.domCompareItem {
+  text-align: center;
+  flex: 1;
+}
+
+.domCompareItem[data-status="active"] .domCompareValue {
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.domCompareItem[data-status="before"] .domCompareValue {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.domCompareItem[data-status="after"] .domCompareValue {
+  color: var(--color-success);
+  opacity: 0.5;
+}
+
+.domCompareValue {
+  display: block;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.domCompareLabel {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.domCompareArrow {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+
+.domCompareSavings {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--diagram-layer-9);
+  flex-shrink: 0;
+}
+
+/* ── Step 11: CLS compare ───────────────────────────────────────── */
+
+.clsCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.clsCompareCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.clsCompareLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.clsCompareBlock {
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.clsCompareBlock[data-state="bad"] {
+  border-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg));
+}
+
+.clsCompareBlock[data-state="good"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
+}
+
+.clsCompareBlock[data-state="inactive"] {
+  opacity: 0.4;
+}
+
+.clsShift {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.clsReserved {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.clsMeter {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--color-muted);
+}
+
+/* ── Step 14: Backoff timeline ──────────────────────────────────── */
+
+.backoffTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.backoffHeader {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.backoffSteps {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.backoffStep {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.backoffStep[data-final="true"] {
+  border-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg));
+}
+
+.backoffAttempt {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--diagram-layer-9);
+}
+
+.backoffDelay {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.backoffStep[data-final="true"] .backoffDelay {
+  color: var(--color-error);
+}
+
+.backoffLabel {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.backoffStats {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 8: Insert mode toggle ─────────────────────────────────── */
+
+.insertModeToggle {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.insertModeButton {
+  flex: 1;
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.insertModeButton[data-active="true"][data-variant="good"] {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+}
+
+.insertModeButton[data-active="true"][data-variant="bad"] {
+  border-color: var(--color-error);
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 8%, var(--color-bg));
+}
+
+/* ── Step 9: Weight sliders ─────────────────────────────────────── */
+
+.weightSliders {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.weightRow {
+  display: grid;
+  grid-template-columns: 90px 1fr 40px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.weightLabel {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.weightSlider {
+  width: 100%;
+  accent-color: var(--diagram-layer-9);
+  height: 4px;
+}
+
+.weightValue {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--diagram-layer-9);
+  text-align: right;
+}
+
+/* ── Step 9: Formula display ────────────────────────────────────── */
+
+.formulaDisplay {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--diagram-layer-9);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── Step 12: Embedding pipeline ────────────────────────────────── */
+
+.embeddingPipeline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.6rem;
+  color: var(--color-text);
+}
+
+.pipelineStep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pipelineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-success);
+}
+
+.pipelineArrow {
+  color: var(--color-muted);
+  font-size: 0.56rem;
+}
+
+.embeddingExplainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.embeddingStage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.embeddingStageBadge {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+  font-size: 0.56rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.embeddingStageTitle {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.embeddingStageDesc {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.embeddingStats {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 13: Accessibility ─────────────────────────────────────── */
+
+.ariaPreview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ariaRow {
+  display: grid;
+  grid-template-columns: 120px 70px 1fr;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  font-size: 0.58rem;
+  align-items: center;
+}
+
+.ariaAttr {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--diagram-layer-2);
+}
+
+.ariaEl {
+  color: var(--color-muted);
+}
+
+.ariaDesc {
+  color: var(--color-text);
+}
+
+.a11yChecklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.a11yCheckRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  transition: all 200ms ease;
+}
+
+.a11yCheckRow[data-passed="true"] {
+  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
+}
+
+.a11yCheckIcon {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.a11yCheckRow[data-passed="true"] .a11yCheckIcon {
+  color: var(--color-success);
+}
+
+.a11yCheckLabel {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.a11yCheckDesc {
+  display: block;
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.toggleStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toggleLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.toggleButton {
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  cursor: pointer;
+  position: relative;
+  transition: all 200ms ease;
+  flex-shrink: 0;
+}
+
+.toggleButton[data-on="true"] {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  transition: all 200ms ease;
+}
+
+.toggleButton[data-on="true"] .toggleKnob {
+  left: 18px;
+  background: var(--color-bg);
+}
+
+.toggleImpact {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+}
+
+.toggleImpact strong[data-status="good"] { color: var(--color-success); }
+.toggleImpact strong[data-status="bad"] { color: var(--color-error); }
+
+/* ── Feed mode controls ──────────────────────────────────────────── */
+
+.feedModeControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.feedModeButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.layoutModeButton {
+  flex: 1;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.layoutModeButton[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+}
+
+/* ── Scale controls ──────────────────────────────────────────────── */
+
+.scaleControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.scaleSliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scaleSliderLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.scaleSliderValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--diagram-layer-9);
+}
+
+.scaleSliderInput {
+  width: 100%;
+  accent-color: var(--diagram-layer-9);
+}
+
+.scaleMarks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.56rem;
+  color: var(--color-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Feed container (the persistent feed view)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.feedContainer {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.feedScroll {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── New post banner ─────────────────────────────────────────────── */
+
+.newPostBanner {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  padding: var(--space-2);
+  background: var(--diagram-layer-0);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.newPostBanner:hover {
+  background: color-mix(in srgb, var(--diagram-layer-0) 85%, var(--color-bg));
+}
+
+/* ── Post card ───────────────────────────────────────────────────── */
+
+.postCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.postCard[data-type="image"] {
+  border-left: 3px solid var(--diagram-layer-2);
+}
+
+.postCard[data-type="link"] {
+  border-left: 3px solid var(--diagram-layer-5);
+}
+
+.postCard[data-type="poll"] {
+  border-left: 3px solid var(--diagram-layer-4);
+}
+
+.postHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.postAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.postMeta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.postAuthor {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.postHandle {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.engagementBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--diagram-layer-4);
+  background: color-mix(in srgb, var(--diagram-layer-4) 12%, var(--color-surface));
+  padding: 2px 6px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.postContent {
+  font-size: 0.68rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* ── Post: image type ────────────────────────────────────────────── */
+
+.postImage {
+  border-radius: var(--radius-1);
+  min-height: 80px;
+  max-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.postImageIcon {
+  width: 28px;
+  height: 28px;
+  opacity: 0.4;
+  color: var(--color-bg);
+}
+
+/* ── Post: link preview ──────────────────────────────────────────── */
+
+.linkPreview {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid;
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.linkDomain {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.linkTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.linkDesc {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ── Post: poll ──────────────────────────────────────────────────── */
+
+.pollContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pollOption {
+  position: relative;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.pollBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
+  border-radius: var(--radius-1);
+  transition: width 600ms ease;
+}
+
+.pollLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--color-text);
+  position: relative;
+  z-index: 1;
+}
+
+.pollPct {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--diagram-layer-9);
+  position: relative;
+  z-index: 1;
+}
+
+.pollTotal {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  text-align: right;
+}
+
+/* ── Reaction bar ────────────────────────────────────────────────── */
+
+.reactionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+
+.reactionButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-1);
+  transition: all 150ms ease;
+}
+
+.reactionButton:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  color: var(--color-error);
+}
+
+.reactionButton[data-liked="true"] {
+  color: var(--color-error);
+}
+
+.reactionButton[data-liked="true"] .heartIcon {
+  display: inline-block;
+  animation: heartPop 300ms ease;
+}
+
+.reactionButton[data-pending="true"] {
+  opacity: 0.6;
+}
+
+.reactionButton[data-failed="true"] {
+  animation: heartShake 400ms ease;
+}
+
+@keyframes heartPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+@keyframes heartShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+.heartIcon {
+  font-size: 0.72rem;
+}
+
+.reactionButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.reactionStat {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+/* ── Post error state ────────────────────────────────────────────── */
+
+.postCardError {
+  padding: var(--space-3);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--color-error);
+}
+
+.retryButton {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-error);
+  background: none;
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-1);
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.retryButton:hover {
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+}
+
+/* ── Skeleton cards ──────────────────────────────────────────────── */
+
+.skeletonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skeletonCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.skeletonAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonLines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.skeletonLine {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Scroll sentinel ─────────────────────────────────────────────── */
+
+.scrollSentinel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.sentinelLine {
+  flex: 1;
+  height: 1px;
+  background: var(--diagram-layer-0);
+  opacity: 0.4;
+}
+
+.sentinelLabel {
+  font-size: 0.56rem;
+  color: var(--diagram-layer-0);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Widget panels (below feed)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Step 5: Post type explainer ─────────────────────────────────── */
+
+.typeExplainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.typeExplainerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  border-radius: var(--radius-1);
+  opacity: 0.5;
+  transition: opacity 200ms ease;
+}
+
+.typeExplainerRow[data-active="true"] {
+  opacity: 1;
+}
+
+.typeExplainerBadge {
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  min-width: 48px;
+  text-align: center;
+}
+
+.typeExplainerBadge[data-type="text"] {
+  background: color-mix(in srgb, var(--color-text) 12%, transparent);
+  color: var(--color-text);
+}
+
+.typeExplainerBadge[data-type="image"] {
+  background: color-mix(in srgb, var(--diagram-layer-2) 15%, transparent);
+  color: var(--diagram-layer-2);
+}
+
+.typeExplainerBadge[data-type="link"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 15%, transparent);
+  color: var(--diagram-layer-5);
+}
+
+.typeExplainerBadge[data-type="poll"] {
+  background: color-mix(in srgb, var(--diagram-layer-4) 15%, transparent);
+  color: var(--diagram-layer-4);
+}
+
+.typeExplainerDesc {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 6: Sentinel diagram ────────────────────────────────────── */
+
+.sentinelDiagram {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.sentinelDiagramViewport {
+  padding: var(--space-2);
+}
+
+.sentinelDiagramContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sentinelDiagramPosts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sentinelDiagramPost {
+  height: 16px;
+  border-radius: 3px;
+  background: var(--color-border);
+}
+
+.sentinelDiagramTrigger {
+  padding: 4px;
+  border: 1px dashed var(--diagram-layer-0);
+  border-radius: var(--radius-1);
+  font-size: 0.56rem;
+  color: var(--diagram-layer-0);
+  text-align: center;
+}
+
+/* ── Step 7: Optimistic diagram ──────────────────────────────────── */
+
+.optimisticDiagram {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.optimisticStep {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6rem;
+  color: var(--color-text);
+}
+
+.optimisticDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.optimisticDot[data-state="user"] { background: var(--color-text); }
+.optimisticDot[data-state="optimistic"] { background: var(--color-error); }
+.optimisticDot[data-state="server"] { background: var(--color-success); }
+.optimisticDot[data-state="rollback"] { background: var(--color-warning); }
+
+.optimisticArrow {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+.optimisticStats {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 8: Real-time diagram ───────────────────────────────────── */
+
+.realtimeDiagram {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+  color: var(--color-text);
+}
+
+.realtimeSource {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.realtimeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-muted);
+}
+
+.realtimeDot[data-active="true"] {
+  background: var(--color-success);
+  animation: realtimePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes realtimePulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 40%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 0%, transparent); }
+}
+
+.realtimeArrow {
+  color: var(--color-muted);
+}
+
+.realtimeQueue {
+  font-weight: 600;
+}
+
+.realtimeBanner {
+  color: var(--diagram-layer-0);
+  font-weight: 600;
+}
+
+/* ── Step 9: Ranking table ───────────────────────────────────────── */
+
+.rankingTable {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.6rem;
+}
+
+.rankingHeader {
+  display: grid;
+  grid-template-columns: 50px repeat(3, 1fr) 60px;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  color: var(--color-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.5rem;
+}
+
+.rankingRow {
+  display: grid;
+  grid-template-columns: 50px repeat(3, 1fr) 60px;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  border-radius: 2px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.rankingRank {
+  font-weight: 700;
+  color: var(--diagram-layer-9);
+}
+
+.rankingScore {
+  font-weight: 700;
+  color: var(--diagram-layer-4);
+}
+
+/* ── Step 10: Virtual strip ──────────────────────────────────────── */
+
+.virtualStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.virtualDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--color-border);
+  transition: background 200ms ease;
+}
+
+.virtualDot[data-active="true"] {
+  background: var(--diagram-layer-9);
+}
+
+.virtualDot[data-rendered="true"]:not([data-active="true"]) {
+  background: var(--color-muted);
+}
+
+.virtualOverflow {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  align-self: center;
+  margin-left: 4px;
+}
+
+/* ── Step 11: Skeleton compare ───────────────────────────────────── */
+
+.skeletonCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.skeletonCompareCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.skeletonCompareLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.skeletonCompareBox {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 60px;
+  justify-content: center;
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.skeletonSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-muted);
+  border-radius: 999px;
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.miniSkeleton {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-border);
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.miniSkeletonLine {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  animation: shimmer 1.5s ease-in-out infinite;
+  align-self: stretch;
+}
+
+/* ── Step 14: Error diagram ──────────────────────────────────────── */
+
+.errorDiagram {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.errorStateRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.6rem;
+  color: var(--color-text);
+}
+
+.errorStateBranch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.6rem;
+  color: var(--color-text);
+  margin-left: 120px;
+}
+
+.errorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.errorDot[data-state="pending"] { background: var(--color-muted); }
+.errorDot[data-state="loading"] { background: var(--diagram-layer-0); }
+.errorDot[data-state="loaded"] { background: var(--color-success); }
+.errorDot[data-state="failed"] { background: var(--color-error); }
+
+.errorArrow {
+  color: var(--color-muted);
+  font-size: 0.56rem;
+}
+
+.errorStats {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+/* ── Step 15: CWV gauges ─────────────────────────────────────────── */
+
+.cwvGauges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.cwvGauge {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.cwvLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.cwvValue {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.cwvValue[data-score="good"] { color: var(--color-success); }
+.cwvValue[data-score="needs-improvement"] { color: var(--color-warning); }
+.cwvValue[data-score="poor"] { color: var(--color-error); }
+
+.cwvTarget {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+  .realtimeDot[data-active="true"] { animation: none; }
+  .skeletonAvatar,
+  .skeletonLine,
+  .miniSkeleton,
+  .miniSkeletonLine { animation: none; opacity: 0.6; }
+  .skeletonSpinner { animation: none; }
+  .reactionButton[data-liked="true"] .heartIcon { animation: none; }
+  .reactionButton[data-failed="true"] { animation: none; }
+}
