@@ -321,10 +321,6 @@
   flex: 1;
 }
 
-.endpointChevron {
-  color: var(--color-muted);
-  font-size: 0.625rem;
-}
 
 .endpointDetail {
   padding: var(--space-2);
@@ -373,8 +369,6 @@
 .typeCardHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-1); }
 .typeCardName { font-size: 0.75rem; font-weight: 800; }
 .typeCardCategory { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; }
-.typeCardExtends { font-size: 0.625rem; color: var(--color-muted); margin-bottom: var(--space-1); }
-.typeCardExtends span { color: var(--color-accent); }
 .typeCardFields { display: flex; flex-direction: column; gap: 3px; }
 .typeFieldRow { display: flex; gap: var(--space-1); font-size: 0.625rem; }
 .typeFieldName { font-weight: 700; color: var(--color-text); }
@@ -834,11 +828,6 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-weight: 600;
 }
 
-.undoControls {
-  display: flex;
-  gap: var(--space-1);
-}
-
 .undoButton {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--color-accent);
@@ -962,21 +951,6 @@ button.scopeBadge[data-in-scope="false"]:hover {
   color: var(--color-muted);
 }
 
-.crdtRow {
-  display: flex;
-  gap: var(--space-1);
-  font-size: 0.625rem;
-  margin-top: 3px;
-}
-
-.crdtLabel {
-  font-weight: 700;
-  color: var(--color-muted);
-  min-width: 70px;
-}
-
-.crdtValue { color: var(--color-text); }
-
 /* ── R-tree visualizer ──────────────────────────────────────── */
 
 .rtreeVisualizer {
@@ -1062,35 +1036,11 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 /* ── Coalesced events viz ──────────────────────────────────── */
 
-.coalescedViz {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.coalescedRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .coalescedLabel {
   font-size: 0.625rem;
   font-weight: 700;
   color: var(--color-muted);
   min-width: 90px;
-}
-
-.coalescedDots {
-  display: flex;
-  gap: 3px;
-  flex-wrap: wrap;
-}
-
-.coalescedDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
 }
 
 .coalescedCount {

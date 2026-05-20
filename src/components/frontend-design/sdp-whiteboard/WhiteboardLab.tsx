@@ -29,12 +29,21 @@ const CANVAS_H = 260;
 
 export function WhiteboardLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0);
+    const firstFocusable = scrollRef.current?.querySelector(
+      "button, [tabindex='0'], input, [role='radio']"
+    ) as HTMLElement;
+    firstFocusable?.focus({ preventScroll: true });
+  }, [activeStep]);
 
   return (
     <WhiteboardProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
         <StepBar activeStep={activeStep} />
-        <div className={styles.scrollArea}>
+        <div ref={scrollRef} className={styles.scrollArea}>
           {isPlanning ? (
             <AnimatePresence mode="wait">
               <motion.div
