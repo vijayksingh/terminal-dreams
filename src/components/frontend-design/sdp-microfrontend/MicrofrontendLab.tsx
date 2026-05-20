@@ -19,6 +19,13 @@ import {
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { MICROFRONTEND_ARCH_CONFIG } from "./architecture-scenarios";
 import styles from "./MicrofrontendLab.module.css";
+import {
+  PredictionChallenge,
+  RemoteFrameContainer,
+  HostShellDashboard,
+  LogConsole,
+} from "./ui/MicrofrontendUI";
+import { simulateMfeLoading } from "./engine/loader";
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -626,11 +633,12 @@ function RemoteLoadingWidget() {
     products: 0,
     cart: 0,
   });
+
   const [isLoading, setIsLoading] = useState(false);
-  const timersRef = useRef<ReturnType<typeof setInterval>[]>([]);
+  const timersRef = useRef<(() => void)[]>([]);
 
   const cleanup = useCallback(() => {
-    timersRef.current.forEach(t => clearInterval(t));
+    timersRef.current.forEach(fn => fn());
     timersRef.current = [];
   }, []);
 
@@ -644,22 +652,17 @@ function RemoteLoadingWidget() {
 
     MFE_TEAMS.forEach(team => {
       const latency = latencies[team.id] ?? 500;
-      const steps = 20;
-      const interval = latency / steps;
-      let step = 0;
-
-      const timer = setInterval(() => {
-        step++;
-        const pct = Math.min(100, Math.round((step / steps) * 100));
-        setProgress(prev => ({ ...prev, [team.id]: pct }));
-
-        if (step >= steps) {
-          clearInterval(timer);
+      const cancel = simulateMfeLoading({
+        teamId: team.id,
+        latency,
+        onProgress: (pct) => {
+          setProgress(prev => ({ ...prev, [team.id]: pct }));
+        },
+        onComplete: () => {
           setLoadState(team.id, "ready");
-        }
-      }, interval);
-
-      timersRef.current.push(timer);
+        },
+      });
+      timersRef.current.push(cancel);
     });
   }, [latencies, setLoadState, cleanup]);
 
@@ -2207,17 +2210,7 @@ function IntegrationWidget() {
       <div className={styles.widgetTitle}>Full System Simulation</div>
       <div className={styles.widgetSubtitle}>Configure each scenario, predict the outcome, then trigger</div>
 
-      <div className={styles.mfePanelGrid}>
-        {MFE_TEAMS.map(team => {
-          const state = loadStates[team.id] ?? "idle";
-          return (
-            <div key={team.id} className={styles.mfePanel} data-state={state}>
-              <div className={styles.mfePanelName} style={{ color: team.color }}>{team.name}</div>
-              <div className={styles.mfePanelStatus} data-state={state}>{state}</div>
-            </div>
-          );
-        })}
-      </div>
+      <RemoteFrameContainer mfeTeams={MFE_TEAMS} loadStates={loadStates} />
 
       {scenarioOrder.map(scenarioId => {
         const def = SCENARIO_DEFS.find(s => s.id === scenarioId);
@@ -2325,54 +2318,18 @@ function IntegrationWidget() {
       })}
 
       {/* Dashboard */}
-      <div className={styles.dashboardGrid}>
-        <div className={styles.dashboardCard}>
-          <span className={styles.dashboardLabel}>Events</span>
-          <span className={styles.dashboardValue} data-status={eventCount > 0 ? "good" : undefined}>{eventCount}</span>
-        </div>
-        <div className={styles.dashboardCard}>
-          <span className={styles.dashboardLabel}>Bundle Savings</span>
-          <span className={styles.dashboardValue} data-status="good">
-            {bundleSize < unsharedTotal ? Math.round(((unsharedTotal - bundleSize) / unsharedTotal) * 100) : 0}%
-          </span>
-        </div>
-        <div className={styles.dashboardCard}>
-          <span className={styles.dashboardLabel}>MFEs Ready</span>
-          <span className={styles.dashboardValue} data-status={readyCount === 3 ? "good" : errorCount > 0 ? "bad" : undefined}>
-            {readyCount}/3
-          </span>
-        </div>
-        <div className={styles.dashboardCard}>
-          <span className={styles.dashboardLabel}>Error Isolation</span>
-          <span className={styles.dashboardValue} data-status={errorIsolated ? "good" : undefined}>
-            {errorIsolated ? "Active" : "Standby"}
-          </span>
-        </div>
-      </div>
+      <HostShellDashboard
+        eventCount={eventCount}
+        bundleSize={bundleSize}
+        unsharedTotal={unsharedTotal}
+        readyCount={readyCount}
+        errorCount={errorCount}
+        errorIsolated={errorIsolated}
+      />
 
       {/* Scenario log */}
       {scenarioLog.length > 0 && (
-        <div className={styles.eventLog} role="log" aria-label="Scenario log" aria-live="polite">
-          {scenarioLog.map((entry, i) => (
-            noMotion ? (
-              <div key={i} className={styles.eventLogEntry}>
-                <span className={styles.eventLogType}>{entry.startsWith("Deploy") || entry.startsWith("Team B") ? "DEPLOY" : entry.startsWith("Event") ? "EVENT" : "STATUS"}</span>
-                <span>{entry}</span>
-              </div>
-            ) : (
-              <motion.div
-                key={i}
-                className={styles.eventLogEntry}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ ...SPRING.quick, delay: i * 0.1 }}
-              >
-                <span className={styles.eventLogType}>{entry.startsWith("Deploy") || entry.startsWith("Team B") ? "DEPLOY" : entry.startsWith("Event") ? "EVENT" : "STATUS"}</span>
-                <span>{entry}</span>
-              </motion.div>
-            )
-          ))}
-        </div>
+        <LogConsole logs={scenarioLog} noMotion={noMotion} />
       )}
 
       {/* Decision matrix — shown after all 3 scenarios */}
@@ -2435,53 +2392,6 @@ function IntegrationWidget() {
       <div className={styles.widgetNote}>
         Scenarios: {[deployTriggered, cartTriggered, networkFailTriggered].filter(Boolean).length}/3 | Matrix: {matrixRevealed.size}/{DECISION_MATRIX.length} ({matrixCorrectCount} correct)
       </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Shared: PredictionChallenge
-// ═══════════════════════════════════════════════════════════════════
-
-function PredictionChallenge({ question, options, correctIndex, explanation, onComplete }: {
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
-  onComplete?: () => void;
-}) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const revealed = selected !== null;
-
-  useEffect(() => {
-    if (revealed && onComplete) onComplete();
-  }, [revealed, onComplete]);
-
-  return (
-    <div className={styles.prediction}>
-      <div className={styles.predictionQ}>{question}</div>
-      <div className={styles.predictionOptions} role="radiogroup" aria-label={question}>
-        {options.map((opt, i) => (
-          <button
-            key={i}
-            type="button"
-            className={styles.predictionOption}
-            data-correct={revealed && i === correctIndex ? "true" : undefined}
-            data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
-            onClick={() => !revealed && setSelected(i)}
-            disabled={revealed}
-            role="radio"
-            aria-checked={selected === i}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
-      {revealed && (
-        <div className={styles.predictionResult} data-correct={selected === correctIndex ? "true" : undefined}>
-          {selected === correctIndex ? "Correct " : "Not quite "}{explanation}
-        </div>
-      )}
     </div>
   );
 }

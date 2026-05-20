@@ -6,9 +6,12 @@ import {
   useState,
   useCallback,
   useMemo,
+  useEffect,
   type ReactNode,
 } from "react";
 import type { StateEntry } from "@/components/recipe-lab/StateInspector";
+import { calculateBundleSize, calculateTotalLoadTime } from "./engine/loader";
+import { IframeBridge } from "./engine/iframe-bridge";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -242,8 +245,6 @@ const DEFAULT_SHARED_DEPS: SharedDep[] = [
   { name: "router", version: "6.20.0", size: 28, loadedBy: ["header", "products"] },
 ];
 
-let eventIdCounter = 0;
-
 export function MicrofrontendProvider({
   activeStep,
   children,
@@ -282,16 +283,20 @@ export function MicrofrontendProvider({
     });
   }, []);
 
-  // Event bus
+  // Event bus & postMessage bridge logic coordination
   const [eventBusMessages, setEventBusMessages] = useState<EventBusMessage[]>([]);
+  const bridge = useMemo(() => new IframeBridge(), []);
+
+  useEffect(() => {
+    return bridge.subscribe((event) => {
+      setEventBusMessages(prev => [...prev, event]);
+    });
+  }, [bridge]);
+
   const sendEvent = useCallback((msg: Omit<EventBusMessage, "id" | "timestamp">) => {
-    const newMsg: EventBusMessage = {
-      ...msg,
-      id: `evt-${++eventIdCounter}`,
-      timestamp: Date.now(),
-    };
-    setEventBusMessages(prev => [...prev, newMsg]);
-  }, []);
+    bridge.dispatch(msg);
+  }, [bridge]);
+
   const clearEvents = useCallback(() => setEventBusMessages([]), []);
 
   // Isolation & routing
@@ -304,17 +309,13 @@ export function MicrofrontendProvider({
     setStepCompleted(prev => prev[step] ? prev : { ...prev, [step]: true });
   }, []);
 
-  // Derived metrics
+  // Derived metrics calculated via engine loader
   const bundleSize = useMemo(() => {
-    const totalRaw = DEFAULT_SHARED_DEPS.reduce((sum, d) => sum + d.size * d.loadedBy.length, 0);
-    const shared = DEFAULT_SHARED_DEPS.filter(d => sharingEnabled.has(d.name));
-    const savedPerDep = shared.reduce((sum, d) => sum + d.size * (d.loadedBy.length - 1), 0);
-    return totalRaw - savedPerDep;
+    return calculateBundleSize(sharingEnabled, DEFAULT_SHARED_DEPS);
   }, [sharingEnabled]);
 
   const totalLoadTime = useMemo(() => {
-    const readyCount = Object.values(loadStates).filter(s => s === "ready").length;
-    return readyCount * 120 + (3 - readyCount) * 320;
+    return calculateTotalLoadTime(loadStates);
   }, [loadStates]);
 
   const eventCount = eventBusMessages.length;

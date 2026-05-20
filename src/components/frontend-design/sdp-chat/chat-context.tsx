@@ -52,8 +52,6 @@ export type AlgorithmWeights = {
 // ── Constants ───────────────────────────────────────────────────────
 
 export const TOTAL_STEPS = 15;
-const DEFAULT_MESSAGE_COUNT = 80;
-const BASELINE_MESSAGE_COUNT = 6;
 
 export const SCOPE_ITEMS: ScopeItem[] = [
   { id: "one-on-one", label: "1:1 and group chats?", description: "Group adds member lists, typing indicators for multiple users" },
@@ -204,75 +202,36 @@ const MESSAGES = [
   "Right, it's a heartbeat every 30s. If we miss 2 heartbeats, mark as offline.",
 ];
 
+import {
+  generateMessages as engineGenerateMessages,
+  generateIncoming as engineGenerateIncoming,
+  getPhase as engineGetPhase,
+  FEATURE_UNLOCK as ENGINE_FEATURE_UNLOCK,
+  isFeatureActive as engineIsFeatureActive,
+  DEFAULT_MESSAGE_COUNT as ENGINE_DEFAULT_MESSAGE_COUNT,
+  BASELINE_MESSAGE_COUNT as ENGINE_BASELINE_MESSAGE_COUNT,
+  GROUP_THRESHOLD_MS as ENGINE_GROUP_THRESHOLD_MS
+} from "./engine/chat-helpers";
+
+const DEFAULT_MESSAGE_COUNT = ENGINE_DEFAULT_MESSAGE_COUNT;
+const BASELINE_MESSAGE_COUNT = ENGINE_BASELINE_MESSAGE_COUNT;
+
 function generateMessages(count: number): ChatMessage[] {
-  const messages: ChatMessage[] = [];
-  for (let i = 0; i < count; i++) {
-    const user = USERS[i % USERS.length];
-    const isOwn = user.id === "alice";
-    messages.push({
-      id: `msg-${i}`,
-      author: user.name,
-      authorId: user.id,
-      avatarHue: user.hue,
-      content: MESSAGES[i % MESSAGES.length],
-      timestamp: Date.now() - (count - i) * 60000,
-      status: "read",
-      isOwn,
-      reactions: i % 7 === 0 ? { "👍": 2, "❤️": 1 } : {},
-      replyTo: i > 2 && i % 11 === 0 ? `msg-${i - 2}` : undefined,
-    });
-  }
-  return messages;
+  return engineGenerateMessages(count);
 }
 
 function generateIncoming(index: number): ChatMessage {
-  const user = USERS[(index + 1) % USERS.length];
-  return {
-    id: `incoming-${index}-${Date.now()}`,
-    author: user.name,
-    authorId: user.id,
-    avatarHue: user.hue,
-    content: [
-      "Just found a race condition in the reconnection handler.",
-      "The heartbeat timeout was 30s but the server expects 25s. Mismatched values.",
-      "I'm seeing duplicate messages in the offline queue — the dedup key might be wrong.",
-    ][index % 3],
-    timestamp: Date.now(),
-    status: "delivered",
-    isOwn: false,
-    reactions: {},
-  };
+  return engineGenerateIncoming(index);
 }
-
-// ── Phase + feature computation ─────────────────────────────────────
 
 export function getPhase(step: number): Phase {
-  if (step <= 3) return "planning";
-  if (step <= 7) return "building";
-  if (step <= 10) return "optimizing";
-  if (step <= 13) return "polishing";
-  return "production";
+  return engineGetPhase(step);
 }
 
-const FEATURE_UNLOCK: Record<string, number> = {
-  messageList: 5,
-  sendMessage: 6,
-  deliveryStatus: 7,
-  typingIndicator: 8,
-  reconnection: 9,
-  offlineQueue: 10,
-  messageGrouping: 11,
-  reactions: 12,
-  readReceipts: 13,
-  encryption: 14,
-};
+const FEATURE_UNLOCK = ENGINE_FEATURE_UNLOCK;
 
 function isFeatureActive(feature: string, step: number, toggled: boolean): boolean {
-  const unlock = FEATURE_UNLOCK[feature];
-  if (!unlock) return false;
-  if (step > unlock) return true;
-  if (step === unlock) return toggled;
-  return false;
+  return engineIsFeatureActive(feature, step, toggled);
 }
 
 // ── Context shape ───────────────────────────────────────────────────

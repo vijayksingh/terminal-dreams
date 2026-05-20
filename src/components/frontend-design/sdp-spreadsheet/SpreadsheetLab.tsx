@@ -15,6 +15,8 @@ import {
 } from "./spreadsheet-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { SPREADSHEET_ARCH_CONFIG } from "./architecture-scenarios";
+import { MiniSpreadsheetGrid, COL_LABELS } from "./ui/MiniSpreadsheetGrid";
+import { DepGraphViz } from "./ui/DepGraphViz";
 import styles from "./SpreadsheetLab.module.css";
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -58,9 +60,6 @@ export function SpreadsheetLab({ activeStep }: { activeStep: number }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-const COL_LABELS = ["A", "B", "C", "D"];
-const GRID_ROWS = 6;
-const GRID_COLS = 4;
 
 // Step indicator bar
 // ═══════════════════════════════════════════════════════════════════
@@ -375,7 +374,7 @@ function SheetEvolution() {
     <div className={styles.evolutionLayout}>
       <MetricsBar />
       <StepControls />
-      <MiniSpreadsheet />
+      <MiniSpreadsheetGrid />
       {ctx.isActive("depGraph") && <DepGraphViz />}
       <AnimatePresence mode="wait">
         <motion.div
@@ -530,273 +529,6 @@ function StepControls() {
   }
 }
 
-// ── Mini spreadsheet grid ─────────────────────────────────────────
-
-function MiniSpreadsheet() {
-  const ctx = useSpreadsheet();
-  const { cells, editingCell, startEditing, commitEdit, cancelEdit, affectedCells, highlightedCell } = ctx;
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const target = e.target as HTMLElement;
-    if (!target.matches('[role="gridcell"]') || editingCell) return;
-    const cellId = target.getAttribute("aria-label")?.split(":")[0] ?? "";
-    const col = COL_LABELS.indexOf(cellId[0]);
-    const row = parseInt(cellId.slice(1), 10) - 1;
-    if (col < 0 || isNaN(row)) return;
-
-    let nextR = row, nextC = col;
-    switch (e.key) {
-      case "ArrowUp": nextR = Math.max(0, row - 1); break;
-      case "ArrowDown": nextR = Math.min(GRID_ROWS - 1, row + 1); break;
-      case "ArrowLeft": nextC = Math.max(0, col - 1); break;
-      case "ArrowRight": nextC = Math.min(GRID_COLS - 1, col + 1); break;
-      case "Home": nextC = 0; if (e.ctrlKey) nextR = 0; break;
-      case "End": nextC = GRID_COLS - 1; if (e.ctrlKey) nextR = GRID_ROWS - 1; break;
-      default: return;
-    }
-    e.preventDefault();
-    const nextId = `${COL_LABELS[nextC]}${nextR + 1}`;
-    const nextCell = gridRef.current?.querySelector(`[aria-label^="${nextId}:"]`) as HTMLElement;
-    nextCell?.focus();
-  }, [editingCell]);
-
-  return (
-    <div ref={gridRef} className={styles.spreadsheet} role="grid" aria-label="Mini spreadsheet" onKeyDown={handleGridKeyDown}>
-      <div className={styles.sheetRow} role="row">
-        <div className={styles.rowHeader} role="columnheader" aria-label="Row" />
-        {COL_LABELS.map(col => (
-          <div key={col} className={styles.colHeader} role="columnheader">{col}</div>
-        ))}
-      </div>
-      {Array.from({ length: GRID_ROWS }, (_, r) => (
-        <div key={r} className={styles.sheetRow} role="row">
-          <div className={styles.rowHeader} role="rowheader">{r + 1}</div>
-          {COL_LABELS.map((col, c) => {
-            const id = `${col}${r + 1}`;
-            const cell = cells.get(id);
-            const isEditing = editingCell === id;
-            const isAffected = affectedCells.has(id);
-
-            return (
-              <CellComponent
-                key={id}
-                cellId={id}
-                raw={cell?.raw ?? ""}
-                computed={cell?.computed ?? null}
-                formula={cell?.formula ?? false}
-                error={cell?.error ?? null}
-                isEditing={isEditing}
-                isAffected={isAffected}
-                isHighlighted={highlightedCell === id}
-                bold={cell?.format.bold ?? false}
-                onDoubleClick={() => startEditing(id)}
-                onCommit={(val) => commitEdit(id, val)}
-                onCancel={cancelEdit}
-              />
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAffected, isHighlighted, bold, onDoubleClick, onCommit, onCancel }: {
-  cellId: string;
-  raw: string;
-  computed: string | number | null;
-  formula: boolean;
-  error: string | null;
-  isEditing: boolean;
-  isAffected: boolean;
-  isHighlighted: boolean;
-  bold: boolean;
-  onDoubleClick: () => void;
-  onCommit: (value: string) => void;
-  onCancel: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const seedRef = useRef<string | null>(null);
-  const [editValue, setEditValue] = useState(raw);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      const seed = seedRef.current;
-      seedRef.current = null;
-      setEditValue(seed ?? raw);
-      inputRef.current.focus();
-      if (seed) {
-        inputRef.current.setSelectionRange(seed.length, seed.length);
-      } else {
-        inputRef.current.select();
-      }
-    }
-  }, [isEditing, raw]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      onCommit(editValue);
-    } else if (e.key === "Escape") {
-      onCancel();
-    }
-  }, [editValue, onCommit, onCancel]);
-
-  const display = error ? error : computed !== null ? String(computed) : "";
-
-  return (
-    <div
-      className={styles.cell}
-      data-formula={formula ? "true" : undefined}
-      data-error={error ? "true" : undefined}
-      data-affected={isAffected ? "true" : undefined}
-      data-editing={isEditing ? "true" : undefined}
-      data-highlighted={isHighlighted ? "true" : undefined}
-      data-bold={bold ? "true" : undefined}
-      role="gridcell"
-      aria-label={`${cellId}: ${display || "empty"}`}
-      onDoubleClick={onDoubleClick}
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === "F2") { onDoubleClick(); return; }
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          seedRef.current = e.key;
-          onDoubleClick();
-        }
-      }}
-    >
-      {isEditing ? (
-        <input
-          ref={inputRef}
-          className={styles.cellInput}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={() => onCommit(editValue)}
-          aria-label={`Edit ${cellId}`}
-        />
-      ) : (
-        <span className={styles.cellValue}>{display}</span>
-      )}
-    </div>
-  );
-}
-
-// ── Dependency graph visualization ────────────────────────────────
-
-function DepGraphViz() {
-  const { depGraph, affectedCells, recalcOrder } = useSpreadsheet();
-
-  if (depGraph.size === 0) return null;
-
-  const nodes = new Set<string>();
-  depGraph.forEach((deps, cell) => {
-    nodes.add(cell);
-    deps.forEach(d => nodes.add(d));
-  });
-
-  const nodeArr = [...nodes];
-  const nodePos: Record<string, { x: number; y: number }> = {};
-  const levelMap = new Map<string, number>();
-
-  // Simple level assignment
-  function getLevel(id: string, visited = new Set<string>()): number {
-    if (visited.has(id)) return 0;
-    visited.add(id);
-    if (levelMap.has(id)) return levelMap.get(id)!;
-    const deps = depGraph.get(id) ?? [];
-    const level = deps.length === 0 ? 0 : Math.max(...deps.map(d => getLevel(d, visited))) + 1;
-    levelMap.set(id, level);
-    return level;
-  }
-
-  nodeArr.forEach(n => getLevel(n));
-
-  const levels: string[][] = [];
-  nodeArr.forEach(n => {
-    const l = levelMap.get(n) ?? 0;
-    if (!levels[l]) levels[l] = [];
-    levels[l]!.push(n);
-  });
-
-  levels.forEach((lvl, li) => {
-    lvl.forEach((n, ni) => {
-      nodePos[n] = { x: 30 + ni * 60, y: 20 + li * 50 };
-    });
-  });
-
-  const width = Math.max(160, levels.reduce((m, l) => Math.max(m, l.length * 60 + 30), 0));
-  const height = Math.max(80, levels.length * 50 + 20);
-
-  return (
-    <div className={styles.widgetPanel} data-category="formula">
-      <div className={styles.widgetTitle}>Dependency DAG</div>
-      <svg viewBox={`0 0 ${width} ${height}`} className={styles.dagSvg} role="img" aria-label={`Dependency graph: ${nodeArr.length} cells, ${[...depGraph.values()].reduce((n, d) => n + d.length, 0)} edges`}>
-        {/* Edges */}
-        {nodeArr.map(cell => {
-          const deps = depGraph.get(cell) ?? [];
-          return deps.map(dep => {
-            const from = nodePos[dep];
-            const to = nodePos[cell];
-            if (!from || !to) return null;
-            return (
-              <line
-                key={`${dep}-${cell}`}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
-                className={styles.dagEdge}
-                data-affected={affectedCells.has(cell) || affectedCells.has(dep) ? "true" : undefined}
-                markerEnd="url(#dagArrow)"
-              />
-            );
-          });
-        })}
-        {/* Arrow marker */}
-        <defs>
-          <marker id="dagArrow" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6" fill="var(--color-muted)" />
-          </marker>
-        </defs>
-        {/* Nodes */}
-        {nodeArr.map(n => {
-          const pos = nodePos[n];
-          if (!pos) return null;
-          return (
-            <g key={n}>
-              <circle
-                cx={pos.x}
-                cy={pos.y}
-                r={16}
-                className={styles.dagNode}
-                data-affected={affectedCells.has(n) ? "true" : undefined}
-              />
-              <text
-                x={pos.x}
-                y={pos.y + 4}
-                className={styles.dagLabel}
-                textAnchor="middle"
-              >
-                {n}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      {recalcOrder.length > 0 && (
-        <div className={styles.recalcOrder} role="status" aria-live="polite">
-          <span className={styles.recalcLabel}>Recalc order:</span>
-          {recalcOrder.map((id, i) => (
-            <span key={id} className={styles.recalcStep} data-affected={affectedCells.has(id) ? "true" : undefined}>
-              {i > 0 && " → "}{id}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Scope badge (connects planning → building) ──────────────────
 

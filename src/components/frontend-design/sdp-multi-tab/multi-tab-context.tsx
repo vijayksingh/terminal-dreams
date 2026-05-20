@@ -11,174 +11,45 @@ import {
 } from "react";
 import type { StateEntry } from "@/components/recipe-lab/StateInspector";
 
-// ── Types ───────────────────────────────────────────────────────────
+import {
+  type Phase,
+  type TabInfo,
+  type Message,
+  type MessageType,
+  type ConflictStrategy,
+  type ScopeItem,
+  type ApiEndpoint,
+  type TypeDef,
+  TOTAL_STEPS,
+  SCOPE_ITEMS,
+  API_ENDPOINTS,
+  DATA_MODELS,
+  SyncCoordinator,
+} from "./engine/sync-coordinator";
 
-export type Phase = "planning" | "building";
-
-export type TabInfo = {
-  id: string;
-  label: string;
-  isLeader: boolean;
-  visibility: "visible" | "hidden" | "frozen" | "terminated";
-  lastHeartbeat: number;
-  state: Record<string, string>;
+export type {
+  Phase,
+  TabInfo,
+  Message,
+  MessageType,
+  ConflictStrategy,
+  ScopeItem,
+  ApiEndpoint,
+  TypeDef,
 };
 
-export type Message = {
-  id: string;
-  type: MessageType;
-  from: string;
-  to: string | "broadcast";
-  payload: string;
-  timestamp: number;
+export {
+  TOTAL_STEPS,
+  SCOPE_ITEMS,
+  API_ENDPOINTS,
+  DATA_MODELS,
 };
-
-export type MessageType =
-  | "state-sync"
-  | "action"
-  | "heartbeat"
-  | "election"
-  | "ack";
-
-export type ConflictStrategy = "lww" | "merge-queue" | "leader-decides";
-
-export type ScopeItem = {
-  id: string;
-  label: string;
-  description: string;
-};
-
-export type ApiEndpoint = {
-  method: "GET" | "POST" | "PUT" | "DELETE";
-  path: string;
-  description: string;
-  usedBy: string;
-  params: { name: string; type: string; note: string }[];
-  responseType: string;
-};
-
-export type TypeDef = {
-  name: string;
-  category: string;
-  extends?: string;
-  fields: { name: string; type: string; note?: string }[];
-};
-
-// ── Constants ───────────────────────────────────────────────────────
-
-export const TOTAL_STEPS = 15;
-
-export const SCOPE_ITEMS: ScopeItem[] = [
-  { id: "broadcastChannel", label: "BroadcastChannel?", description: "Cross-tab messaging via BroadcastChannel API -- simple pub/sub" },
-  { id: "sharedWorker", label: "SharedWorker?", description: "Single worker process shared across all tabs -- centralized routing" },
-  { id: "storageEvents", label: "localStorage events?", description: "Storage event fires in other tabs when localStorage changes" },
-  { id: "leaderElection", label: "Leader election?", description: "Bully algorithm to elect one tab as coordinator for writes" },
-  { id: "tabLifecycle", label: "Tab lifecycle?", description: "Page Visibility API + Page Lifecycle -- frozen, hidden, terminated states" },
-];
-
-export const API_ENDPOINTS: ApiEndpoint[] = [
-  {
-    method: "POST",
-    path: "/api/channel/create",
-    description: "Create a new BroadcastChannel with a unique name",
-    usedBy: "ChannelManager",
-    params: [
-      { name: "name", type: "string", note: "channel identifier" },
-    ],
-    responseType: "{ channel: BroadcastChannel }",
-  },
-  {
-    method: "POST",
-    path: "/api/channel/send",
-    description: "Post a typed message to all subscribers on the channel",
-    usedBy: "ChannelManager -> Tabs",
-    params: [
-      { name: "channel", type: "string", note: "channel name" },
-      { name: "message", type: "TabMessage", note: "typed message envelope" },
-    ],
-    responseType: "{ delivered: number }",
-  },
-  {
-    method: "GET",
-    path: "/api/tabs/registry",
-    description: "List all currently registered tabs with heartbeat status",
-    usedBy: "TabRegistry",
-    params: [
-      { name: "timeout", type: "number?", note: "ms before tab is considered dead" },
-    ],
-    responseType: "{ tabs: TabInfo[], leader: string | null }",
-  },
-  {
-    method: "PUT",
-    path: "/api/tabs/:tabId/state",
-    description: "Sync local state from a tab to the shared state store",
-    usedBy: "StateSynchronizer",
-    params: [
-      { name: "tabId", type: "string", note: "tab identifier" },
-      { name: "state", type: "Record<string, unknown>", note: "state patch" },
-      { name: "version", type: "number", note: "vector clock or lamport timestamp" },
-    ],
-    responseType: "{ accepted: boolean, conflicts: ConflictEntry[] }",
-  },
-];
-
-export const DATA_MODELS: TypeDef[] = [
-  {
-    name: "TabMessage",
-    category: "api",
-    fields: [
-      { name: "type", type: "'state-sync' | 'action' | 'heartbeat' | 'election'" },
-      { name: "from", type: "string", note: "sender tab ID" },
-      { name: "to", type: "string | 'broadcast'", note: "target" },
-      { name: "payload", type: "unknown" },
-      { name: "timestamp", type: "number" },
-    ],
-  },
-  {
-    name: "TabInfo",
-    category: "state",
-    fields: [
-      { name: "id", type: "string", note: "unique tab identifier" },
-      { name: "isLeader", type: "boolean" },
-      { name: "visibility", type: "VisibilityState" },
-      { name: "lastHeartbeat", type: "number" },
-      { name: "state", type: "Record<string, unknown>" },
-    ],
-  },
-  {
-    name: "SyncState",
-    category: "state",
-    fields: [
-      { name: "version", type: "number", note: "lamport clock" },
-      { name: "tabs", type: "Map<string, TabInfo>" },
-      { name: "leader", type: "string | null" },
-      { name: "pendingOps", type: "Operation[]" },
-    ],
-  },
-  {
-    name: "LockHandle",
-    category: "api",
-    fields: [
-      { name: "name", type: "string", note: "lock resource name" },
-      { name: "mode", type: "'exclusive' | 'shared'" },
-      { name: "holder", type: "string", note: "tab ID holding the lock" },
-    ],
-  },
-];
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-let _tabIdCounter = 0;
-function genTabId(): string {
-  _tabIdCounter += 1;
-  return `tab-${_tabIdCounter}`;
-}
-
+let _tabIdCounter = 2;
 let _msgIdCounter = 0;
-function genMsgId(): string {
-  _msgIdCounter += 1;
-  return `msg-${_msgIdCounter}`;
-}
+
 
 // ── Context ─────────────────────────────────────────────────────────
 
@@ -258,7 +129,8 @@ export function MultiTabProvider({
   useEffect(() => { _tabIdCounter = 2; _msgIdCounter = 0; }, []);
 
   const addTab = useCallback((label: string): string => {
-    const id = genTabId();
+    const { id, nextCounter } = SyncCoordinator.genTabId(_tabIdCounter);
+    _tabIdCounter = nextCounter;
     setTabs(prev => [...prev, {
       id,
       label,
@@ -271,15 +143,7 @@ export function MultiTabProvider({
   }, []);
 
   const removeTab = useCallback((id: string) => {
-    setTabs(prev => {
-      const next = prev.filter(t => t.id !== id);
-      // If removed tab was leader, clear leadership
-      const first = next[0];
-      if (prev.find(t => t.id === id)?.isLeader && first) {
-        next[0] = { ...first, isLeader: true };
-      }
-      return next;
-    });
+    setTabs(prev => SyncCoordinator.removeTab(prev, id));
   }, []);
 
   const setTabVisibility = useCallback((id: string, v: TabInfo["visibility"]) => {
@@ -303,9 +167,11 @@ export function MultiTabProvider({
   // Messages
   const [messages, setMessages] = useState<Message[]>([]);
   const sendMessage = useCallback((msg: Omit<Message, "id" | "timestamp">) => {
+    const { id, nextCounter } = SyncCoordinator.genMsgId(_msgIdCounter);
+    _msgIdCounter = nextCounter;
     setMessages(prev => [...prev.slice(-49), {
       ...msg,
-      id: genMsgId(),
+      id,
       timestamp: Date.now(),
     }]);
   }, []);
@@ -316,19 +182,14 @@ export function MultiTabProvider({
   const leaderId = useMemo(() => tabs.find(t => t.isLeader)?.id ?? null, [tabs]);
 
   const runElection = useCallback((): string | null => {
-    const alive = tabs.filter(t => t.visibility !== "terminated");
-    if (alive.length === 0) return null;
-    // Bully: sort by numeric portion of ID descending, highest wins
-    const sorted = [...alive].sort((a, b) => {
-      const aNum = parseInt(a.id.split("-")[1] ?? "0", 10);
-      const bNum = parseInt(b.id.split("-")[1] ?? "0", 10);
-      return bNum - aNum;
+    let winnerId: string | null = null;
+    setTabs(prev => {
+      const result = SyncCoordinator.runBullyElection(prev);
+      winnerId = result.winnerId;
+      return result.updatedTabs;
     });
-    const winner = sorted[0];
-    if (!winner) return null;
-    setTabs(prev => prev.map(t => ({ ...t, isLeader: t.id === winner.id })));
-    return winner.id;
-  }, [tabs]);
+    return winnerId;
+  }, []);
 
   // Conflict strategy
   const [conflictStrategy, setConflictStrategy] = useState<ConflictStrategy>("lww");

@@ -32,8 +32,8 @@
 .stepDot {
   font-size: 0.625rem;
   font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 3px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
   background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
@@ -123,7 +123,7 @@
 .checkToggle {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: var(--radius-1);
   border: 2px solid var(--color-border);
   display: flex;
   align-items: center;
@@ -308,8 +308,8 @@
 .methodBadge {
   font-size: 0.625rem;
   font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
   letter-spacing: 0.02em;
 }
 
@@ -348,7 +348,7 @@
 .endpointDesc {
   font-size: 0.65rem;
   color: var(--color-muted);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .endpointUsedBy {
@@ -372,7 +372,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   margin-top: var(--space-1);
 }
 
@@ -433,7 +433,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .typeCardName {
@@ -675,14 +675,14 @@
 .mfeLoadBar {
   height: 8px;
   background: var(--color-surface-2);
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   overflow: hidden;
   border: 1px solid var(--color-border);
 }
 
 .mfeLoadFill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   transition: width 200ms ease;
   background: var(--diagram-layer-3);
 }
@@ -743,7 +743,7 @@
 .bundleBar {
   height: 16px;
   background: var(--color-surface-2);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   overflow: hidden;
   border: 1px solid var(--color-border);
   position: relative;
@@ -751,7 +751,7 @@
 
 .bundleFill {
   height: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   transition: width 400ms ease;
 }
 
@@ -887,7 +887,7 @@
 .eventLog {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   max-height: 160px;
   overflow-y: auto;
   padding: var(--space-1);
@@ -900,7 +900,7 @@
   display: flex;
   gap: var(--space-1);
   font-size: 0.575rem;
-  padding: 4px var(--space-1);
+  padding: var(--space-1) var(--space-1);
   border-left: 3px solid var(--diagram-layer-5);
   color: var(--color-text);
   font-weight: 500;
@@ -942,7 +942,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-1);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   padding: var(--space-1);
@@ -1288,7 +1288,7 @@
   flex: 1;
   height: 16px;
   background: var(--color-surface);
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   overflow: hidden;
   border: 1px solid var(--color-border);
   position: relative;
@@ -1296,7 +1296,7 @@
 
 .waterfallFill {
   height: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-2);
   transition: width 400ms ease, left 400ms ease;
   position: absolute;
   top: 0;
@@ -1465,7 +1465,7 @@
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .dashboardLabel {
@@ -1494,7 +1494,7 @@
 /* ── Action buttons ──────────────────────────────────────── */
 
 .actionButton {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
@@ -1546,7 +1546,7 @@
 }
 
 .toolButton {
-  padding: 6px 12px;
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);

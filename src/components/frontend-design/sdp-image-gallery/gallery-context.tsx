@@ -12,239 +12,51 @@ import {
 } from "react";
 import type { StateEntry } from "@/components/recipe-lab/StateInspector";
 
-// ── Types ───────────────────────────────────────────────────────────
+import {
+  type Phase,
+  type LayoutMode,
+  type DeviceType,
+  type ImageFormat,
+  type GalleryImage,
+  type ScopeItem,
+  type ApiEndpoint,
+  type TypeField,
+  type TypeDef,
+  TOTAL_STEPS,
+  SCOPE_ITEMS,
+  COMPONENT_TREE,
+  API_RESPONSE,
+  API_ENDPOINTS,
+  DATA_MODELS,
+  RESPONSIVE_DATA,
+  getPhase,
+  isFeatureActive,
+  generateImages,
+  PriorityLoader,
+} from "./engine/priority-loader";
 
-export type Phase = "planning" | "building" | "optimizing" | "polishing" | "production";
-
-export type LayoutMode = "uniform" | "css-columns" | "css-grid";
-export type DeviceType = "mobile" | "tablet" | "desktop";
-export type ImageFormat = "jpeg" | "webp" | "avif";
-
-export type GalleryImage = {
-  id: string;
-  index: number;
-  hue: number;
-  width: number;
-  height: number;
-  aspectRatio: number;
+export {
+  type Phase,
+  type LayoutMode,
+  type DeviceType,
+  type ImageFormat,
+  type GalleryImage,
+  type ScopeItem,
+  type ApiEndpoint,
+  type TypeField,
+  type TypeDef,
+  TOTAL_STEPS,
+  SCOPE_ITEMS,
+  COMPONENT_TREE,
+  API_RESPONSE,
+  API_ENDPOINTS,
+  DATA_MODELS,
+  RESPONSIVE_DATA,
+  getPhase,
+  isFeatureActive,
+  generateImages,
+  PriorityLoader,
 };
-
-export type ScopeItem = {
-  id: string;
-  label: string;
-  description: string;
-};
-
-// ── Constants ───────────────────────────────────────────────────────
-
-export const TOTAL_STEPS = 15;
-
-export const SCOPE_ITEMS: ScopeItem[] = [
-  { id: "layout", label: "Masonry or uniform grid?", description: "Masonry preserves aspect ratios but adds complexity" },
-  { id: "upload", label: "Upload support?", description: "Adds drag-and-drop, progress bars, validation" },
-  { id: "scale", label: "Scale: 100s vs 100Ks?", description: "Virtualization and pagination strategy depends on this" },
-  { id: "mobile", label: "Mobile support?", description: "Touch gestures, responsive breakpoints, bandwidth" },
-  { id: "search", label: "Search and filtering?", description: "Tag system, full-text search, filter UI" },
-];
-
-export const COMPONENT_TREE = `App
-└─ Gallery
-   ├─ Grid (masonry layout)
-   │  └─ ImageCard[] (lazy loaded)
-   ├─ Lightbox (modal overlay)
-   └─ Pagination (cursor-based)`;
-
-export const API_RESPONSE = {
-  images: [
-    {
-      id: "abc",
-      src: "/photos/abc-1200.webp",
-      thumb: "/photos/abc-200.webp",
-      width: 800,
-      height: 600,
-      alt: "Mountain landscape at sunset",
-      blurhash: "LEHV6nWB2y...",
-    },
-  ],
-  nextCursor: "eyJpZCI6MTIzfQ==",
-};
-
-// ── API Endpoints ──────────────────────────────────────────────────
-
-export type ApiEndpoint = {
-  method: "GET" | "POST" | "DELETE";
-  path: string;
-  description: string;
-  usedBy: string;
-  params: { name: string; type: string; note: string }[];
-  responseType: string;
-};
-
-export const API_ENDPOINTS: ApiEndpoint[] = [
-  {
-    method: "GET",
-    path: "/api/gallery",
-    description: "Paginated image list for the grid",
-    usedBy: "Gallery → Grid",
-    params: [
-      { name: "cursor", type: "string?", note: "opaque pagination token" },
-      { name: "limit", type: "number", note: "default 50, max 200" },
-      { name: "sort", type: "string?", note: "created_at | name" },
-    ],
-    responseType: "GalleryListResponse",
-  },
-  {
-    method: "GET",
-    path: "/api/gallery/:id",
-    description: "Full image detail with all resolutions",
-    usedBy: "Gallery → Lightbox",
-    params: [
-      { name: "id", type: "string", note: "image identifier" },
-    ],
-    responseType: "ImageDetailResponse",
-  },
-  {
-    method: "GET",
-    path: "/api/gallery/dimensions",
-    description: "Batch dimensions for masonry pre-computation",
-    usedBy: "Gallery → Grid (masonry)",
-    params: [
-      { name: "ids", type: "string[]", note: "image IDs" },
-      { name: "viewport", type: "number", note: "client viewport width" },
-    ],
-    responseType: "DimensionsResponse",
-  },
-  {
-    method: "GET",
-    path: "/api/gallery/srcset/:id",
-    description: "Responsive image variants for a given image",
-    usedBy: "Lightbox → <picture>",
-    params: [
-      { name: "id", type: "string", note: "image identifier" },
-      { name: "formats", type: "string[]?", note: "jpeg, webp, avif" },
-    ],
-    responseType: "SrcSetResponse",
-  },
-];
-
-// ── Data Models (used by Step 2's "Types" tab) ────────────────────
-
-export type TypeField = {
-  name: string;
-  type: string;
-  note?: string;
-};
-
-export type TypeDef = {
-  name: string;
-  category: "api" | "state" | "props";
-  extends?: string;
-  fields: TypeField[];
-};
-
-export const DATA_MODELS: TypeDef[] = [
-  {
-    name: "ImageSummary",
-    category: "api",
-    fields: [
-      { name: "id", type: "string" },
-      { name: "thumb", type: "string", note: "200px thumbnail URL" },
-      { name: "width", type: "number", note: "intrinsic px" },
-      { name: "height", type: "number", note: "intrinsic px" },
-      { name: "alt", type: "string", note: "accessible description" },
-      { name: "blurhash", type: "string", note: "4×3 compact placeholder" },
-      { name: "dominantColor", type: "string", note: "CSS fallback" },
-    ],
-  },
-  {
-    name: "ImageDetail",
-    category: "api",
-    extends: "ImageSummary",
-    fields: [
-      { name: "src", type: "string", note: "full-resolution URL" },
-      { name: "srcSet", type: "SrcSetEntry[]", note: "responsive variants" },
-      { name: "exif", type: "ExifData?", note: "camera metadata" },
-      { name: "createdAt", type: "number", note: "unix ms" },
-    ],
-  },
-  {
-    name: "SrcSetEntry",
-    category: "api",
-    fields: [
-      { name: "url", type: "string" },
-      { name: "width", type: "number", note: "px" },
-      { name: "format", type: "'jpeg' | 'webp' | 'avif'" },
-    ],
-  },
-];
-
-export const RESPONSIVE_DATA: Record<DeviceType, Record<ImageFormat, { sizeKB: number; decodeMs: number }>> = {
-  mobile: {
-    jpeg: { sizeKB: 45, decodeMs: 12 },
-    webp: { sizeKB: 28, decodeMs: 8 },
-    avif: { sizeKB: 18, decodeMs: 15 },
-  },
-  tablet: {
-    jpeg: { sizeKB: 120, decodeMs: 25 },
-    webp: { sizeKB: 75, decodeMs: 18 },
-    avif: { sizeKB: 48, decodeMs: 28 },
-  },
-  desktop: {
-    jpeg: { sizeKB: 280, decodeMs: 45 },
-    webp: { sizeKB: 165, decodeMs: 32 },
-    avif: { sizeKB: 95, decodeMs: 52 },
-  },
-};
-
-// ── Phase + feature computation ─────────────────────────────────────
-
-export function getPhase(step: number): Phase {
-  if (step <= 3) return "planning";
-  if (step <= 7) return "building";
-  if (step <= 10) return "optimizing";
-  if (step <= 13) return "polishing";
-  return "production";
-}
-
-const FEATURE_UNLOCK: Record<string, number> = {
-  reserveSpace: 6,
-  masonry: 7,
-  lazyLoading: 8,
-  placeholders: 9,
-  virtualization: 10,
-  responsive: 11,
-  lightbox: 12,
-  focusTrap: 13,
-  errorHandling: 14,
-};
-
-function isFeatureActive(feature: string, step: number, toggled: boolean): boolean {
-  const unlock = FEATURE_UNLOCK[feature];
-  if (!unlock) return false;
-  if (step > unlock) return true;
-  if (step === unlock) return toggled;
-  return false;
-}
-
-// ── Image generation ────────────────────────────────────────────────
-
-function generateImages(count: number): GalleryImage[] {
-  const images: GalleryImage[] = [];
-  for (let i = 0; i < count; i++) {
-    const hue = (i * 37 + 15) % 360;
-    const widthBase = 150 + ((i * 73) % 100);
-    const heightBase = 100 + ((i * 51) % 150);
-    images.push({
-      id: `img-${i}`,
-      index: i,
-      hue,
-      width: widthBase,
-      height: heightBase,
-      aspectRatio: widthBase / heightBase,
-    });
-  }
-  return images;
-}
 
 // ── Context shape ───────────────────────────────────────────────────
 
@@ -373,54 +185,74 @@ export function GalleryProvider({
 
   const images = useMemo(() => generateImages(imageCount), [imageCount]);
 
-  // Loaded set — progressive loading when lazy loading is active
-  const [lazyLoadedSet, setLazyLoadedSet] = useState<Set<string>>(new Set());
-  const loadTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
-
-  useEffect(() => {
-    if (imageCount === 0) { setLazyLoadedSet(new Set()); return; }
-    if (!isActive("lazyLoading")) {
-      setLazyLoadedSet(new Set(images.map(i => i.id)));
-      return;
-    }
-    const initial = Math.min(6, imageCount);
-    setLazyLoadedSet(new Set(images.slice(0, initial).map(i => i.id)));
-    let loaded = initial;
-    clearInterval(loadTimerRef.current);
-    loadTimerRef.current = setInterval(() => {
-      loaded += 3;
-      const batch = Math.min(loaded, imageCount);
-      setLazyLoadedSet(new Set(images.slice(0, batch).map(i => i.id)));
-      if (batch >= imageCount) clearInterval(loadTimerRef.current);
-    }, 200);
-    return () => clearInterval(loadTimerRef.current);
-  }, [imageCount, images, isActive]);
-
-  const loadedSet = lazyLoadedSet;
-
-  // Error set — stateful so retry can remove entries
+  // State for loaded and error sets that React components read
+  const [loadedSet, setLoadedSet] = useState<Set<string>>(new Set());
   const [errorSet, setErrorSet] = useState<Set<string>>(new Set());
 
+  // Ref to hold the loader instance
+  const loaderRef = useRef<PriorityLoader | null>(null);
+
+  // Initialize PriorityLoader
   useEffect(() => {
-    if (!isActive("errorHandling")) {
-      setErrorSet(new Set());
+    const errorTrigger = (id: string) => {
+      if (!isActive("errorHandling")) return false;
+      const match = id.match(/img-(\d+)/);
+      if (!match) return false;
+      const idx = parseInt(match[1], 10);
+      return idx % 5 === 2 || idx % 7 === 3;
+    };
+
+    const loader = new PriorityLoader(
+      (loaded, errors) => {
+        setLoadedSet(loaded);
+        setErrorSet(errors);
+      },
+      errorTrigger
+    );
+
+    loaderRef.current = loader;
+
+    return () => {
+      loader.clear();
+    };
+  }, [isActive]);
+
+  // Handle active images changes and lightbox preloading priority updates
+  useEffect(() => {
+    const loader = loaderRef.current;
+    if (!loader) return;
+
+    if (imageCount === 0) {
+      loader.clear();
       return;
     }
-    const errors = new Set<string>();
-    images.forEach((img) => {
-      if (img.index % 5 === 2 || img.index % 7 === 3) {
-        errors.add(img.id);
-      }
+
+    if (!isActive("lazyLoading")) {
+      loader.setLoadedImmediately(images.map(i => i.id));
+      return;
+    }
+
+    // Standard grid queue loading
+    images.forEach((img, idx) => {
+      // First 6 images get high priority, others normal
+      const priority = idx < 6 ? "high" : "normal";
+      loader.add(img.id, priority);
     });
-    setErrorSet(errors);
-  }, [images, isActive]);
+
+    // If lightbox is open, we can elevate priorities of the active lightbox images
+    if (lightboxOpen) {
+      const currentImg = images[lightboxIndex];
+      const prevImg = images[lightboxIndex - 1];
+      const nextImg = images[lightboxIndex + 1];
+
+      if (currentImg) loader.add(currentImg.id, "high");
+      if (prevImg) loader.add(prevImg.id, "high");
+      if (nextImg) loader.add(nextImg.id, "high");
+    }
+  }, [imageCount, images, isActive, lightboxOpen, lightboxIndex]);
 
   const retryImage = useCallback((id: string) => {
-    setErrorSet(prev => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+    loaderRef.current?.retry(id);
   }, []);
 
   // Reset per-step state on step transitions

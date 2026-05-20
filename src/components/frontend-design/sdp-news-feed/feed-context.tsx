@@ -11,6 +11,8 @@ import {
   type ReactNode,
 } from "react";
 import type { StateEntry } from "@/components/recipe-lab/StateInspector";
+import { calculateScrollMetrics, getVirtualWindow } from "./engine/scroll-observer";
+import { FeedCache } from "./engine/feed-cache";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -418,6 +420,9 @@ export function FeedProvider({
 }) {
   const phase = getPhase(activeStep);
 
+  // LRU feed cache for caching recently retrieved/processed posts
+  const postCache = useMemo(() => new FeedCache<string, FeedPost>(200), []);
+
   // Step 1: Scope
   const [scopeEnabled, setScopeEnabled] = useState<Set<string>>(new Set());
 
@@ -586,10 +591,14 @@ export function FeedProvider({
     return [...insertedPosts, ...postsWithLikes];
   }, [insertedPosts, postsWithLikes]);
 
+  // Keep LRU cache synchronized with computed posts
+  useEffect(() => {
+    combinedPosts.forEach(post => postCache.put(post.id, post));
+  }, [combinedPosts, postCache]);
+
   // Virtualization window
   const virtualWindow = useMemo(() => {
-    if (!isActive("virtualization")) return { start: 0, end: combinedPosts.length };
-    return { start: 0, end: Math.min(12, combinedPosts.length) };
+    return getVirtualWindow(combinedPosts.length, isActive("virtualization"));
   }, [combinedPosts.length, isActive]);
 
   const visiblePosts = useMemo(() => {
@@ -655,27 +664,14 @@ export function FeedProvider({
 
   // ── Metrics ─────────────────────────────────────────────────────
   const metrics = useMemo(() => {
-    if (postCount === 0) return { domNodes: 0, networkReqs: 0, scrollFps: 60, tti: 0 };
-
-    let domNodes = combinedPosts.length * 4;
-    let networkReqs = combinedPosts.filter(p => p.type === "image" || p.type === "link").length;
-    let scrollFps = 60;
-    let tti = 400;
-
-    if (postCount > 50) {
-      domNodes = combinedPosts.length * 4;
-      scrollFps = Math.max(24, 60 - Math.floor(combinedPosts.length / 15));
-      tti = 400 + combinedPosts.length * 2;
-    }
-
-    if (isActive("virtualization")) {
-      domNodes = Math.min(48, domNodes);
-      scrollFps = 60;
-    }
-
-    if (isActive("skeletons")) tti = Math.min(tti, 600);
-
-    return { domNodes, networkReqs, scrollFps, tti };
+    const imageOrLinkCount = combinedPosts.filter(p => p.type === "image" || p.type === "link").length;
+    return calculateScrollMetrics({
+      postCount,
+      combinedPostsLength: combinedPosts.length,
+      imageOrLinkCount,
+      isVirtualActive: isActive("virtualization"),
+      isSkeletonsActive: isActive("skeletons"),
+    });
   }, [postCount, combinedPosts, isActive]);
 
   // ── State inspector ─────────────────────────────────────────────

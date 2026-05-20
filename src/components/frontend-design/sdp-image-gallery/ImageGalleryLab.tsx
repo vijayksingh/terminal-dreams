@@ -20,6 +20,9 @@ import {
 } from "./gallery-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { IMAGE_GALLERY_ARCH_CONFIG } from "./architecture-scenarios";
+import { MetricsBar } from "./ui/MetricsBar";
+import { LightboxViewer } from "./ui/LightboxViewer";
+import { ResponsiveGrid } from "./ui/ResponsiveGrid";
 import styles from "./ImageGalleryLab.module.css";
 
 // ── Public API ──────────────────────────────────────────────────────
@@ -325,12 +328,12 @@ function TypeCard({ typeDef }: { typeDef: TypeDef }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function GalleryEvolution() {
-  const { activeStep, stateEntries } = useGallery();
+  const { activeStep, stateEntries, metrics } = useGallery();
   const noMotion = usePrefersReducedMotion();
 
   return (
     <div className={styles.evolutionStack}>
-      <MetricsBar />
+      <MetricsBar activeStep={activeStep} metrics={metrics} />
 
       {noMotion ? (
         <StepControls />
@@ -371,31 +374,6 @@ function GalleryEvolution() {
   );
 }
 
-// ── Metrics bar ─────────────────────────────────────────────────────
-
-function MetricsBar() {
-  const { activeStep, metrics } = useGallery();
-  if (activeStep < 4) return null;
-
-  return (
-    <div className={styles.metricsBar} role="status" aria-label="Simulated performance metrics">
-      <MetricCard label="DOM" value={metrics.domNodes} bad={metrics.domNodes > 50} good={metrics.domNodes <= 25} />
-      <MetricCard label="Network" value={metrics.networkReqs} bad={metrics.networkReqs > 50} good={metrics.networkReqs <= 20} />
-      <MetricCard label="Memory" value={`${metrics.memoryMB}MB`} bad={metrics.memoryMB > 10} good={metrics.memoryMB <= 2} />
-      <MetricCard label="CLS" value={metrics.cls.toFixed(2)} bad={metrics.cls > 0.1} good={metrics.cls <= 0.05} />
-    </div>
-  );
-}
-
-function MetricCard({ label, value, bad, good }: { label: string; value: string | number; bad: boolean; good: boolean }) {
-  const status = bad ? "bad" : good ? "good" : "neutral";
-  return (
-    <div className={styles.metricCard}>
-      <div className={styles.metricLabel}>{label}</div>
-      <div className={styles.metricValue} data-status={status}>{value}</div>
-    </div>
-  );
-}
 
 // ── Step-specific controls (above gallery) ──────────────────────────
 
@@ -684,16 +662,11 @@ function ToggleRow({ label, on, onToggle }: { label: string; on: boolean; onTogg
 
 function PersistentGallery() {
   const {
-    activeStep, images, imageCount, loadedSet, errorSet, retryImage,
+    activeStep, images, loadedSet, errorSet, retryImage,
     layoutMode, isActive, lightboxOpen, lightboxIndex,
     openLightbox, closeLightbox, lightboxNext, lightboxPrev,
     focusedElement, setFocusedElement, a11yAnnouncement,
   } = useGallery();
-
-  const containerRef = useRef<HTMLDivElement>(null);
-  const prevBtnRef = useRef<HTMLButtonElement>(null);
-  const nextBtnRef = useRef<HTMLButtonElement>(null);
-  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
   const showMasonry = activeStep >= 7 && layoutMode !== "uniform";
   const showIndex = activeStep === 7;
@@ -703,7 +676,6 @@ function PersistentGallery() {
   const showReserveSpace = isActive("reserveSpace");
   const canOpenLightbox = activeStep >= 12;
   const showErrors = isActive("errorHandling");
-  const PICSUM_LIMIT = 48;
 
   const displayImages = useMemo(() => {
     if (showVirtual) return images.slice(0, 24);
@@ -711,119 +683,25 @@ function PersistentGallery() {
     return images;
   }, [images, showVirtual, activeStep]);
 
-  const gridClass = useMemo(() => {
-    if (!showMasonry) return styles.uniformGrid;
-    if (layoutMode === "css-columns") return styles.cssColumnsGrid;
-    return styles.cssGridMasonry;
-  }, [showMasonry, layoutMode]);
-
-  const btnRefs = useMemo(() => ({
-    prev: prevBtnRef, next: nextBtnRef, close: closeBtnRef,
-  }), []);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (!lightboxOpen) return;
-      if (e.key === "Escape") closeLightbox();
-      if (e.key === "ArrowRight") lightboxNext();
-      if (e.key === "ArrowLeft") lightboxPrev();
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const order: ("prev" | "next" | "close")[] = ["prev", "next", "close"];
-        const idx = order.indexOf(focusedElement);
-        const nextIdx = e.shiftKey
-          ? (idx - 1 + order.length) % order.length
-          : (idx + 1) % order.length;
-        const nextEl = order[nextIdx];
-        setFocusedElement(nextEl);
-        btnRefs[nextEl].current?.focus();
-      }
-    },
-    [lightboxOpen, closeLightbox, lightboxNext, lightboxPrev, focusedElement, setFocusedElement, btnRefs]
-  );
-
-  useEffect(() => {
-    if (lightboxOpen) closeBtnRef.current?.focus();
-  }, [lightboxOpen]);
-
-  const currentImage = images[lightboxIndex];
-
   return (
-    <div
-      ref={containerRef}
-      onKeyDown={handleKeyDown}
-      role="region"
-      aria-label="Image gallery"
-    >
+    <div role="region" aria-label="Image gallery">
       <div className={styles.galleryContainer}>
         <div className={styles.galleryScroll}>
-          <div className={gridClass}>
-            {displayImages.map((img) => {
-              const isLoaded = loadedSet.has(img.id);
-              const hasError = showErrors && errorSet.has(img.id);
-              const rowSpan = layoutMode === "css-grid" && showMasonry
-                ? Math.ceil(img.height / 20) + 1
-                : undefined;
-              const thumbW = 200;
-              const thumbH = !showMasonry ? 200 : Math.round(thumbW / img.aspectRatio);
-              const picsumUrl = `https://picsum.photos/seed/g${img.index}/${thumbW}/${thumbH}`;
-
-              const isClickable = canOpenLightbox && !hasError;
-              return (
-                <div
-                  key={img.id}
-                  className={styles.imageCard}
-                  style={{
-                    aspectRatio: !showMasonry ? "1" : showReserveSpace ? `${img.width}/${img.height}` : undefined,
-                    minHeight: !showMasonry ? "28px" : showReserveSpace ? undefined : "40px",
-                    gridRow: rowSpan ? `span ${rowSpan}` : undefined,
-                  }}
-                  role={isClickable && !hasError ? "button" : undefined}
-                  tabIndex={isClickable && !hasError ? 0 : undefined}
-                  aria-label={isClickable && !hasError ? `Open image ${img.index + 1} in lightbox` : undefined}
-                  onClick={isClickable && !hasError ? () => openLightbox(img.index) : undefined}
-                  onKeyDown={isClickable && !hasError ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLightbox(img.index); } } : undefined}
-                >
-                  {hasError ? (
-                    <div className={styles.imageCardError} onClick={(e) => { e.stopPropagation(); retryImage(img.id); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); retryImage(img.id); }}} role="button" tabIndex={0} aria-label={`Retry loading image ${img.index + 1}`}><span>⟳ Retry</span></div>
-                  ) : !isLoaded && showLazy ? (
-                    showPlaceholders ? (
-                      <div className={styles.imageCardPlaceholder}>
-                        <div
-                          className={styles.imageCardBlurFill}
-                          style={{ background: `oklch(45% 0.12 ${img.hue})` }}
-                        />
-                      </div>
-                    ) : (
-                      <div className={styles.imageCardPending} />
-                    )
-                  ) : img.index < PICSUM_LIMIT ? (
-                    <div className={styles.imageCardInner}>
-                      <img
-                        src={picsumUrl}
-                        alt={`Gallery image ${img.index + 1}`}
-                        className={styles.imageCardImg}
-                        loading="lazy"
-                      />
-                      {showIndex && (
-                        <span className={styles.imageCardIndex}>{img.index + 1}</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className={styles.imageCardInner}>
-                      <div
-                        className={styles.imageCardFill}
-                        style={{ background: `oklch(50% 0.12 ${img.hue})` }}
-                      />
-                      {showIndex && (
-                        <span className={styles.imageCardIndex}>{img.index + 1}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <ResponsiveGrid
+            displayImages={displayImages}
+            layoutMode={layoutMode}
+            showMasonry={showMasonry}
+            showReserveSpace={showReserveSpace}
+            showErrors={showErrors}
+            showLazy={showLazy}
+            showPlaceholders={showPlaceholders}
+            showIndex={showIndex}
+            canOpenLightbox={canOpenLightbox}
+            loadedSet={loadedSet}
+            errorSet={errorSet}
+            openLightbox={openLightbox}
+            retryImage={retryImage}
+          />
         </div>
 
         {/* IO viewport band overlay (step 8) */}
@@ -835,25 +713,16 @@ function PersistentGallery() {
         )}
       </div>
 
-      {/* Lightbox overlay */}
-      {lightboxOpen && currentImage && canOpenLightbox && (
-        <div className={styles.lightboxOverlay} role="dialog" aria-modal="true" aria-label={`Image ${lightboxIndex + 1} of ${images.length}`} onClick={(e) => { if (e.target === e.currentTarget) closeLightbox(); }}>
-          <div className={styles.lightboxInner}>
-            <div className={styles.lightboxContent}>
-              <img
-                src={`https://picsum.photos/seed/g${currentImage.index}/800/${Math.round(800 / currentImage.aspectRatio)}`}
-                alt={`Gallery image ${currentImage.index + 1}`}
-                className={styles.lightboxImg}
-              />
-            </div>
-            <div className={styles.lightboxControls}>
-              <button ref={prevBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "prev" ? "true" : undefined} onClick={lightboxPrev} aria-label="Previous image">Prev</button>
-              <button ref={nextBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "next" ? "true" : undefined} onClick={lightboxNext} aria-label="Next image">Next</button>
-              <button ref={closeBtnRef} type="button" className={styles.lightboxButton} data-focused={focusedElement === "close" ? "true" : undefined} onClick={closeLightbox} aria-label="Close lightbox">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <LightboxViewer
+        isOpen={lightboxOpen && canOpenLightbox}
+        index={lightboxIndex}
+        images={images}
+        onClose={closeLightbox}
+        onNext={lightboxNext}
+        onPrev={lightboxPrev}
+        focusedElement={focusedElement}
+        setFocusedElement={setFocusedElement}
+      />
 
       <div className={styles.srOnly} aria-live="assertive" role="status">
         {a11yAnnouncement}

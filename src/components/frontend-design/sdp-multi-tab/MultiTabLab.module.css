@@ -105,7 +105,7 @@
   width: 18px;
   height: 18px;
   border: 2px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,7 +199,7 @@
 .endpointCard {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-2);
   border-radius: var(--radius-2);
   background: var(--color-surface);
@@ -246,7 +246,7 @@
   font-weight: 800;
   text-transform: uppercase;
   color: var(--color-muted);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .paramGrid {
@@ -476,7 +476,7 @@
 .predictionOptions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .predictionOption {
@@ -554,7 +554,7 @@
   position: relative;
   width: 44px;
   height: 24px;
-  border-radius: 12px;
+  border-radius: var(--radius-3);
   border: 2px solid var(--color-border);
   background: var(--color-surface-2);
   cursor: pointer;
@@ -591,7 +591,7 @@
 
 .strategyGroup {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -658,7 +658,7 @@
 .tabCard {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-2);
   background: var(--color-surface);
   border-radius: var(--radius-2);
@@ -729,7 +729,7 @@
 .messageLog {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-2);
   background: var(--color-surface);
   border-radius: var(--radius-1);
@@ -742,7 +742,7 @@
   gap: var(--space-1);
   font-size: 0.6rem;
   align-items: center;
-  padding: 2px 4px;
+  padding: 2px var(--space-1);
   border-radius: var(--radius-1);
   transition: background 200ms ease;
 }
@@ -910,7 +910,7 @@
 
 .storageKey {
   font-weight: 700;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   background: var(--color-surface);
   border-radius: var(--radius-1);
   min-width: 60px;
@@ -919,7 +919,7 @@
 
 .storageValue {
   font-weight: 700;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-1);
 }
 
@@ -965,7 +965,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-2);
   background: var(--color-surface);
   border-radius: var(--radius-1);
@@ -996,7 +996,7 @@
 
 .lifecycleStrip {
   display: flex;
-  gap: 4px;
+  gap: var(--space-1);
   flex-wrap: wrap;
 }
 
@@ -1013,7 +1013,7 @@
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   transition: background 200ms ease;
 }
 
@@ -1058,13 +1058,13 @@
   flex: 1;
   height: 8px;
   background: var(--color-surface-2);
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   overflow: hidden;
 }
 
 .timerFill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: var(--radius-1);
   transition: width 200ms ease;
 }
 
@@ -1239,7 +1239,7 @@
 .memoryBar {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .memoryRow {
@@ -1259,13 +1259,13 @@
   flex: 1;
   height: 12px;
   background: var(--color-surface-2);
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   overflow: hidden;
 }
 
 .memoryFill {
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--radius-2);
   transition: width 300ms ease;
 }
 
@@ -1409,7 +1409,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin-top: 4px;
+  margin-top: var(--space-1);
 }
 
 .timerValue[data-drift="positive"] { color: var(--color-warning); }
@@ -1429,7 +1429,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   flex: 1;
   height: 6px;
   background: var(--color-surface-2);
-  border-radius: 3px;
+  border-radius: var(--radius-1);
   position: relative;
   overflow: visible;
 }
@@ -1486,7 +1486,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .messageFlowEntry {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   padding: var(--space-2);
   border-radius: var(--radius-1);
   background: var(--color-surface);
