@@ -1,51 +1,49 @@
-/* ── Component tokens ─────────────────────────── */
+/* ── Component tokens — derived from site design system ── */
 .labRoot {
-  --win-accent: oklch(65% 0.18 60);
-  --win-accent-bg: oklch(65% 0.18 60 / 0.25);
-  --win-accent-border: oklch(65% 0.18 60 / 0.4);
-  --win-accent-glow: oklch(65% 0.18 60 / 0.5);
-  --win-good: oklch(58% 0.20 145);
-  --win-good-bg: oklch(58% 0.20 145 / 0.22);
-  --win-good-border: oklch(58% 0.20 145 / 0.4);
-  --win-good-glow: oklch(58% 0.20 145 / 0.5);
-  --win-bad: oklch(60% 0.22 25);
-  --win-bad-bg: oklch(60% 0.22 25 / 0.18);
-  --win-bad-border: oklch(60% 0.22 25 / 0.35);
-  --win-dim: oklch(55% 0.06 200 / 0.25);
-  --win-overscan: oklch(60% 0.15 200);
-  --win-overscan-bg: oklch(60% 0.15 200 / 0.18);
-  --win-overscan-border: oklch(60% 0.15 200 / 0.35);
+  /* Viewport/active — site accent (blue-purple) */
+  --win-accent: var(--color-accent);
+  --win-accent-bg: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  --win-accent-border: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  --win-accent-glow: color-mix(in srgb, var(--color-accent) 30%, transparent);
+
+  /* Windowed/efficient — site success (green) */
+  --win-good: var(--color-success);
+  --win-good-bg: color-mix(in srgb, var(--color-success) 12%, transparent);
+  --win-good-border: color-mix(in srgb, var(--color-success) 35%, transparent);
+  --win-good-glow: color-mix(in srgb, var(--color-success) 25%, transparent);
+
+  /* Naive/wasteful — site error (red) */
+  --win-bad: var(--color-error);
+  --win-bad-bg: color-mix(in srgb, var(--color-error) 10%, transparent);
+  --win-bad-border: color-mix(in srgb, var(--color-error) 30%, transparent);
+
+  /* Overscan buffer — site code color (cyan-teal) */
+  --win-overscan: var(--color-code-fg);
+  --win-overscan-bg: color-mix(in srgb, var(--color-code-fg) 10%, transparent);
+  --win-overscan-border: color-mix(in srgb, var(--color-code-fg) 30%, transparent);
+
+  /* Dimmed */
+  --win-dim: color-mix(in srgb, var(--color-muted) 20%, transparent);
 
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  font-family: var(--font-mono);
 }
 
-/* ── Keyframes ───────────────────────────────────── */
+/* ── Keyframes ────────────────────────────────── */
 
 @keyframes stepPulse {
   0%, 100% { box-shadow: 0 0 0 0 var(--win-accent-glow); }
   50% { box-shadow: 0 0 8px 2px var(--win-accent-glow); }
 }
 
-@keyframes domFlash {
-  0% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-
 @keyframes badgeGlow {
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
-  50% { box-shadow: 0 0 8px 2px var(--win-good-glow); }
+  50% { box-shadow: 0 0 6px 2px var(--win-good-glow); }
 }
 
-@keyframes viewportSlide {
-  from { opacity: 0.4; }
-  to { opacity: 1; }
-}
-
-/* ── Step bar ────────────────────────────────────── */
+/* ── Step bar ─────────────────────────────────── */
 
 .stepBar {
   display: flex;
@@ -58,6 +56,7 @@
 }
 
 .stepDot {
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   padding: 2px 8px;
@@ -71,7 +70,7 @@
 .stepDot[data-active] {
   color: var(--win-accent);
   border-color: var(--win-accent-border);
-  background: color-mix(in srgb, var(--win-accent) 8%, transparent);
+  background: var(--win-accent-bg);
 }
 
 .stepDot[data-current] {
@@ -81,7 +80,7 @@
   animation: stepPulse 2s ease-in-out infinite;
 }
 
-/* ── Scroll area ─────────────────────────────────── */
+/* ── Scroll area ──────────────────────────────── */
 
 .scrollArea {
   flex: 1;
@@ -92,7 +91,7 @@
   gap: var(--space-3);
 }
 
-/* ── Split layout (minimap + scroller) ───────────── */
+/* ── Split layout (minimap + scroller) ────────── */
 
 .splitLayout {
   display: grid;
@@ -101,7 +100,7 @@
   align-items: start;
 }
 
-/* ── Toolbar ─────────────────────────────────────── */
+/* ── Toolbar ──────────────────────────────────── */
 
 .toolbar {
   display: flex;
@@ -115,7 +114,7 @@
 }
 
 .toggleBtn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   font-family: var(--font-mono);
@@ -123,8 +122,8 @@
   font-weight: 600;
   padding: 6px 14px;
   border-radius: var(--radius-1);
-  border: 1.5px solid var(--color-border);
-  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  background: transparent;
   color: var(--color-muted);
   cursor: pointer;
   transition: all 0.15s;
@@ -149,7 +148,7 @@
 }
 
 .toggleBtnActive:hover {
-  background: color-mix(in srgb, var(--win-good) 25%, transparent);
+  background: color-mix(in srgb, var(--win-good) 20%, transparent);
   border-color: var(--win-good);
 }
 
@@ -165,22 +164,24 @@
 .toggleDot[data-on] {
   background: var(--win-good);
   opacity: 1;
-  box-shadow: 0 0 6px var(--win-good-glow);
+  box-shadow: 0 0 4px var(--win-good-glow);
 }
 
 .toolbarHint {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--win-good);
   font-weight: 600;
 }
 
 .toolbarWarning {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--win-bad);
   font-weight: 600;
 }
 
-/* ── Scroller ────────────────────────────────────── */
+/* ── Scroller ─────────────────────────────────── */
 
 .scrollerContainer {
   display: flex;
@@ -197,6 +198,8 @@
 }
 
 .scrollerTitle {
+  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -204,6 +207,7 @@
 }
 
 .domBadge {
+  font-family: var(--font-mono);
   font-weight: 700;
   padding: 2px 10px;
   border-radius: var(--radius-1);
@@ -226,13 +230,9 @@
   animation: badgeGlow 2s ease-in-out infinite;
 }
 
-.domBadgeFlash {
-  animation: domFlash 0.25s ease-out;
-}
-
 .scroller {
   overflow-y: auto;
-  border: 2px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-bg);
   scrollbar-width: thin;
@@ -247,7 +247,7 @@
   position: relative;
 }
 
-/* ── Row variants ────────────────────────────────── */
+/* ── Row variants ─────────────────────────────── */
 
 .rowBase {
   position: absolute;
@@ -257,9 +257,10 @@
   align-items: center;
   gap: var(--space-2);
   padding: 0 var(--space-3);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
-  transition: background 0.1s, border-color 0.1s;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  transition: background 0.1s;
 }
 
 .rowNaive {
@@ -268,13 +269,13 @@
 }
 
 .rowNaive:hover {
-  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .rowDimmed {
   composes: rowBase;
   color: var(--color-muted);
-  opacity: 0.2;
+  opacity: 0.3;
 }
 
 .rowViewport {
@@ -285,7 +286,7 @@
 }
 
 .rowViewport:hover {
-  background: color-mix(in srgb, var(--win-accent) 20%, transparent);
+  background: color-mix(in srgb, var(--win-accent) 15%, transparent);
 }
 
 .rowOverscan {
@@ -296,7 +297,7 @@
 }
 
 .rowOverscan:hover {
-  background: color-mix(in srgb, var(--win-overscan) 15%, transparent);
+  background: color-mix(in srgb, var(--win-overscan) 12%, transparent);
 }
 
 .rowIdx {
@@ -304,11 +305,11 @@
   min-width: 4ch;
   color: inherit;
   font-variant-numeric: tabular-nums;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .rowIcon {
-  font-size: 12px;
+  font-size: 10px;
   flex-shrink: 0;
   line-height: 1;
 }
@@ -325,19 +326,20 @@
 .rowMeta {
   color: inherit;
   font-size: 10px;
-  opacity: 0.5;
+  opacity: 0.45;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .naiveWarning {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--win-bad);
   padding: var(--space-1) var(--space-2);
   font-weight: 600;
 }
 
-/* ── Minimap ─────────────────────────────────────── */
+/* ── Minimap ──────────────────────────────────── */
 
 .minimap {
   display: flex;
@@ -346,6 +348,7 @@
 }
 
 .mmLabel {
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -357,7 +360,7 @@
   position: relative;
   width: 100%;
   background: var(--color-surface-2);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   overflow: hidden;
 }
@@ -376,8 +379,8 @@
   right: 0;
   background: var(--win-good-bg);
   border-left: 3px solid var(--win-good);
-  transition: top 0.08s, height 0.08s;
-  box-shadow: 0 0 8px var(--win-good-glow);
+  transition: top 0.12s cubic-bezier(0.25, 1, 0.5, 1),
+              height 0.12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .mmViewport {
@@ -387,8 +390,7 @@
   background: var(--win-accent-bg);
   border: 2px solid var(--win-accent);
   border-radius: 2px;
-  transition: top 0.08s;
-  box-shadow: 0 0 6px var(--win-accent-glow);
+  transition: top 0.12s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .mmStats {
@@ -401,6 +403,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  font-family: var(--font-mono);
   font-size: 10px;
   color: var(--color-muted);
 }
@@ -414,12 +417,10 @@
 
 .mmStatDot[data-type="viewport"] {
   background: var(--win-accent);
-  box-shadow: 0 0 4px var(--win-accent-glow);
 }
 
 .mmStatDot[data-type="rendered"] {
   background: var(--win-good);
-  box-shadow: 0 0 4px var(--win-good-glow);
 }
 
 .mmStatDot[data-type="total"] {
@@ -434,7 +435,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Problem overview (Step 1) ───────────────────── */
+/* ── Problem overview (Step 1) ────────────────── */
 
 .problemOverview {
   display: flex;
@@ -458,17 +459,17 @@
   gap: 2px;
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
 
 .calcLine:hover {
   border-color: var(--win-accent-border);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--win-accent) 15%, transparent);
 }
 
 .calcLabel {
+  font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -476,25 +477,27 @@
 }
 
 .calcValue {
+  font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: 700;
   color: var(--color-text);
 }
 
 .calcResult {
+  font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: 700;
   color: var(--win-accent);
-  text-shadow: 0 0 12px var(--win-accent-glow);
 }
 
 .calcOperator {
+  font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: 700;
   color: var(--color-muted);
 }
 
-/* ── Problem visual bar ──────────────────────────── */
+/* ── Problem visual bar ───────────────────────── */
 
 .problemVisual {
   display: flex;
@@ -507,7 +510,7 @@
   position: relative;
   height: 200px;
   background: var(--win-bad-bg);
-  border: 1.5px solid var(--win-bad-border);
+  border: 1px solid var(--win-bad-border);
   border-radius: var(--radius-2);
   overflow: hidden;
 }
@@ -519,7 +522,6 @@
   right: 0;
   height: 8px;
   background: var(--win-accent);
-  box-shadow: 0 2px 12px var(--win-accent-glow);
 }
 
 .problemBarLabel {
@@ -533,12 +535,13 @@
 }
 
 .problemBarCaption {
-  font-size: 12px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   color: var(--color-muted);
   line-height: 1.5;
 }
 
-/* ── Comparison banner ───────────────────────────── */
+/* ── Comparison banner ────────────────────────── */
 
 .comparison {
   display: flex;
@@ -546,7 +549,7 @@
   gap: var(--space-1);
   padding: var(--space-3);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
 }
 
@@ -558,6 +561,7 @@
 }
 
 .compLabel {
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   color: var(--color-muted);
@@ -578,7 +582,6 @@
   background: var(--win-good);
   border-radius: 6px;
   min-width: 4px;
-  box-shadow: 0 0 6px var(--win-good-glow);
 }
 
 .compBarNaive {
@@ -589,6 +592,7 @@
 }
 
 .compCount {
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   text-align: right;
@@ -597,15 +601,15 @@
 }
 
 .compResult {
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   text-align: center;
   color: var(--win-good);
   padding: var(--space-1) 0;
-  text-shadow: 0 0 8px var(--win-good-glow);
 }
 
-/* ── Pipeline ────────────────────────────────────── */
+/* ── Pipeline ─────────────────────────────────── */
 
 .pipeline {
   display: flex;
@@ -613,11 +617,12 @@
   gap: var(--space-2);
   padding: var(--space-3);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
 }
 
 .pipelineLabel {
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -629,7 +634,7 @@
   display: flex;
   align-items: stretch;
   gap: 0;
-  overflow-x: auto;
+  flex-wrap: wrap;
 }
 
 .pipelineStep {
@@ -644,7 +649,7 @@
   font-size: 16px;
   font-weight: 700;
   padding: 0 4px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .pipelineBox {
@@ -653,17 +658,17 @@
   gap: 1px;
   padding: var(--space-1) var(--space-2);
   background: var(--color-bg);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
 }
 
 .pipelineBox:hover {
   border-color: var(--win-accent-border);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--win-accent) 12%, transparent);
 }
 
 .pipelineBoxLabel {
+  font-family: var(--font-mono);
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -671,6 +676,7 @@
 }
 
 .pipelineBoxValue {
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   color: var(--win-accent);
@@ -678,7 +684,7 @@
   white-space: nowrap;
 }
 
-/* ── Overscan control ────────────────────────────── */
+/* ── Overscan control ─────────────────────────── */
 
 .overscanControl {
   display: flex;
@@ -686,63 +692,69 @@
   gap: var(--space-1);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   overflow: hidden;
 }
 
 .overscanWarning {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--win-bad);
   font-weight: 600;
 }
 
-/* ── Stats bar ───────────────────────────────────── */
+/* ── Collapsible inspector ────────────────────── */
 
-.statsBar {
+.inspectorWrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+}
+
+.inspectorToggle {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
   background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-2);
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.statLabel {
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--color-muted);
+  transition: color 0.15s;
 }
 
-.statValue {
-  font-size: var(--text-sm);
-  font-weight: 700;
+.inspectorToggle:hover {
   color: var(--color-text);
+}
+
+.inspectorChevron {
+  font-size: 9px;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.inspectorChevron[data-open] {
+  transform: rotate(90deg);
+}
+
+.inspectorRenders {
+  margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
 
-.statHighlight {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--win-good);
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 8px var(--win-good-glow);
-}
-
-/* ── Controls ────────────────────────────────────── */
+/* ── Controls ─────────────────────────────────── */
 
 .ctrl {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--color-muted);
   width: 100%;
@@ -750,6 +762,36 @@
 
 .ctrl input[type="range"] {
   flex: 1;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: 2px;
+  outline: none;
+}
+
+.ctrl input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--win-accent);
+  border: 2px solid var(--color-bg);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.ctrl input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.ctrl input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--win-accent);
+  border: 2px solid var(--color-bg);
   cursor: pointer;
 }
 
@@ -767,7 +809,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Responsive ──────────────────────────────────── */
+/* ── Responsive ───────────────────────────────── */
 
 @media (max-width: 640px) {
   .splitLayout {
@@ -784,7 +826,6 @@
   }
 
   .pipelineSteps {
-    flex-wrap: wrap;
     gap: var(--space-1);
   }
 
@@ -806,7 +847,8 @@
   .scroller,
   .calcLine,
   .pipelineBox,
-  .rowBase {
+  .rowBase,
+  .ctrl input[type="range"]::-webkit-slider-thumb {
     transition: none;
   }
 
@@ -815,10 +857,6 @@
   }
 
   .domBadgeGreen {
-    animation: none;
-  }
-
-  .domBadgeFlash {
     animation: none;
   }
 }

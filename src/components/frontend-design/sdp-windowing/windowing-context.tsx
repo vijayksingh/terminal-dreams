@@ -130,7 +130,7 @@ export function WindowingProvider({
     if (activeStep >= 4) setWindowingEnabled(true);
     else setWindowingEnabled(false);
 
-    if (activeStep === 6) setOverscan(DEFAULT_OVERSCAN);
+    if (activeStep === 6) setOverscan(0);
 
     const prevPhase = getPhase(prevStepRef.current);
     if (prevPhase !== phase) setScrollTop(0);
@@ -159,7 +159,7 @@ export function WindowingProvider({
   );
 
   const isWindowed = windowingEnabled && showWindowing;
-  const activeOverscan = showOverscan ? overscan : isWindowed ? 0 : 0;
+  const activeOverscan = showOverscan ? overscan : 0;
 
   const renderStart = isWindowed
     ? Math.max(0, viewportStart - activeOverscan)

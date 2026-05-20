@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SPRING, TRANSITION, STAGGER } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -174,7 +174,6 @@ function ProblemView() {
           </motion.div>
         )}
       </AnimatePresence>
-      <StatsBar />
       <Inspector />
     </>
   );
@@ -224,7 +223,6 @@ function InsightView() {
           </motion.div>
         )}
       </AnimatePresence>
-      <StatsBar />
       <Inspector />
     </>
   );
@@ -259,7 +257,6 @@ function MechanicsView() {
         <VirtualScroller />
       </div>
       <Pipeline />
-      <StatsBar />
       <Inspector />
     </>
   );
@@ -891,108 +888,6 @@ function OverscanControl() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// Stats bar — animated value flashes
-// ═══════════════════════════════════════════════════════════════════════
-
-function StatsBar() {
-  const {
-    activeStep,
-    totalItems,
-    mountedCount,
-    naiveDomCount,
-    windowingEnabled,
-    showWindowing,
-    savings,
-    visibleCount,
-    overscan,
-    showOverscan,
-  } = useWindowing();
-  const prefersReducedMotion = usePrefersReducedMotion();
-
-  const isWindowed = windowingEnabled && showWindowing;
-  const domCount = isWindowed ? mountedCount : naiveDomCount;
-
-  const stats: Array<{ label: string; value: string; highlight?: boolean }> =
-    [];
-
-  stats.push({
-    label: "DOM nodes",
-    value: fmt(domCount),
-    highlight: isWindowed,
-  });
-  stats.push({
-    label: "total items",
-    value: fmt(totalItems),
-  });
-
-  if (activeStep >= 3) {
-    stats.push({
-      label: "visible",
-      value: String(visibleCount),
-    });
-  }
-
-  if (activeStep >= 4 && isWindowed) {
-    stats.push({
-      label: "savings",
-      value: `${savings}%`,
-      highlight: true,
-    });
-  }
-
-  if (showOverscan) {
-    stats.push({
-      label: "overscan",
-      value: `±${overscan}`,
-    });
-  }
-
-  return (
-    <div
-      className={styles.statsBar}
-      role="region"
-      aria-label="Windowing statistics"
-      aria-live="polite"
-    >
-      <AnimatePresence mode="popLayout">
-        {stats.map((s) => (
-          <motion.div
-            key={s.label}
-            layout
-            initial={prefersReducedMotion ? false : { opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={
-              prefersReducedMotion ? undefined : { opacity: 0, y: 4 }
-            }
-            transition={
-              prefersReducedMotion ? INSTANT : TRANSITION.enterItem
-            }
-            className={styles.stat}
-          >
-            <span className={styles.statLabel}>{s.label}</span>
-            <motion.span
-              key={s.value}
-              initial={
-                prefersReducedMotion ? false : { opacity: 0.4 }
-              }
-              animate={{ opacity: 1 }}
-              transition={
-                prefersReducedMotion ? INSTANT : TRANSITION.crossfade
-              }
-              className={
-                s.highlight ? styles.statHighlight : styles.statValue
-              }
-            >
-              {s.value}
-            </motion.span>
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════
 // Item count slider
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -1022,12 +917,43 @@ function ItemCountSlider() {
 
 function Inspector() {
   const { stateEntries, renderCount } = useWindowing();
+  const [open, setOpen] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
-    <StateInspector
-      entries={stateEntries}
-      title="Windowing State"
-      renderCount={renderCount}
-    />
+    <div className={styles.inspectorWrap}>
+      <button
+        className={styles.inspectorToggle}
+        onClick={() => setOpen((p) => !p)}
+        aria-expanded={open}
+      >
+        <span className={styles.inspectorChevron} data-open={open || undefined}>
+          ▸
+        </span>
+        State Inspector
+        {renderCount !== undefined && (
+          <span className={styles.inspectorRenders}>
+            renders: {renderCount}
+          </span>
+        )}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="inspector-body"
+            initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={prefersReducedMotion ? undefined : { height: 0, opacity: 0 }}
+            transition={prefersReducedMotion ? INSTANT : TRANSITION.collapse}
+            style={{ overflow: "hidden" }}
+          >
+            <StateInspector
+              entries={stateEntries}
+              title="Windowing State"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
