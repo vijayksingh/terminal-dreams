@@ -1,0 +1,141 @@
+---
+title: "Design Adaptive Video Streaming"
+slug: design-video-streaming
+section: system-design-problems
+stopId: sdp-video-streaming
+order: 8
+kind: system-design-problem
+summary: "Design adaptive video streaming with HLS/DASH manifest parsing, ABR algorithms, buffer management, and bandwidth-based quality switching"
+tags:
+  - system-design
+  - video-streaming
+  - adaptive-bitrate
+  - hls
+  - buffer-management
+  - bandwidth
+intersections:
+  - net-protocols
+  - perf-js
+prerequisites: []
+demo: design-video-streaming
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design an adaptive video streaming player that adjusts quality based on network conditions."
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API & Data Model
+
+Define the manifest format, segment delivery, and analytics endpoints.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+Map the streaming pipeline: manifest parser → ABR controller → buffer manager → segment fetcher → CDN.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Video Manifest
+
+Parse HLS/DASH manifests to discover available quality levels, codecs, and segment URLs.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Buffer Manager
+
+Track loaded segments, monitor buffer health, and detect underrun conditions.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Bandwidth Estimator
+
+Measure download throughput with EWMA to smooth noisy network samples.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — ABR Algorithm
+
+Select quality levels using throughput-based, buffer-based, or hybrid strategies.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Segment Fetcher
+
+Download segments with progress tracking, retry logic, and abort-on-switch.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Quality Switching
+
+Handle mid-stream quality transitions without visual artifacts or buffer gaps.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Buffer Underrun Protection
+
+Detect critically low buffer and trigger emergency quality drops to prevent stalls.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Startup Optimization
+
+Minimize time-to-first-frame with fast-start at low quality, then progressive ramp-up.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Seek Handling
+
+Flush and refill the buffer when the user seeks to a new position.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Live Streaming
+
+Support live edge tracking with sliding window buffers and latency constraints.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Bandwidth Prediction
+
+Forecast future bandwidth using historical samples and statistical methods.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Full Player Integration
+
+Compare ABR-on vs ABR-off under the same network conditions to see the dramatic difference.
+
+</section>

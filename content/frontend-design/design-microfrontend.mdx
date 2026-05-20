@@ -1,0 +1,140 @@
+---
+title: "Design a Micro-frontend Architecture"
+slug: design-microfrontend
+section: system-design-problems
+stopId: sdp-microfrontend
+order: 11
+kind: system-design-problem
+summary: "Architect micro-frontends with module federation, shared dependencies, event bus communication, and independent deployment"
+tags:
+  - system-design
+  - micro-frontend
+  - module-federation
+  - event-bus
+intersections:
+  - state-memory
+  - perf-bundle
+  - render-csr-ssr-ssg
+prerequisites: []
+demo: design-microfrontend
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Scope
+
+"Design a micro-frontend architecture where multiple teams independently develop, deploy, and run their own frontend modules within a single application shell."
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Federation API
+
+Define the manifest, bundle delivery, event bus, and shared dependency endpoints.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+Map the MFE architecture: app shell, team containers, shared runtime, CDN pipeline, and event bus.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — App Shell
+
+Build the application shell that orchestrates MFE layout slots and team assignments.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Remote Containers
+
+Load remote MFE containers with independent latency and bundle sizes.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Shared Dependencies
+
+Deduplicate React, ReactDOM, and design tokens across independently-built MFEs.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Event Bus
+
+Build pub/sub communication between MFEs using a typed event bus.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Isolation Strategy
+
+Choose between iframe, Web Component, and Module Federation isolation boundaries.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Cross-MFE Routing
+
+Handle URL ownership and navigation handoffs between independently-deployed MFEs.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — CSS Scoping
+
+Prevent style collisions when multiple teams define the same class names.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Error Isolation
+
+Contain MFE failures with error boundaries so one team's crash doesn't take down the whole app.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Version Management
+
+Resolve dependency version conflicts when teams upgrade at different paces.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Bundle Performance
+
+Optimize bundle loading with prefetching, code splitting, and network-aware waterfall visualization.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Contract Testing
+
+Define and verify event contracts between MFEs to catch breaking changes before deployment.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Full System
+
+Run the complete micro-frontend system: independent deployment, cross-MFE events, and error isolation.
+
+</section>

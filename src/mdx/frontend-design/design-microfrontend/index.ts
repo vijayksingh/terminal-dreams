@@ -1,0 +1,1 @@
+export { MicrofrontendDemo } from "./MicrofrontendDemo";

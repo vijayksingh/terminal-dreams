@@ -13,6 +13,9 @@ import { WindowingLab } from "./sdp-windowing/WindowingLab";
 import { WhiteboardLab } from "./sdp-whiteboard/WhiteboardLab";
 import { OfflineFirstLab } from "./sdp-offline-first/OfflineFirstLab";
 import { MultiTabLab } from "./sdp-multi-tab/MultiTabLab";
+import { VideoStreamingLab } from "./sdp-video-streaming/VideoStreamingLab";
+import { NotificationLab } from "./sdp-notification-system/NotificationLab";
+import { MicrofrontendLab } from "./sdp-microfrontend/MicrofrontendLab";
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -175,6 +178,33 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <MultiTabLab activeStep={activeStep} />
+    ),
+  },
+  "design-video-streaming": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <VideoStreamingLab activeStep={activeStep} />
+    ),
+  },
+  "design-notification-system": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <NotificationLab activeStep={activeStep} />
+    ),
+  },
+  "design-microfrontend": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <MicrofrontendLab activeStep={activeStep} />
     ),
   },
 };

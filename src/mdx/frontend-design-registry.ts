@@ -30,6 +30,10 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-news-feed"),
   "design-realtime-chat": () =>
     import("@/mdx/frontend-design/design-realtime-chat"),
+  "design-video-streaming": () =>
+    import("@/mdx/frontend-design/design-video-streaming"),
+  "design-microfrontend": () =>
+    import("@/mdx/frontend-design/design-microfrontend"),
   "fixed-vs-variable-height": () =>
     import("@/mdx/frontend-design/fixed-vs-variable-height"),
   "virtual-scroll-implementation": () =>
