@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -16,6 +16,7 @@ const DEFAULT_CARD_AREA = { side: "right" as const, widthVB: 200, gapVB: 16 };
 
 export function ArchitectureScenarioPlayer({
   config,
+  onScenarioChange,
 }: ArchitectureScenarioPlayerProps) {
   const reducedMotion = usePrefersReducedMotion();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +38,10 @@ export function ArchitectureScenarioPlayer({
     isPlaying,
     splitEnabled,
   } = player;
+
+  useEffect(() => {
+    onScenarioChange?.(scenarioIdx);
+  }, [scenarioIdx, onScenarioChange]);
 
   const panelStep = activeSteps[displayedStepIdx];
   const panelPrevStep =

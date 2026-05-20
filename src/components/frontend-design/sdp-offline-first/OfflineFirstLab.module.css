@@ -316,7 +316,8 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  border-top: 3px solid var(--type-color, var(--color-accent));
+  background: color-mix(in srgb, var(--type-color, var(--color-accent)) 10%, transparent);
 }
 
 .typeCardHeader {
@@ -327,7 +328,7 @@
 }
 
 .typeCardName { font-size: 0.7rem; font-weight: 800; }
-.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--type-color, var(--color-accent)); }
 
 .typeCardFields {
   display: flex;
@@ -479,7 +480,8 @@
 .toggleButton {
   position: relative;
   width: 44px;
-  height: 24px;
+  min-height: 44px;
+  padding: 10px 0;
   border-radius: 12px;
   border: 2px solid var(--color-border);
   background: var(--color-surface-2);
@@ -892,29 +894,61 @@
 }
 
 .schemaRow {
-  display: grid;
-  grid-template-columns: 80px 80px 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-1);
   font-size: 0.625rem;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2);
   border-radius: var(--radius-1);
-  align-items: center;
-  min-height: 44px;
   background: var(--color-surface);
-  cursor: pointer;
   transition: background 200ms ease;
 }
-
-.schemaRow:hover { background: var(--color-surface-2); }
-.schemaRow:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .schemaRow[data-revealed="true"] {
   background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
 }
 
+.schemaFieldHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.schemaFeedback {
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
+.schemaFeedback[data-correct="true"] { color: var(--color-success); }
+.schemaFeedback:not([data-correct]) { color: var(--color-error); }
+
+.typeChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.typeChoice {
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-surface-2);
+  border: none;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition: background 200ms ease, color 200ms ease;
+}
+
+.typeChoice:hover { background: var(--color-accent); color: var(--color-bg); }
+.typeChoice:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
 .schemaField { font-weight: 700; }
 .schemaType { color: var(--color-accent); }
 .schemaNote { color: var(--color-muted); }
+.schemaHint { color: var(--color-error); font-style: italic; }
 
 .schemaStoreLabel {
   font-size: 0.65rem;
@@ -1154,6 +1188,13 @@
   height: 80px;
 }
 
+.backoffColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
 .backoffBar {
   flex: 1;
   border-radius: var(--radius-1) var(--radius-1) 0 0;
@@ -1221,6 +1262,27 @@
   font-weight: 600;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.ttlBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 6px;
+  border-radius: var(--radius-1);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.ttlBadge[data-low="true"] {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 12%, transparent);
+}
+
+.ttlBadge[data-expired="true"] {
+  color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
 }
 
 /* ── Prop controls ─────────────────────────────────────────────── */
@@ -1336,7 +1398,8 @@
   .versionEntry,
   .backoffBar,
   .networkIndicator,
-  .schemaRow {
+  .schemaRow,
+  .ttlBadge {
     transition: none;
   }
 }

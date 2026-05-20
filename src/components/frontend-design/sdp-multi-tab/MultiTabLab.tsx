@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSITION, SPRING } from "@/lib/motion";
+import { TRANSITION, SPRING, STAGGER } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
@@ -315,10 +315,10 @@ function TypeCards() {
 function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed: Set<string>; onReveal: (key: string) => void }) {
   const color = TYPE_CATEGORY_COLORS[typeDef.category];
   return (
-    <div className={styles.typeCard} style={{ borderTopColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
+    <div className={styles.typeCard} style={{ ["--type-color" as string]: color }}>
       <div className={styles.typeCardHeader}>
         <span className={styles.typeCardName}>{typeDef.name}</span>
-        <span className={styles.typeCardCategory} style={{ color }}>{typeDef.category}</span>
+        <span className={styles.typeCardCategory}>{typeDef.category}</span>
       </div>
       <div className={styles.typeCardFields}>
         {typeDef.fields.map((f, i) => {
@@ -352,44 +352,16 @@ function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed:
 
 function ComponentTreeView() {
   const { markStepComplete } = useMultiTab();
-  const [scenariosViewed, setScenariosViewed] = useState(0);
-  const prevScenarioRef = useRef<number | null>(null);
+  const scenariosViewed = useRef(new Set<number>());
 
-  // Track scenario changes via a polling interval on the player's DOM
-  // Since ArchitectureScenarioPlayer doesn't expose onScenarioComplete,
-  // mark complete after the user has interacted enough (viewed 2+ scenarios)
-  useEffect(() => {
-    if (scenariosViewed >= 2) markStepComplete(3);
-  }, [scenariosViewed, markStepComplete]);
-
-  // Detect scenario navigation by observing active step indicator changes
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new MutationObserver(() => {
-      const activeIndicator = el.querySelector('[data-scenario-idx]');
-      if (activeIndicator) {
-        const idx = Number(activeIndicator.getAttribute('data-scenario-idx'));
-        if (!isNaN(idx) && prevScenarioRef.current !== null && idx !== prevScenarioRef.current) {
-          setScenariosViewed(prev => prev + 1);
-        }
-        prevScenarioRef.current = idx;
-      }
-    });
-    observer.observe(el, { subtree: true, attributes: true, childList: true });
-    return () => observer.disconnect();
-  }, []);
-
-  // Fallback: auto-complete after meaningful engagement time (8 seconds)
-  useEffect(() => {
-    const timer = setTimeout(() => markStepComplete(3), 8000);
-    return () => clearTimeout(timer);
+  const handleScenarioChange = useCallback((idx: number) => {
+    scenariosViewed.current.add(idx);
+    if (scenariosViewed.current.size >= 2) markStepComplete(3);
   }, [markStepComplete]);
 
   return (
-    <div className={styles.planningPanel} ref={containerRef}>
-      <ArchitectureScenarioPlayer config={MULTI_TAB_ARCH_CONFIG} />
+    <div className={styles.planningPanel}>
+      <ArchitectureScenarioPlayer config={MULTI_TAB_ARCH_CONFIG} onScenarioChange={handleScenarioChange} />
     </div>
   );
 }
@@ -473,7 +445,7 @@ function TabListViz() {
             initial={noMotion ? false : { opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={noMotion ? undefined : { opacity: 0, scale: 0.9 }}
-            transition={SPRING.snappy}
+            transition={SPRING.gentle}
             layout={!noMotion}
           >
             <div className={styles.tabCardHeader}>
@@ -537,7 +509,7 @@ function PredictionChallenge({ question, options, correctIndex, explanation }: {
             initial={noMotion ? false : { opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={noMotion ? undefined : { opacity: 0, scale: 0.92 }}
-            transition={SPRING.snappy}
+            transition={SPRING.quick}
           >
             {selected === correctIndex ? "✓ " : "✗ "}{explanation}
           </motion.div>
@@ -743,7 +715,7 @@ function MessageLog({ messages }: { messages: { id: string; type: string; from: 
               initial={noMotion ? false : { opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               exit={noMotion ? undefined : { opacity: 0, x: 12 }}
-              transition={SPRING.snappy}
+              transition={SPRING.quick}
             >
               <span className={styles.msgTypeBadge}>{msg.type}</span>
               <span className={styles.msgFrom}>{msg.from.slice(-1)}</span>
@@ -768,35 +740,84 @@ const MESSAGE_TYPES = [
   { type: "election", desc: "Leader election messages (ELECTION, OK, COORDINATOR)", fields: ["from", "phase", "candidateId"] },
 ] as const;
 
-const MSG_SCENARIOS = [
-  { scenario: "Tab A edited a document and needs to push the change to Tab B", correctType: "state-sync" },
-  { scenario: "Tab C checks in to prove it is still alive", correctType: "heartbeat" },
-  { scenario: "The leader tab has crashed and a new leader must be chosen", correctType: "election" },
-  { scenario: "User clicks 'Save' and the request must go through the leader", correctType: "action" },
-] as const;
+type SentMessage = {
+  id: string;
+  type: string;
+  from: string;
+  payload: string;
+  deliveredTo: string[];
+  handlerResult: string[];
+};
+
+const TAB_NAMES = ["Tab A", "Tab B", "Tab C"];
+
+function describeHandler(msgType: string, tabLabel: string, isLeader: boolean): string {
+  switch (msgType) {
+    case "state-sync":
+      return `${tabLabel}: applies state diff to local store`;
+    case "action":
+      return isLeader
+        ? `${tabLabel} (leader): executes action, broadcasts result`
+        : `${tabLabel}: forwards to leader for coordination`;
+    case "heartbeat":
+      return `${tabLabel}: updates last-seen timestamp for sender`;
+    case "election":
+      return isLeader
+        ? `${tabLabel}: acknowledges new coordinator`
+        : `${tabLabel}: compares candidate ID, may start counter-election`;
+    default:
+      return `${tabLabel}: processes message`;
+  }
+}
 
 function MessageProtocolWidget() {
-  const { markStepComplete } = useMultiTab();
+  const { tabs, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
-  const [scenarioAnswers, setScenarioAnswers] = useState<Record<number, string>>({});
-  const [scenarioCorrect, setScenarioCorrect] = useState(0);
+  const [selectedType, setSelectedType] = useState<(typeof MESSAGE_TYPES)[number]["type"]>(MESSAGE_TYPES[0]?.type ?? "state-sync");
+  const [selectedSource, setSelectedSource] = useState(TAB_NAMES[0] ?? "Tab A");
+  const [payloadVal, setPayloadVal] = useState("");
+  const [sentMessages, setSentMessages] = useState<SentMessage[]>([]);
+  const sentTypesRef = useRef<Set<string>>(new Set());
+  const msgCounter = useRef(0);
+
+  const sentCount = sentMessages.length;
+  const uniqueTypesSent = new Set(sentMessages.map(m => m.type)).size;
 
   useEffect(() => {
-    if (revealed.size === MESSAGE_TYPES.length && scenarioCorrect >= 2) markStepComplete(5);
-  }, [revealed.size, scenarioCorrect, markStepComplete]);
+    if (revealed.size === MESSAGE_TYPES.length && sentCount >= 3 && uniqueTypesSent >= 2) markStepComplete(5);
+  }, [revealed.size, sentCount, uniqueTypesSent, markStepComplete]);
 
-  const handleScenarioGuess = (idx: number, guess: string) => {
-    if (scenarioAnswers[idx] !== undefined) return;
-    setScenarioAnswers(prev => ({ ...prev, [idx]: guess }));
-    if (guess === MSG_SCENARIOS[idx]!.correctType) {
-      setScenarioCorrect(prev => prev + 1);
-    }
+  const handleSend = () => {
+    msgCounter.current += 1;
+    const otherTabs = TAB_NAMES.filter(t => t !== selectedSource);
+    const typeInfo = MESSAGE_TYPES.find(mt => mt.type === selectedType);
+    const payload = payloadVal.trim() || (typeInfo ? typeInfo.desc.slice(0, 30) : selectedType);
+    const leaderLabel = tabs[0]?.label ?? "Tab A";
+
+    const handlers = otherTabs.map(t =>
+      describeHandler(selectedType, t, t === leaderLabel)
+    );
+
+    sentTypesRef.current.add(selectedType);
+    setSentMessages(prev => [
+      ...prev.slice(-9),
+      {
+        id: `proto-${msgCounter.current}`,
+        type: selectedType,
+        from: selectedSource,
+        payload,
+        deliveredTo: otherTabs,
+        handlerResult: handlers,
+      },
+    ]);
+    setPayloadVal("");
   };
 
   return (
     <div className={styles.widgetPanel} data-category="channel">
-      <div className={styles.widgetTitle}>Message protocol -- typed message envelopes</div>
-      <div className={styles.widgetNote}>Tap each message type to reveal its fields. A well-typed protocol prevents runtime surprises.</div>
+      <div className={styles.widgetTitle}>Message protocol -- compose and send typed messages</div>
+      <div className={styles.widgetNote}>Tap each message type to reveal its fields, then use the composer to send messages and see how each tab handles them.</div>
       {MESSAGE_TYPES.map(mt => {
         const isRevealed = revealed.has(mt.type);
         return (
@@ -807,11 +828,11 @@ function MessageProtocolWidget() {
             data-revealed={isRevealed ? "true" : undefined}
             onClick={() => setRevealed(prev => new Set(prev).add(mt.type))}
             aria-expanded={isRevealed}
-            style={{ minHeight: 44, background: "var(--color-surface)", borderRadius: "var(--radius-1)", padding: "var(--space-2)" }}
+            data-kind="protocol"
           >
             <span className={styles.typeFieldName}>{mt.type}</span>
             {isRevealed ? (
-              <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span className={styles.typeFieldRevealedContent}>
                 <span className={styles.typeFieldNote}>{mt.desc}</span>
                 <span className={styles.typeFieldType}>{mt.fields.join(", ")}</span>
               </span>
@@ -821,54 +842,109 @@ function MessageProtocolWidget() {
           </button>
         );
       })}
-      <div className={styles.widgetTitle} style={{ fontSize: "0.65rem", marginTop: "var(--space-2)" }}>
-        Match the scenario to the correct message type
+      <div className={styles.widgetSubtitle}>
+        Message composer
       </div>
-      {MSG_SCENARIOS.map((sc, idx) => {
-        const answer = scenarioAnswers[idx];
-        const isCorrect = answer === sc.correctType;
-        return (
-          <div key={idx} className={styles.prediction} style={{ padding: "var(--space-2)" }}>
-            <div className={styles.predictionQ} style={{ fontSize: "0.65rem" }}>{sc.scenario}</div>
-            <div className={styles.strategyGroup} role="radiogroup" aria-label={sc.scenario}>
-              {MESSAGE_TYPES.map(mt => (
-                <button
-                  key={mt.type}
-                  type="button"
-                  role="radio"
-                  aria-checked={answer === mt.type}
-                  className={styles.strategyOption}
-                  data-active={answer === mt.type ? "true" : undefined}
-                  disabled={answer !== undefined}
-                  onClick={() => handleScenarioGuess(idx, mt.type)}
-                  style={{
-                    minHeight: 32,
-                    fontSize: "0.6rem",
-                    ...(answer !== undefined && mt.type === sc.correctType ? { color: "var(--color-success)", fontWeight: 800 } : {}),
-                    ...(answer === mt.type && !isCorrect ? { color: "var(--color-error)" } : {}),
-                  }}
-                >
-                  {mt.type}
-                </button>
-              ))}
-            </div>
-            {answer !== undefined && !isCorrect && (
-              <div className={styles.methodHint}>Correct answer: {sc.correctType}</div>
-            )}
+      <div className={styles.composerPanel}>
+        <div className={styles.toggleRow}>
+          <span className={styles.toggleLabel}>Type</span>
+          <div className={styles.strategyGroup} role="radiogroup" aria-label="Message type">
+            {MESSAGE_TYPES.map(mt => (
+              <button
+                key={mt.type}
+                type="button"
+                role="radio"
+                aria-checked={selectedType === mt.type}
+                className={styles.strategyOption}
+                data-active={selectedType === mt.type ? "true" : undefined}
+                data-compact="true"
+                onClick={() => setSelectedType(mt.type)}
+              >
+                {mt.type}
+              </button>
+            ))}
           </div>
-        );
-      })}
+        </div>
+        <div className={styles.toggleRow}>
+          <span className={styles.toggleLabel}>From</span>
+          <div className={styles.strategyGroup} role="radiogroup" aria-label="Source tab">
+            {TAB_NAMES.map(t => (
+              <button
+                key={t}
+                type="button"
+                role="radio"
+                aria-checked={selectedSource === t}
+                className={styles.strategyOption}
+                data-active={selectedSource === t ? "true" : undefined}
+                onClick={() => setSelectedSource(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.toggleRow}>
+          <input
+            className={styles.editorInput}
+            value={payloadVal}
+            onChange={e => setPayloadVal(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleSend(); }}
+            placeholder={`payload for ${selectedType}...`}
+            aria-label="Message payload"
+          />
+          <button type="button" className={styles.actionButton} onClick={handleSend}>
+            Send
+          </button>
+        </div>
+      </div>
+      {sentMessages.length > 0 && (
+        <div className={styles.messageFlowLog} role="log" aria-label="Message flow log">
+          <AnimatePresence initial={false}>
+            {sentMessages.map(msg => (
+              <motion.div
+                key={msg.id}
+                className={styles.messageFlowEntry}
+                data-type={msg.type}
+                initial={noMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={noMotion ? undefined : { opacity: 0 }}
+                transition={noMotion ? { duration: 0 } : SPRING.quick}
+              >
+                <div className={styles.messageFlowHeader}>
+                  <span className={styles.msgTypeBadge}>{msg.type}</span>
+                  <span className={styles.msgFrom}>{msg.from}</span>
+                  <span className={styles.msgArrow}>{"→"}</span>
+                  <span className={styles.msgPayload}>BroadcastChannel</span>
+                  <span className={styles.msgArrow}>{"→"}</span>
+                  <span className={styles.msgPayload}>{msg.deliveredTo.join(", ")}</span>
+                </div>
+                <div className={styles.messageFlowHandlers}>
+                  {msg.handlerResult.map((h, i) => (
+                    <div key={i} className={styles.messageFlowHandler}>{h}</div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Revealed</div>
+          <div className={styles.metricLabel}>Types revealed</div>
           <div className={styles.metricValue} data-status={revealed.size === MESSAGE_TYPES.length ? "good" : undefined}>
             {revealed.size}/{MESSAGE_TYPES.length}
           </div>
         </div>
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Matched</div>
-          <div className={styles.metricValue} data-status={scenarioCorrect >= 2 ? "good" : undefined}>
-            {scenarioCorrect}/{MSG_SCENARIOS.length}
+          <div className={styles.metricLabel}>Sent</div>
+          <div className={styles.metricValue} data-status={sentCount >= 3 ? "good" : undefined}>
+            {sentCount}
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Types used</div>
+          <div className={styles.metricValue} data-status={uniqueTypesSent >= 2 ? "good" : undefined}>
+            {uniqueTypesSent}/{MESSAGE_TYPES.length}
           </div>
         </div>
       </div>
@@ -882,6 +958,7 @@ function MessageProtocolWidget() {
 
 function TabRegistryWidget() {
   const { tabs, addTab, removeTab, updateTabHeartbeat, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [addCount, setAddCount] = useState(0);
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [, forceUpdate] = useState(0);
@@ -910,31 +987,42 @@ function TabRegistryWidget() {
     <div className={styles.widgetPanel} data-category="channel">
       <div className={styles.widgetTitle}>Tab registry -- register/unregister tabs</div>
       <div className={styles.tabListViz}>
-        {tabs.map(tab => (
-          <div key={tab.id} className={styles.tabCard} data-leader={tab.isLeader ? "true" : undefined} data-visibility={tab.visibility}>
-            <div className={styles.tabCardHeader}>
-              <span className={styles.tabCardName}>{tab.label}</span>
-              <button
-                type="button"
-                className={styles.toolButton}
-                onClick={() => removeTab(tab.id)}
-                disabled={tabs.length <= 1}
-                aria-label={`Remove ${tab.label}`}
-                style={{ minHeight: 28, padding: "2px 6px", fontSize: "0.6rem" }}
-              >
-                x
-              </button>
-            </div>
-            <div className={styles.tabCardMeta}>
-              <span className={styles.heartbeatDot} data-status={
-                tab.visibility === "terminated" ? "dead"
-                : Date.now() - tab.lastHeartbeat > 10000 ? "stale"
-                : "alive"
-              } />
-              {tab.id}
-            </div>
-          </div>
-        ))}
+        <AnimatePresence>
+          {tabs.map(tab => (
+            <motion.div
+              key={tab.id}
+              className={styles.tabCard}
+              data-leader={tab.isLeader ? "true" : undefined}
+              data-visibility={tab.visibility}
+              initial={noMotion ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={noMotion ? undefined : { opacity: 0, scale: 0.9 }}
+              transition={noMotion ? { duration: 0 } : SPRING.snappy}
+              layout={!noMotion}
+            >
+              <div className={styles.tabCardHeader}>
+                <span className={styles.tabCardName}>{tab.label}</span>
+                <button
+                  type="button"
+                  className={styles.tabRemoveButton}
+                  onClick={() => removeTab(tab.id)}
+                  disabled={tabs.length <= 1}
+                  aria-label={`Remove ${tab.label}`}
+                >
+                  x
+                </button>
+              </div>
+              <div className={styles.tabCardMeta}>
+                <span className={styles.heartbeatDot} data-status={
+                  tab.visibility === "terminated" ? "dead"
+                  : Date.now() - tab.lastHeartbeat > 10000 ? "stale"
+                  : "alive"
+                } />
+                {tab.id}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       <button
         type="button"
@@ -966,6 +1054,7 @@ function TabRegistryWidget() {
 
 function LeaderElectionWidget() {
   const { tabs, leaderId, runElection, removeTab, addTab, sendMessage, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [electionLog, setElectionLog] = useState<{ step: number; text: string; done: boolean }[]>([]);
   const [electionStep, setElectionStep] = useState(-1);
 
@@ -984,8 +1073,8 @@ function LeaderElectionWidget() {
     const steps = [
       { step: 1, text: `Leader ${leaderId ?? "?"} detected as down. Election triggered.`, done: false },
       { step: 2, text: `Alive tabs: ${alive.map(t => t.id).join(", ")}. Each sends ELECTION to higher IDs.`, done: false },
-      { step: 3, text: `Highest ID: ${sorted[0]!.id}. No higher tab responds -- declares itself COORDINATOR.`, done: false },
-      { step: 4, text: `${sorted[0]!.id} is the new leader. All tabs acknowledge.`, done: false },
+      { step: 3, text: `Highest ID: ${sorted[0]?.id ?? "?"}. No higher tab responds -- declares itself COORDINATOR.`, done: false },
+      { step: 4, text: `${sorted[0]?.id ?? "?"} is the new leader. All tabs acknowledge.`, done: false },
     ];
     setElectionLog(steps);
     setElectionStep(0);
@@ -1033,9 +1122,9 @@ function LeaderElectionWidget() {
               className={styles.electionStep}
               data-active={i === electionStep ? "true" : undefined}
               data-done={e.done ? "true" : undefined}
-              initial={{ opacity: 0, y: 8 }}
+              initial={noMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...SPRING.snappy, delay: i * 0.05 }}
+              transition={noMotion ? { duration: 0 } : { ...SPRING.gentle, delay: i * STAGGER.fast }}
             >
               <span className={styles.electionIndex}>{e.done ? "✓" : e.step}</span>
               <div className={styles.electionBody}>
@@ -1073,37 +1162,101 @@ function LeaderElectionWidget() {
 
 function StateSyncWidget() {
   const { tabs, updateTabState, sendMessage, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [tabAVal, setTabAVal] = useState("hello");
   const [tabBVal, setTabBVal] = useState("hello");
   const [syncCount, setSyncCount] = useState(0);
+  const [divergenceResolved, setDivergenceResolved] = useState(false);
+  const [hasDiverged, setHasDiverged] = useState(false);
+  const [latency, setLatency] = useState(0);
+  const [syncInFlight, setSyncInFlight] = useState<"a-to-b" | "b-to-a" | null>(null);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const syncTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tabA = tabs[0];
   const tabB = tabs[1];
 
   useEffect(() => {
-    if (syncCount >= 2) markStepComplete(8);
-  }, [syncCount, markStepComplete]);
+    return () => {
+      if (syncTimerRef.current) clearInterval(syncTimerRef.current);
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, []);
 
-  const syncAtoB = () => {
-    if (!tabA || !tabB) return;
-    updateTabState(tabA.id, "value", tabAVal);
-    sendMessage({ type: "state-sync", from: tabA.id, to: tabB.id, payload: tabAVal });
-    setTabBVal(tabAVal);
-    updateTabState(tabB.id, "value", tabAVal);
-    setSyncCount(c => c + 1);
+  useEffect(() => {
+    if (syncCount >= 2 && divergenceResolved) markStepComplete(8);
+  }, [syncCount, divergenceResolved, markStepComplete]);
+
+  const isDiverged = tabAVal !== tabBVal;
+
+  const performSync = (direction: "a-to-b" | "b-to-a") => {
+    if (!tabA || !tabB || syncInFlight) return;
+    const sourceVal = direction === "a-to-b" ? tabAVal : tabBVal;
+    const sourceId = direction === "a-to-b" ? tabA.id : tabB.id;
+    const targetId = direction === "a-to-b" ? tabB.id : tabA.id;
+
+    if (hasDiverged && isDiverged) setDivergenceResolved(true);
+    updateTabState(sourceId, "value", sourceVal);
+    sendMessage({ type: "state-sync", from: sourceId, to: targetId, payload: sourceVal });
+
+    if (latency === 0) {
+      // Instant sync
+      if (direction === "a-to-b") setTabBVal(sourceVal);
+      else setTabAVal(sourceVal);
+      updateTabState(targetId, "value", sourceVal);
+      setSyncCount(c => c + 1);
+    } else {
+      // Delayed sync with visible progress
+      setSyncInFlight(direction);
+      setSyncProgress(0);
+      const steps = 20;
+      const stepMs = latency / steps;
+      let current = 0;
+      syncTimerRef.current = setInterval(() => {
+        current += 1;
+        setSyncProgress(Math.min(100, (current / steps) * 100));
+        if (current >= steps) {
+          if (syncTimerRef.current) clearInterval(syncTimerRef.current);
+        }
+      }, stepMs);
+      syncTimeoutRef.current = setTimeout(() => {
+        if (direction === "a-to-b") setTabBVal(sourceVal);
+        else setTabAVal(sourceVal);
+        updateTabState(targetId, "value", sourceVal);
+        setSyncCount(c => c + 1);
+        setSyncInFlight(null);
+        setSyncProgress(0);
+      }, latency);
+    }
   };
 
-  const syncBtoA = () => {
-    if (!tabA || !tabB) return;
-    updateTabState(tabB.id, "value", tabBVal);
-    sendMessage({ type: "state-sync", from: tabB.id, to: tabA.id, payload: tabBVal });
-    setTabAVal(tabBVal);
-    updateTabState(tabA.id, "value", tabBVal);
-    setSyncCount(c => c + 1);
+  const simulateSimultaneousEdit = () => {
+    setTabAVal("version-A");
+    setTabBVal("version-B");
+    setHasDiverged(true);
   };
 
   return (
     <div className={styles.widgetPanel} data-category="state">
       <div className={styles.widgetTitle}>State synchronization -- two-pane editor</div>
+      <div className={styles.toggleRow}>
+        <label className={styles.toggleLabel} htmlFor="latency-slider">
+          Network latency
+        </label>
+        <input
+          id="latency-slider"
+          type="range"
+          min={0}
+          max={2000}
+          step={50}
+          value={latency}
+          onChange={e => setLatency(Number(e.target.value))}
+          className={styles.rangeSlider}
+          aria-label="Network latency"
+          aria-valuetext={latency === 0 ? "instant" : `${latency}ms delay`}
+        />
+        <span className={styles.timerValue}>{latency === 0 ? "0ms" : `${latency}ms`}</span>
+      </div>
       <div className={styles.twoPaneEditor}>
         <div className={styles.editorPane}>
           <span className={styles.editorPaneLabel} data-tab="a">{tabA?.label ?? "Tab A"}</span>
@@ -1113,10 +1266,24 @@ function StateSyncWidget() {
             onChange={e => setTabAVal(e.target.value)}
             aria-label="Tab A value"
           />
-          <button type="button" className={styles.actionButton} onClick={syncAtoB}>
+          <button type="button" className={styles.actionButton} onClick={() => performSync("a-to-b")} disabled={syncInFlight !== null}>
             Sync A {"→"} B
           </button>
         </div>
+        {syncInFlight && (
+          <div className={styles.syncFlightIndicator}>
+            <div className={styles.syncFlightTrack}>
+              <motion.div
+                className={styles.syncFlightDot}
+                data-direction={syncInFlight}
+                initial={noMotion ? false : { left: syncInFlight === "a-to-b" ? "0%" : "100%" }}
+                animate={{ left: syncInFlight === "a-to-b" ? `${syncProgress}%` : `${100 - syncProgress}%` }}
+                transition={noMotion ? { duration: 0 } : { duration: 0.05, ease: "linear" }}
+              />
+            </div>
+            <span className={styles.syncFlightLabel}>{Math.round(syncProgress)}%</span>
+          </div>
+        )}
         <div className={styles.editorPane}>
           <span className={styles.editorPaneLabel} data-tab="b">{tabB?.label ?? "Tab B"}</span>
           <input
@@ -1125,14 +1292,22 @@ function StateSyncWidget() {
             onChange={e => setTabBVal(e.target.value)}
             aria-label="Tab B value"
           />
-          <button type="button" className={styles.actionButton} onClick={syncBtoA}>
+          <button type="button" className={styles.actionButton} onClick={() => performSync("b-to-a")} disabled={syncInFlight !== null}>
             Sync B {"→"} A
           </button>
         </div>
       </div>
+      {isDiverged && hasDiverged && !syncInFlight && (
+        <div className={styles.conflictIndicator} role="alert">
+          Conflict: both tabs edited simultaneously. Choose a sync direction to resolve.
+        </div>
+      )}
       <div className={styles.syncArrow}>
-        {tabAVal === tabBVal ? "In sync" : "Out of sync -- click a sync button"}
+        {syncInFlight ? `Syncing... ${latency}ms delay` : tabAVal === tabBVal ? "In sync" : "Out of sync -- click a sync button"}
       </div>
+      <button type="button" className={styles.actionButton} onClick={simulateSimultaneousEdit} disabled={syncInFlight !== null}>
+        Simulate simultaneous edit
+      </button>
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Syncs</div>
@@ -1144,9 +1319,15 @@ function StateSyncWidget() {
             {tabAVal === tabBVal ? "synced" : "diverged"}
           </div>
         </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Latency</div>
+          <div className={styles.metricValue} data-status={latency > 1000 ? "warning" : latency > 0 ? undefined : "good"}>
+            {latency}ms
+          </div>
+        </div>
       </div>
       <div className={styles.widgetNote}>
-        Edit the value in either pane, then click the sync button to propagate. Watch how the message appears in the log and both panes converge.
+        Drag the latency slider to simulate network delay. At high latency (1-2s), watch the sync dot travel between panes -- simultaneous edits become much harder to resolve when you cannot see the other tab's changes in time.
       </div>
     </div>
   );
@@ -1184,6 +1365,7 @@ function resolveConflict(strategy: ConflictStrategy, a: string, b: string, aTime
 
 function ConflictResolutionWidget() {
   const { conflictStrategy, setConflictStrategy, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [tabAVal, setTabAVal] = useState("red");
   const [tabBVal, setTabBVal] = useState("blue");
   const [result, setResult] = useState<ReturnType<typeof resolveConflict> | null>(null);
@@ -1218,16 +1400,27 @@ function ConflictResolutionWidget() {
         </div>
       </div>
       <div className={styles.strategyGroup} role="radiogroup" aria-label="Conflict resolution strategy">
-        {(["lww", "merge-queue", "leader-decides"] as const).map(s => (
-          <button key={s} type="button" role="radio" aria-checked={conflictStrategy === s}
-            className={styles.strategyOption} data-active={conflictStrategy === s ? "true" : undefined}
-            onClick={() => setConflictStrategy(s)}>
-            <span className={styles.strategyName}>{s === "lww" ? "LWW" : s === "merge-queue" ? "Merge Queue" : "Leader Decides"}</span>
-            <span className={styles.strategyDesc}>
-              {s === "lww" ? "Latest timestamp wins" : s === "merge-queue" ? "Queue both for resolution" : "Leader tab always wins"}
-            </span>
-          </button>
-        ))}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={conflictStrategy}
+            className={styles.contentsWrapper}
+            initial={noMotion ? false : { opacity: 0.7 }}
+            animate={{ opacity: 1 }}
+            exit={noMotion ? undefined : { opacity: 0.7 }}
+            transition={noMotion ? { duration: 0 } : SPRING.snappy}
+          >
+            {(["lww", "merge-queue", "leader-decides"] as const).map(s => (
+              <button key={s} type="button" role="radio" aria-checked={conflictStrategy === s}
+                className={styles.strategyOption} data-active={conflictStrategy === s ? "true" : undefined}
+                onClick={() => setConflictStrategy(s)}>
+                <span className={styles.strategyName}>{s === "lww" ? "LWW" : s === "merge-queue" ? "Merge Queue" : "Leader Decides"}</span>
+                <span className={styles.strategyDesc}>
+                  {s === "lww" ? "Latest timestamp wins" : s === "merge-queue" ? "Queue both for resolution" : "Leader tab always wins"}
+                </span>
+              </button>
+            ))}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <button type="button" className={styles.actionButton} onClick={handleResolve}>
         Resolve conflict
@@ -1236,18 +1429,18 @@ function ConflictResolutionWidget() {
         {result && (
           <motion.div
             key={conflictStrategy}
-            initial={{ opacity: 0, scale: 0.92 }}
+            initial={noMotion ? false : { opacity: 0, scale: 0.92 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.92 }}
-            transition={SPRING.snappy}
+            exit={noMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
           >
-            <div className={styles.conflictResult}>
+            <div className={styles.conflictResult} aria-live="polite">
               <span className={styles.conflictResultLabel}>Result</span>
               <span className={styles.conflictResultValue} data-lost={result.winner !== "merge" ? "true" : undefined}>
                 {result.result}
               </span>
             </div>
-            <div className={styles.predictionResult} data-correct="true" style={{ marginTop: "var(--space-1)" }}>
+            <div className={styles.conflictExplanation} data-strategy={conflictStrategy}>
               {result.explanation}
             </div>
           </motion.div>
@@ -1273,19 +1466,40 @@ function ConflictResolutionWidget() {
 
 function LocalStorageWidget() {
   const { markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [key, setKey] = useState("theme");
   const [writeValue, setWriteValue] = useState("dark");
-  const [events, setEvents] = useState<{ key: string; oldValue: string; newValue: string }[]>([]);
+  const [tabBEvents, setTabBEvents] = useState<{ id: number; key: string; oldValue: string; newValue: string }[]>([]);
+  const [tabALog, setTabALog] = useState<{ id: number; key: string; note: string }[]>([]);
+  const [flashId, setFlashId] = useState<number | null>(null);
   const uniqueKeys = useRef<Set<string>>(new Set());
+  const writeCounter = useRef(0);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const storageState = useRef<Record<string, string>>({});
+
+  useEffect(() => () => clearTimeout(flashTimerRef.current), []);
 
   useEffect(() => {
-    events.forEach(ev => uniqueKeys.current.add(ev.key));
-    if (events.length >= 2 && uniqueKeys.current.size >= 2) markStepComplete(10);
-  }, [events, markStepComplete]);
+    tabBEvents.forEach(ev => uniqueKeys.current.add(ev.key));
+    if (tabBEvents.length >= 2 && uniqueKeys.current.size >= 2) markStepComplete(10);
+  }, [tabBEvents, markStepComplete]);
 
   const writeToStorage = () => {
-    const oldValue = events.length > 0 ? events[events.length - 1]!.newValue : "(none)";
-    setEvents(prev => [...prev.slice(-9), { key, oldValue, newValue: writeValue }]);
+    writeCounter.current += 1;
+    const id = writeCounter.current;
+    const oldValue = storageState.current[key] ?? "(none)";
+    storageState.current[key] = writeValue;
+
+    // Tab A: wrote the value, does NOT receive its own storage event
+    setTabALog(prev => [...prev.slice(-9), { id, key, note: `wrote "${writeValue}" -- no event fired here` }]);
+
+    // Tab B: receives the storage event with oldValue -> newValue
+    setTabBEvents(prev => [...prev.slice(-9), { id, key, oldValue, newValue: writeValue }]);
+
+    // Flash animation on Tab B
+    setFlashId(id);
+    clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => setFlashId(null), 600);
   };
 
   return (
@@ -1293,42 +1507,84 @@ function LocalStorageWidget() {
       <div className={styles.widgetTitle}>localStorage events -- cross-tab notification</div>
       <div className={styles.toggleRow}>
         <span className={styles.toggleLabel}>Key</span>
-        <input className={styles.editorInput} value={key} onChange={e => setKey(e.target.value)} aria-label="Storage key" style={{ maxWidth: 120 }} />
+        <input className={styles.editorInput} data-size="sm" value={key} onChange={e => setKey(e.target.value)} aria-label="Storage key" />
       </div>
       <div className={styles.toggleRow}>
         <span className={styles.toggleLabel}>Value</span>
-        <input className={styles.editorInput} value={writeValue} onChange={e => setWriteValue(e.target.value)} aria-label="Storage value" style={{ maxWidth: 200 }} />
+        <input className={styles.editorInput} data-size="md" value={writeValue} onChange={e => setWriteValue(e.target.value)} aria-label="Storage value"
+          onKeyDown={e => { if (e.key === "Enter") writeToStorage(); }}
+        />
         <button type="button" className={styles.actionButton} onClick={writeToStorage}>
           Write
         </button>
       </div>
-      <div className={styles.storageViz}>
-        <div className={styles.widgetNote}>Tab A writes to localStorage. Tab B receives the storage event:</div>
-        <AnimatePresence initial={false}>
-          {events.map((ev, i) => (
-            <motion.div
-              key={i}
-              className={styles.storageRow}
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={SPRING.snappy}
-            >
-              <span className={styles.storageKey}>{ev.key}</span>
-              <span className={styles.storageValue} data-source="true">{ev.oldValue}</span>
-              <span className={styles.msgArrow}>{"→"}</span>
-              <span className={styles.storageValue} data-received="true">{ev.newValue}</span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+      <div className={styles.storageTwoPanes}>
+        {/* Tab A -- writer pane */}
+        <div className={styles.storagePane}>
+          <span className={styles.storagePaneLabel} data-tab="a">Tab A (writer)</span>
+          <div className={styles.storageEventList} role="log" aria-label="Tab A event log">
+            {tabALog.length === 0 ? (
+              <div className={styles.storageNoEvent}>No writes yet</div>
+            ) : (
+              <AnimatePresence initial={false}>
+                {tabALog.map(entry => (
+                  <motion.div
+                    key={entry.id}
+                    className={styles.storageNoEvent}
+                    initial={noMotion ? false : { opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={noMotion ? { duration: 0 } : TRANSITION.enterItem}
+                  >
+                    <strong>{entry.key}:</strong> {entry.note}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+        </div>
+        {/* Tab B -- listener pane */}
+        <div className={styles.storagePane}>
+          <span className={styles.storagePaneLabel} data-tab="b">Tab B (listener)</span>
+          <div className={styles.storageEventList} role="log" aria-label="Tab B storage events" aria-live="polite">
+            {tabBEvents.length === 0 ? (
+              <div className={styles.storageNoEvent}>Waiting for storage events...</div>
+            ) : (
+              <AnimatePresence initial={false}>
+                {tabBEvents.map(ev => (
+                  <motion.div
+                    key={ev.id}
+                    className={`${styles.storageEventItem}${flashId === ev.id ? ` ${styles.storageEventFlash}` : ""}`}
+                    initial={noMotion ? false : { opacity: 0, x: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    transition={noMotion ? { duration: 0 } : SPRING.quick}
+                  >
+                    <strong>{ev.key}:</strong> {ev.oldValue} {"→"} {ev.newValue}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className={styles.storageCrossTabNote} role="status">
+        Notice: the writing tab (A) never receives its own storage event. Only other tabs (B) see the StorageEvent fire.
       </div>
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Events fired</div>
-          <div className={styles.metricValue}>{events.length}</div>
+          <div className={styles.metricLabel}>Writes</div>
+          <div className={styles.metricValue}>{tabALog.length}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Events (Tab B)</div>
+          <div className={styles.metricValue} data-status={tabBEvents.length >= 2 ? "good" : undefined}>{tabBEvents.length}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Unique keys</div>
+          <div className={styles.metricValue} data-status={uniqueKeys.current.size >= 2 ? "good" : undefined}>{uniqueKeys.current.size}</div>
         </div>
       </div>
       <div className={styles.widgetNote}>
-        The storage event only fires in OTHER tabs, not the tab that made the change. This is why BroadcastChannel is preferred for explicit messaging -- storage events are a side effect.
+        Write values with different keys from Tab A. Tab B shows received StorageEvents with oldValue and newValue. Tab A's log stays empty of events -- this is the key gotcha of the storage event API.
       </div>
     </div>
   );
@@ -1406,7 +1662,7 @@ function SharedWorkerWidget() {
         payload: m.msg,
         timestamp: Date.now(),
       }))} />
-      <div className={styles.widgetTitle} style={{ fontSize: "0.65rem", marginTop: "var(--space-2)" }}>
+      <div className={styles.widgetSubtitle}>
         SharedWorker advantage -- persistent state
       </div>
       <div className={styles.metricsBar} aria-live="polite">
@@ -1459,7 +1715,7 @@ const LIFECYCLE_STATES: { state: VisState; desc: string; behavior: string }[] = 
 ];
 
 function TabLifecycleWidget() {
-  const { tabs, setTabVisibility, markStepComplete } = useMultiTab();
+  const { tabs, setTabVisibility, updateTabHeartbeat, markStepComplete } = useMultiTab();
   const [selectedTab, setSelectedTab] = useState(tabs[0]?.id ?? "");
   const [triedStates, setTriedStates] = useState<Set<string>>(new Set(["visible"]));
   const selectedTabInfo = tabs.find(t => t.id === selectedTab);
@@ -1471,9 +1727,21 @@ function TabLifecycleWidget() {
   const currentState = selectedTabInfo?.visibility ?? "visible";
   const currentInfo = LIFECYCLE_STATES.find(s => s.state === currentState);
 
+  const handleStateChange = (state: VisState) => {
+    setTabVisibility(selectedTab, state);
+    setTriedStates(prev => new Set(prev).add(state));
+    // When returning to visible, refresh heartbeat so the indicator recovers
+    if (state === "visible") {
+      updateTabHeartbeat(selectedTab);
+    }
+  };
+
   return (
     <div className={styles.widgetPanel} data-category="lifecycle">
       <div className={styles.widgetTitle}>Tab lifecycle -- Visibility API states</div>
+      <div className={styles.widgetNote}>
+        Changing lifecycle state here affects the heartbeat indicators in the tab cards above. Hidden and frozen tabs stop sending heartbeats, causing staleness.
+      </div>
       <div className={styles.toggleRow}>
         <span className={styles.toggleLabel}>Tab</span>
         <div className={styles.strategyGroup} role="radiogroup" aria-label="Select tab">
@@ -1495,10 +1763,7 @@ function TabLifecycleWidget() {
             aria-checked={currentState === ls.state}
             className={styles.lifecycleState}
             data-active={currentState === ls.state ? "true" : undefined}
-            onClick={() => {
-              setTabVisibility(selectedTab, ls.state);
-              setTriedStates(prev => new Set(prev).add(ls.state));
-            }}
+            onClick={() => handleStateChange(ls.state)}
           >
             <span className={styles.lifecycleDot} data-state={ls.state} />
             {ls.state}
@@ -1534,42 +1799,46 @@ function TabLifecycleWidget() {
 function ThrottlingWidget() {
   const { markStepComplete } = useMultiTab();
   const [visibility, setVisibility] = useState<"visible" | "hidden">("visible");
+  const [desiredInterval, setDesiredInterval] = useState(200);
   const [elapsed, setElapsed] = useState(0);
   const [timerCount, setTimerCount] = useState(0);
+  const [hasDragged, setHasDragged] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
+  // Effective interval: when hidden, browser forces minimum 1000ms
+  const effectiveInterval = visibility === "hidden"
+    ? Math.max(1000, desiredInterval)
+    : desiredInterval;
+
   useEffect(() => {
-    if (timerCount > 0 && visibility === "hidden") markStepComplete(13);
-  }, [timerCount, visibility, markStepComplete]);
+    if (hasDragged && visibility === "hidden") markStepComplete(13);
+  }, [hasDragged, visibility, markStepComplete]);
 
   useEffect(() => {
     startTimeRef.current = Date.now();
     setElapsed(0);
     setTimerCount(0);
 
-    const interval = visibility === "visible" ? 100 : 1000;
     intervalRef.current = setInterval(() => {
       setElapsed(Date.now() - startTimeRef.current);
       setTimerCount(c => c + 1);
-    }, interval);
+    }, effectiveInterval);
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [visibility]);
+  }, [effectiveInterval]);
 
-  const expectedTicks = visibility === "visible"
-    ? Math.floor(elapsed / 100)
-    : Math.floor(elapsed / 1000);
+  const expectedTicks = elapsed > 0
+    ? Math.floor(elapsed / effectiveInterval)
+    : 0;
   const drift = timerCount > 0 && expectedTicks > 0
     ? Math.abs(timerCount - expectedTicks)
     : 0;
   const driftStatus = drift === 0 ? "good" : drift < 3 ? "throttled" : "severe";
-  const timerInterval = visibility === "visible" ? "100ms" : "1000ms (throttled)";
-  const fillPct = visibility === "visible"
-    ? Math.min(100, (timerCount / Math.max(1, expectedTicks)) * 100)
-    : Math.min(100, (timerCount / Math.max(1, expectedTicks)) * 100);
+  const fillPct = Math.min(100, (timerCount / Math.max(1, expectedTicks)) * 100);
+  const throttled = visibility === "hidden" && desiredInterval < 1000;
 
   return (
     <div className={styles.widgetPanel} data-category="lifecycle">
@@ -1581,16 +1850,40 @@ function ThrottlingWidget() {
             className={styles.strategyOption} data-active={visibility === "visible" ? "true" : undefined}
             onClick={() => setVisibility("visible")}>
             <span className={styles.strategyName}>visible</span>
-            <span className={styles.strategyDesc}>100ms intervals</span>
           </button>
           <button type="button" role="radio" aria-checked={visibility === "hidden"}
             className={styles.strategyOption} data-active={visibility === "hidden" ? "true" : undefined}
             onClick={() => setVisibility("hidden")}>
             <span className={styles.strategyName}>hidden</span>
-            <span className={styles.strategyDesc}>Throttled to 1/sec</span>
           </button>
         </div>
       </div>
+      <div className={styles.toggleRow}>
+        <label className={styles.toggleLabel} htmlFor="interval-slider">
+          Tick interval
+        </label>
+        <input
+          id="interval-slider"
+          type="range"
+          min={50}
+          max={2000}
+          step={50}
+          value={desiredInterval}
+          onChange={e => {
+            setDesiredInterval(Number(e.target.value));
+            setHasDragged(true);
+          }}
+          className={styles.rangeSlider}
+          aria-label="Timer tick interval"
+          aria-valuetext={`${desiredInterval}ms desired, ${effectiveInterval}ms effective`}
+        />
+        <span className={styles.timerValue}>{desiredInterval}ms</span>
+      </div>
+      {throttled && (
+        <div className={styles.throttleNotice} role="status">
+          Browser throttled: {desiredInterval}ms {"→"} {effectiveInterval}ms (min 1s in hidden tabs)
+        </div>
+      )}
       <div className={styles.timerRow}>
         <span className={styles.timerLabel}>Ticks</span>
         <div className={styles.timerBar}>
@@ -1599,12 +1892,14 @@ function ThrottlingWidget() {
         <span className={styles.timerValue}>{timerCount}</span>
       </div>
       <div className={styles.timerRow}>
-        <span className={styles.timerLabel}>Interval</span>
-        <span className={styles.timerValue}>{timerInterval}</span>
+        <span className={styles.timerLabel}>Effective</span>
+        <span className={styles.timerValue} data-drift={throttled ? "positive" : "zero"}>
+          {effectiveInterval}ms
+        </span>
       </div>
       <div className={styles.timerRow}>
         <span className={styles.timerLabel}>Drift</span>
-        <span className={styles.timerValue} style={{ color: drift > 0 ? "var(--color-warning)" : "var(--color-success)" }}>
+        <span className={styles.timerValue} data-drift={drift > 0 ? "positive" : "zero"}>
           {drift} ticks
         </span>
       </div>
@@ -1614,16 +1909,16 @@ function ThrottlingWidget() {
           <div className={styles.metricValue}>{(elapsed / 1000).toFixed(1)}s</div>
         </div>
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Expected ticks</div>
+          <div className={styles.metricLabel}>Expected</div>
           <div className={styles.metricValue}>{expectedTicks}</div>
         </div>
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Actual ticks</div>
+          <div className={styles.metricLabel}>Actual</div>
           <div className={styles.metricValue} data-status={drift > 2 ? "warning" : "good"}>{timerCount}</div>
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Switch to "hidden" and watch the timer slow down. In real browsers, hidden tabs get timers throttled to max once per second. Your heartbeat interval of 5s might actually fire at 6s, 8s, or later. Design your leader election timeout to account for this drift.
+        Drag the interval slider to control how often the timer ticks. Switch to "hidden" to see browser throttling clamp the interval to a minimum of 1 second. At fast intervals (50-200ms) the throttling is dramatic; at slow intervals (1s+) there is no difference. Design heartbeat timeouts to account for this drift.
       </div>
     </div>
   );
@@ -1635,25 +1930,60 @@ function ThrottlingWidget() {
 
 function MemoryPressureWidget() {
   const { tabs, removeTab, addTab, markStepComplete } = useMultiTab();
+  const noMotion = usePrefersReducedMotion();
   const [memoryPressure, setMemoryPressure] = useState(30);
   const [discardedTabs, setDiscardedTabs] = useState<string[]>([]);
   const [restoredTabs, setRestoredTabs] = useState<string[]>([]);
+  const [autoDiscardMsg, setAutoDiscardMsg] = useState<string | null>(null);
+  const [hasReachedHigh, setHasReachedHigh] = useState(false);
+  const [hasManualDiscarded, setHasManualDiscarded] = useState(false);
+  const autoDiscardTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  useEffect(() => () => clearTimeout(autoDiscardTimerRef.current), []);
+
+  // Completion: slider pushed to 70%+ AND manual discard AND restore
   useEffect(() => {
-    if (discardedTabs.length > 0 && restoredTabs.length > 0) markStepComplete(14);
-  }, [discardedTabs.length, restoredTabs.length, markStepComplete]);
+    if (hasReachedHigh && hasManualDiscarded && restoredTabs.length > 0) markStepComplete(14);
+  }, [hasReachedHigh, hasManualDiscarded, restoredTabs.length, markStepComplete]);
+
+  // Auto-discard at 90%+ critical pressure
+  useEffect(() => {
+    if (memoryPressure >= 90) {
+      const bgTabs = tabs.filter(t => t.visibility === "hidden" || t.visibility === "frozen");
+      if (bgTabs.length > 0) {
+        const victim = bgTabs[0]; // oldest background tab
+        if (victim) {
+          removeTab(victim.id);
+          setDiscardedTabs(prev => [...prev, victim.label]);
+          setAutoDiscardMsg(`Critical pressure (${memoryPressure}%) -- auto-discarded oldest background tab: ${victim.label}`);
+          clearTimeout(autoDiscardTimerRef.current);
+          autoDiscardTimerRef.current = setTimeout(() => setAutoDiscardMsg(null), 4000);
+        }
+      }
+    }
+  }, [memoryPressure, tabs, removeTab]);
+
+  const handlePressureChange = (value: number) => {
+    setMemoryPressure(value);
+    if (value >= 70) setHasReachedHigh(true);
+  };
+
+  const canDiscard = memoryPressure >= 70
+    && tabs.filter(t => t.visibility === "hidden" || t.visibility === "frozen").length > 0;
 
   const simulateDiscard = () => {
     const bgTabs = tabs.filter(t => t.visibility === "hidden" || t.visibility === "frozen");
     if (bgTabs.length === 0) return;
-    const victim = bgTabs[bgTabs.length - 1]!;
+    const victim = bgTabs[bgTabs.length - 1];
+    if (!victim) return;
     removeTab(victim.id);
     setDiscardedTabs(prev => [...prev, victim.label]);
+    setHasManualDiscarded(true);
   };
 
   const restoreTab = () => {
     if (discardedTabs.length === 0) return;
-    const label = discardedTabs[discardedTabs.length - 1]!;
+    const label = discardedTabs[discardedTabs.length - 1] ?? "Tab";
     addTab(`${label} (restored)`);
     setRestoredTabs(prev => [...prev, label]);
     setDiscardedTabs(prev => prev.slice(0, -1));
@@ -1681,20 +2011,49 @@ function MemoryPressureWidget() {
           id="mem-slider"
           type="range" min={10} max={100} step={5}
           value={memoryPressure}
-          onChange={e => setMemoryPressure(Number(e.target.value))}
-          style={{ flex: 1, minHeight: 44, accentColor: "var(--color-accent)" }}
+          onChange={e => handlePressureChange(Number(e.target.value))}
+          className={styles.rangeSlider}
           aria-valuetext={`${memoryPressure}% memory used`}
         />
       </div>
+      <div className={styles.memoryThresholds} aria-hidden="true">
+        <span className={styles.memoryThresholdMark} data-level="high" style={{ left: "70%" }}>
+          70% high
+        </span>
+        <span className={styles.memoryThresholdMark} data-level="critical" style={{ left: "90%" }}>
+          90% critical
+        </span>
+      </div>
+      <AnimatePresence>
+        {autoDiscardMsg && (
+          <motion.div
+            className={styles.memoryAutoDiscard}
+            role="alert"
+            initial={noMotion ? false : { opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={noMotion ? undefined : { opacity: 0, scale: 0.95 }}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
+          >
+            {autoDiscardMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className={styles.toggleRow}>
         <button type="button" className={styles.actionButton} onClick={simulateDiscard}
-          disabled={tabs.filter(t => t.visibility === "hidden" || t.visibility === "frozen").length === 0}>
+          disabled={!canDiscard}
+          aria-describedby={memoryPressure < 70 ? "mem-low-notice" : undefined}
+        >
           Discard background tab
         </button>
         <button type="button" className={styles.actionButton} onClick={restoreTab} disabled={discardedTabs.length === 0}>
           Restore tab
         </button>
       </div>
+      {memoryPressure < 70 && (
+        <div id="mem-low-notice" className={styles.memoryLowNotice}>
+          Memory pressure too low to trigger discard -- push above 70% to enable
+        </div>
+      )}
       {discardedTabs.length > 0 && (
         <div className={styles.stepMessage} data-severity="warning">
           Discarded: {discardedTabs.join(", ")}. State lost unless persisted to sessionStorage/IndexedDB.
@@ -1707,6 +2066,10 @@ function MemoryPressureWidget() {
       )}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Pressure</div>
+          <div className={styles.metricValue} data-status={memoryPressure >= 90 ? "bad" : memoryPressure >= 70 ? "warning" : undefined}>{memoryPressure}%</div>
+        </div>
+        <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Discarded</div>
           <div className={styles.metricValue} data-status={discardedTabs.length > 0 ? "warning" : undefined}>{discardedTabs.length}</div>
         </div>
@@ -1716,7 +2079,7 @@ function MemoryPressureWidget() {
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Under memory pressure, browsers discard hidden/frozen tabs. First set a tab to "hidden" in the lifecycle step, then discard it. Restore shows why you need sessionStorage or IndexedDB to persist state across discards.
+        Slide memory pressure above 70% to enable manual discarding. At 90%+, the browser auto-discards the oldest background tab. First set a tab to "hidden" in the lifecycle step, then push pressure up. Restore shows why you need sessionStorage or IndexedDB to persist state across discards.
       </div>
     </div>
   );
@@ -1793,7 +2156,7 @@ function LockApiWidget() {
                 {lock.waiters.length > 0 ? `${lock.waiters.length} waiting` : "no queue"}
               </span>
             </div>
-            <div className={styles.strategyGroup} style={{ marginTop: 4 }}>
+            <div className={styles.lockControls}>
               {aliveTabs.map(t => (
                 <button key={t.id} type="button" className={styles.toolButton}
                   data-active={lock.holder === t.id ? "true" : undefined}

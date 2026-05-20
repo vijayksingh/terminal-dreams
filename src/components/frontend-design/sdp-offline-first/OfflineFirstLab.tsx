@@ -24,6 +24,7 @@ import styles from "./OfflineFirstLab.module.css";
 
 export function OfflineFirstLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
+  const noMotion = usePrefersReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,10 +44,10 @@ export function OfflineFirstLab({ activeStep }: { activeStep: number }) {
             <AnimatePresence mode="wait">
               <motion.div
                 key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
+                initial={noMotion ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
+                transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
               >
                 <PlanningView activeStep={activeStep} />
               </motion.div>
@@ -298,22 +299,66 @@ const TYPE_CATEGORY_COLORS: Record<string, string> = {
   props: "var(--diagram-layer-1)",
 };
 
+/** Build 2-3 type options per field for the TypeCard mini-challenge */
+function buildTypeCardOptions(): Record<string, string[]> {
+  const allTypes = Array.from(
+    new Set(DATA_MODELS.flatMap(t => t.fields.map(f => f.type)))
+  );
+  const opts: Record<string, string[]> = {};
+  for (const model of DATA_MODELS) {
+    for (let i = 0; i < model.fields.length; i++) {
+      const f = model.fields[i];
+      if (!f) continue;
+      const key = `${model.name}-${i}`;
+      const distractors = allTypes.filter(t => t !== f.type);
+      const shuffled = fisherYatesShuffle(distractors).slice(0, 2);
+      opts[key] = fisherYatesShuffle([...shuffled, f.type]);
+    }
+  }
+  return opts;
+}
+
 function TypeCards() {
   const totalFields = DATA_MODELS.reduce((sum, t) => sum + t.fields.length, 0);
-  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const answeredCount = Object.keys(guesses).length;
+  const correctCount = useMemo(() => {
+    let count = 0;
+    for (const model of DATA_MODELS) {
+      for (let i = 0; i < model.fields.length; i++) {
+        const f = model.fields[i];
+        if (!f) continue;
+        const key = `${model.name}-${i}`;
+        if (guesses[key] === f.type) count++;
+      }
+    }
+    return count;
+  }, [guesses]);
+  const fieldOptions = useMemo(buildTypeCardOptions, []);
 
-  const revealField = (key: string) => setRevealed(prev => new Set(prev).add(key));
+  const handleGuess = useCallback((key: string, guess: string) => {
+    setGuesses(prev => {
+      if (prev[key] !== undefined) return prev;
+      return { ...prev, [key]: guess };
+    });
+  }, []);
 
   return (
     <div className={styles.typeCardGrid}>
       {DATA_MODELS.map((t) => (
-        <TypeCard key={t.name} typeDef={t} revealed={revealed} onReveal={revealField} />
+        <TypeCard key={t.name} typeDef={t} guesses={guesses} fieldOptions={fieldOptions} onGuess={handleGuess} />
       ))}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Explored</div>
-          <div className={styles.metricValue} data-status={revealed.size === totalFields ? "good" : undefined}>
-            {revealed.size}/{totalFields}
+          <div className={styles.metricLabel}>Answered</div>
+          <div className={styles.metricValue} data-status={answeredCount === totalFields ? "good" : undefined}>
+            {answeredCount}/{totalFields}
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Correct</div>
+          <div className={styles.metricValue} data-status={correctCount === totalFields ? "good" : correctCount > 0 ? "warning" : undefined}>
+            {correctCount}/{totalFields}
           </div>
         </div>
       </div>
@@ -321,37 +366,66 @@ function TypeCards() {
   );
 }
 
-function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed: Set<string>; onReveal: (key: string) => void }) {
+function TypeCard({ typeDef, guesses, fieldOptions, onGuess }: {
+  typeDef: TypeDef;
+  guesses: Record<string, string>;
+  fieldOptions: Record<string, string[]>;
+  onGuess: (key: string, guess: string) => void;
+}) {
+  const noMotion = usePrefersReducedMotion();
   const color = TYPE_CATEGORY_COLORS[typeDef.category];
   return (
-    <div className={styles.typeCard} style={{ borderTopColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
+    <div className={styles.typeCard} style={{ ["--type-color" as string]: color }}>
       <div className={styles.typeCardHeader}>
         <span className={styles.typeCardName}>{typeDef.name}</span>
-        <span className={styles.typeCardCategory} style={{ color }}>{typeDef.category}</span>
+        <span className={styles.typeCardCategory}>{typeDef.category}</span>
       </div>
       <div className={styles.typeCardFields}>
         {typeDef.fields.map((f, i) => {
           const key = `${typeDef.name}-${i}`;
-          const isRevealed = revealed.has(key);
+          const guess = guesses[key];
+          const isAnswered = guess !== undefined;
+          const isCorrect = guess === f.type;
+          const options = fieldOptions[key] ?? [];
           return (
-            <button
-              key={i}
-              type="button"
-              className={styles.typeFieldRow}
-              data-revealed={isRevealed ? "true" : undefined}
-              onClick={() => onReveal(key)}
-              aria-expanded={isRevealed}
-            >
-              {f.name && <span className={styles.typeFieldName}>{f.name}</span>}
-              {isRevealed ? (
+            <div key={i} className={styles.typeFieldRow} data-revealed={isAnswered ? "true" : undefined}>
+              <div className={styles.schemaFieldHeader}>
+                {f.name && <span className={styles.typeFieldName}>{f.name}</span>}
+                {isAnswered && (
+                  <motion.span
+                    className={styles.schemaFeedback}
+                    data-correct={isCorrect ? "true" : undefined}
+                    initial={noMotion ? false : { scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={noMotion ? { duration: 0 } : SPRING.quick}
+                  >
+                    {isCorrect ? "✓" : "✗"}
+                  </motion.span>
+                )}
+              </div>
+              {!isAnswered ? (
+                <div className={styles.typeChoices} role="radiogroup" aria-label={`Type for ${f.name}`}>
+                  {options.map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      role="radio"
+                      aria-checked={false}
+                      className={styles.typeChoice}
+                      onClick={() => onGuess(key, t)}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              ) : (
                 <>
                   <span className={styles.typeFieldType}>{f.type}</span>
                   {f.note && <span className={styles.typeFieldNote}>{f.note}</span>}
+                  {!isCorrect && <span className={styles.schemaHint}>You picked: {guess}</span>}
                 </>
-              ) : (
-                <span className={styles.typeFieldType}>tap to reveal type</span>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -361,16 +435,16 @@ function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed:
 
 function ComponentTreeView() {
   const { markStepComplete } = useOfflineFirst();
+  const scenariosViewed = useRef(new Set<number>());
 
-  useEffect(() => {
-    // Auto-complete step 3 after the user has spent time exploring the architecture
-    const timer = setTimeout(() => markStepComplete(3), 3000);
-    return () => clearTimeout(timer);
+  const handleScenarioChange = useCallback((idx: number) => {
+    scenariosViewed.current.add(idx);
+    if (scenariosViewed.current.size >= 2) markStepComplete(3);
   }, [markStepComplete]);
 
   return (
     <div className={styles.planningPanel}>
-      <ArchitectureScenarioPlayer config={OFFLINE_FIRST_ARCH_CONFIG} />
+      <ArchitectureScenarioPlayer config={OFFLINE_FIRST_ARCH_CONFIG} onScenarioChange={handleScenarioChange} />
     </div>
   );
 }
@@ -471,7 +545,7 @@ function PredictionChallenge({ question, options, correctIndex, explanation, onA
             initial={noMotion ? false : { opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={noMotion ? { duration: 0 } : SPRING.snappy}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
           >
             {selected === correctIndex ? "✓ " : "✗ "}{explanation}
           </motion.div>
@@ -596,7 +670,7 @@ function CacheStrategyWidget() {
               data-miss={s.status === "miss" && simStep >= i ? "true" : undefined}
               initial={noMotion ? false : { opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={noMotion ? { duration: 0 } : { ...SPRING.snappy, delay: i * STAGGER.fast }}
+              transition={noMotion ? { duration: 0 } : { ...SPRING.gentle, delay: i * STAGGER.fast }}
             >
               <span className={styles.flowStageLabel}>{s.label}</span>
               <span className={styles.flowStageValue}>{s.value}</span>
@@ -626,23 +700,78 @@ const SW_TRANSITIONS: Record<SWState, { next: SWState; trigger: string }> = {
   redundant: { next: "installing", trigger: "register() called with new script" },
 };
 
+type SWPrediction = {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+};
+
+const SW_PREDICTIONS: Partial<Record<SWState, SWPrediction>> = {
+  waiting: {
+    question: "When does a waiting SW take over?",
+    options: ["Immediately", "When all tabs close", "After 5 seconds"],
+    correctIndex: 1,
+    explanation: "A waiting SW activates only after all tabs using the old SW are closed (or skipWaiting() is called). This prevents breaking in-flight requests.",
+  },
+  active: {
+    question: "What can an active SW intercept?",
+    options: ["Only fetch events", "All DOM events", "Fetch + push + sync events"],
+    correctIndex: 2,
+    explanation: "An active SW handles fetch events (network proxy), push events (push notifications), and sync events (background sync). It cannot access the DOM directly.",
+  },
+  redundant: {
+    question: "What happens to an active SW when a new version registers?",
+    options: ["It is killed immediately", "It keeps running until tabs close", "It enters redundant state after the new SW activates"],
+    correctIndex: 2,
+    explanation: "The old SW stays active until the new one activates. Then the old one becomes redundant -- it can no longer intercept events and will be garbage collected.",
+  },
+};
+
 function ServiceWorkerLifecycleWidget() {
   const { swState, setSWState, markStepComplete } = useOfflineFirst();
+  const noMotion = usePrefersReducedMotion();
   const [visitedStates, setVisitedStates] = useState<Set<SWState>>(new Set(["installing"]));
   const [transitionLog, setTransitionLog] = useState<string[]>([]);
+  const [pendingTarget, setPendingTarget] = useState<SWState | null>(null);
+  const [predictionAnswers, setPredictionAnswers] = useState<Record<string, boolean>>({});
+
+  const correctPredictions = Object.values(predictionAnswers).filter(Boolean).length;
 
   useEffect(() => {
-    if (visitedStates.size >= 4) markStepComplete(5);
-  }, [visitedStates.size, markStepComplete]);
+    if (visitedStates.size >= 4 && correctPredictions >= 2) markStepComplete(5);
+  }, [visitedStates.size, correctPredictions, markStepComplete]);
 
   const advanceState = (target: SWState) => {
     const transition = SW_TRANSITIONS[swState];
-    if (target === transition.next) {
-      setTransitionLog(prev => [...prev, `${swState} -> ${target}: ${transition.trigger}`]);
-      setSWState(target);
-      setVisitedStates(prev => new Set(prev).add(target));
+    if (target !== transition.next) return;
+
+    const prediction = SW_PREDICTIONS[target];
+    if (prediction && predictionAnswers[target] === undefined) {
+      setPendingTarget(target);
+      return;
     }
+
+    setTransitionLog(prev => [...prev, `${swState} -> ${target}: ${transition.trigger}`]);
+    setSWState(target);
+    setVisitedStates(prev => new Set(prev).add(target));
+    setPendingTarget(null);
   };
+
+  const handlePredictionAnswer = (target: SWState, isCorrect: boolean) => {
+    setPredictionAnswers(prev => ({ ...prev, [target]: isCorrect }));
+  };
+
+  const confirmAdvance = () => {
+    if (!pendingTarget) return;
+    const transition = SW_TRANSITIONS[swState];
+    setTransitionLog(prev => [...prev, `${swState} -> ${pendingTarget}: ${transition.trigger}`]);
+    setSWState(pendingTarget);
+    setVisitedStates(prev => new Set(prev).add(pendingTarget));
+    setPendingTarget(null);
+  };
+
+  const currentPrediction = pendingTarget ? SW_PREDICTIONS[pendingTarget] ?? null : null;
 
   return (
     <div className={styles.widgetPanel} data-category="cache">
@@ -657,6 +786,7 @@ function ServiceWorkerLifecycleWidget() {
               data-current={swState === state ? "true" : undefined}
               data-visited={visitedStates.has(state) && swState !== state ? "true" : undefined}
               onClick={() => advanceState(state)}
+              disabled={pendingTarget !== null && state !== pendingTarget}
               aria-label={`${state}${swState === state ? " (current)" : ""}`}
             >
               {state}
@@ -664,10 +794,36 @@ function ServiceWorkerLifecycleWidget() {
           </React.Fragment>
         ))}
       </div>
-      <div className={styles.stateTransition}>
-        <strong>Next transition:</strong> {SW_TRANSITIONS[swState].trigger}
-        {" -> "}<strong>{SW_TRANSITIONS[swState].next}</strong>
-      </div>
+      <AnimatePresence mode="wait">
+        {pendingTarget && currentPrediction ? (
+          <motion.div
+            key={`prediction-${pendingTarget}`}
+            initial={noMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
+          >
+            <SWInlinePrediction
+              prediction={currentPrediction}
+              target={pendingTarget}
+              onAnswer={handlePredictionAnswer}
+              onContinue={confirmAdvance}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key={swState}
+            className={styles.stateTransition}
+            initial={noMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={noMotion ? { duration: 0 } : TRANSITION.crossfade}
+          >
+            <strong>Next transition:</strong> {SW_TRANSITIONS[swState].trigger}
+            {" -> "}<strong>{SW_TRANSITIONS[swState].next}</strong>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {transitionLog.length > 0 && (
         <div className={styles.timeline}>
           {transitionLog.map((log, i) => (
@@ -687,10 +843,76 @@ function ServiceWorkerLifecycleWidget() {
           <div className={styles.metricLabel}>States visited</div>
           <div className={styles.metricValue} data-status={visitedStates.size >= 4 ? "good" : undefined}>{visitedStates.size}/4</div>
         </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Predictions</div>
+          <div className={styles.metricValue} data-status={correctPredictions >= 2 ? "good" : undefined}>{correctPredictions}/3</div>
+        </div>
       </div>
       <div className={styles.widgetNote}>
-        Click through each state in order. The service worker must pass through installing, waiting, and active before it can intercept fetch events.
+        Click each state in order. Before advancing, predict what happens at the next stage. Visit all 4 states and answer 2+ predictions correctly to complete.
       </div>
+    </div>
+  );
+}
+
+function SWInlinePrediction({ prediction, target, onAnswer, onContinue }: {
+  prediction: SWPrediction;
+  target: SWState;
+  onAnswer: (target: SWState, isCorrect: boolean) => void;
+  onContinue: () => void;
+}) {
+  const noMotion = usePrefersReducedMotion();
+  const [selected, setSelected] = useState<number | null>(null);
+  const revealed = selected !== null;
+
+  return (
+    <div className={styles.prediction}>
+      <div className={styles.predictionQ}>Before entering &quot;{target}&quot;: {prediction.question}</div>
+      <div className={styles.predictionOptions} role="radiogroup" aria-label={prediction.question}>
+        {prediction.options.map((opt, i) => (
+          <button
+            key={i}
+            type="button"
+            className={styles.predictionOption}
+            data-correct={revealed && i === prediction.correctIndex ? "true" : undefined}
+            data-wrong={revealed && selected === i && i !== prediction.correctIndex ? "true" : undefined}
+            onClick={() => {
+              if (!revealed) {
+                setSelected(i);
+                onAnswer(target, i === prediction.correctIndex);
+              }
+            }}
+            disabled={revealed}
+            role="radio"
+            aria-checked={selected === i}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+      <AnimatePresence>
+        {revealed && (
+          <motion.div
+            className={styles.predictionResult}
+            data-correct={selected === prediction.correctIndex ? "true" : undefined}
+            initial={noMotion ? false : { opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
+          >
+            {selected === prediction.correctIndex ? "✓ " : "✗ "}{prediction.explanation}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {revealed && (
+        <button
+          type="button"
+          className={styles.actionButton}
+          onClick={onContinue}
+        >
+          Advance to {target}
+        </button>
+      )}
     </div>
   );
 }
@@ -731,46 +953,112 @@ const IDB_STORES = [
   },
 ];
 
+const TYPE_OPTIONS = [
+  "string (keyPath)", "string (indexed)", "string", "number", "number (indexed)",
+  "'synced'|'dirty'|'conflict'", "'create'|'update'|'delete'", "Blob",
+];
+
+/** Fisher-Yates shuffle -- unbiased O(n) */
+function fisherYatesShuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = a[i];
+    a[i] = a[j] as T;
+    a[j] = tmp as T;
+  }
+  return a;
+}
+
+function buildFieldOptions(): Record<string, string[]> {
+  const opts: Record<string, string[]> = {};
+  for (const store of IDB_STORES) {
+    for (let i = 0; i < store.fields.length; i++) {
+      const f = store.fields[i];
+      if (!f) continue;
+      const key = `${store.name}-${i}`;
+      const distractors = TYPE_OPTIONS.filter(t => t !== f.type);
+      const shuffled = fisherYatesShuffle(distractors).slice(0, 3);
+      const all = fisherYatesShuffle([...shuffled, f.type]);
+      opts[key] = all;
+    }
+  }
+  return opts;
+}
+
 function IndexedDBSchemaWidget() {
   const { markStepComplete } = useOfflineFirst();
-  const [revealedFields, setRevealedFields] = useState<Set<string>>(new Set());
+  const noMotion = usePrefersReducedMotion();
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const [correctCount, setCorrectCount] = useState(0);
   const totalFields = IDB_STORES.reduce((sum, s) => sum + s.fields.length, 0);
+  const fieldOptions = useMemo(buildFieldOptions, []);
 
   useEffect(() => {
-    if (revealedFields.size >= totalFields * 0.6) markStepComplete(6);
-  }, [revealedFields.size, totalFields, markStepComplete]);
+    if (correctCount >= Math.ceil(totalFields * 0.6)) markStepComplete(6);
+  }, [correctCount, totalFields, markStepComplete]);
 
-  const revealField = (key: string) => setRevealedFields(prev => new Set(prev).add(key));
+  const handleGuess = (key: string, guess: string, correct: string) => {
+    if (guesses[key]) return;
+    setGuesses(prev => ({ ...prev, [key]: guess }));
+    if (guess === correct) setCorrectCount(c => c + 1);
+  };
 
   return (
     <div className={styles.widgetPanel} data-category="storage">
-      <div className={styles.widgetTitle}>IndexedDB schema -- object stores with indexes</div>
+      <div className={styles.widgetTitle}>IndexedDB schema -- assign field types</div>
+      <div className={styles.widgetNote}>
+        For each field, pick the correct type. KeyPath and indexed fields are what make IndexedDB queries fast without scanning entire stores.
+      </div>
       {IDB_STORES.map(store => (
         <div key={store.name}>
           <div className={styles.schemaStoreLabel}>{store.name}</div>
           <div className={styles.schemaTable}>
             {store.fields.map((f, i) => {
               const key = `${store.name}-${i}`;
-              const isRevealed = revealedFields.has(key);
+              const guess = guesses[key];
+              const isCorrect = guess === f.type;
+              const isAnswered = guess !== undefined;
+              const options = fieldOptions[key] ?? [];
               return (
-                <button
-                  key={key}
-                  type="button"
-                  className={styles.schemaRow}
-                  data-revealed={isRevealed ? "true" : undefined}
-                  onClick={() => revealField(key)}
-                  aria-expanded={isRevealed}
-                >
-                  <span className={styles.schemaField}>{f.name}</span>
-                  {isRevealed ? (
+                <div key={key} className={styles.schemaRow} data-revealed={isAnswered ? "true" : undefined}>
+                  <div className={styles.schemaFieldHeader}>
+                    <span className={styles.schemaField}>{f.name}</span>
+                    {isAnswered && (
+                      <motion.span
+                        className={styles.schemaFeedback}
+                        data-correct={isCorrect ? "true" : undefined}
+                        initial={noMotion ? false : { scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={noMotion ? { duration: 0 } : SPRING.quick}
+                      >
+                        {isCorrect ? "✓" : "✗"}
+                      </motion.span>
+                    )}
+                  </div>
+                  {!isAnswered ? (
+                    <div className={styles.typeChoices} role="radiogroup" aria-label={`Type for ${f.name}`}>
+                      {options.map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          role="radio"
+                          aria-checked={false}
+                          className={styles.typeChoice}
+                          onClick={() => handleGuess(key, t, f.type)}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
                     <>
                       <span className={styles.schemaType}>{f.type}</span>
                       <span className={styles.schemaNote}>{f.note}</span>
+                      {!isCorrect && <span className={styles.schemaHint}>You picked: {guess}</span>}
                     </>
-                  ) : (
-                    <span className={styles.schemaType}>tap to reveal</span>
                   )}
-                </button>
+                </div>
               );
             })}
           </div>
@@ -778,9 +1066,9 @@ function IndexedDBSchemaWidget() {
       ))}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Fields revealed</div>
-          <div className={styles.metricValue} data-status={revealedFields.size === totalFields ? "good" : undefined}>
-            {revealedFields.size}/{totalFields}
+          <div className={styles.metricLabel}>Correct</div>
+          <div className={styles.metricValue} data-status={correctCount >= Math.ceil(totalFields * 0.6) ? "good" : undefined}>
+            {correctCount}/{totalFields}
           </div>
         </div>
         <div className={styles.metricCard}>
@@ -789,7 +1077,7 @@ function IndexedDBSchemaWidget() {
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Tap each field to reveal its type and purpose. Notice keyPath and indexed fields -- these are what make IndexedDB queries fast without scanning entire stores.
+        Assign the correct type to each field. The answer always reveals the correct type with its purpose, so wrong guesses are still a learning opportunity.
       </div>
     </div>
   );
@@ -902,66 +1190,233 @@ function OfflineQueueWidget() {
 // Step 8: Sync Engine
 // ═══════════════════════════════════════════════════════════════════
 
-const SYNC_STEPS = [
-  { label: "Read local changes", detail: "Query syncQueue store for all pending entries ordered by createdAt" },
-  { label: "Diff with remote", detail: "POST /api/sync/push with batch -- server compares versions" },
-  { label: "Detect conflicts", detail: "Server returns accepted[] and conflicts[] -- check vector clocks" },
-  { label: "Resolve conflicts", detail: "Apply resolution strategy (LWW/merge/manual) to each conflict" },
-  { label: "Apply remote changes", detail: "Write server-accepted changes to local IndexedDB" },
-  { label: "Clear sync queue", detail: "Remove processed entries, update lastSyncTime" },
+type SyncItemStatus = "pending" | "syncing" | "synced" | "failed" | "retrying";
+type SyncItem = {
+  id: string;
+  op: string;
+  payload: string;
+  status: SyncItemStatus;
+  retries: number;
+  backoff: number | null;
+};
+
+const INITIAL_SYNC_ITEMS: SyncItem[] = [
+  { id: "sq-1", op: "PUT", payload: "doc/meeting-notes", status: "pending", retries: 0, backoff: null },
+  { id: "sq-2", op: "POST", payload: "doc/new-draft", status: "pending", retries: 0, backoff: null },
+  { id: "sq-3", op: "DELETE", payload: "doc/old-archive", status: "pending", retries: 0, backoff: null },
 ];
 
 function SyncEngineWidget() {
   const { markStepComplete, incrementSyncs } = useOfflineFirst();
-  const [currentStep, setCurrentStep] = useState(-1);
+  const noMotion = usePrefersReducedMotion();
+  const [items, setItems] = useState<SyncItem[]>(INITIAL_SYNC_ITEMS);
   const [predictionAnswered, setPredictionAnswered] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [log, setLog] = useState<string[]>([]);
+  const [syncComplete, setSyncComplete] = useState(false);
+  const [syncRanOnce, setSyncRanOnce] = useState(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (currentStep >= SYNC_STEPS.length - 1 && predictionAnswered) {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
+    if (syncComplete && predictionAnswered) {
       markStepComplete(8);
       incrementSyncs();
     }
-  }, [currentStep, predictionAnswered, markStepComplete, incrementSyncs]);
+  }, [syncComplete, predictionAnswered, markStepComplete, incrementSyncs]);
 
-  const stepForward = () => setCurrentStep(prev => Math.min(prev + 1, SYNC_STEPS.length - 1));
-  const stepBack = () => setCurrentStep(prev => Math.max(prev - 1, -1));
-  const reset = () => setCurrentStep(-1);
+  const scheduleTimer = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      fn();
+    }, ms);
+    timersRef.current.push(id);
+    return id;
+  }, []);
+
+  const processNext = useCallback((queue: SyncItem[], idx: number) => {
+    if (!isMountedRef.current) return;
+    if (idx >= queue.length) {
+      setSyncing(false);
+      setActiveIdx(-1);
+      setSyncComplete(true);
+      setSyncRanOnce(true);
+      setLog(prev => [...prev, "Sync complete -- queue drained"]);
+      return;
+    }
+
+    const item = queue[idx];
+    if (!item) return;
+    if (item.status === "synced") {
+      processNext(queue, idx + 1);
+      return;
+    }
+
+    setActiveIdx(idx);
+    // Mark as syncing
+    const syncing_ = queue.map((it, i) =>
+      i === idx ? { ...it, status: "syncing" as SyncItemStatus } : it
+    );
+    setItems(syncing_);
+    setLog(prev => [...prev, `Syncing: ${item.op} ${item.payload}...`]);
+
+    // Simulate network delay, then resolve
+    const delay = noMotion ? 100 : 600;
+    scheduleTimer(() => {
+      // Item at index 1 (POST doc/new-draft) fails on first attempt to show retry
+      const willFail = idx === 1 && item.retries === 0;
+
+      if (willFail) {
+        const backoffMs = 1000 * Math.pow(2, item.retries); // 1s
+        const failed = syncing_.map((it, i) =>
+          i === idx ? { ...it, status: "failed" as SyncItemStatus, retries: it.retries + 1, backoff: backoffMs } : it
+        );
+        setItems(failed);
+        setLog(prev => [...prev, `Failed: ${item.op} ${item.payload} -- retry in ${backoffMs}ms (exponential backoff)`]);
+
+        // Auto-retry after backoff
+        const retryDelay = noMotion ? 200 : 1200;
+        scheduleTimer(() => {
+          const retrying = failed.map((it, i) =>
+            i === idx ? { ...it, status: "retrying" as SyncItemStatus, backoff: null } : it
+          );
+          setItems(retrying);
+          setLog(prev => [...prev, `Retrying: ${item.op} ${item.payload} (attempt ${item.retries + 2})...`]);
+
+          scheduleTimer(() => {
+            const succeeded = retrying.map((it, i) =>
+              i === idx ? { ...it, status: "synced" as SyncItemStatus } : it
+            );
+            setItems(succeeded);
+            setLog(prev => [...prev, `Synced: ${item.op} ${item.payload}`]);
+            scheduleTimer(() => processNext(succeeded, idx + 1), noMotion ? 50 : 300);
+          }, delay);
+        }, retryDelay);
+      } else {
+        const succeeded = syncing_.map((it, i) =>
+          i === idx ? { ...it, status: "synced" as SyncItemStatus } : it
+        );
+        setItems(succeeded);
+        setLog(prev => [...prev, `Synced: ${item.op} ${item.payload}`]);
+        scheduleTimer(() => processNext(succeeded, idx + 1), noMotion ? 50 : 300);
+      }
+    }, delay);
+  }, [noMotion, scheduleTimer]);
+
+  const startSync = () => {
+    setSyncing(true);
+    setSyncComplete(false);
+    setLog(["Sync engine started -- processing queue sequentially..."]);
+    processNext(items, 0);
+  };
+
+  const resetSim = () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    setItems(INITIAL_SYNC_ITEMS);
+    setSyncing(false);
+    setActiveIdx(-1);
+    setLog([]);
+    setSyncComplete(false);
+  };
 
   return (
     <div className={styles.widgetPanel} data-category="sync">
-      <div className={styles.widgetTitle}>Sync engine -- step through the algorithm</div>
-      <PredictionChallenge
-        question="When should the sync engine run?"
-        options={[
-          "On every keystroke to minimize data loss",
-          "On a timer (e.g. every 30s) plus on reconnect events",
-          "Only when the user clicks a save button",
-        ]}
-        correctIndex={1}
-        explanation="Timer + reconnect balances freshness with battery/bandwidth. Per-keystroke is too aggressive, manual-only risks data loss."
-        onAnswer={() => setPredictionAnswered(true)}
-      />
-      <div className={styles.timeline}>
-        {SYNC_STEPS.map((step, i) => (
-          <div key={i} className={styles.timelineEvent}
-            data-active={currentStep === i ? "true" : undefined}
-            data-success={currentStep > i ? "true" : undefined}>
-            <span className={styles.timelineMs}>{i + 1}.</span>
-            <span className={styles.timelineLabel}>
-              <strong>{step.label}</strong>
-              {currentStep >= i && <><br />{step.detail}</>}
-            </span>
-          </div>
-        ))}
+      <div className={styles.widgetTitle}>Sync engine -- interactive simulation</div>
+      <div className={styles.queueList} aria-label="Sync queue">
+        <AnimatePresence>
+          {items.map((item, i) => (
+            <motion.div
+              key={item.id}
+              layout
+              className={styles.queueEntry}
+              data-status={item.status === "retrying" ? "syncing" : item.status}
+              initial={noMotion ? false : { opacity: 0, y: -8 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: activeIdx === i && syncing ? 1.02 : 1,
+              }}
+              transition={noMotion ? { duration: 0 } : SPRING.snappy}
+            >
+              <span className={styles.queueOp}>{item.op}</span>
+              <span className={styles.queuePayload}>{item.payload}</span>
+              <span className={styles.queueStatus} data-status={item.status === "retrying" ? "syncing" : item.status}>
+                {item.status === "retrying" ? "retrying" : item.status}
+              </span>
+              {item.backoff !== null && (
+                <span className={styles.propCount}>backoff: {item.backoff}ms</span>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
       <div className={styles.propControls}>
-        <button type="button" className={styles.actionButton} onClick={stepBack} disabled={currentStep < 0} aria-label="Previous step">{"◀"}</button>
-        <span className={styles.propCount}>{currentStep < 0 ? "Ready" : `${currentStep + 1}/${SYNC_STEPS.length}`}</span>
-        <button type="button" className={styles.actionButton} onClick={stepForward} disabled={currentStep >= SYNC_STEPS.length - 1} aria-label="Next step">{"▶"}</button>
-        <button type="button" className={styles.toolButton} onClick={reset} aria-label="Reset">{"↺"}</button>
+        <button
+          type="button"
+          className={styles.actionButton}
+          onClick={startSync}
+          disabled={syncing || syncComplete}
+          aria-label="Start sync"
+        >
+          {syncComplete ? "Sync done" : "Start sync"}
+        </button>
+        <button type="button" className={styles.toolButton} onClick={resetSim} disabled={syncing} aria-label="Reset simulation">
+          {"↺ Reset"}
+        </button>
+      </div>
+      {log.length > 0 && (
+        <div className={styles.timeline} aria-live="polite">
+          {log.map((entry, i) => (
+            <div key={i} className={styles.timelineEvent}
+              data-active={i === log.length - 1 ? "true" : undefined}
+              data-success={entry.startsWith("Synced:") || entry.startsWith("Sync complete") ? "true" : undefined}
+              data-rollback={entry.startsWith("Failed:") ? "true" : undefined}>
+              <span className={styles.timelineMs}>{i + 1}.</span>
+              <span className={styles.timelineLabel}>{entry}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {syncRanOnce && (
+        <PredictionChallenge
+          question="You saw a failure and retry. What should happen when a sync request fails?"
+          options={[
+            "Drop the item and move on to the next",
+            "Retry immediately in an infinite loop",
+            "Retry with exponential backoff, then skip after max retries",
+          ]}
+          correctIndex={2}
+          explanation="Exponential backoff avoids overwhelming the server. A max-retry cap prevents infinite loops. Failed items are flagged for manual review."
+          onAnswer={() => setPredictionAnswered(true)}
+        />
+      )}
+      <div className={styles.metricsBar} aria-live="polite">
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Synced</div>
+          <div className={styles.metricValue} data-status={items.every(i => i.status === "synced") ? "good" : undefined}>
+            {items.filter(i => i.status === "synced").length}/{items.length}
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Retries</div>
+          <div className={styles.metricValue} data-status={items.some(i => i.retries > 0) ? "warning" : undefined}>
+            {items.reduce((sum, i) => sum + i.retries, 0)}
+          </div>
+        </div>
       </div>
       <div className={styles.widgetNote}>
-        Step through the sync algorithm to see how local and remote state are reconciled. Each step reveals what happens under the hood.
+        Answer the prediction, then start the sync. Watch items process one at a time -- the second item will fail and retry with exponential backoff, showing how real sync engines handle transient failures.
       </div>
     </div>
   );
@@ -979,10 +1434,10 @@ function ConflictDetectionWidget() {
   const [localClock, setLocalClock] = useState({ A: 3, B: 1 });
   const [remoteClock, setRemoteClock] = useState({ A: 2, B: 2 });
   const [detected, setDetected] = useState(false);
-  const [clockModified, setClockModified] = useState(false);
+  const [clockMods, setClockMods] = useState(0);
+  const [conflictFound, setConflictFound] = useState(false);
 
   const hasConflict = useMemo(() => {
-    // Concurrent if neither dominates
     const localDominates = Object.keys(remoteClock).every(k => (localClock[k as keyof typeof localClock] ?? 0) >= (remoteClock[k as keyof typeof remoteClock] ?? 0));
     const remoteDominates = Object.keys(localClock).every(k => (remoteClock[k as keyof typeof remoteClock] ?? 0) >= (localClock[k as keyof typeof localClock] ?? 0));
     return !localDominates && !remoteDominates;
@@ -990,8 +1445,11 @@ function ConflictDetectionWidget() {
 
   const detect = () => {
     setDetected(true);
-    if (hasConflict) incrementConflicts();
-    if (clockModified) markStepComplete(9);
+    if (hasConflict) {
+      incrementConflicts();
+      setConflictFound(true);
+    }
+    if (clockMods >= 2 && hasConflict) markStepComplete(9);
   };
 
   const incrementClock = (side: "local" | "remote", device: "A" | "B") => {
@@ -1000,7 +1458,7 @@ function ConflictDetectionWidget() {
     } else {
       setRemoteClock(prev => ({ ...prev, [device]: (prev[device] ?? 0) + 1 }));
     }
-    setClockModified(true);
+    setClockMods(c => c + 1);
     setDetected(false);
   };
 
@@ -1054,7 +1512,7 @@ function ConflictDetectionWidget() {
             initial={noMotion ? false : { opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            transition={noMotion ? { duration: 0 } : SPRING.snappy}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
           >
             {hasConflict
               ? `Conflict detected! Neither vector clock dominates -- versions diverged concurrently. Local: [A:${localClock.A}, B:${localClock.B}] vs Remote: [A:${remoteClock.A}, B:${remoteClock.B}]`
@@ -1089,18 +1547,20 @@ const RESOLUTION_STRATEGIES: { id: ConflictStrategy; name: string; desc: string 
 
 function ConflictResolutionWidget() {
   const { conflictStrategy, setConflictStrategy, markStepComplete } = useOfflineFirst();
+  const noMotion = usePrefersReducedMotion();
   const [localDoc, setLocalDoc] = useState("The quick brown fox");
   const [remoteDoc, setRemoteDoc] = useState("The slow brown dog");
   const [resolved, setResolved] = useState<string | null>(null);
   const [manualChoice, setManualChoice] = useState<"local" | "remote" | null>(null);
+  const triedStrategies = useRef(new Set<string>());
 
   const resolve = useCallback(() => {
+    triedStrategies.current.add(conflictStrategy);
     switch (conflictStrategy) {
       case "lww":
         setResolved(remoteDoc);
         break;
       case "merge": {
-        // Simple word-level merge
         const localWords = localDoc.split(" ");
         const remoteWords = remoteDoc.split(" ");
         const merged = localWords.map((w, i) => {
@@ -1119,7 +1579,7 @@ function ConflictResolutionWidget() {
         else if (manualChoice === "remote") setResolved(remoteDoc);
         break;
     }
-    markStepComplete(10);
+    if (triedStrategies.current.size >= 2) markStepComplete(10);
   }, [conflictStrategy, localDoc, remoteDoc, manualChoice, markStepComplete]);
 
   useEffect(() => { setResolved(null); setManualChoice(null); }, [conflictStrategy, localDoc, remoteDoc]);
@@ -1168,12 +1628,21 @@ function ConflictResolutionWidget() {
         disabled={conflictStrategy === "manual" && !manualChoice}>
         Apply {conflictStrategy === "lww" ? "LWW" : conflictStrategy === "merge" ? "merge" : "decision"}
       </button>
-      {resolved !== null && (
-        <div className={styles.conflictResult}>
-          <span className={styles.conflictResultLabel}>Result</span>
-          <span className={styles.conflictResultValue}>{resolved}</span>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {resolved !== null && (
+          <motion.div
+            key={`${conflictStrategy}-${resolved}`}
+            className={styles.conflictResult}
+            initial={noMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={noMotion ? { duration: 0 } : SPRING.quick}
+          >
+            <span className={styles.conflictResultLabel}>Result</span>
+            <span className={styles.conflictResultValue}>{resolved}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className={styles.widgetNote}>
         Edit both documents, pick a strategy, and resolve. LWW is simplest but loses data. Merge preserves both but may produce odd results. Manual is safest but requires user attention.
       </div>
@@ -1379,10 +1848,10 @@ function BackgroundSyncWidget() {
           {attempts.map((a, i) => (
             <motion.div
               key={i}
-              style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}
+              className={styles.backoffColumn}
               initial={noMotion ? false : { opacity: 0, scaleY: 0 }}
               animate={{ opacity: 1, scaleY: 1 }}
-              transition={noMotion ? { duration: 0 } : { ...SPRING.snappy, delay: i * STAGGER.fast }}
+              transition={noMotion ? { duration: 0 } : { ...SPRING.gentle, delay: i * STAGGER.fast }}
             >
               <div className={styles.backoffBar}
                 data-failed={!a.success ? "true" : undefined}
@@ -1404,7 +1873,7 @@ function BackgroundSyncWidget() {
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Last delay</div>
-          <div className={styles.metricValue}>{attempts.length > 0 ? `${(attempts[attempts.length - 1]!.delay / 1000).toFixed(1)}s` : "---"}</div>
+          <div className={styles.metricValue}>{attempts.length > 0 ? `${((attempts[attempts.length - 1]?.delay ?? 0) / 1000).toFixed(1)}s` : "---"}</div>
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Result</div>
@@ -1424,39 +1893,76 @@ function BackgroundSyncWidget() {
 // Step 13: Cache Invalidation
 // ═══════════════════════════════════════════════════════════════════
 
-type CacheVersionEntry = { url: string; version: number; cachedAt: number; stale: boolean };
+type CacheVersionEntry = { url: string; version: number; cachedAt: number; stale: boolean; ttlRemaining: number };
+
+type ServeResult = { url: string; servedVersion: number; serverVersion: number; wasStale: boolean };
+
+const CACHE_TTL_SECONDS = 10;
 
 function CacheInvalidationWidget() {
   const { markStepComplete } = useOfflineFirst();
+  const noMotion = usePrefersReducedMotion();
   const [entries, setEntries] = useState<CacheVersionEntry[]>([
-    { url: "/api/posts", version: 1, cachedAt: 0, stale: false },
-    { url: "/api/user", version: 1, cachedAt: 0, stale: false },
-    { url: "/assets/app.js", version: 1, cachedAt: 0, stale: false },
-    { url: "/assets/styles.css", version: 1, cachedAt: 0, stale: false },
+    { url: "/api/posts", version: 1, cachedAt: 0, stale: false, ttlRemaining: CACHE_TTL_SECONDS },
+    { url: "/api/user", version: 1, cachedAt: 0, stale: false, ttlRemaining: CACHE_TTL_SECONDS },
+    { url: "/assets/app.js", version: 1, cachedAt: 0, stale: false, ttlRemaining: CACHE_TTL_SECONDS },
+    { url: "/assets/styles.css", version: 1, cachedAt: 0, stale: false, ttlRemaining: CACHE_TTL_SECONDS },
   ]);
   const [serverVersion, setServerVersion] = useState(1);
   const [deployCount, setDeployCount] = useState(0);
-  const [refreshCount, setRefreshCount] = useState(0);
+  const [staleServeCount, setStaleServeCount] = useState(0);
+  const [serveLog, setServeLog] = useState<ServeResult[]>([]);
+  const ttlIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (deployCount >= 2 && refreshCount >= 2) markStepComplete(13);
-  }, [deployCount, refreshCount, markStepComplete]);
+    // Tick TTL every second
+    ttlIntervalRef.current = setInterval(() => {
+      setEntries(prev => prev.map(e => {
+        if (e.stale || e.ttlRemaining <= 0) return e;
+        const next = e.ttlRemaining - 1;
+        if (next <= 0) return { ...e, ttlRemaining: 0, stale: true };
+        return { ...e, ttlRemaining: next };
+      }));
+    }, 1000);
+    return () => {
+      if (ttlIntervalRef.current) clearInterval(ttlIntervalRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (deployCount >= 2 && staleServeCount >= 1) markStepComplete(13);
+  }, [deployCount, staleServeCount, markStepComplete]);
 
   const bumpServer = () => {
     const newVersion = serverVersion + 1;
     setServerVersion(newVersion);
     setDeployCount(c => c + 1);
-    // Mark some entries as stale
+    // Mark API entries as stale immediately (server changed), static assets keep their TTL
     setEntries(prev => prev.map((e, i) =>
-      i < 2 ? { ...e, stale: true } : e
+      i < 2 ? { ...e, stale: true, ttlRemaining: 0 } : e
     ));
+  };
+
+  const serveRequest = () => {
+    // Pick a random entry and serve it to a "user"
+    const idx = Math.floor(Math.random() * entries.length);
+    const entry = entries[idx];
+    if (!entry) return;
+    const wasStale = entry.stale || entry.version < serverVersion;
+    const result: ServeResult = {
+      url: entry.url,
+      servedVersion: entry.version,
+      serverVersion,
+      wasStale,
+    };
+    setServeLog(prev => [...prev.slice(-4), result]);
+    if (wasStale) setStaleServeCount(c => c + 1);
   };
 
   const refreshStale = () => {
     setEntries(prev => prev.map(e =>
-      e.stale ? { ...e, version: serverVersion, stale: false, cachedAt: Date.now() } : e
+      e.stale ? { ...e, version: serverVersion, stale: false, cachedAt: Date.now(), ttlRemaining: CACHE_TTL_SECONDS } : e
     ));
-    setRefreshCount(c => c + 1);
   };
 
   const staleCount = entries.filter(e => e.stale).length;
@@ -1482,6 +1988,11 @@ function CacheInvalidationWidget() {
             <span className={styles.versionKey}>{e.url}</span>
             <span className={styles.versionNumber}>v{e.version}</span>
             <span className={styles.versionAge}>{e.stale ? "STALE" : "fresh"}</span>
+            <span className={styles.ttlBadge}
+              data-expired={e.ttlRemaining <= 0 ? "true" : undefined}
+              data-low={e.ttlRemaining > 0 && e.ttlRemaining <= 3 ? "true" : undefined}>
+              TTL: {e.ttlRemaining}s
+            </span>
           </div>
         ))}
       </div>
@@ -1489,11 +2000,41 @@ function CacheInvalidationWidget() {
         <button type="button" className={styles.actionButton} onClick={bumpServer}>
           Deploy v{serverVersion + 1}
         </button>
+        <button type="button" className={styles.actionButton} onClick={serveRequest}>
+          Serve request
+        </button>
         <button type="button" className={styles.actionButton} onClick={refreshStale}
           disabled={staleCount === 0}>
           Refresh stale ({staleCount})
         </button>
       </div>
+      {serveLog.length > 0 && (
+        <div className={styles.timeline} aria-live="polite">
+          <AnimatePresence initial={false}>
+            {serveLog.map((result, i) => (
+              <motion.div
+                key={`serve-${i}-${result.url}`}
+                className={styles.timelineEvent}
+                data-rollback={result.wasStale ? "true" : undefined}
+                data-success={!result.wasStale ? "true" : undefined}
+                initial={noMotion ? false : { opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={noMotion ? { duration: 0 } : SPRING.snappy}
+              >
+                <span className={styles.timelineMs}>{i + 1}.</span>
+                <span className={styles.timelineLabel}>
+                  {result.wasStale
+                    ? `User saw v${result.servedVersion} but server has v${result.serverVersion}!`
+                    : `Served fresh v${result.servedVersion} for ${result.url}`}
+                </span>
+                <span className={styles.timelineStatus}>
+                  {result.wasStale ? "STALE" : "OK"}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Server version</div>
@@ -1503,9 +2044,13 @@ function CacheInvalidationWidget() {
           <div className={styles.metricLabel}>Stale entries</div>
           <div className={styles.metricValue} data-status={staleCount > 0 ? "warning" : "good"}>{staleCount}</div>
         </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Stale serves</div>
+          <div className={styles.metricValue} data-status={staleServeCount > 0 ? "bad" : "good"}>{staleServeCount}</div>
+        </div>
       </div>
       <div className={styles.widgetNote}>
-        Click &quot;Deploy&quot; to simulate a new server version. API responses become stale while static assets stay fresh (different cache policies). Click &quot;Refresh stale&quot; to update.
+        Deploy to bump the server version, then hit &quot;Serve request&quot; to see a user receive stale data. Watch TTL timers count down -- entries auto-expire. Refresh stale to update the cache. Complete by deploying 2+ times and serving at least 1 stale response.
       </div>
     </div>
   );
@@ -1543,7 +2088,9 @@ function StorageQuotaWidget() {
     // Remove oldest (first) entry
     const sorted = [...storageEntries].sort((a, b) => a.lastAccessed - b.lastAccessed);
     if (sorted.length > 0) {
-      removeStorageEntry(sorted[0]!.key);
+      const oldest = sorted[0];
+      if (!oldest) return;
+      removeStorageEntry(oldest.key);
       setEvictionRan(true);
     }
   };
@@ -1570,7 +2117,7 @@ function StorageQuotaWidget() {
                 initial={noMotion ? false : { opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={noMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
-                transition={noMotion ? { duration: 0 } : SPRING.snappy}
+                transition={noMotion ? { duration: 0 } : SPRING.gentle}
               >
                 <span className={styles.storageItemKey}>{e.key}</span>
                 <span className={styles.storageItemSize}>{(e.size / 1024).toFixed(1)}KB</span>
@@ -1629,10 +2176,11 @@ function NetworkStatusWidget() {
   const [stateIdx, setStateIdx] = useState(0);
   const [transitions, setTransitions] = useState<string[]>([]);
   const [triedStates, setTriedStates] = useState<Set<number>>(new Set([0]));
+  const [predictionAnswered, setPredictionAnswered] = useState(false);
 
   useEffect(() => {
-    if (triedStates.size >= 2 && transitions.length >= 2) markStepComplete(15);
-  }, [triedStates.size, transitions.length, markStepComplete]);
+    if (triedStates.size >= 2 && predictionAnswered) markStepComplete(15);
+  }, [triedStates.size, predictionAnswered, markStepComplete]);
 
   const switchState = (idx: number) => {
     const state = NETWORK_STATES[idx];
@@ -1652,20 +2200,11 @@ function NetworkStatusWidget() {
   };
 
   const currentState = NETWORK_STATES[stateIdx];
+  const hasInteracted = transitions.length >= 1;
 
   return (
     <div className={styles.widgetPanel} data-category="network">
       <div className={styles.widgetTitle}>Network status -- adaptive UI</div>
-      <PredictionChallenge
-        question="How should an offline-first app respond to navigator.onLine returning true?"
-        options={[
-          "Immediately sync all pending data -- the connection is definitely back",
-          "Treat it as a hint and verify with a real network request before syncing",
-          "Ignore it -- navigator.onLine is completely unreliable",
-        ]}
-        correctIndex={1}
-        explanation="navigator.onLine only indicates if the device has a network interface up -- it does not mean the server is reachable. Always verify with a lightweight health check (HEAD request) before draining the sync queue."
-      />
       <div className={styles.networkIndicator} data-online={isOnline ? "true" : "false"}>
         <span className={styles.networkDot} />
         {currentState?.label ?? "Unknown"}: {currentState?.uiMessage ?? ""}
@@ -1691,6 +2230,19 @@ function NetworkStatusWidget() {
           ))}
         </div>
       )}
+      {hasInteracted && (
+        <PredictionChallenge
+          question="Now that you have toggled states: how should an offline-first app respond to navigator.onLine returning true?"
+          options={[
+            "Immediately sync all pending data -- the connection is definitely back",
+            "Treat it as a hint and verify with a real network request before syncing",
+            "Ignore it -- navigator.onLine is completely unreliable",
+          ]}
+          correctIndex={1}
+          explanation="navigator.onLine only indicates if the device has a network interface up -- it does not mean the server is reachable. Always verify with a lightweight health check (HEAD request) before draining the sync queue."
+          onAnswer={() => setPredictionAnswered(true)}
+        />
+      )}
       <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Status</div>
@@ -1708,7 +2260,7 @@ function NetworkStatusWidget() {
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Toggle between network states to see how the UI adapts. Going offline pauses sync and queues mutations. Coming back online triggers queue drain and revalidation.
+        Toggle between network states to see how the UI adapts. Going offline pauses sync and queues mutations. After interacting, answer the prediction to complete this step.
       </div>
     </div>
   );

@@ -118,7 +118,7 @@ const offlineMutationScenario: ArchStep[] = [
   {
     nodeId: "syncmanager",
     caption: "SyncManager enqueues the mutation with a timestamp and pending status",
-    payload: { type: TYPES[0]!, sample: ['{ operation: "update",', '  status: "pending", retries: 0 }'] },
+    payload: { type: TYPES[0] as ArchTypeDef, sample: ['{ operation: "update",', '  status: "pending", retries: 0 }'] },
   },
   {
     nodeId: "localstore",
@@ -153,7 +153,7 @@ const syncOnReconnectScenario: ArchStep[] = [
   {
     nodeId: "remote",
     caption: "Server accepts the mutation, responds with server timestamp and any conflicts detected",
-    payload: { type: TYPES[1]!, sample: ['{ localVersion: v3,', '  remoteVersion: v5,', '  resolution: "pending" }'] },
+    payload: { type: TYPES[1] as ArchTypeDef, sample: ['{ localVersion: v3,', '  remoteVersion: v5,', '  resolution: "pending" }'] },
   },
   {
     nodeId: "conflictresolver",

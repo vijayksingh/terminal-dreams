@@ -316,7 +316,8 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  border-top: 3px solid var(--type-color, var(--color-accent));
+  background: color-mix(in srgb, var(--type-color, var(--color-accent)) 10%, transparent);
 }
 
 .typeCardHeader {
@@ -327,7 +328,7 @@
 }
 
 .typeCardName { font-size: 0.7rem; font-weight: 800; }
-.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--type-color, var(--color-accent)); }
 
 .typeCardFields {
   display: flex;
@@ -816,6 +817,17 @@
   outline-offset: 2px;
 }
 
+.conflictIndicator {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-warning) 16%, var(--color-surface));
+  color: var(--color-warning);
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
 .syncArrow {
   font-size: 0.625rem;
   color: var(--color-accent);
@@ -1299,6 +1311,326 @@ button.scopeBadge[data-in-scope="false"]:hover {
   background: var(--color-surface-2);
 }
 
+/* -- Protocol-specific ------------------------------------------------ */
+
+.typeFieldRow[data-kind="protocol"] {
+  min-height: 44px;
+  background: var(--color-surface);
+  border-radius: var(--radius-1);
+  padding: var(--space-2);
+}
+
+.typeFieldRevealedContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.widgetSubtitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  margin-top: var(--space-2);
+}
+
+.scenarioPrediction {
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.scenarioPredictionQ {
+  font-size: 0.65rem;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
+}
+
+.strategyOption[data-correct="true"] {
+  color: var(--color-success);
+  font-weight: 800;
+}
+
+.strategyOption[data-wrong="true"] {
+  color: var(--color-error);
+}
+
+.strategyOption[data-compact="true"] {
+  min-height: 44px;
+  font-size: 0.6rem;
+  padding: var(--space-1);
+}
+
+.tabRemoveButton {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px 6px;
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--color-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+.tabRemoveButton:hover { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 10%, transparent); }
+.tabRemoveButton:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.conflictExplanation {
+  font-size: 0.625rem;
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+}
+
+.conflictExplanation[data-strategy="lww"],
+.conflictExplanation[data-strategy="leader-decides"] {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 8%, transparent);
+}
+
+.conflictExplanation[data-strategy="merge-queue"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+}
+
+.editorInput[data-size="sm"] { max-width: 120px; }
+.editorInput[data-size="md"] { max-width: 200px; }
+
+.rangeSlider {
+  flex: 1;
+  min-height: 44px;
+  accent-color: var(--color-accent);
+}
+
+.lockControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: 4px;
+}
+
+.timerValue[data-drift="positive"] { color: var(--color-warning); }
+.timerValue[data-drift="zero"] { color: var(--color-success); }
+
+/* -- Sync flight indicator ------------------------------------------- */
+
+.syncFlightIndicator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  grid-column: 1 / -1;
+}
+
+.syncFlightTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--color-surface-2);
+  border-radius: 3px;
+  position: relative;
+  overflow: visible;
+}
+
+.syncFlightDot {
+  position: absolute;
+  top: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
+.syncFlightLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- Throttle notice ------------------------------------------------- */
+
+.throttleNotice {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+  color: var(--color-warning);
+}
+
+/* -- Message composer & flow log ------------------------------------- */
+
+.composerPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-1);
+}
+
+.messageFlowLog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.messageFlowEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.messageFlowEntry[data-type="state-sync"] { border-left: 3px solid var(--diagram-layer-2); }
+.messageFlowEntry[data-type="action"] { border-left: 3px solid var(--diagram-layer-5); }
+.messageFlowEntry[data-type="heartbeat"] { border-left: 3px solid var(--diagram-layer-1); }
+.messageFlowEntry[data-type="election"] { border-left: 3px solid var(--diagram-layer-4); }
+
+.messageFlowHeader {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  font-size: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.messageFlowHandlers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-border);
+  margin-left: var(--space-1);
+}
+
+.messageFlowHandler {
+  font-size: 0.575rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+/* -- Contents wrapper (display: contents for motion wrappers) -------- */
+
+.contentsWrapper {
+  display: contents;
+}
+
+/* -- Memory threshold markers ---------------------------------------- */
+
+.memoryThresholds {
+  position: relative;
+  height: 16px;
+  margin-top: -4px;
+}
+
+.memoryThresholdMark {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.memoryThresholdMark[data-level="high"] {
+  color: var(--color-warning);
+}
+
+.memoryThresholdMark[data-level="critical"] {
+  color: var(--color-error);
+}
+
+.memoryAutoDiscard {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface));
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+}
+
+.memoryLowNotice {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  padding: var(--space-1) 0;
+}
+
+/* -- localStorage two-pane ------------------------------------------- */
+
+.storageTwoPanes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.storagePane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-1);
+}
+
+.storagePaneLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.storagePaneLabel[data-tab="a"] { color: var(--diagram-layer-1); }
+.storagePaneLabel[data-tab="b"] { color: var(--diagram-layer-4); }
+
+.storageEventList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.storageEventItem {
+  font-size: 0.6rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-4) 10%, transparent);
+  border-left: 3px solid var(--diagram-layer-4);
+  line-height: 1.5;
+}
+
+.storageEventFlash {
+  background: color-mix(in srgb, var(--diagram-layer-4) 22%, transparent);
+}
+
+.storageNoEvent {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  font-style: italic;
+  padding: var(--space-1) var(--space-2);
+}
+
+.storageCrossTabNote {
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  color: var(--color-warning);
+  line-height: 1.5;
+}
+
 /* -- Reduced motion -------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1320,7 +1652,11 @@ button.scopeBadge[data-in-scope="false"]:hover {
   .memoryFill,
   .lifecycleState,
   .actionButton,
-  .toolButton {
+  .toolButton,
+  .syncFlightDot,
+  .messageFlowEntry,
+  .storageEventItem,
+  .storageEventFlash {
     transition: none;
   }
 }

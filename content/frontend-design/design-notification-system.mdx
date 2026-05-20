@@ -5,7 +5,7 @@ section: system-design-problems
 stopId: sdp-notifications
 order: 3
 kind: system-design-problem
-summary: "Design a notification system with priority queuing, permission failure handling, and push integration"
+summary: "Design a notification system with priority queuing, toast management, permission lifecycle, and Push API integration"
 tags:
   - system-design
   - notifications
@@ -17,83 +17,125 @@ intersections:
   - net-long-polling
   - render-edge
 prerequisites: []
+demo: design-notification-system
 ---
 
-## Notifications Are Easy to Build, Hard to Build Well
+<section id="step-1" className="recipe-step">
 
-Every frontend developer has built a toast notification. `showToast("Saved!")` — done, ship it. But real notification systems are one of the most deceptively complex pieces of frontend infrastructure. The moment you have more than one notification competing for screen space, you've entered the world of priority queues, rate limiting, and permission management.
+## 01 — Requirements
 
-The hard problems aren't about rendering a floating div. They're about what happens when 10 notifications fire simultaneously, when the user has blocked push permissions permanently, when a high-priority error needs to interrupt a queue of info toasts, and when the browser tab isn't even open.
+"Design a notification system with priority queuing, permission handling, and push integration."
 
-This problem teaches three concepts that show up everywhere in frontend system design: **priority queuing** (how to order competing work), **permission lifecycle** (how to handle irrevocable user decisions), and **push channel management** (how to bridge server events to client UI).
+</section>
 
-## Phase 1: Architecture
+<section id="step-2" className="recipe-step">
 
-A production notification system breaks into six architectural blocks:
+## 02 — API & Data Model
 
-1. **ToastQueue** — The priority queue that holds pending notifications. Not a simple FIFO — errors must jump ahead of info toasts. This is the data structure that governs _what the user sees and when_.
+Define endpoints for sending, listing, and managing notification preferences.
 
-2. **PriorityScheduler** — The promotion logic that moves items from the queue to the visible stack. Enforces the max-visible constraint (typically 3), decides when to show the next toast, and handles the transition timing.
+</section>
 
-3. **ToastRenderer** — The presentation layer. Each toast needs a countdown timer, hover-to-pause, dismiss button, and visual encoding of its priority level. The timer bar depleting at the bottom gives the user a sense of urgency calibrated to the notification type.
+<section id="step-3" className="recipe-step">
 
-4. **NotificationCenter** — The persistent store. Toasts are ephemeral, but the notification center keeps a full history. This is where dismissed-but-unread notifications live — the badge count on the bell icon.
+## 03 — Architecture
 
-5. **PushSubscriber** — The bridge to the Push API. Registers a `PushSubscription` with the browser's push service, stores the endpoint on the server, and wakes the Service Worker when a server-sent message arrives.
+Map the notification pipeline: push server → service worker → notification manager → toast queue → UI.
 
-6. **PermissionManager** — The guard around `Notification.requestPermission()`. This is the block that most teams get wrong. Permission denial is _permanent per origin_ — there's no API to re-request. The PermissionManager must implement a soft-ask pattern (custom UI before the real browser prompt) to avoid burning the one chance.
+</section>
 
-There's a seventh block — a **mystery block** — that you'll discover when you hit the queue inspector below and notice something missing from this list. Hint: what prevents the same notification from showing twice after a page refresh?
+<section id="step-4" className="recipe-step">
 
-<NotificationDemo />
+## 04 — Toast Component
 
-## Phase 2: The Priority Queue
+Build a configurable toast with position, duration, type, and dismiss controls.
 
-The core insight of this system is that notifications aren't equal. A payment failure toast _must_ interrupt a queue of "settings saved" info toasts. This means the queue isn't a simple first-in-first-out structure — it's a priority queue where insertion position depends on severity.
+</section>
 
-The implementation is straightforward: a sorted array where each insert walks from the front and finds the correct position based on priority number (0 = error/critical, 1 = warning, 2 = info). When the visible stack has capacity, the scheduler dequeues from the front — always serving the highest-priority item first.
+<section id="step-5" className="recipe-step">
 
-**Watch for the edge case**: when the visible stack is full and a new error arrives, it jumps to the front of the queue but doesn't immediately evict a visible info toast. The scheduler waits for a slot to open (timer expiry or dismiss) and then promotes the error next. A more aggressive strategy would _preempt_ — forcefully dismiss the lowest-priority visible toast to make room. Both are valid; the demo uses the non-preemptive approach.
+## 05 — Toast Queue
 
-### Timer Mechanics
+Implement the visible/overflow queue with max-visible constraints.
 
-Each toast type has a different lifetime:
-- **Info**: 5 seconds — low urgency, auto-dismiss is fine
-- **Warning**: 8 seconds — gives the user more time to read and decide
-- **Error**: No auto-dismiss — the user must explicitly acknowledge the problem
+</section>
 
-Hovering over any toast pauses its timer. This seems like a small detail, but it's a critical UX pattern: if the user is reading a toast, dismissing it from under them is hostile. The timer bar at the bottom depletes visually, giving a spatial sense of remaining time. On hover, the bar pulses to signal "paused."
+<section id="step-6" className="recipe-step">
 
-### Permission Denial: The Cliff
+## 06 — Priority System
 
-The Push Permission tab demonstrates the most dangerous UX cliff in the notification system. When the user clicks "Block" on the browser's native permission dialog, `Notification.permission` returns `"denied"` — and there is no programmatic way to re-request. The permission is locked until the user manually navigates to browser settings.
+Add priority-based ordering so critical notifications jump the queue.
 
-This is why production systems use a **soft-ask pattern**: show a custom, non-browser dialog first ("Would you like to enable notifications?"). If the user says no to _your_ dialog, you haven't burned the browser prompt — you can ask again later. Only trigger the real `Notification.requestPermission()` after the user has already said yes to your custom prompt.
+</section>
 
-The demo simulates both paths. Try the Block path — notice how the "Send Test Push" button becomes permanently disabled. That's the reality your users face when you skip the soft-ask.
+<section id="step-7" className="recipe-step">
 
-## Phase 3: Advanced Scenarios
+## 07 — Toast Animations
 
-These scenarios go beyond the interactive demo, but they're the questions an interviewer would push toward:
+Choose animation strategies that avoid layout shift during stack reflow.
 
-**DeduplicationGuard** — The mystery block from Phase 1. When the page refreshes and the server re-sends pending notifications, the user shouldn't see toasts they've already dismissed. A _DeduplicationGuard_ tracks notification IDs in `sessionStorage` — every dismissed notification ID is stored, and on rehydration the system filters out any ID that's already in the dismissed set. The key design decisions are the storage scope (sessionStorage for per-tab, localStorage for cross-tab) and the eviction strategy (clear on session end, or cap at N entries with LRU).
+</section>
 
-**Batch aggregation** — When five "New comment" notifications arrive within two seconds, showing five separate toasts is overwhelming. A _BatchAggregator_ collapses them into a single toast: "5 new comments." The aggregation window (typically 2-3 seconds) and the grouping key (notification type + entity) are the design decisions.
+<section id="step-8" className="recipe-step">
 
-**Polling fallback** — Push API isn't available everywhere (some corporate proxies strip Service Worker registrations). The system needs a fallback: long-polling the server for new notifications on a timer. The notification center should be source-agnostic — whether a notification arrived via push or polling, the rendering path is identical.
+## 08 — Notification Center
 
-**Deleted entity** — The user clicks a notification about a comment, but the comment was deleted between when the notification was created and when the user clicked it. The notification center needs to handle 404s gracefully: show "This item is no longer available" rather than a broken page or a spinner that never resolves.
+Build a persistent inbox with read/unread state, filtering, and bulk actions.
 
-**Persistence across sessions** — Notifications must survive page refreshes. IndexedDB (not localStorage — notifications can be large and numerous) stores the queue. On page load, the system rehydrates from IndexedDB, filters out expired notifications, and re-establishes the push subscription if permission is still granted.
+</section>
 
-## Key Takeaways
+<section id="step-9" className="recipe-step">
 
-1. **Priority queues, not FIFO** — Any system with mixed-severity events needs priority-aware ordering. This applies to notification systems, task schedulers, and network request queues.
+## 09 — Push Permission
 
-2. **Permission is a one-shot resource** — Browser permission prompts (notifications, camera, location) are irrevocable on denial. Always use a soft-ask pattern to preserve the real prompt for users who've already signaled intent.
+Implement the soft-ask pattern to protect the one-shot browser permission prompt.
 
-3. **Timers are user-hostile without pause** — Any auto-dismissing UI element must pause its timer when the user interacts with it. The hover-to-pause pattern is the minimum viable kindness.
+</section>
 
-4. **Batch aggregation prevents notification fatigue** — Collapsing rapid-fire notifications into grouped summaries is the difference between a helpful system and an annoying one.
+<section id="step-10" className="recipe-step">
 
-5. **Design for the failure path** — The Block path, the deleted entity, the expired session — these are the scenarios that separate a toy demo from a production system. Always build and test the sad path first.
+## 10 — Push API Integration
+
+Walk through SW registration → push subscription → server storage → push receive.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Notification Grouping
+
+Collapse rapid-fire related notifications into grouped summaries.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Rate Limiting
+
+Throttle notification frequency to prevent queue flooding and user fatigue.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Preferences
+
+Build per-category opt-in/out controls and quiet hours.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Accessibility
+
+Ensure aria-live regions, focus management, and keyboard navigation for toasts.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Full System Stress Test
+
+Run a mixed-priority notification stream and observe the complete system in action.
+
+</section>

@@ -143,4 +143,5 @@ export type ArchScenarioPlayerConfig = {
 
 export type ArchitectureScenarioPlayerProps = {
   config: ArchScenarioPlayerConfig;
+  onScenarioChange?: (scenarioIdx: number) => void;
 };

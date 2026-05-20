@@ -274,8 +274,9 @@ export function MultiTabProvider({
     setTabs(prev => {
       const next = prev.filter(t => t.id !== id);
       // If removed tab was leader, clear leadership
-      if (prev.find(t => t.id === id)?.isLeader && next.length > 0) {
-        next[0] = { ...next[0]!, isLeader: true };
+      const first = next[0];
+      if (prev.find(t => t.id === id)?.isLeader && first) {
+        next[0] = { ...first, isLeader: true };
       }
       return next;
     });
@@ -323,7 +324,8 @@ export function MultiTabProvider({
       const bNum = parseInt(b.id.split("-")[1] ?? "0", 10);
       return bNum - aNum;
     });
-    const winner = sorted[0]!;
+    const winner = sorted[0];
+    if (!winner) return null;
     setTabs(prev => prev.map(t => ({ ...t, isLeader: t.id === winner.id })));
     return winner.id;
   }, [tabs]);
