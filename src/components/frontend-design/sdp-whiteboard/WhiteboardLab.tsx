@@ -22,6 +22,9 @@ import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenar
 import { WHITEBOARD_ARCH_CONFIG } from "./architecture-scenarios";
 import styles from "./WhiteboardLab.module.css";
 
+const CANVAS_W = 440;
+const CANVAS_H = 260;
+
 // ── Public API ──────────────────────────────────────────────────────
 
 export function WhiteboardLab({ activeStep }: { activeStep: number }) {
@@ -215,33 +218,60 @@ function ApiDesignView() {
         </button>
       </div>
       <div role="tabpanel" id={`wb-panel-${tab}`} aria-labelledby={`wb-tab-${tab}`}>
-        {tab === "endpoints" ? <EndpointCards /> : <TypeCards />}
+        {tab === "endpoints" ? <EndpointChallenge /> : <TypeCards />}
       </div>
     </div>
   );
 }
 
-function EndpointCards() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+const WB_METHODS = ["GET", "POST", "PUT", "DELETE", "WS"] as const;
+
+function EndpointChallenge() {
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
 
   return (
     <div className={styles.endpointList}>
       {API_ENDPOINTS.map((ep) => {
         const key = `${ep.method}-${ep.path}`;
-        const isOpen = expanded === key;
+        const guess = guesses[key];
+        const isRevealed = revealed.has(key);
+        const isCorrect = guess === ep.method;
+
         return (
-          <div key={key} className={styles.endpointCard}>
-            <button
-              type="button"
-              className={styles.endpointHeader}
-              onClick={() => setExpanded(isOpen ? null : key)}
-              aria-expanded={isOpen}
-            >
-              <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
-              <span className={styles.endpointPath}>{ep.path}</span>
-              <span className={styles.endpointChevron}>{isOpen ? "▾" : "▸"}</span>
-            </button>
-            {isOpen && (
+          <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
+            <div className={styles.endpointDesc}>{ep.description}</div>
+            <div className={styles.endpointPath}>{ep.path}</div>
+            {!isRevealed ? (
+              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.description}`}>
+                {WB_METHODS.map(m => (
+                  <button
+                    key={m} type="button" role="radio"
+                    aria-checked={guess === m}
+                    className={styles.methodOption}
+                    data-method={m}
+                    data-picked={guess === m ? "true" : undefined}
+                    onClick={() => {
+                      setGuesses(prev => ({ ...prev, [key]: m }));
+                      if (m === ep.method) {
+                        setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400);
+                      }
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.endpointHeader}>
+                <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
+                <span className={styles.endpointPath}>{ep.path}</span>
+              </div>
+            )}
+            {guess && !isCorrect && !isRevealed && (
+              <div className={styles.methodHint}>Not quite — consider the operation type.</div>
+            )}
+            {isRevealed && (
               <div className={styles.endpointDetail}>
                 <div className={styles.endpointDesc}>{ep.description}</div>
                 <div className={styles.endpointUsedBy}>Used by: {ep.usedBy}</div>
@@ -266,6 +296,12 @@ function EndpointCards() {
           </div>
         );
       })}
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Revealed</div>
+          <div className={styles.metricValue} data-status={revealed.size === API_ENDPOINTS.length ? "good" : undefined}>{revealed.size}/{API_ENDPOINTS.length}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -505,14 +541,14 @@ function CanvasRenderStep() {
         {renderMode === "canvas" ? (
           <canvas
             ref={canvasRef}
-            width={440}
-            height={260}
+            width={CANVAS_W}
+            height={CANVAS_H}
             className={styles.canvas}
             role="img"
             aria-label={`Canvas rendering ${allShapes.length} shapes`}
           />
         ) : (
-          <svg viewBox="0 0 440 260" className={styles.renderSvg}>
+          <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg}>
             {allShapes.map((shape) => {
               if (shape.kind === "rect") return (
                 <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
@@ -741,8 +777,8 @@ function PointerCaptureStep() {
       <div className={styles.canvasWrapper}>
         <canvas
           ref={canvasRef}
-          width={440}
-          height={260}
+          width={CANVAS_W}
+          height={CANVAS_H}
           className={styles.canvas}
           tabIndex={0}
           role="application"
@@ -951,8 +987,8 @@ function HitTestingStep() {
       <div className={styles.canvasWrapper}>
         <canvas
           ref={canvasRef}
-          width={440}
-          height={260}
+          width={CANVAS_W}
+          height={CANVAS_H}
           className={styles.canvas}
           tabIndex={0}
           data-tool="select"
@@ -1035,9 +1071,8 @@ function SelectionHandlesStep() {
     let { x, y, w, h } = orig;
     if (activeHandle.includes("w")) { x = orig.x + dx; w = orig.w - dx; }
     if (activeHandle.includes("e")) { w = orig.w + dx; }
-    if (activeHandle.includes("n") && activeHandle !== "ne" && activeHandle !== "nw" ? activeHandle === "n" : activeHandle.startsWith("n")) { y = orig.y + dy; h = orig.h - dy; }
-    if (activeHandle === "s" || activeHandle === "se" || activeHandle === "sw") { h = orig.h + dy; }
     if (activeHandle === "n" || activeHandle === "ne" || activeHandle === "nw") { y = orig.y + dy; h = orig.h - dy; }
+    if (activeHandle === "s" || activeHandle === "se" || activeHandle === "sw") { h = orig.h + dy; }
 
     w = Math.max(20, w); h = Math.max(20, h);
     setShapes(prev => prev.map(s => s.id === selected.id ? { ...s, x, y, w, h } : s));

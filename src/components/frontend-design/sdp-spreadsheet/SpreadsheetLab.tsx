@@ -50,6 +50,10 @@ export function SpreadsheetLab({ activeStep }: { activeStep: number }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+const COL_LABELS = ["A", "B", "C", "D"];
+const GRID_ROWS = 6;
+const GRID_COLS = 4;
+
 // Step indicator bar
 // ═══════════════════════════════════════════════════════════════════
 
@@ -155,27 +159,59 @@ function ApiDesignView() {
           Types
         </button>
       </div>
-      {tab === "endpoints" ? <EndpointCards /> : <TypeCards />}
+      {tab === "endpoints" ? <EndpointChallenge /> : <TypeCards />}
     </div>
   );
 }
 
-function EndpointCards() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+const METHODS = ["GET", "POST", "PUT", "DELETE"] as const;
+
+function EndpointChallenge() {
+  const [guesses, setGuesses] = useState<Record<string, string>>({});
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+
   return (
     <div className={styles.endpointList}>
       {API_ENDPOINTS.map((ep) => {
         const key = `${ep.method}-${ep.path}`;
-        const isOpen = expanded === key;
+        const guess = guesses[key];
+        const isRevealed = revealed.has(key);
+        const isCorrect = guess === ep.method;
+
         return (
-          <button key={key} type="button" className={styles.endpointCard} data-expanded={isOpen ? "true" : undefined} onClick={() => setExpanded(isOpen ? null : key)} aria-expanded={isOpen}>
-            <div className={styles.endpointHeader}>
-              <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
-              <span className={styles.endpointPath}>{ep.path}</span>
-              <span className={styles.endpointChevron}>{isOpen ? "▾" : "▸"}</span>
-            </div>
+          <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
             <div className={styles.endpointDesc}>{ep.description}</div>
-            {isOpen && (
+            <div className={styles.endpointPath}>{ep.path}</div>
+            {!isRevealed ? (
+              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.description}`}>
+                {METHODS.map(m => (
+                  <button
+                    key={m} type="button" role="radio"
+                    aria-checked={guess === m}
+                    className={styles.methodOption}
+                    data-method={m}
+                    data-picked={guess === m ? "true" : undefined}
+                    onClick={() => {
+                      setGuesses(prev => ({ ...prev, [key]: m }));
+                      if (m === ep.method) {
+                        setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400);
+                      }
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.endpointHeader}>
+                <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
+                <span className={styles.endpointPath}>{ep.path}</span>
+              </div>
+            )}
+            {guess && !isCorrect && !isRevealed && (
+              <div className={styles.methodHint}>Not quite — think about what this operation does to the resource.</div>
+            )}
+            {isRevealed && (
               <div className={styles.endpointDetail}>
                 {ep.params.length > 0 && (
                   <>
@@ -195,9 +231,15 @@ function EndpointCards() {
                 <div className={styles.responseType}>{ep.responseType}</div>
               </div>
             )}
-          </button>
+          </div>
         );
       })}
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Revealed</div>
+          <div className={styles.metricValue} data-status={revealed.size === API_ENDPOINTS.length ? "good" : undefined}>{revealed.size}/{API_ENDPOINTS.length}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -421,10 +463,6 @@ function MiniSpreadsheet() {
   const { cells, editingCell, startEditing, commitEdit, cancelEdit, selection, setSelection, affectedCells, isActive } = ctx;
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const ROWS = 6;
-  const COLS = 4;
-  const COL_LABELS = ["A", "B", "C", "D"];
-
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
     const target = e.target as HTMLElement;
     if (!target.matches('[role="gridcell"]') || editingCell) return;
@@ -436,11 +474,11 @@ function MiniSpreadsheet() {
     let nextR = row, nextC = col;
     switch (e.key) {
       case "ArrowUp": nextR = Math.max(0, row - 1); break;
-      case "ArrowDown": nextR = Math.min(ROWS - 1, row + 1); break;
+      case "ArrowDown": nextR = Math.min(GRID_ROWS - 1, row + 1); break;
       case "ArrowLeft": nextC = Math.max(0, col - 1); break;
-      case "ArrowRight": nextC = Math.min(COLS - 1, col + 1); break;
+      case "ArrowRight": nextC = Math.min(GRID_COLS - 1, col + 1); break;
       case "Home": nextC = 0; if (e.ctrlKey) nextR = 0; break;
-      case "End": nextC = COLS - 1; if (e.ctrlKey) nextR = ROWS - 1; break;
+      case "End": nextC = GRID_COLS - 1; if (e.ctrlKey) nextR = GRID_ROWS - 1; break;
       default: return;
     }
     e.preventDefault();
@@ -457,7 +495,7 @@ function MiniSpreadsheet() {
           <div key={col} className={styles.colHeader} role="columnheader">{col}</div>
         ))}
       </div>
-      {Array.from({ length: ROWS }, (_, r) => (
+      {Array.from({ length: GRID_ROWS }, (_, r) => (
         <div key={r} className={styles.sheetRow} role="row">
           <div className={styles.rowHeader} role="rowheader">{r + 1}</div>
           {COL_LABELS.map((col, c) => {
@@ -1146,7 +1184,6 @@ function FormatWidget() {
   const { cells, selection } = useSpreadsheet();
   const [format, setFormat] = useState<"text" | "number" | "percent" | "currency">("text");
 
-  const COL_LABELS = ["A", "B", "C", "D"];
   const targetId = selection ? `${COL_LABELS[selection.start.col] ?? "A"}${selection.start.row + 1}` : "A1";
   const cell = cells.get(targetId);
   const rawVal = cell?.computed ?? cell?.raw ?? "";

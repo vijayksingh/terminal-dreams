@@ -537,6 +537,8 @@ export function SpreadsheetProvider({
     setRenderCount(c => c + 1);
   }, []);
 
+  const isUndoing = useRef(false);
+
   const commitEdit = useCallback(
     (id: string, value: string) => {
       setCells((prev) => {
@@ -544,8 +546,7 @@ export function SpreadsheetProvider({
         const oldCell = next.get(id);
         const prevRaw = oldCell?.raw ?? "";
 
-        // Record undo
-        if (isActive("undoRedo")) {
+        if (!isUndoing.current && isActive("undoRedo")) {
           setUndoStack((s) => [...s, { cellId: id, prevRaw, newRaw: value }].slice(-20));
         }
 
@@ -642,7 +643,9 @@ export function SpreadsheetProvider({
     setUndoStack((prev) => {
       if (prev.length === 0) return prev;
       const op = prev[prev.length - 1]!;
+      isUndoing.current = true;
       commitEdit(op.cellId, op.prevRaw);
+      isUndoing.current = false;
       return prev.slice(0, -1);
     });
   }, [commitEdit]);
