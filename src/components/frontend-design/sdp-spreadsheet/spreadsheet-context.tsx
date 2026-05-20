@@ -7,6 +7,7 @@ import {
   useCallback,
   useMemo,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import type { StateEntry } from "@/components/recipe-lab/StateInspector";
@@ -215,6 +216,51 @@ function parseFormulaDeps(raw: string): string[] {
   return [...new Set(refs)];
 }
 
+function safeEval(expr: string): number {
+  let pos = 0;
+  const s = expr.replace(/\s/g, "");
+
+  function parseExpr(): number {
+    let result = parseTerm();
+    while (pos < s.length && (s[pos] === "+" || s[pos] === "-")) {
+      const op = s[pos]!;
+      pos++;
+      const right = parseTerm();
+      result = op === "+" ? result + right : result - right;
+    }
+    return result;
+  }
+
+  function parseTerm(): number {
+    let result = parseFactor();
+    while (pos < s.length && (s[pos] === "*" || s[pos] === "/")) {
+      const op = s[pos]!;
+      pos++;
+      const right = parseFactor();
+      result = op === "*" ? result * right : result / right;
+    }
+    return result;
+  }
+
+  function parseFactor(): number {
+    if (s[pos] === "(") {
+      pos++;
+      const result = parseExpr();
+      pos++; // skip )
+      return result;
+    }
+    if (s[pos] === "-") {
+      pos++;
+      return -parseFactor();
+    }
+    const start = pos;
+    while (pos < s.length && (s[pos]! >= "0" && s[pos]! <= "9" || s[pos] === ".")) pos++;
+    return parseFloat(s.slice(start, pos));
+  }
+
+  return parseExpr();
+}
+
 function evaluateFormula(
   raw: string,
   cells: Map<string, Cell>
@@ -261,10 +307,8 @@ function evaluateFormula(
   }
 
   try {
-    // Safe evaluation for simple arithmetic
     if (/^[\d\s+\-*/().]+$/.test(resolved)) {
-      const fn = new Function(`return (${resolved})`);
-      const result = fn();
+      const result = safeEval(resolved);
       if (typeof result === "number" && isFinite(result)) {
         return { value: result, error: null };
       }
@@ -488,6 +532,13 @@ export function SpreadsheetProvider({
     setEditingCell(null);
   }, []);
 
+  const renderCountRef = useRef(0);
+  const [renderCount, setRenderCount] = useState(0);
+  const bumpRenderCount = useCallback(() => {
+    renderCountRef.current += 1;
+    setRenderCount(renderCountRef.current);
+  }, []);
+
   const commitEdit = useCallback(
     (id: string, value: string) => {
       setCells((prev) => {
@@ -584,8 +635,9 @@ export function SpreadsheetProvider({
         return next;
       });
       setEditingCell(null);
+      bumpRenderCount();
     },
-    [isActive]
+    [isActive, bumpRenderCount]
   );
 
   const undo = useCallback(() => {
@@ -596,12 +648,6 @@ export function SpreadsheetProvider({
       return prev.slice(0, -1);
     });
   }, [commitEdit]);
-
-  // Render count tracking
-  const [renderCount, setRenderCount] = useState(0);
-  useEffect(() => {
-    setRenderCount((c) => c + 1);
-  });
 
   const cellsInDom = useMemo(() => {
     if (isActive("virtualGrid")) {

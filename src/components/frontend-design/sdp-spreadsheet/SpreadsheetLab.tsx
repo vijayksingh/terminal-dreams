@@ -821,8 +821,43 @@ function PropagationWidget() {
 }
 
 function SelectionWidget() {
-  const { selection, setSelection } = useSpreadsheet();
   const [mode, setMode] = useState<"single" | "range" | "multi">("single");
+  const GRID_ROWS = 5;
+  const GRID_COLS = 4;
+  const [anchor, setAnchor] = useState<{r: number; c: number} | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const cellKey = (r: number, c: number) => `${r}-${c}`;
+
+  const handleClick = (r: number, c: number, e: React.MouseEvent) => {
+    const key = cellKey(r, c);
+    if (mode === "single") {
+      setSelected(new Set([key]));
+      setAnchor({ r, c });
+    } else if (mode === "range") {
+      if (!anchor || !e.shiftKey) {
+        setSelected(new Set([key]));
+        setAnchor({ r, c });
+      } else {
+        const newSet = new Set<string>();
+        const minR = Math.min(anchor.r, r);
+        const maxR = Math.max(anchor.r, r);
+        const minC = Math.min(anchor.c, c);
+        const maxC = Math.max(anchor.c, c);
+        for (let ri = minR; ri <= maxR; ri++) {
+          for (let ci = minC; ci <= maxC; ci++) {
+            newSet.add(cellKey(ri, ci));
+          }
+        }
+        setSelected(newSet);
+      }
+    } else {
+      const newSet = new Set(selected);
+      if (newSet.has(key)) newSet.delete(key);
+      else newSet.add(key);
+      setSelected(newSet);
+    }
+  };
 
   return (
     <div className={styles.widgetPanel}>
@@ -831,16 +866,51 @@ function SelectionWidget() {
         {(["single", "range", "multi"] as const).map(m => (
           <button key={m} type="button" role="radio" aria-checked={mode === m}
             className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
-            onClick={() => setMode(m)}>
+            onClick={() => { setMode(m); setSelected(new Set()); setAnchor(null); }}>
             <span className={styles.strategyName}>{m}</span>
+            <span className={styles.strategyDesc}>
+              {m === "single" ? "Click to select one cell" : m === "range" ? "Click + Shift-click for range" : "Cmd/Ctrl-click to toggle cells"}
+            </span>
           </button>
         ))}
       </div>
-      <div className={styles.selectionDemo}>
-        <div className={styles.selectionInfo}>
-          {mode === "single" && "Click → select one cell. The simplest model."}
-          {mode === "range" && "Click + Shift-click → anchor + cursor → rectangular range. The range recomputes from the fixed anchor."}
-          {mode === "multi" && "Ctrl/Cmd-click → toggle individual cells. Ctrl-drag → add ranges. Disjoint selections are arrays of ranges."}
+      <div className={styles.selectionGrid} role="grid" aria-label="Selection demo grid">
+        {Array.from({ length: GRID_ROWS }, (_, r) => (
+          <div key={r} className={styles.selectionRow} role="row">
+            {Array.from({ length: GRID_COLS }, (_, c) => {
+              const key = cellKey(r, c);
+              const isSelected = selected.has(key);
+              const isAnchor = anchor?.r === r && anchor?.c === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  role="gridcell"
+                  className={styles.selectionCell}
+                  data-selected={isSelected ? "true" : undefined}
+                  data-anchor={isAnchor ? "true" : undefined}
+                  onClick={(e) => handleClick(r, c, e)}
+                  aria-label={`${String.fromCharCode(65 + c)}${r + 1}${isSelected ? " selected" : ""}`}
+                >
+                  {String.fromCharCode(65 + c)}{r + 1}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Selected</div>
+          <div className={styles.metricValue}>{selected.size}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Mode</div>
+          <div className={styles.metricValue}>{mode}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Anchor</div>
+          <div className={styles.metricValue}>{anchor ? `${String.fromCharCode(65 + anchor.c)}${anchor.r + 1}` : "—"}</div>
         </div>
       </div>
     </div>
@@ -992,30 +1062,123 @@ function ClipboardWidget() {
 }
 
 function PerformanceWidget() {
-  const [naive, setNaive] = useState(true);
-  const deps = 3;
-  const evaluations = naive ? deps : 1;
+  const [mode, setMode] = useState<"naive" | "batched">("naive");
+  const [step, setStep] = useState(0);
+  const [running, setRunning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const naiveSteps = [
+    { active: ["A1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "A1 changed" },
+    { active: ["B1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 0 }, label: "B1 recalcs (dep of A1)" },
+    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 1 }, label: "E1 recalcs (dep of B1) — eval #1" },
+    { active: ["C1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 1 }, label: "C1 recalcs (dep of A1)" },
+    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 2 }, label: "E1 recalcs AGAIN (dep of C1) — eval #2" },
+    { active: ["D1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 2 }, label: "D1 recalcs (dep of A1)" },
+    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 3 }, label: "E1 recalcs AGAIN (dep of D1) — eval #3!" },
+  ];
+
+  const batchedSteps = [
+    { active: ["A1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "A1 changed → dirty-mark subgraph" },
+    { active: ["B1", "C1", "D1", "E1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "All dependents marked dirty" },
+    { active: ["B1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 0 }, label: "Topo order: eval B1" },
+    { active: ["C1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 0 }, label: "Topo order: eval C1" },
+    { active: ["D1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 0 }, label: "Topo order: eval D1" },
+    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 1 }, label: "Topo order: eval E1 — just once!" },
+  ];
+
+  const steps = mode === "naive" ? naiveSteps : batchedSteps;
+  const currentStep = steps[Math.min(step, steps.length - 1)]!;
+
+  const runAnimation = useCallback(() => {
+    setStep(0);
+    setRunning(true);
+    let s = 0;
+    const tick = () => {
+      s++;
+      if (s < steps.length) {
+        setStep(s);
+        timerRef.current = setTimeout(tick, 600);
+      } else {
+        setRunning(false);
+      }
+    };
+    timerRef.current = setTimeout(tick, 600);
+  }, [steps.length]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  const cells = ["A1", "B1", "C1", "D1", "E1"];
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Batch recalculation</div>
-      <div className={styles.toggleRow}>
-        <span className={styles.toggleLabel}>Naive propagation</span>
-        <button type="button" className={styles.toggleButton} data-on={naive ? "true" : undefined} onClick={() => setNaive(!naive)} aria-pressed={naive}>
-          <span className={styles.toggleKnob} />
-        </button>
+      <div className={styles.strategyGroup} role="radiogroup" aria-label="Propagation mode">
+        {(["naive", "batched"] as const).map(m => (
+          <button key={m} type="button" role="radio" aria-checked={mode === m}
+            className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
+            onClick={() => { setMode(m); setStep(0); setRunning(false); if (timerRef.current) clearTimeout(timerRef.current); }}>
+            <span className={styles.strategyName}>{m}</span>
+            <span className={styles.strategyDesc}>
+              {m === "naive" ? "Propagate on each dep change" : "Dirty-mark, then topo-sort eval"}
+            </span>
+          </button>
+        ))}
       </div>
-      <div className={styles.perfDemo}>
-        <div className={styles.perfScenario}>A1 → B1, C1, D1 → E1</div>
-        <div className={styles.perfResult}>
-          <span className={styles.statLabel}>E1 evaluations:</span>
-          <span className={styles.statValue} data-status={evaluations > 1 ? "warning" : "good"}>{evaluations}</span>
+      <div style={{ display: "flex", gap: "var(--space-1)", padding: "var(--space-2) 0" }}>
+        {cells.map(cell => {
+          const isActive = currentStep.active.includes(cell);
+          const evals = currentStep.evalCount[cell as keyof typeof currentStep.evalCount] ?? 0;
+          return (
+            <div key={cell} style={{
+              flex: 1,
+              textAlign: "center",
+              padding: "var(--space-2)",
+              borderRadius: "var(--radius-1)",
+              background: isActive
+                ? "color-mix(in srgb, var(--color-accent) 25%, transparent)"
+                : evals > 0
+                  ? "var(--color-surface)"
+                  : "transparent",
+              transition: "background 300ms ease",
+            }}>
+              <div style={{ fontSize: "0.75rem", fontWeight: 800 }}>{cell}</div>
+              <div style={{
+                fontSize: "0.85rem",
+                fontWeight: 800,
+                color: evals > 1 ? "var(--color-error)" : evals > 0 ? "var(--color-success)" : "var(--color-muted)",
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                {evals > 0 ? `×${evals}` : "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className={styles.stepMessage}>{currentStep.label}</div>
+      <button
+        type="button"
+        className={styles.undoButton}
+        onClick={runAnimation}
+        disabled={running}
+        style={{ width: "100%" }}
+      >
+        {running ? "Running..." : "▶ Run propagation"}
+      </button>
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>E1 evals</div>
+          <div className={styles.metricValue} data-status={(currentStep.evalCount.E1 ?? 0) > 1 ? "bad" : "good"}>
+            {currentStep.evalCount.E1 ?? 0}
+          </div>
         </div>
-      </div>
-      <div className={styles.widgetNote}>
-        {naive
-          ? "Naive: each dependency triggers E1 independently → 3 redundant evaluations. Toggle off to see batched mode."
-          : "Batched: dirty-mark the entire subgraph first, then evaluate in topological order. E1 runs once."}
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Total evals</div>
+          <div className={styles.metricValue}>
+            {Object.values(currentStep.evalCount).reduce((a, b) => a + b, 0)}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1023,6 +1186,55 @@ function PerformanceWidget() {
 
 function CollaborationWidget() {
   const [strategy, setStrategy] = useState<"lww" | "ot" | "crdt">("lww");
+  const [step, setStep] = useState(0);
+  const [running, setRunning] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  type TimelineStep = { alice: string; bob: string; server: string; result: string; lost?: boolean };
+
+  const timelines: Record<string, TimelineStep[]> = {
+    lww: [
+      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
+      { alice: "sends A1=10 (t=1)", bob: "—", server: "A1=10", result: "10" },
+      { alice: "—", bob: "sends A1=20 (t=2)", server: "A1=20", result: "20" },
+      { alice: "receives A1=20", bob: "✓", server: "A1=20", result: "20", lost: true },
+    ],
+    ot: [
+      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
+      { alice: "sends op(A1, 10)", bob: "sends op(A1, 20)", server: "queue", result: "?" },
+      { alice: "—", bob: "—", server: "transforms: 10 → 20", result: "20" },
+      { alice: "receives transform", bob: "receives transform", server: "canonical", result: "20" },
+    ],
+    crdt: [
+      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
+      { alice: "lww(A1, 10, t=1, alice)", bob: "lww(A1, 20, t=2, bob)", server: "—", result: "?" },
+      { alice: "merges bob's op", bob: "merges alice's op", server: "no server needed", result: "?" },
+      { alice: "A1=20 (t=2 wins)", bob: "A1=20 (t=2 wins)", server: "converged", result: "20" },
+    ],
+  };
+
+  const timeline = timelines[strategy]!;
+  const currentStep = timeline[Math.min(step, timeline.length - 1)]!;
+
+  const runAnimation = useCallback(() => {
+    setStep(0);
+    setRunning(true);
+    let s = 0;
+    const tick = () => {
+      s++;
+      if (s < timeline.length) {
+        setStep(s);
+        timerRef.current = setTimeout(tick, 900);
+      } else {
+        setRunning(false);
+      }
+    };
+    timerRef.current = setTimeout(tick, 900);
+  }, [timeline.length]);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   return (
     <div className={styles.widgetPanel}>
@@ -1031,22 +1243,47 @@ function CollaborationWidget() {
         {(["lww", "ot", "crdt"] as const).map(s => (
           <button key={s} type="button" role="radio" aria-checked={strategy === s}
             className={styles.strategyOption} data-active={strategy === s ? "true" : undefined}
-            onClick={() => setStrategy(s)}>
+            onClick={() => { setStrategy(s); setStep(0); setRunning(false); if (timerRef.current) clearTimeout(timerRef.current); }}>
             <span className={styles.strategyName}>{s === "lww" ? "LWW" : s.toUpperCase()}</span>
+            <span className={styles.strategyDesc}>
+              {s === "lww" ? "Last writer wins" : s === "ot" ? "Server transforms" : "Convergent replicas"}
+            </span>
           </button>
         ))}
       </div>
-      <div className={styles.collabDemo}>
-        <div className={styles.collabScenario}>
-          <div className={styles.collabUser}>Alice sets A1 = 10</div>
-          <div className={styles.collabUser}>Bob sets A1 = 20</div>
-        </div>
-        <div className={styles.collabResult}>
-          {strategy === "lww" && "Result: whichever edit the server processes last wins. One edit is silently lost."}
-          {strategy === "ot" && "Result: server transforms operations sequentially. Last operation wins, but both users see the resolution."}
-          {strategy === "crdt" && "Result: per-cell LWW register resolves deterministically by logical timestamp. Both clients converge."}
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", padding: "var(--space-2) 0" }}>
+        {["alice", "bob", "server", "result"].map(row => (
+          <div key={row} style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", fontSize: "0.65rem" }}>
+            <span style={{
+              minWidth: 48,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              color: row === "alice" ? "var(--diagram-layer-1)" : row === "bob" ? "var(--diagram-layer-4)" : row === "server" ? "var(--color-muted)" : "var(--color-accent)",
+            }}>{row}</span>
+            <span style={{
+              flex: 1,
+              padding: "var(--space-1) var(--space-2)",
+              borderRadius: "var(--radius-1)",
+              background: currentStep[row as keyof TimelineStep] !== "—" && currentStep[row as keyof TimelineStep] !== "?" ? "var(--color-surface)" : "transparent",
+              color: row === "result" && currentStep.lost ? "var(--color-error)" : "var(--color-text)",
+              fontWeight: 600,
+              transition: "background 300ms ease",
+            }}>
+              {currentStep[row as keyof TimelineStep]}
+              {row === "result" && currentStep.lost && " (alice's edit lost)"}
+            </span>
+          </div>
+        ))}
       </div>
+      <button
+        type="button"
+        className={styles.undoButton}
+        onClick={runAnimation}
+        disabled={running}
+        style={{ width: "100%" }}
+      >
+        {running ? "Simulating..." : "▶ Simulate conflict"}
+      </button>
     </div>
   );
 }
