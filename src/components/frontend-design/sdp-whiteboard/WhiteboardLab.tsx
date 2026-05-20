@@ -414,14 +414,20 @@ function WbScopeBadge({ step, expanded, onToggle }: { step: number; expanded: bo
 function StepContent({ step }: { step: number }) {
   const { scopeEnabled } = useWhiteboard();
   const [bonusExpanded, setBonusExpanded] = useState(false);
+  const [predictionAnswered, setPredictionAnswered] = useState(false);
   const scopeId = WB_STEP_SCOPE_MAP[step];
   const isOutOfScope = scopeId && !scopeEnabled[scopeId];
+  const hasPrediction = !!STEP_PREDICTIONS[step];
+  const showWidget = (!isOutOfScope || bonusExpanded) && (!hasPrediction || predictionAnswered);
 
   return (
     <div className={styles.stepContentStack}>
       <WbScopeBadge step={step} expanded={bonusExpanded} onToggle={() => setBonusExpanded(v => !v)} />
-      <PredictionChallenge step={step} />
-      {(!isOutOfScope || bonusExpanded) && <StepInteractive step={step} />}
+      <PredictionChallenge step={step} onAnswer={() => setPredictionAnswered(true)} />
+      {showWidget && <StepInteractive step={step} />}
+      {hasPrediction && !predictionAnswered && (
+        <div className={styles.widgetNote}>Answer the prediction above to unlock the interactive demo.</div>
+      )}
     </div>
   );
 }
@@ -448,7 +454,7 @@ function StepInteractive({ step }: { step: number }) {
 // Prediction challenge
 // ═══════════════════════════════════════════════════════════════════
 
-function PredictionChallenge({ step }: { step: number }) {
+function PredictionChallenge({ step, onAnswer }: { step: number; onAnswer: () => void }) {
   const pred = STEP_PREDICTIONS[step];
   const [picked, setPicked] = useState<number | null>(null);
 
@@ -469,7 +475,7 @@ function PredictionChallenge({ step }: { step: number }) {
             disabled={isAnswered}
             data-correct={isAnswered && i === pred.correctIndex ? "true" : undefined}
             data-wrong={isAnswered && i === picked && !isCorrect ? "true" : undefined}
-            onClick={() => setPicked(i)}
+            onClick={() => { setPicked(i); onAnswer(); }}
           >
             {opt}
           </button>
@@ -836,6 +842,7 @@ function PointerCaptureStep() {
 function ShapeModelStep() {
   const { shapes, setShapes, pushUndo } = useWhiteboard();
   const [addKind, setAddKind] = useState<"rect" | "ellipse">("rect");
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const addShape = () => {
     const x = 40 + Math.random() * 280;
@@ -861,14 +868,33 @@ function ShapeModelStep() {
     pushUndo({ type: "add", shapeId: newShape.id, after: newShape });
   };
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const cs = getComputedStyle(canvas);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
+    for (const shape of shapes) drawCanvasShape(ctx, shape, cs);
+  }, [shapes]);
+
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Shape Object Model</div>
         <div className={styles.widgetNote}>
-          Each shape is a data object: id, kind, bounding box (x, y, w, h), rotation, fill, stroke, z-index. This is what makes selection, transforms, undo, and serialization possible — pixels alone cannot be selected or moved.
+          Each shape is a data object: id, kind, bounding box (x, y, w, h), rotation, fill, stroke, z-index. Add shapes and watch both the canvas preview and the data list update — this dual representation is what makes selection, transforms, undo, and serialization possible.
         </div>
       </div>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_W}
+        height={CANVAS_H}
+        className={styles.canvas}
+        role="img"
+        aria-label={`Shape preview: ${shapes.length} shapes`}
+      />
       <div className={styles.toolbar}>
         <button type="button" className={styles.toolButton} data-active={addKind === "rect" ? "true" : undefined} onClick={() => setAddKind("rect")}>
           ◻ Rect
@@ -1188,6 +1214,9 @@ const CANVAS_LAYERS = [
   { id: "cursors", label: "Cursor Canvas", colorVar: "--diagram-layer-4" },
 ];
 
+const LAYER_CANVAS_W = 300;
+const LAYER_CANVAS_H = 140;
+
 function LayerSeparationStep() {
   const shapeCanvasRef = useRef<HTMLCanvasElement>(null);
   const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1250,11 +1279,19 @@ function LayerSeparationStep() {
     drawCursorLayer();
   }, [drawShapeLayer, drawCursorLayer]);
 
-  const onPointerDown = (e: React.PointerEvent) => {
+  const getScaledPos = (e: React.PointerEvent): { x: number; y: number } => {
     const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
+    if (!rect) return { x: 0, y: 0 };
+    const scaleX = LAYER_CANVAS_W / rect.width;
+    const scaleY = LAYER_CANVAS_H / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const { x: px, y: py } = getScaledPos(e);
     const s = shapePos.current;
     if (px >= s.x && px <= s.x + s.w && py >= s.y && py <= s.y + s.h) {
       setIsDragging(true);
@@ -1264,10 +1301,7 @@ function LayerSeparationStep() {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
+    const { x: px, y: py } = getScaledPos(e);
 
     cursorPos.current = { x: px, y: py };
     drawCursorLayer();
@@ -1294,8 +1328,8 @@ function LayerSeparationStep() {
       </div>
       <div ref={containerRef} className={styles.dualCanvasDemo}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}>
-        <canvas ref={shapeCanvasRef} width={300} height={140} className={styles.layerCanvas} />
-        <canvas ref={cursorCanvasRef} width={300} height={140} className={styles.layerCanvas} />
+        <canvas ref={shapeCanvasRef} width={LAYER_CANVAS_W} height={LAYER_CANVAS_H} className={styles.layerCanvas} />
+        <canvas ref={cursorCanvasRef} width={LAYER_CANVAS_W} height={LAYER_CANVAS_H} className={styles.layerCanvas} />
       </div>
       <div className={styles.layerDiagram}>
         <div className={styles.layerRow}>

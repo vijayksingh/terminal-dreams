@@ -336,6 +336,28 @@
   display: flex;
   gap: var(--space-1);
   font-size: 0.625rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  color: var(--color-text);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-1);
+  text-align: left;
+  min-height: 28px;
+  align-items: center;
+  transition: background 200ms ease;
+}
+
+.typeFieldRow:hover { background: var(--color-surface-2); }
+
+.typeFieldRow[data-revealed="true"] {
+  cursor: default;
+}
+
+.typeFieldRow:not([data-revealed="true"]) .typeFieldType {
+  color: var(--color-muted);
+  font-style: italic;
 }
 
 .typeFieldName { font-weight: 700; }
