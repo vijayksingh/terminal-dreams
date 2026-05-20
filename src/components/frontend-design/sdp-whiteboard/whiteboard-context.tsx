@@ -317,17 +317,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     correctIndex: 0,
     explanation: "Without pointer capture, pointermove events stop firing when the pointer exits the canvas element. The user drags outside the canvas boundary (very common during fast drawing) and the stroke ends abruptly. setPointerCapture() routes ALL subsequent pointer events to the canvas until pointerup, regardless of where the pointer goes.",
   },
-  6: {
-    question: "Why store shapes as objects with bounding boxes instead of just raw pixel data?",
-    options: [
-      "Objects can be selected, moved, resized, and serialized — pixels cannot",
-      "Object storage uses less memory than pixel storage",
-      "Pixel data cannot be rendered on canvas",
-      "Object storage is faster to render than pixel data",
-    ],
-    correctIndex: 0,
-    explanation: "A vector shape model enables selection (hit-test the bounding box), transforms (modify x/y/w/h), undo (store operation on shape), and sync (send shape objects, not pixel diffs). Pixel data is a dead end — you can't select 'that rectangle' from a flat bitmap.",
-  },
+  // Step 6 omitted — shape model widget teaches through building
   7: {
     question: "With 500 shapes on canvas, what's the complexity of naive hit-testing on every pointermove?",
     options: [
@@ -339,17 +329,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     correctIndex: 0,
     explanation: "Naive hit testing iterates all shapes in reverse z-order and checks if the point is inside each bounding box. At 500 shapes × 60 pointermove events/sec, that's 30,000 bounding-box checks per second. Acceptable for 500 shapes, but at 10,000+ shapes you need spatial indexing (R-tree) for O(log n) per query.",
   },
-  8: {
-    question: "How many resize handles does a selected rectangle need, and why?",
-    options: [
-      "8 handles: 4 corners + 4 edge midpoints, each constraining different axes",
-      "4 handles: one per corner is sufficient for all resize operations",
-      "2 handles: top-left and bottom-right define the full rectangle",
-      "1 handle: a single drag handle with modifier keys for different modes",
-    ],
-    correctIndex: 0,
-    explanation: "8 handles give precise control: corners resize both dimensions, edge midpoints resize only one dimension (top/bottom = height only, left/right = width only). A rotation handle (usually offset above the top edge) adds a 9th control point. Each handle has a different cursor (nw-resize, n-resize, etc.) to communicate its constraint.",
-  },
+  // Step 8 omitted — selection handles widget teaches through drag interaction
   9: {
     question: "Why separate the canvas into multiple layers (grid, shapes, selection, cursors)?",
     options: [
@@ -383,6 +363,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     correctIndex: 0,
     explanation: "Local undo reverses the current user's last operation regardless of what others have done since. If Alice draws a circle, then Bob draws a square, Alice's Ctrl+Z removes her circle — not Bob's square. Global undo in a multi-user context leads to 'who undid my work?' confusion. The command pattern stores operations per-user with actor IDs.",
   },
+  // Step 11 kept — undo question is pedagogically valuable (local vs global)
   12: {
     question: "Why are CRDTs preferred over OT for whiteboard sync?",
     options: [
@@ -416,17 +397,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     correctIndex: 0,
     explanation: "Below ~500 shapes, linear scan is fast enough (< 1ms per hit test). The R-tree has insertion/deletion overhead and memory cost for internal nodes. At 1,000+ shapes with 60 hit tests/sec (pointermove), linear scan costs ~2-3ms per frame while R-tree stays under 0.1ms. The crossover point depends on shape complexity, but 1,000 is a reasonable rule of thumb.",
   },
-  15: {
-    question: "How do you make a canvas-based whiteboard accessible to screen readers?",
-    options: [
-      "Maintain a parallel hidden DOM structure that mirrors the canvas shapes",
-      "Canvas elements are inherently accessible through ARIA attributes",
-      "Use alt text on the canvas element to describe all shapes",
-      "Screen readers can read canvas pixels directly using OCR",
-    ],
-    correctIndex: 0,
-    explanation: "Canvas is an opaque bitmap to assistive technology. The solution: maintain a hidden DOM tree with role='img' elements for each shape, positioned absolutely to match canvas coordinates. When a shape is added/moved/deleted, update the parallel DOM. Use aria-live regions to announce changes ('Rectangle added at position 100, 200'). Keyboard users navigate shapes with Tab, and use arrow keys to move them.",
-  },
+  // Step 15 omitted — accessible canvas widget teaches through keyboard navigation
 };
 
 // ── Context ────────────────────────────────────────────────────────

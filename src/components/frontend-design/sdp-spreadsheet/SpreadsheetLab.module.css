@@ -206,7 +206,7 @@
 }
 
 .endpointCard[data-revealed="true"] {
-  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
 }
 
 .endpointHeader {
@@ -453,15 +453,14 @@
   color: var(--color-text);
   background: var(--color-surface);
   border: none;
-  border-left: 3px solid transparent;
   border-radius: var(--radius-1);
   cursor: pointer;
-  transition: border-color 200ms ease, background 200ms ease;
+  transition: background 200ms ease, font-weight 200ms ease;
 }
 
 .predictionOption:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
-  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  font-weight: 800;
 }
 
 .predictionOption:focus-visible {
@@ -470,16 +469,15 @@
 }
 
 .predictionOption[data-correct="true"] {
-  border-left-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-success) 18%, var(--color-surface));
+  font-weight: 800;
 }
 
 .predictionOption[data-wrong="true"] {
-  border-left-color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-error) 18%, var(--color-surface));
 }
 
-.predictionOption:disabled { cursor: default; opacity: 0.7; }
+.predictionOption:disabled { cursor: default; opacity: 0.75; }
 
 .predictionResult {
   font-size: 0.7rem;
@@ -577,7 +575,8 @@
 }
 .strategyOption[data-active="true"] {
   background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
-  box-shadow: inset 3px 0 0 var(--color-accent);
+  font-weight: 800;
+  color: var(--color-accent);
 }
 .strategyOption:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -840,7 +839,8 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .dagPrompt[data-done="true"] {
-  opacity: 0.55;
+  opacity: 0.7;
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
 }
 
 .dagPrompt[data-current="true"] {
@@ -962,29 +962,6 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .statValue[data-status="good"] { color: var(--color-success); }
 .statValue[data-status="warning"] { color: var(--color-warning); }
 
-/* ── Cell inspector ─────────────────────────────────────────────── */
-
-.cellInspector {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cellInspectRow {
-  display: grid;
-  grid-template-columns: 32px 1fr 1fr;
-  gap: var(--space-2);
-  font-size: 0.7rem;
-  padding: 4px;
-  background: var(--color-surface);
-  border-radius: var(--radius-1);
-}
-
-.cellInspectId { font-weight: 800; color: var(--color-accent); }
-.cellInspectRaw { color: var(--color-muted); }
-.cellInspectComputed { font-weight: 700; }
-.cellInspectError { color: var(--color-error); }
-
 /* ── Formula tokenizer ──────────────────────────────────────────── */
 
 .formulaInput {
@@ -1019,13 +996,13 @@ button.scopeBadge[data-in-scope="false"]:hover {
   padding: 4px 8px;
   border-radius: var(--radius-1);
   background: var(--color-surface);
-  border-left: 3px solid var(--color-border);
+  border-top: 3px solid var(--color-border);
 }
 
-.token[data-type="ref"] { border-left-color: var(--diagram-layer-2); }
-.token[data-type="op"] { border-left-color: var(--diagram-layer-4); }
-.token[data-type="lit"] { border-left-color: var(--diagram-layer-1); }
-.token[data-type="fn"] { border-left-color: var(--diagram-layer-5); }
+.token[data-type="ref"] { border-top-color: var(--diagram-layer-2); background: color-mix(in srgb, var(--diagram-layer-2) 8%, var(--color-surface)); }
+.token[data-type="op"] { border-top-color: var(--diagram-layer-4); background: color-mix(in srgb, var(--diagram-layer-4) 8%, var(--color-surface)); }
+.token[data-type="lit"] { border-top-color: var(--diagram-layer-1); background: color-mix(in srgb, var(--diagram-layer-1) 8%, var(--color-surface)); }
+.token[data-type="fn"] { border-top-color: var(--diagram-layer-5); background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-surface)); }
 
 .tokenType {
   font-size: 0.6rem;

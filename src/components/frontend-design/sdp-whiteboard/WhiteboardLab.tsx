@@ -13,7 +13,6 @@ import {
   DATA_MODELS,
   STEP_PREDICTIONS,
   type Shape,
-  type DrawTool,
   type SyncStrategy,
   type TypeDef,
   type Point,
@@ -273,7 +272,6 @@ function EndpointChallenge() {
             ) : (
               <div className={styles.endpointHeader}>
                 <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
-                <span className={styles.endpointPath}>{ep.path}</span>
               </div>
             )}
             {guess && !isCorrect && !isRevealed && (
@@ -613,10 +611,10 @@ function CanvasRenderStep() {
           <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg}>
             {allShapes.map((shape) => {
               if (shape.kind === "rect") return (
-                <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
+                <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.5} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
               );
               if (shape.kind === "ellipse") return (
-                <ellipse key={shape.id} cx={shape.x + shape.w / 2} cy={shape.y + shape.h / 2} rx={shape.w / 2} ry={shape.h / 2} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
+                <ellipse key={shape.id} cx={shape.x + shape.w / 2} cy={shape.y + shape.h / 2} rx={shape.w / 2} ry={shape.h / 2} fill={shape.fill} fillOpacity={0.5} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
               );
               return null;
             })}
@@ -672,7 +670,7 @@ function drawCanvasShape(ctx: CanvasRenderingContext2D, shape: Shape, cs: CSSSty
 
   if (shape.kind === "rect") {
     ctx.fillStyle = fillColor;
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.5;
     ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
     ctx.globalAlpha = 1;
     ctx.strokeStyle = strokeColor;
@@ -682,7 +680,7 @@ function drawCanvasShape(ctx: CanvasRenderingContext2D, shape: Shape, cs: CSSSty
     ctx.beginPath();
     ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
     ctx.fillStyle = fillColor;
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.5;
     ctx.fill();
     ctx.globalAlpha = 1;
     ctx.strokeStyle = strokeColor;
@@ -977,7 +975,7 @@ function HitTestingStep() {
 
       if (shape.kind === "rect") {
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.5;
         ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -987,7 +985,7 @@ function HitTestingStep() {
         ctx.beginPath();
         ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.5;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -1189,9 +1187,9 @@ function SelectionHandlesStep() {
           >
             {/* Shape */}
             {selected.kind === "ellipse" ? (
-              <ellipse cx={selected.x + selected.w / 2} cy={selected.y + selected.h / 2} rx={selected.w / 2} ry={selected.h / 2} fill={selected.fill} fillOpacity={0.3} stroke={selected.stroke} strokeWidth={2} />
+              <ellipse cx={selected.x + selected.w / 2} cy={selected.y + selected.h / 2} rx={selected.w / 2} ry={selected.h / 2} fill={selected.fill} fillOpacity={0.5} stroke={selected.stroke} strokeWidth={2} />
             ) : (
-              <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill={selected.fill} fillOpacity={0.3} stroke={selected.stroke} strokeWidth={2} />
+              <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill={selected.fill} fillOpacity={0.5} stroke={selected.stroke} strokeWidth={2} />
             )}
             {/* Selection outline */}
             <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="4 4" />
@@ -1266,7 +1264,6 @@ function LayerSeparationStep() {
   const cursorPos = useRef({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
   const reducedMotion = usePrefersReducedMotion();
-  const rafRef = useRef<number>(0);
 
   const drawShapeLayer = useCallback(() => {
     const canvas = shapeCanvasRef.current;
