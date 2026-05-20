@@ -2006,7 +2006,7 @@ function SpatialIndexStep() {
         </div>
       </div>
       <RtreeVisualization shapeCount={shapeCount} depth={depth} queryPath={queryPath} />
-      <div className={styles.rtreeStats}>
+      <div className={styles.rtreeStats} aria-live="polite">
         <div className={styles.rtreeStat}>
           <span className={styles.rtreeStatLabel}>Linear scan</span>
           <span className={styles.rtreeStatValue} data-status={Number(linearMs) > 10 ? "warning" : "good"}>{linearMs}ms</span>

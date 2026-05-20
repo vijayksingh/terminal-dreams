@@ -904,7 +904,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .undoButton:hover { background: color-mix(in srgb, var(--color-accent) 16%, transparent); }
 .undoButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.undoButton:disabled { opacity: 0.3; cursor: default; }
+.undoButton:disabled { opacity: 0.5; cursor: default; }
 
 /* ── CRDT comparison ────────────────────────────────────────── */
 

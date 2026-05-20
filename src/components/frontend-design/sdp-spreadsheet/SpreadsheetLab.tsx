@@ -261,7 +261,7 @@ function EndpointChallenge() {
           </div>
         );
       })}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Revealed</div>
           <div className={styles.metricValue} data-status={revealed.size === API_ENDPOINTS.length ? "good" : undefined}>{revealed.size}/{API_ENDPOINTS.length}</div>
@@ -288,7 +288,7 @@ function TypeCards() {
       {DATA_MODELS.map((t) => (
         <TypeCard key={t.name} typeDef={t} revealed={revealed} onReveal={revealField} />
       ))}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Explored</div>
           <div className={styles.metricValue} data-status={revealed.size === totalFields ? "good" : undefined}>
@@ -1199,7 +1199,7 @@ function PropagationWidget() {
           Edit a cell that other cells depend on — try changing A1 or B2. The cascade path will appear here showing which cells recalculate and in what order.
         </div>
       )}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metric}>
           <div className={styles.metricValue} data-status={affectedCells.size > 0 ? "warning" : undefined}>{affectedCells.size}</div>
           <div className={styles.metricLabel}>Affected</div>
@@ -1574,7 +1574,7 @@ function UndoWidget() {
             </>
           )}
 
-          <div className={styles.metricsBar}>
+          <div className={styles.metricsBar} aria-live="polite">
             <div className={styles.metricCard}>
               <div className={styles.metricLabel}>Stack depth</div>
               <div className={styles.metricValue}>{undoStack.length}</div>
@@ -1760,7 +1760,7 @@ function PerformanceWidget() {
         <button type="button" className={styles.toolButton} disabled={!canNext} onClick={() => setStep(s => s + 1)} aria-label="Next step">▶</button>
         <button type="button" className={styles.toolButton} onClick={() => setStep(0)} aria-label="Reset">↺</button>
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>E1 evals</div>
           <div className={styles.metricValue} data-status={(currentStep.evalCount.E1 ?? 0) > 1 ? "bad" : "good"}>
