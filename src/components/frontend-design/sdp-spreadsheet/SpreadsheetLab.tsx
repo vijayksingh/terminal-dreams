@@ -953,6 +953,65 @@ function CellEditWidget() {
   );
 }
 
+type AstNode = { type: "op" | "ref" | "lit"; value: string; left?: AstNode; right?: AstNode };
+
+function parseAst(tokens: { type: string; value: string }[]): AstNode | null {
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const eat = () => tokens[pos++]!;
+
+  function parseAtom(): AstNode | null {
+    const t = peek();
+    if (!t) return null;
+    if (t.type === "ref" || t.type === "lit") { eat(); return { type: t.type as "ref" | "lit", value: t.value }; }
+    return null;
+  }
+
+  function parseMul(): AstNode | null {
+    let left = parseAtom();
+    if (!left) return null;
+    while (peek()?.type === "op" && (peek()!.value === "*" || peek()!.value === "/")) {
+      const op = eat();
+      const right = parseAtom();
+      if (!right) break;
+      left = { type: "op", value: op.value, left, right };
+    }
+    return left;
+  }
+
+  function parseAdd(): AstNode | null {
+    let left = parseMul();
+    if (!left) return null;
+    while (peek()?.type === "op" && (peek()!.value === "+" || peek()!.value === "-")) {
+      const op = eat();
+      const right = parseMul();
+      if (!right) break;
+      left = { type: "op", value: op.value, left, right };
+    }
+    return left;
+  }
+
+  return parseAdd();
+}
+
+function AstTree({ node, depth = 0 }: { node: AstNode; depth?: number }) {
+  const isRoot = depth === 0;
+  return (
+    <div className={styles.astNode} data-type={node.type} data-root={isRoot ? "true" : undefined}>
+      <span className={styles.astValue} data-type={node.type}>
+        {node.value}
+        {isRoot && <span className={styles.astRootTag}>root</span>}
+      </span>
+      {(node.left || node.right) && (
+        <div className={styles.astChildren}>
+          {node.left && <AstTree node={node.left} depth={depth + 1} />}
+          {node.right && <AstTree node={node.right} depth={depth + 1} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FormulaWidget() {
   const [formula, setFormula] = useState("=A1+B2*C3");
   const tokens = useMemo(() => {
@@ -980,9 +1039,11 @@ function FormulaWidget() {
     return result;
   }, [formula]);
 
+  const ast = useMemo(() => parseAst(tokens), [tokens]);
+
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Formula parsing — tokens</div>
+      <div className={styles.widgetTitle}>Formula parsing — tokens → AST</div>
       <input
         className={styles.formulaInput}
         value={formula}
@@ -998,8 +1059,15 @@ function FormulaWidget() {
           </span>
         ))}
       </div>
+      {ast && (
+        <div className={styles.astTreeContainer}>
+          <AstTree node={ast} />
+        </div>
+      )}
       <div className={styles.widgetNote}>
-        Edit the formula to see tokens update live. References (A1, B2) become dependency edges in the DAG. Operators define the AST structure.
+        {ast?.type === "op"
+          ? `Root is "${ast.value}" (${ast.value === "+" || ast.value === "-" ? "lowest" : "highest"} precedence). B2*C3 groups first, then adds A1.`
+          : "Edit the formula to see the AST update. The root node is always the last operation to evaluate."}
       </div>
     </div>
   );
@@ -1350,14 +1418,21 @@ function VirtualGridWidget() {
 }
 
 function FormatWidget() {
-  const { cells, selection } = useSpreadsheet();
+  const { cells, selection, startEditing, commitEdit } = useSpreadsheet();
   const [format, setFormat] = useState<"text" | "number" | "percent" | "currency">("text");
+  const [seeded, setSeeded] = useState(false);
 
-  const targetId = selection ? `${COL_LABELS[selection.start.col] ?? "A"}${selection.start.row + 1}` : "A1";
+  const targetId = selection ? `${COL_LABELS[selection.start.col] ?? "A"}${selection.start.row + 1}` : "C1";
   const cell = cells.get(targetId);
   const rawVal = cell?.computed ?? cell?.raw ?? "";
   const numVal = typeof rawVal === "number" ? rawVal : parseFloat(String(rawVal));
   const isNum = !isNaN(numVal);
+
+  const seedValue = () => {
+    startEditing("C1");
+    commitEdit("C1", "0.5");
+    setSeeded(true);
+  };
 
   const display = !isNum ? String(rawVal)
     : format === "percent" ? `${(numVal * 100).toFixed(0)}%`
@@ -1397,9 +1472,13 @@ function FormatWidget() {
           <span className={styles.pipelineValue} data-result="true">{display}</span>
         </div>
       </div>
+      {!seeded && !isNum && (
+        <button type="button" className={styles.actionButton} onClick={seedValue}>
+          Set C1 = 0.5 to start
+        </button>
+      )}
       <div className={styles.widgetNote}>
-        Click a cell in the grid above to select it. The pipeline shows how the stored value transforms through formatting — the raw data never changes.
-        {!isNum && cell?.raw ? " (Enter a number to see format options work)" : ""}
+        {isNum ? "Toggle formats above — same stored value (0.5), four different displays. The raw data never changes." : "Click the button or enter a number in any cell to see the format pipeline in action."}
       </div>
     </div>
   );
