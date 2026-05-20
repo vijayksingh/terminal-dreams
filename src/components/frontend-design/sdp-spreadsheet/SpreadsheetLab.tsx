@@ -322,7 +322,7 @@ function SheetEvolution() {
 // ── Metrics bar ────────────────────────────────────────────────────
 
 function MetricsBar() {
-  const { cells, cellsInDom, recalcCount, renderCount } = useSpreadsheet();
+  const { cells, cellsInDom, recalcCount } = useSpreadsheet();
   const formulaCount = useMemo(() => [...cells.values()].filter(c => c.formula).length, [cells]);
 
   return (
@@ -460,7 +460,7 @@ function StepControls() {
 
 function MiniSpreadsheet() {
   const ctx = useSpreadsheet();
-  const { cells, editingCell, startEditing, commitEdit, cancelEdit, selection, setSelection, affectedCells, isActive } = ctx;
+  const { cells, editingCell, startEditing, commitEdit, cancelEdit, affectedCells } = ctx;
   const gridRef = useRef<HTMLDivElement>(null);
 
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -718,21 +718,39 @@ const STEP_SCOPE_MAP: Record<number, string> = {
   15: "collaboration",
 };
 
-function ScopeBadge({ step }: { step: number }) {
+function ScopeBadge({ step, expanded, onToggle }: { step: number; expanded: boolean; onToggle: () => void }) {
   const { scopeEnabled } = useSpreadsheet();
   const scopeId = STEP_SCOPE_MAP[step];
   if (!scopeId) return null;
   const inScope = scopeEnabled.has(scopeId);
+  if (inScope) {
+    return (
+      <div className={styles.scopeBadge} data-in-scope="true">
+        ✓ In your scope
+      </div>
+    );
+  }
   return (
-    <div className={styles.scopeBadge} data-in-scope={inScope ? "true" : "false"}>
-      {inScope ? "✓ In your scope" : "Not in scope — bonus topic"}
-    </div>
+    <button
+      type="button"
+      className={styles.scopeBadge}
+      data-in-scope="false"
+      onClick={onToggle}
+      aria-expanded={expanded}
+    >
+      {expanded ? "▾ Bonus topic (collapse)" : "▸ Bonus topic — click to explore"}
+    </button>
   );
 }
 
 // ── Step widgets ──────────────────────────────────────────────────
 
 function StepWidget({ step }: { step: number }) {
+  const { scopeEnabled } = useSpreadsheet();
+  const [bonusExpanded, setBonusExpanded] = useState(false);
+  const scopeId = STEP_SCOPE_MAP[step];
+  const isOutOfScope = scopeId && !scopeEnabled.has(scopeId);
+
   const Widget = (() => {
     switch (step) {
       case 4: return GridWidget;
@@ -753,8 +771,8 @@ function StepWidget({ step }: { step: number }) {
   if (!Widget) return null;
   return (
     <>
-      <ScopeBadge step={step} />
-      <Widget />
+      <ScopeBadge step={step} expanded={bonusExpanded} onToggle={() => setBonusExpanded(v => !v)} />
+      {(!isOutOfScope || bonusExpanded) && <Widget />}
     </>
   );
 }
@@ -902,13 +920,78 @@ function FormulaWidget() {
   );
 }
 
+const DAG_PROMPTS = [
+  { cell: "A1", value: "5", hint: "Set a root value — no dependencies" },
+  { cell: "B1", value: "=A1+1", hint: "B1 depends on A1 → first edge" },
+  { cell: "C1", value: "=B1*2", hint: "C1 depends on B1 → chain grows" },
+  { cell: "D1", value: "=A1+C1", hint: "D1 depends on A1 AND C1 → DAG branches" },
+] as const;
+
 function DepGraphWidget() {
+  const { cells, commitEdit, startEditing } = useSpreadsheet();
+  const [promptIdx, setPromptIdx] = useState(0);
+
+  const applied = useMemo(() => {
+    return DAG_PROMPTS.map(p => {
+      const cell = cells.get(p.cell);
+      return cell?.raw === p.value;
+    });
+  }, [cells]);
+
+  const allDone = applied.every(Boolean);
+
+  const applyPrompt = (idx: number) => {
+    const p = DAG_PROMPTS[idx]!;
+    startEditing(p.cell);
+    commitEdit(p.cell, p.value);
+    if (idx < DAG_PROMPTS.length - 1) {
+      setPromptIdx(idx + 1);
+    }
+  };
+
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Dependency tracking</div>
-      <div className={styles.widgetNote}>
-        The DAG visualization above updates as you edit formulas. Enter =B2*C2 in D2, then =SUM(D2:D4) in D5 to see the dependency chain form. Each arrow means &quot;this cell reads from that cell.&quot;
+      <div className={styles.widgetTitle}>Dependency tracking — build the DAG</div>
+      <div className={styles.dagPromptList}>
+        {DAG_PROMPTS.map((p, i) => {
+          const isDone = applied[i];
+          const isCurrent = i === promptIdx && !allDone;
+          return (
+            <div
+              key={p.cell}
+              className={styles.dagPrompt}
+              data-done={isDone ? "true" : undefined}
+              data-current={isCurrent ? "true" : undefined}
+            >
+              <span className={styles.dagPromptIndex}>{isDone ? "✓" : i + 1}</span>
+              <div className={styles.dagPromptBody}>
+                <span className={styles.dagPromptCell}>{p.cell} = {p.value}</span>
+                <span className={styles.dagPromptHint}>{p.hint}</span>
+              </div>
+              {!isDone && (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => applyPrompt(i)}
+                  aria-label={`Apply ${p.cell} = ${p.value}`}
+                >
+                  Apply
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
+      {allDone && (
+        <div className={styles.widgetNote} data-tone="success">
+          DAG complete. Notice A1 has two dependents (B1 and D1), while C1 has one. Edit A1 above to see the full cascade propagate through the graph.
+        </div>
+      )}
+      {!allDone && (
+        <div className={styles.widgetNote}>
+          Click Apply to inject each formula step by step. Watch the DAG visualization above grow as dependencies form.
+        </div>
+      )}
     </div>
   );
 }
@@ -976,11 +1059,12 @@ function PropagationWidget() {
   );
 }
 
+const SEL_ROWS = 5;
+const SEL_COLS = 4;
+
 function SelectionWidget() {
   const [mode, setMode] = useState<"single" | "range" | "multi">("single");
   const selGridRef = useRef<HTMLDivElement>(null);
-  const GRID_ROWS = 5;
-  const GRID_COLS = 4;
   const [anchor, setAnchor] = useState<{r: number; c: number} | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -1042,9 +1126,9 @@ function SelectionWidget() {
           let nR = row, nC = col;
           switch (e.key) {
             case "ArrowUp": nR = Math.max(0, row - 1); break;
-            case "ArrowDown": nR = Math.min(GRID_ROWS - 1, row + 1); break;
+            case "ArrowDown": nR = Math.min(SEL_ROWS - 1, row + 1); break;
             case "ArrowLeft": nC = Math.max(0, col - 1); break;
-            case "ArrowRight": nC = Math.min(GRID_COLS - 1, col + 1); break;
+            case "ArrowRight": nC = Math.min(SEL_COLS - 1, col + 1); break;
             default: return;
           }
           e.preventDefault();
@@ -1053,9 +1137,9 @@ function SelectionWidget() {
           nextEl?.focus();
         }}
       >
-        {Array.from({ length: GRID_ROWS }, (_, r) => (
+        {Array.from({ length: SEL_ROWS }, (_, r) => (
           <div key={r} className={styles.selectionRow} role="row">
-            {Array.from({ length: GRID_COLS }, (_, c) => {
+            {Array.from({ length: SEL_COLS }, (_, c) => {
               const key = cellKey(r, c);
               const isSelected = selected.has(key);
               const isAnchor = anchor?.r === r && anchor?.c === c;
@@ -1077,7 +1161,7 @@ function SelectionWidget() {
           </div>
         ))}
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} role="status" aria-live="polite" aria-label="Selection state">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Selected</div>
           <div className={styles.metricValue}>{selected.size}</div>

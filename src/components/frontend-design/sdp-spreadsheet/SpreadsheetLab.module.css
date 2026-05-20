@@ -197,22 +197,16 @@
   flex-direction: column;
   gap: 4px;
   padding: var(--space-2);
-  border: none;
-  border-left: 3px solid var(--color-border);
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
   font-family: var(--font-mono);
   color: var(--color-text);
   min-height: 44px;
-  transition: border-color 200ms ease;
+  transition: background 200ms ease;
 }
 
-.endpointCard:hover { border-left-color: var(--color-accent); }
-.endpointCard:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+.endpointCard[data-revealed="true"] {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
 }
 
 .endpointHeader {
@@ -235,7 +229,6 @@
 .methodBadge[data-method="DELETE"] { background: var(--color-error); }
 
 .endpointPath { font-size: 0.7rem; font-weight: 600; }
-.endpointChevron { margin-left: auto; color: var(--color-muted); }
 .endpointDesc { font-size: 0.625rem; color: var(--color-muted); }
 
 .endpointDetail {
@@ -752,8 +745,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-left: 3px solid var(--color-accent);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  border-radius: var(--radius-2);
 }
 
 /* ── Scope badge ───────────────────────────────────────────────── */
@@ -772,9 +766,19 @@
   background: color-mix(in srgb, var(--color-success) 10%, transparent);
 }
 
-.scopeBadge[data-in-scope="false"] {
+button.scopeBadge[data-in-scope="false"] {
   color: var(--color-muted);
   background: var(--color-surface);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: color 200ms ease, background 200ms ease;
+}
+
+button.scopeBadge[data-in-scope="false"]:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
 }
 
 .widgetTitle {
@@ -786,6 +790,69 @@
   font-size: 0.625rem;
   color: var(--color-muted);
   line-height: 1.5;
+}
+
+.widgetNote[data-tone="success"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+}
+
+/* ── DAG prompt list ──────────────────────────────────────────── */
+
+.dagPromptList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dagPrompt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  transition: opacity 200ms ease, background 200ms ease;
+}
+
+.dagPrompt[data-done="true"] {
+  opacity: 0.55;
+}
+
+.dagPrompt[data-current="true"] {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+.dagPromptIndex {
+  font-size: 0.7rem;
+  font-weight: 800;
+  min-width: 1.5em;
+  text-align: center;
+  color: var(--color-accent);
+}
+
+.dagPrompt[data-done="true"] .dagPromptIndex {
+  color: var(--color-success);
+}
+
+.dagPromptBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dagPromptCell {
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.dagPromptHint {
+  font-size: 0.6rem;
+  color: var(--color-muted);
 }
 
 .widgetSliderLabel {
@@ -1292,63 +1359,6 @@
   padding: var(--space-1) 0;
 }
 
-/* ── Performance demo ───────────────────────────────────────────── */
-
-.perfDemo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
-
-.perfScenario {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.perfResult {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ── Virtual compare ────────────────────────────────────────────── */
-
-.virtualCompare {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--space-2) 0;
-}
-
-/* ── Collaboration demo ─────────────────────────────────────────── */
-
-.collabDemo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) 0;
-}
-
-.collabScenario {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.collabUser {
-  flex: 1;
-  padding: var(--space-2);
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-left: 3px solid var(--color-border);
-  border-radius: 0;
-  background: var(--color-surface);
-}
-
-.collabUser:first-child { border-left-color: var(--diagram-layer-0); }
-.collabUser:last-child { border-left-color: var(--diagram-layer-4); }
-
 .collabResult {
   font-size: 0.7rem;
   line-height: 1.5;
@@ -1447,50 +1457,6 @@
 .propCellEvals[data-status="bad"] { color: var(--color-error); }
 .propCellEvals[data-status="idle"] { color: var(--color-muted); }
 
-/* ── Collaboration timeline ────────────────────────────────────── */
-
-.timelineRows {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-2) 0;
-}
-
-.timelineRow {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-  font-size: 0.65rem;
-}
-
-.timelineLabel {
-  min-width: 48px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.timelineLabel[data-role="alice"] { color: var(--diagram-layer-1); }
-.timelineLabel[data-role="bob"] { color: var(--diagram-layer-4); }
-.timelineLabel[data-role="server"] { color: var(--color-muted); }
-.timelineLabel[data-role="result"] { color: var(--color-accent); }
-
-.timelineValue {
-  flex: 1;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  font-weight: 600;
-  transition: background 300ms ease;
-  background: transparent;
-}
-
-.timelineValue[data-active="true"] {
-  background: var(--color-surface);
-}
-
-.timelineValue[data-lost="true"] {
-  color: var(--color-error);
-}
-
 /* ── Reduced motion ─────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1504,7 +1470,6 @@
   .predictionOption,
   .strategyOption,
   .propCell,
-  .timelineValue,
   .metricCard {
     transition: none;
   }

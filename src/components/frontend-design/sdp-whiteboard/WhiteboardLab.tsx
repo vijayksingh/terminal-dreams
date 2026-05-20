@@ -386,24 +386,42 @@ const WB_STEP_SCOPE_MAP: Record<number, string> = {
   14: "spatialIndex",
 };
 
-function WbScopeBadge({ step }: { step: number }) {
+function WbScopeBadge({ step, expanded, onToggle }: { step: number; expanded: boolean; onToggle: () => void }) {
   const { scopeEnabled } = useWhiteboard();
   const scopeId = WB_STEP_SCOPE_MAP[step];
   if (!scopeId) return null;
   const inScope = !!scopeEnabled[scopeId];
+  if (inScope) {
+    return (
+      <div className={styles.scopeBadge} data-in-scope="true">
+        ✓ In your scope
+      </div>
+    );
+  }
   return (
-    <div className={styles.scopeBadge} data-in-scope={inScope ? "true" : "false"}>
-      {inScope ? "✓ In your scope" : "Not in scope — bonus topic"}
-    </div>
+    <button
+      type="button"
+      className={styles.scopeBadge}
+      data-in-scope="false"
+      onClick={onToggle}
+      aria-expanded={expanded}
+    >
+      {expanded ? "▾ Bonus topic (collapse)" : "▸ Bonus topic — click to explore"}
+    </button>
   );
 }
 
 function StepContent({ step }: { step: number }) {
+  const { scopeEnabled } = useWhiteboard();
+  const [bonusExpanded, setBonusExpanded] = useState(false);
+  const scopeId = WB_STEP_SCOPE_MAP[step];
+  const isOutOfScope = scopeId && !scopeEnabled[scopeId];
+
   return (
     <div className={styles.stepContentStack}>
-      <WbScopeBadge step={step} />
+      <WbScopeBadge step={step} expanded={bonusExpanded} onToggle={() => setBonusExpanded(v => !v)} />
       <PredictionChallenge step={step} />
-      <StepInteractive step={step} />
+      {(!isOutOfScope || bonusExpanded) && <StepInteractive step={step} />}
     </div>
   );
 }
@@ -1656,6 +1674,7 @@ function CursorPresenceStep() {
   const msgsPerSec = Math.round((1000 / throttleMs) * userCount);
 
   const startSim = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
     setRunning(true);
     setMsgCount(0);
     const angles: Record<string, number> = {};
