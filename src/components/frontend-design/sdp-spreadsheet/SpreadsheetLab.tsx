@@ -1155,10 +1155,16 @@ function DepGraphWidget() {
 }
 
 function PropagationWidget() {
-  const { affectedCells, recalcOrder, recalcCount, cells } = useSpreadsheet();
+  const { affectedCells, recalcOrder, recalcCount, cells, setHighlightedCell } = useSpreadsheet();
   const [stepIdx, setStepIdx] = useState(-1);
 
   useEffect(() => { setStepIdx(-1); }, [recalcOrder]);
+
+  useEffect(() => {
+    if (recalcOrder.length === 0 && cells.has("A1")) setHighlightedCell("A1");
+    else setHighlightedCell(null);
+    return () => setHighlightedCell(null);
+  }, [recalcOrder.length, cells, setHighlightedCell]);
 
   const stepForward = () => {
     if (recalcOrder.length === 0) return;
@@ -1196,7 +1202,7 @@ function PropagationWidget() {
         </>
       ) : (
         <div className={styles.widgetNote}>
-          Edit a cell that other cells depend on — try changing A1 or B2. The cascade path will appear here showing which cells recalculate and in what order.
+          Double-click the pulsing A1 cell in the grid and change its value. The cascade path will appear here showing which cells recalculate and in what order.
         </div>
       )}
       <div className={styles.metricsBar} aria-live="polite">
