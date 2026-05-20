@@ -693,7 +693,7 @@ function DepGraphViz() {
   const height = Math.max(80, levels.length * 50 + 20);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="formula">
       <div className={styles.widgetTitle}>Dependency DAG</div>
       <svg viewBox={`0 0 ${width} ${height}`} className={styles.dagSvg} role="img" aria-label={`Dependency graph: ${nodeArr.length} cells, ${[...depGraph.values()].reduce((n, d) => n + d.length, 0)} edges`}>
         {/* Edges */}
@@ -836,7 +836,7 @@ function GridWidget() {
   const visibleCount = Math.min(cellCount, 200);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="core">
       <div className={styles.widgetTitle}>Grid rendering — the viewport illusion</div>
       <div className={styles.viewportDemo}>
         <div className={styles.viewportMinimap}>
@@ -904,7 +904,7 @@ function CellEditWidget() {
   };
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="core">
       <div className={styles.widgetTitle}>Cell anatomy — raw vs computed</div>
       <div className={styles.dagPromptList}>
         {EDIT_PROMPTS.map((p, i) => {
@@ -1045,7 +1045,7 @@ function FormulaWidget() {
   const ast = useMemo(() => parseAst(tokens), [tokens]);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="formula">
       <div className={styles.widgetTitle}>Formula parsing — tokens → AST</div>
       <input
         className={styles.formulaInput}
@@ -1106,7 +1106,7 @@ function DepGraphWidget() {
   };
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="formula">
       <div className={styles.widgetTitle}>Dependency tracking — build the DAG</div>
       <div className={styles.dagPromptList}>
         {DAG_PROMPTS.map((p, i) => {
@@ -1166,7 +1166,7 @@ function PropagationWidget() {
   const reset = () => setStepIdx(-1);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="formula">
       <div className={styles.widgetTitle}>Change propagation</div>
       {recalcOrder.length > 0 ? (
         <>
@@ -1257,7 +1257,7 @@ function SelectionWidget() {
   };
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="ui">
       <div className={styles.widgetTitle}>Selection model</div>
       <div className={styles.strategyGroup} role="radiogroup" aria-label="Selection mode">
         {(["single", "range", "multi"] as const).map(m => (
@@ -1365,7 +1365,7 @@ function VirtualGridWidget() {
   const handleMinimapPointerUp = () => { dragging.current = false; };
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="ui">
       <div className={styles.widgetTitle}>Virtual grid viewport</div>
       <div className={styles.viewportDemo}>
         <div
@@ -1444,7 +1444,7 @@ function FormatWidget() {
     : String(rawVal);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="ui">
       <div className={styles.widgetTitle}>Format pipeline — {targetId}</div>
       <div className={styles.formatPipeline}>
         <div className={styles.pipelineStage}>
@@ -1511,7 +1511,7 @@ function UndoWidget() {
   const b2Val = cells.get("B2")?.computed;
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="advanced">
       <div className={styles.widgetTitle}>Undo stack — command pattern</div>
       {on && (
         <>
@@ -1614,7 +1614,7 @@ function ClipboardWidget() {
   const destCell = `${destCol}${destRow}`;
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="advanced">
       <div className={styles.widgetTitle}>Copy/paste formula adjustment</div>
       <div className={styles.clipboardFields}>
         <div className={styles.toggleRow}>
@@ -1712,7 +1712,7 @@ function PerformanceWidget() {
   const canNext = step < buildSteps.length - 1;
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="advanced">
       <div className={styles.widgetTitle}>Batch recalculation</div>
       <div className={styles.strategyGroup} role="radiogroup" aria-label="Propagation mode">
         {(["naive", "batched"] as const).map(m => (
@@ -1805,7 +1805,7 @@ function CollaborationWidget() {
   useEffect(() => { setResult(null); }, [strategy, aliceVal, bobVal]);
 
   return (
-    <div className={styles.widgetPanel}>
+    <div className={styles.widgetPanel} data-category="advanced">
       <div className={styles.widgetTitle}>Conflict resolution</div>
       <div className={styles.widgetNote}>
         Alice and Bob both edit cell A1 at the same time. Type what each enters, pick a strategy, and hit Merge.

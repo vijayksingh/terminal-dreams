@@ -310,7 +310,7 @@ function EndpointChallenge() {
           </div>
         );
       })}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Revealed</div>
           <div className={styles.metricValue} data-status={revealed.size === API_ENDPOINTS.length ? "good" : undefined}>{revealed.size}/{API_ENDPOINTS.length}</div>
@@ -336,7 +336,7 @@ function TypeCards() {
       {DATA_MODELS.map((t) => (
         <TypeCard key={t.name} typeDef={t} revealed={revealed} onReveal={revealField} />
       ))}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Explored</div>
           <div className={styles.metricValue} data-status={revealed.size === totalFields ? "good" : undefined}>
@@ -635,7 +635,7 @@ function CanvasRenderStep() {
           </svg>
         )}
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Shapes</div>
           <div className={styles.metricValue}>{allShapes.length}</div>
@@ -864,7 +864,7 @@ function PointerCaptureStep() {
           onPointerCancel={onPointerUp}
         />
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Points</div>
           <div className={styles.metricValue}>{stats.pointCount}</div>
@@ -1128,7 +1128,7 @@ function HitTestingStep() {
           ))}
         </div>
       )}
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Hit result</div>
           <div className={styles.metricValue} data-status={hitResult === "empty" ? "bad" : "good"}>
@@ -1273,7 +1273,7 @@ function SelectionHandlesStep() {
         </div>
       )}
       {selected && (
-        <div className={styles.metricsBar}>
+        <div className={styles.metricsBar} aria-live="polite">
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>Position</div>
             <div className={styles.metricValue}>({Math.round(selected.x)}, {Math.round(selected.y)})</div>
@@ -1538,7 +1538,7 @@ function CoalescedEventsStep() {
           <div className={styles.coalescedPrompt}>Press and drag to draw</div>
         )}
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>pointermove events</div>
           <div className={styles.metricValue}>{regularPts.length}</div>
@@ -1630,7 +1630,7 @@ function UndoRedoStep() {
           </>
         )}
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Shapes</div>
           <div className={styles.metricValue}>{shapes.length}</div>
@@ -1755,7 +1755,7 @@ function CrdtSyncStep() {
               </div>
             </div>
           </div>
-          <div className={styles.metricsBar}>
+          <div className={styles.metricsBar} aria-live="polite">
             <div className={styles.metricCard}>
               <div className={styles.metricLabel}>Strategy</div>
               <div className={styles.metricValue}>{syncStrategy.toUpperCase()}</div>
@@ -1886,7 +1886,7 @@ function CursorPresenceStep() {
           </div>
         )}
       </div>
-      <div className={styles.metricsBar}>
+      <div className={styles.metricsBar} aria-live="polite">
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Msgs/sec</div>
           <div className={styles.metricValue} data-status={msgsPerSec > 300 ? "bad" : "good"}>
@@ -2027,7 +2027,7 @@ function RtreeVisualization({ shapeCount, depth, queryPath }: { shapeCount: numb
           return (
             <g key={i}>
               <line x1="200" y1="25" x2={x + 30} y2="40" stroke={colors[1]} strokeWidth={onPath ? 2 : 1} strokeOpacity={onPath ? 1 : 0.4} />
-              <rect x={x} y="40" width="60" height="18" rx="3" fill={colors[1]} fillOpacity={onPath ? 0.5 : 0.15} stroke={colors[1]} strokeWidth={onPath ? 2 : 1} />
+              <rect x={x} y="40" width="60" height="18" rx="3" fill={colors[1]} fillOpacity={onPath ? 0.5 : 0.25} stroke={colors[1]} strokeWidth={onPath ? 2 : 1} />
               <text x={x + 30} y="52" textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill={onPath ? "var(--color-text)" : "var(--color-muted)"} fontWeight={onPath ? "800" : "400"}>
                 {Math.ceil(shapeCount / 3)}
               </text>
@@ -2044,7 +2044,7 @@ function RtreeVisualization({ shapeCount, depth, queryPath }: { shapeCount: numb
           return (
             <g key={`l2-${i}`}>
               <line x1={parentX} y1="58" x2={x + 16} y2="74" stroke={colors[2]} strokeWidth={onPath ? 1.5 : 0.8} strokeOpacity={onPath ? 1 : 0.3} />
-              <rect x={x} y="74" width="32" height="14" rx="2" fill={colors[2]} fillOpacity={onPath ? 0.4 : 0.1} stroke={colors[2]} strokeWidth={onPath ? 1.5 : 0.8} />
+              <rect x={x} y="74" width="32" height="14" rx="2" fill={colors[2]} fillOpacity={onPath ? 0.4 : 0.2} stroke={colors[2]} strokeWidth={onPath ? 1.5 : 0.8} />
               <text x={x + 16} y="84" textAnchor="middle" fontSize="6" fontFamily="var(--font-mono)" fill={onPath ? "var(--color-text)" : "var(--color-muted)"}>
                 {Math.ceil(shapeCount / 9)}
               </text>
