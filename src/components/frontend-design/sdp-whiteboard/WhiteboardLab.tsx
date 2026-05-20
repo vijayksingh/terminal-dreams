@@ -1003,54 +1003,137 @@ function HitTestingStep() {
 // Step 8: Selection Handles
 // ═══════════════════════════════════════════════════════════════════
 
-function SelectionHandlesStep() {
-  const { shapes, selectedShapeId, setSelectedShapeId, setShapes, pushUndo } = useWhiteboard();
-  const selected = shapes.find((s) => s.id === selectedShapeId);
+type HandleId = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+const HANDLE_DEFS: { id: HandleId; cursor: string; label: string; getPos: (x: number, y: number, w: number, h: number) => [number, number] }[] = [
+  { id: "nw", cursor: "nwse-resize", label: "top-left", getPos: (x, y) => [x, y] },
+  { id: "n",  cursor: "ns-resize",   label: "top",      getPos: (x, y, w) => [x + w / 2, y] },
+  { id: "ne", cursor: "nesw-resize", label: "top-right", getPos: (x, y, w) => [x + w, y] },
+  { id: "e",  cursor: "ew-resize",   label: "right",    getPos: (x, y, w, h) => [x + w, y + h / 2] },
+  { id: "se", cursor: "nwse-resize", label: "bottom-right", getPos: (x, y, w, h) => [x + w, y + h] },
+  { id: "s",  cursor: "ns-resize",   label: "bottom",   getPos: (x, y, w, h) => [x + w / 2, y + h] },
+  { id: "sw", cursor: "nesw-resize", label: "bottom-left", getPos: (x, y, _w, h) => [x, y + h] },
+  { id: "w",  cursor: "ew-resize",   label: "left",     getPos: (x, y, _w, h) => [x, y + h / 2] },
+];
 
-  const handlePositions = useMemo(() => {
-    if (!selected) return [];
-    const { x, y, w, h } = selected;
-    return [
-      { cx: x, cy: y, cursor: "nw-resize", label: "top-left" },
-      { cx: x + w / 2, cy: y, cursor: "n-resize", label: "top" },
-      { cx: x + w, cy: y, cursor: "ne-resize", label: "top-right" },
-      { cx: x + w, cy: y + h / 2, cursor: "e-resize", label: "right" },
-      { cx: x + w, cy: y + h, cursor: "se-resize", label: "bottom-right" },
-      { cx: x + w / 2, cy: y + h, cursor: "s-resize", label: "bottom" },
-      { cx: x, cy: y + h, cursor: "sw-resize", label: "bottom-left" },
-      { cx: x, cy: y + h / 2, cursor: "w-resize", label: "left" },
-    ];
+function SelectionHandlesStep() {
+  const { shapes, selectedShapeId, setSelectedShapeId, setShapes } = useWhiteboard();
+  const selected = shapes.find((s) => s.id === selectedShapeId);
+  const [activeHandle, setActiveHandle] = useState<HandleId | null>(null);
+  const [dragCursor, setDragCursor] = useState<string>("default");
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragStart = useRef<{ mx: number; my: number; shape: Shape } | null>(null);
+
+  const SVG_W = 400;
+  const SVG_H = 240;
+
+  const handlePointerDown = useCallback((e: React.PointerEvent, handleId: HandleId) => {
+    if (!selected || !svgRef.current) return;
+    e.preventDefault();
+    (e.target as SVGElement).setPointerCapture(e.pointerId);
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const ctm = svgRef.current.getScreenCTM()?.inverse();
+    const svgPt = ctm ? pt.matrixTransform(ctm) : pt;
+    dragStart.current = { mx: svgPt.x, my: svgPt.y, shape: { ...selected } };
+    setActiveHandle(handleId);
+    const def = HANDLE_DEFS.find(h => h.id === handleId);
+    setDragCursor(def?.cursor ?? "default");
   }, [selected]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!activeHandle || !dragStart.current || !selected || !svgRef.current) return;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const ctm = svgRef.current.getScreenCTM()?.inverse();
+    const svgPt = ctm ? pt.matrixTransform(ctm) : pt;
+    const dx = svgPt.x - dragStart.current.mx;
+    const dy = svgPt.y - dragStart.current.my;
+    const orig = dragStart.current.shape;
+
+    let { x, y, w, h } = orig;
+    if (activeHandle.includes("w")) { x = orig.x + dx; w = orig.w - dx; }
+    if (activeHandle.includes("e")) { w = orig.w + dx; }
+    if (activeHandle.includes("n") && activeHandle !== "ne" && activeHandle !== "nw" ? activeHandle === "n" : activeHandle.startsWith("n")) { y = orig.y + dy; h = orig.h - dy; }
+    if (activeHandle === "s" || activeHandle === "se" || activeHandle === "sw") { h = orig.h + dy; }
+    if (activeHandle === "n" || activeHandle === "ne" || activeHandle === "nw") { y = orig.y + dy; h = orig.h - dy; }
+
+    w = Math.max(20, w); h = Math.max(20, h);
+    setShapes(prev => prev.map(s => s.id === selected.id ? { ...s, x, y, w, h } : s));
+  }, [activeHandle, selected, setShapes]);
+
+  const handlePointerUp = useCallback(() => {
+    setActiveHandle(null);
+    setDragCursor("default");
+    dragStart.current = null;
+  }, []);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Selection Handles</div>
         <div className={styles.widgetNote}>
-          8 resize handles (4 corners + 4 edge midpoints) plus a rotation handle above top center. Each constrains different axes — corner handles resize both dimensions, edge handles resize only one.
+          Select a shape below, then drag any handle to resize. Corner handles resize both dimensions, edge handles resize only one. Watch the dimensions update in real time.
         </div>
       </div>
       <ShapeListWidget selectable />
       {selected && (
-        <div className={styles.widgetPanel} style={{ borderLeftColor: "var(--diagram-layer-2)" }}>
-          <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-2)" }}>Handle Map</div>
-          <svg viewBox="0 0 200 140" style={{ width: "100%", maxWidth: 300 }} role="img" aria-label="Diagram showing 8 resize handles around a selected shape">
-            <rect x="40" y="30" width="120" height="80" fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeDasharray="4 4" />
-            {handlePositions.map((h, i) => {
-              const sx = 40 + ((h.cx - selected.x) / selected.w) * 120;
-              const sy = 30 + ((h.cy - selected.y) / selected.h) * 80;
+        <div className={styles.canvasWrapper}>
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            style={{ display: "block", width: "100%", cursor: dragCursor, touchAction: "none" }}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            role="application"
+            aria-label="Drag handles to resize the selected shape"
+          >
+            {/* Shape */}
+            {selected.kind === "ellipse" ? (
+              <ellipse cx={selected.x + selected.w / 2} cy={selected.y + selected.h / 2} rx={selected.w / 2} ry={selected.h / 2} fill={selected.fill} fillOpacity={0.3} stroke={selected.stroke} strokeWidth={2} />
+            ) : (
+              <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill={selected.fill} fillOpacity={0.3} stroke={selected.stroke} strokeWidth={2} />
+            )}
+            {/* Selection outline */}
+            <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="4 4" />
+            {/* Handles */}
+            {HANDLE_DEFS.map(h => {
+              const [hx, hy] = h.getPos(selected.x, selected.y, selected.w, selected.h);
               return (
-                <g key={i}>
-                  <circle cx={sx} cy={sy} r="5" fill="var(--color-accent)" stroke="var(--color-bg)" strokeWidth="2" />
-                  <text x={sx} y={sy + 16} textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill="var(--color-muted)">{h.label}</text>
-                </g>
+                <circle
+                  key={h.id}
+                  cx={hx} cy={hy} r={6}
+                  fill={activeHandle === h.id ? "var(--color-accent)" : "var(--color-bg)"}
+                  stroke="var(--color-accent)"
+                  strokeWidth={2}
+                  style={{ cursor: h.cursor }}
+                  onPointerDown={(e) => handlePointerDown(e, h.id)}
+                />
               );
             })}
-            {/* rotation handle */}
-            <line x1="100" y1="30" x2="100" y2="12" stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="3 3" />
-            <circle cx="100" cy="10" r="4" fill="none" stroke="var(--color-accent)" strokeWidth="1.5" />
-            <text x="100" y="4" textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill="var(--color-muted)">rotate</text>
+            {/* Rotation handle */}
+            <line x1={selected.x + selected.w / 2} y1={selected.y} x2={selected.x + selected.w / 2} y2={selected.y - 20} stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx={selected.x + selected.w / 2} cy={selected.y - 24} r="4" fill="none" stroke="var(--color-accent)" strokeWidth="1.5" />
+            {/* Dimension labels */}
+            <text x={selected.x + selected.w / 2} y={selected.y + selected.h + 18} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fontWeight="700" fill="var(--color-accent)">
+              {Math.round(selected.w)} × {Math.round(selected.h)}
+            </text>
           </svg>
+        </div>
+      )}
+      {selected && (
+        <div className={styles.metricsBar}>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Position</div>
+            <div className={styles.metricValue}>({Math.round(selected.x)}, {Math.round(selected.y)})</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Size</div>
+            <div className={styles.metricValue}>{Math.round(selected.w)}×{Math.round(selected.h)}</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Handle</div>
+            <div className={styles.metricValue}>{activeHandle ?? "—"}</div>
+          </div>
         </div>
       )}
     </>
@@ -1538,20 +1621,38 @@ function CursorPresenceStep() {
 // ═══════════════════════════════════════════════════════════════════
 
 function SpatialIndexStep() {
-  const { shapes } = useWhiteboard();
   const [shapeCount, setShapeCount] = useState(500);
+  const [queryPath, setQueryPath] = useState<number[]>([]);
+  const reducedMotion = usePrefersReducedMotion();
 
   const linearMs = (shapeCount * 60 * 0.005).toFixed(1);
   const rtreeMs = (Math.log2(shapeCount) * 60 * 0.002).toFixed(2);
-  const rtreeNodes = Math.ceil(shapeCount / 9);
+  const depth = Math.max(1, Math.ceil(Math.log(shapeCount) / Math.log(9)));
+
+  const runQuery = useCallback(() => {
+    const path = [0, Math.floor(Math.random() * 3)];
+    if (depth >= 2) path.push(Math.floor(Math.random() * 3));
+    if (depth >= 3) path.push(Math.floor(Math.random() * 3));
+    if (reducedMotion) { setQueryPath(path); return; }
+    setQueryPath([]);
+    path.forEach((_, i) => {
+      setTimeout(() => setQueryPath(path.slice(0, i + 1)), i * 300);
+    });
+  }, [depth, reducedMotion]);
+
+  const checksAvoided = shapeCount - Math.ceil(shapeCount / Math.pow(3, depth));
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>R-tree Spatial Index</div>
         <div className={styles.widgetNote}>
-          An R-tree partitions shapes by bounding rectangles into a balanced tree. Hit-test queries traverse O(log n) nodes instead of scanning all shapes. The crossover vs linear scan is ~1,000 shapes at 60fps pointermove.
+          Click &quot;Query&quot; to trace a hit-test through the R-tree. Watch how the search prunes subtrees — at {shapeCount.toLocaleString()} shapes, it skips ~{checksAvoided.toLocaleString()} bounding-box checks per query.
         </div>
+      </div>
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.toolButton} onClick={runQuery}>▶ Query</button>
+        <button type="button" className={styles.toolButton} onClick={() => setQueryPath([])}>Reset</button>
       </div>
       <div className={styles.toggleStrip}>
         <div className={styles.toggleRow}>
@@ -1562,8 +1663,8 @@ function SpatialIndexStep() {
             max={10000}
             step={10}
             value={shapeCount}
-            onChange={(e) => setShapeCount(Number(e.target.value))}
-            style={{ flex: 1, minHeight: 36, accentColor: "var(--color-accent)" }}
+            onChange={(e) => { setShapeCount(Number(e.target.value)); setQueryPath([]); }}
+            style={{ flex: 1, minHeight: 44, accentColor: "var(--color-accent)" }}
             aria-label="Number of shapes"
           />
           <span style={{ fontSize: "0.75rem", fontWeight: 800, minWidth: 48, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
@@ -1571,75 +1672,96 @@ function SpatialIndexStep() {
           </span>
         </div>
       </div>
+      <RtreeVisualization shapeCount={shapeCount} depth={depth} queryPath={queryPath} />
       <div className={styles.rtreeStats}>
         <div className={styles.rtreeStat}>
-          <span className={styles.rtreeStatLabel}>Linear scan/sec</span>
-          <span className={styles.rtreeStatValue} data-status={Number(linearMs) > 10 ? "warning" : "good"}>
-            {linearMs}ms
-          </span>
+          <span className={styles.rtreeStatLabel}>Linear scan</span>
+          <span className={styles.rtreeStatValue} data-status={Number(linearMs) > 10 ? "warning" : "good"}>{linearMs}ms</span>
         </div>
         <div className={styles.rtreeStat}>
-          <span className={styles.rtreeStatLabel}>R-tree/sec</span>
+          <span className={styles.rtreeStatLabel}>R-tree</span>
           <span className={styles.rtreeStatValue} data-status="good">{rtreeMs}ms</span>
         </div>
         <div className={styles.rtreeStat}>
-          <span className={styles.rtreeStatLabel}>R-tree nodes</span>
-          <span className={styles.rtreeStatValue}>{rtreeNodes}</span>
+          <span className={styles.rtreeStatLabel}>Depth</span>
+          <span className={styles.rtreeStatValue}>{depth}</span>
         </div>
         <div className={styles.rtreeStat}>
           <span className={styles.rtreeStatLabel}>Speedup</span>
-          <span className={styles.rtreeStatValue} data-status="good">
-            {(Number(linearMs) / Number(rtreeMs)).toFixed(0)}x
-          </span>
+          <span className={styles.rtreeStatValue} data-status="good">{(Number(linearMs) / Number(rtreeMs)).toFixed(0)}x</span>
         </div>
       </div>
-      <RtreeVisualization shapeCount={shapeCount} />
     </>
   );
 }
 
-function RtreeVisualization({ shapeCount }: { shapeCount: number }) {
-  const depth = Math.max(1, Math.ceil(Math.log(shapeCount) / Math.log(9)));
+function RtreeVisualization({ shapeCount, depth, queryPath }: { shapeCount: number; depth: number; queryPath: number[] }) {
   const colors = ["var(--diagram-layer-1)", "var(--diagram-layer-2)", "var(--diagram-layer-4)", "var(--color-accent)"];
+  const l1Count = Math.min(depth >= 1 ? 3 : 0, 3);
+  const l2Count = depth >= 2 ? 9 : 0;
+  const l3Count = depth >= 3 ? Math.min(27, 9) : 0;
+  const svgH = depth >= 3 ? 160 : 120;
+
+  const isOnPath = (level: number, idx: number): boolean => {
+    if (queryPath.length <= level) return false;
+    if (level === 0) return queryPath.length > 0;
+    let pathIdx = 0;
+    for (let l = 1; l <= level; l++) pathIdx = (queryPath[l] ?? 0);
+    if (level === 1) return queryPath.length > 1 && queryPath[1] === idx;
+    if (level === 2) return queryPath.length > 2 && queryPath[1] === Math.floor(idx / 3) && queryPath[2] === idx % 3;
+    return false;
+  };
 
   return (
     <div className={styles.rtreeVisualizer}>
-      <svg viewBox="0 0 400 120" className={styles.rtreeSvg} role="img" aria-label={`R-tree with ${depth} levels for ${shapeCount} shapes`}>
+      <svg viewBox={`0 0 400 ${svgH}`} className={styles.rtreeSvg} role="img" aria-label={`R-tree with ${depth} levels for ${shapeCount} shapes`}>
         {/* Root */}
-        <rect x="170" y="5" width="60" height="20" rx="3" fill={colors[0]} fillOpacity="0.3" stroke={colors[0]} strokeWidth="1.5" />
-        <text x="200" y="18" textAnchor="middle" fontSize="8" fontFamily="var(--font-mono)" fill="var(--color-text)">root</text>
+        <rect x="170" y="5" width="60" height="20" rx="3"
+          fill={colors[0]} fillOpacity={isOnPath(0, 0) ? 0.6 : 0.3}
+          stroke={colors[0]} strokeWidth={isOnPath(0, 0) ? 2.5 : 1.5} />
+        <text x="200" y="18" textAnchor="middle" fontSize="8" fontFamily="var(--font-mono)" fill="var(--color-text)" fontWeight={isOnPath(0, 0) ? "800" : "400"}>root</text>
 
         {/* Level 1 */}
-        {[0, 1, 2].map((i) => {
+        {Array.from({ length: l1Count }, (_, i) => {
           const x = 60 + i * 130;
+          const onPath = isOnPath(1, i);
           return (
             <g key={i}>
-              <line x1="200" y1="25" x2={x + 30} y2="40" stroke={colors[1]} strokeWidth="1" strokeOpacity="0.5" />
-              <rect x={x} y="40" width="60" height="18" rx="3" fill={colors[1]} fillOpacity="0.2" stroke={colors[1]} strokeWidth="1" />
-              <text x={x + 30} y="52" textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill="var(--color-muted)">node</text>
+              <line x1="200" y1="25" x2={x + 30} y2="40" stroke={colors[1]} strokeWidth={onPath ? 2 : 1} strokeOpacity={onPath ? 1 : 0.4} />
+              <rect x={x} y="40" width="60" height="18" rx="3" fill={colors[1]} fillOpacity={onPath ? 0.5 : 0.15} stroke={colors[1]} strokeWidth={onPath ? 2 : 1} />
+              <text x={x + 30} y="52" textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill={onPath ? "var(--color-text)" : "var(--color-muted)"} fontWeight={onPath ? "800" : "400"}>
+                {Math.ceil(shapeCount / 3)}
+              </text>
             </g>
           );
         })}
 
-        {/* Level 2 (leaves) */}
-        {depth >= 2 && [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
+        {/* Level 2 */}
+        {l2Count > 0 && Array.from({ length: l2Count }, (_, i) => {
           const parentIdx = Math.floor(i / 3);
           const parentX = 60 + parentIdx * 130 + 30;
           const x = 10 + i * 42;
+          const onPath = isOnPath(2, i);
           return (
             <g key={`l2-${i}`}>
-              <line x1={parentX} y1="58" x2={x + 16} y2="74" stroke={colors[2]} strokeWidth="0.8" strokeOpacity="0.4" />
-              <rect x={x} y="74" width="32" height="14" rx="2" fill={colors[2]} fillOpacity="0.15" stroke={colors[2]} strokeWidth="0.8" />
-              <text x={x + 16} y="84" textAnchor="middle" fontSize="6" fontFamily="var(--font-mono)" fill="var(--color-muted)">
+              <line x1={parentX} y1="58" x2={x + 16} y2="74" stroke={colors[2]} strokeWidth={onPath ? 1.5 : 0.8} strokeOpacity={onPath ? 1 : 0.3} />
+              <rect x={x} y="74" width="32" height="14" rx="2" fill={colors[2]} fillOpacity={onPath ? 0.4 : 0.1} stroke={colors[2]} strokeWidth={onPath ? 1.5 : 0.8} />
+              <text x={x + 16} y="84" textAnchor="middle" fontSize="6" fontFamily="var(--font-mono)" fill={onPath ? "var(--color-text)" : "var(--color-muted)"}>
                 {Math.ceil(shapeCount / 9)}
               </text>
             </g>
           );
         })}
 
-        {/* Leaf shapes indicator */}
-        <text x="200" y="110" textAnchor="middle" fontSize="8" fontFamily="var(--font-mono)" fill="var(--color-muted)">
-          {shapeCount.toLocaleString()} shapes across {depth} levels
+        {/* Level 3 indicator for very large counts */}
+        {depth >= 3 && (
+          <text x="200" y={svgH - 20} textAnchor="middle" fontSize="7" fontFamily="var(--font-mono)" fill="var(--color-muted)">
+            + {Math.ceil(shapeCount / 81)} leaf nodes at depth {depth} (not shown)
+          </text>
+        )}
+
+        <text x="200" y={svgH - 6} textAnchor="middle" fontSize="8" fontFamily="var(--font-mono)" fill="var(--color-muted)">
+          {shapeCount.toLocaleString()} shapes · {depth} levels · {queryPath.length > 0 ? `query checked ${queryPath.length} node${queryPath.length > 1 ? "s" : ""}` : "click Query to trace"}
         </text>
       </svg>
     </div>
