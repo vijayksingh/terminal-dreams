@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results
 
 # next.js
 /.next/
@@ -23,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
@@ -43,3 +45,6 @@ next-env.d.ts
 # infra runtime secrets (deploy.sh writes here)
 secrets/
 infra/pocketbase/pb_data/
+
+# claude code (agent worktrees are ephemeral)
+.claude/worktrees/
