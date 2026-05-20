@@ -547,6 +547,13 @@ function CanvasRenderStep() {
   const [svgMs, setSvgMs] = useState<number | null>(null);
   const svgT0 = useRef(0);
 
+  const svgRefCallback = useCallback((el: SVGSVGElement | null) => {
+    if (el && svgT0.current > 0) {
+      setSvgMs(Number((performance.now() - svgT0.current).toFixed(2)));
+      svgT0.current = 0;
+    }
+  }, []);
+
   const allShapes = useMemo(() => {
     const extras: Shape[] = [];
     for (let i = 0; i < extraCount; i++) {
@@ -622,7 +629,7 @@ function CanvasRenderStep() {
             aria-label={`Canvas rendering ${allShapes.length} shapes`}
           />
         ) : (
-          <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg} ref={() => { if (svgT0.current > 0) { setSvgMs(Number((performance.now() - svgT0.current).toFixed(2))); svgT0.current = 0; } }}>
+          <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg} ref={svgRefCallback}>
             {allShapes.map((shape) => {
               if (shape.kind === "rect") return (
                 <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.5} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
@@ -671,7 +678,7 @@ function drawCanvasGrid(ctx: CanvasRenderingContext2D, w: number, h: number, cs:
   const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
   ctx.save();
   ctx.strokeStyle = gridColor;
-  ctx.globalAlpha = 0.15;
+  ctx.globalAlpha = 0.3;
   ctx.lineWidth = 0.5;
   for (let x = 0; x < w; x += 20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
   for (let y = 0; y < h; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
@@ -1061,7 +1068,7 @@ function HitTestingStep() {
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = isHit ? resolveColor("var(--color-success)", cs) :
           isTraced ? resolveColor("var(--color-error)", cs) : gridColor;
-        ctx.globalAlpha = isTraced ? 0.7 : 0.4;
+        ctx.globalAlpha = isTraced ? 0.7 : 0.5;
         ctx.lineWidth = isTraced ? 2 : 1;
         ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
         ctx.setLineDash([]);
@@ -1621,6 +1628,22 @@ function UndoRedoStep() {
         <button type="button" className={styles.toolButton} onClick={deleteLastShape} disabled={shapes.length === 0}>− Delete</button>
         <button type="button" className={styles.undoButton} onClick={undo} disabled={undoStack.length === 0}>↶ Undo</button>
         <button type="button" className={styles.undoButton} onClick={redo} disabled={redoStack.length === 0}>↷ Redo</button>
+      </div>
+      <div className={styles.canvasWrapper}>
+        <svg viewBox="0 0 320 200" className={styles.renderSvg} role="img" aria-label={`Undo canvas with ${shapes.length} shapes`}>
+          {shapes.map((s) =>
+            s.kind === "rect" ? (
+              <rect key={s.id} x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={s.stroke} strokeWidth={s.strokeWidth} />
+            ) : s.kind === "ellipse" ? (
+              <ellipse key={s.id} cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={s.stroke} strokeWidth={s.strokeWidth} />
+            ) : null
+          )}
+          {shapes.length === 0 && (
+            <text x="160" y="100" textAnchor="middle" fill="var(--color-muted)" fontSize="14" fontFamily="var(--font-mono)">
+              Add shapes to see them here
+            </text>
+          )}
+        </svg>
       </div>
       <div className={styles.undoStack}>
         {undoStack.length === 0 && redoStack.length === 0 ? (

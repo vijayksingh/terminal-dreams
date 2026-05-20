@@ -309,7 +309,7 @@ function TypeCards() {
 function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed: Set<string>; onReveal: (key: string) => void }) {
   const color = TYPE_CATEGORY_COLORS[typeDef.category];
   return (
-    <div className={styles.typeCard} style={{ borderTopColor: color }}>
+    <div className={styles.typeCard} style={{ borderTopColor: color, background: `color-mix(in srgb, ${color} 10%, transparent)` }}>
       <div className={styles.typeCardHeader}>
         <span className={styles.typeCardName}>{typeDef.name}</span>
         <span className={styles.typeCardCategory} style={{ color }}>{typeDef.category}</span>
@@ -606,13 +606,20 @@ function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAff
   onCancel: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const seedRef = useRef<string | null>(null);
   const [editValue, setEditValue] = useState(raw);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      setEditValue(raw);
+      const seed = seedRef.current;
+      seedRef.current = null;
+      setEditValue(seed ?? raw);
       inputRef.current.focus();
-      inputRef.current.select();
+      if (seed) {
+        inputRef.current.setSelectionRange(seed.length, seed.length);
+      } else {
+        inputRef.current.select();
+      }
     }
   }, [isEditing, raw]);
 
@@ -639,7 +646,13 @@ function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAff
       aria-label={`${cellId}: ${display || "empty"}`}
       onDoubleClick={onDoubleClick}
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "F2") onDoubleClick(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === "F2") { onDoubleClick(); return; }
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          seedRef.current = e.key;
+          onDoubleClick();
+        }
+      }}
     >
       {isEditing ? (
         <input
@@ -844,12 +857,17 @@ function StepWidget({ step }: { step: number }) {
 }
 
 function GridWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [cellCount, setCellCount] = useState(100);
   const [virtualized, setVirtualized] = useState(false);
   const totalCells = cellCount * 26;
   const domCount = virtualized ? Math.min(totalCells, 200) : totalCells;
   const renderMs = virtualized ? 2 : Math.min(totalCells * 0.001, 9999);
   const domStatus = domCount > 5000 ? "bad" : domCount > 1000 ? "warning" : "good";
+
+  useEffect(() => {
+    if (virtualized && cellCount > 1000) markStepComplete(4);
+  }, [virtualized, cellCount, markStepComplete]);
 
   return (
     <div className={styles.widgetPanel} data-category="core">
@@ -1045,7 +1063,12 @@ function AstTree({ node, depth = 0 }: { node: AstNode; depth?: number }) {
 }
 
 function FormulaWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [formula, setFormula] = useState("=A1+B2*C3");
+
+  useEffect(() => {
+    if (formula !== "=A1+B2*C3") markStepComplete(6);
+  }, [formula, markStepComplete]);
   const tokens = useMemo(() => {
     if (!formula.startsWith("=")) return [];
     const expr = formula.slice(1);
@@ -1180,8 +1203,12 @@ function DepGraphWidget() {
 }
 
 function PropagationWidget() {
-  const { affectedCells, recalcOrder, recalcCount, cells, setHighlightedCell } = useSpreadsheet();
+  const { affectedCells, recalcOrder, recalcCount, cells, setHighlightedCell, markStepComplete } = useSpreadsheet();
   const [stepIdx, setStepIdx] = useState(-1);
+
+  useEffect(() => {
+    if (recalcOrder.length > 0 && stepIdx >= recalcOrder.length - 1) markStepComplete(8);
+  }, [stepIdx, recalcOrder.length, markStepComplete]);
 
   useEffect(() => { setStepIdx(-1); }, [recalcOrder]);
 
@@ -1252,10 +1279,16 @@ const SEL_ROWS = 5;
 const SEL_COLS = 4;
 
 function SelectionWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [mode, setMode] = useState<"single" | "range" | "multi">("single");
   const selGridRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<{r: number; c: number} | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [triedModes, setTriedModes] = useState<Set<string>>(new Set(["single"]));
+
+  useEffect(() => {
+    if (triedModes.size >= 3) markStepComplete(9);
+  }, [triedModes.size, markStepComplete]);
 
   const cellKey = (r: number, c: number) => `${r}-${c}`;
 
@@ -1296,7 +1329,7 @@ function SelectionWidget() {
         {(["single", "range", "multi"] as const).map(m => (
           <button key={m} type="button" role="radio" aria-checked={mode === m}
             className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
-            onClick={() => { setMode(m); setSelected(new Set()); setAnchor(null); }}>
+            onClick={() => { setMode(m); setSelected(new Set()); setAnchor(null); setTriedModes(prev => new Set(prev).add(m)); }}>
             <span className={styles.strategyName}>{m}</span>
             <span className={styles.strategyDesc}>
               {m === "single" ? "Click to select one cell" : m === "range" ? "Click + Shift-click for range" : "Cmd/Ctrl-click to toggle cells"}
@@ -1369,9 +1402,13 @@ function SelectionWidget() {
 }
 
 function VirtualGridWidget() {
-  const { isActive, cellsInDom, totalRows, totalCols } = useSpreadsheet();
+  const { isActive, cellsInDom, totalRows, totalCols, markStepComplete } = useSpreadsheet();
   const on = isActive("virtualGrid");
   const [viewportTop, setViewportTop] = useState(0);
+
+  useEffect(() => {
+    if (on && viewportTop > 0) markStepComplete(10);
+  }, [on, viewportTop, markStepComplete]);
   const VISIBLE = 20;
   const minimapH = 80;
   const viewH = (VISIBLE / totalRows) * minimapH;
@@ -1454,8 +1491,12 @@ function VirtualGridWidget() {
 }
 
 function FormatWidget() {
-  const { cells, selection, startEditing, commitEdit } = useSpreadsheet();
+  const { cells, selection, startEditing, commitEdit, markStepComplete } = useSpreadsheet();
   const [format, setFormat] = useState<"text" | "number" | "percent" | "currency">("text");
+
+  useEffect(() => {
+    if (format !== "text") markStepComplete(11);
+  }, [format, markStepComplete]);
   const [seeded, setSeeded] = useState(false);
 
   const targetId = selection ? `${COL_LABELS[selection.start.col] ?? "A"}${selection.start.row + 1}` : "C1";
@@ -1521,9 +1562,15 @@ function FormatWidget() {
 }
 
 function UndoWidget() {
-  const { undoStack, undo, isActive, cells, startEditing, commitEdit } = useSpreadsheet();
+  const { undoStack, undo, isActive, cells, startEditing, commitEdit, markStepComplete } = useSpreadsheet();
   const on = isActive("undoRedo");
   const [phase, setPhase] = useState<"build" | "undo">("build");
+  const prevStackLen = useRef(undoStack.length);
+
+  useEffect(() => {
+    if (prevStackLen.current > undoStack.length && undoStack.length >= 0) markStepComplete(12);
+    prevStackLen.current = undoStack.length;
+  }, [undoStack.length, markStepComplete]);
 
   const buildSteps = [
     { cell: "B1", value: "10", label: "Set B1 = 10" },
@@ -1636,9 +1683,14 @@ function adjustFormula(formula: string, rowOffset: number, colOffset: number): s
 }
 
 function ClipboardWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [sourceFormula, setSourceFormula] = useState("=A1+$B$1");
   const [rowOffset, setRowOffset] = useState(2);
   const [colOffset, setColOffset] = useState(0);
+
+  useEffect(() => {
+    if (sourceFormula !== "=A1+$B$1" || rowOffset !== 2 || colOffset !== 0) markStepComplete(13);
+  }, [sourceFormula, rowOffset, colOffset, markStepComplete]);
 
   const pasted = adjustFormula(sourceFormula, rowOffset, colOffset);
   const sourceCell = `C1`;
@@ -1701,9 +1753,15 @@ function ClipboardWidget() {
 }
 
 function PerformanceWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [mode, setMode] = useState<"naive" | "batched">("naive");
   const [step, setStep] = useState(0);
   const [fanOut, setFanOut] = useState(3);
+  const [triedModes, setTriedModes] = useState<Set<string>>(new Set(["naive"]));
+
+  useEffect(() => {
+    if (triedModes.size >= 2 && step > 0) markStepComplete(14);
+  }, [triedModes.size, step, markStepComplete]);
 
   type PropStep = { active: string[]; evalCount: Record<string, number>; label: string };
 
@@ -1751,7 +1809,7 @@ function PerformanceWidget() {
         {(["naive", "batched"] as const).map(m => (
           <button key={m} type="button" role="radio" aria-checked={mode === m}
             className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
-            onClick={() => { setMode(m); setStep(0); }}>
+            onClick={() => { setMode(m); setStep(0); setTriedModes(prev => new Set(prev).add(m)); }}>
             <span className={styles.strategyName}>{m}</span>
             <span className={styles.strategyDesc}>
               {m === "naive" ? "Propagate on each dep change" : "Dirty-mark, then topo-sort eval"}
@@ -1830,6 +1888,7 @@ function resolveCollabConflict(strategy: "lww" | "ot" | "crdt", a: string, b: st
 }
 
 function CollaborationWidget() {
+  const { markStepComplete } = useSpreadsheet();
   const [strategy, setStrategy] = useState<"lww" | "ot" | "crdt">("lww");
   const [aliceVal, setAliceVal] = useState("100");
   const [bobVal, setBobVal] = useState("250");
@@ -1837,6 +1896,10 @@ function CollaborationWidget() {
   const [result, setResult] = useState<ReturnType<typeof resolveCollabConflict> | null>(null);
 
   useEffect(() => { setResult(null); }, [strategy, aliceVal, bobVal]);
+
+  useEffect(() => {
+    if (result) markStepComplete(15);
+  }, [result, markStepComplete]);
 
   return (
     <div className={styles.widgetPanel} data-category="advanced">
