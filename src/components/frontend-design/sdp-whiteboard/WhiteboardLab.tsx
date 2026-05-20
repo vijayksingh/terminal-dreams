@@ -414,8 +414,34 @@ function PredictionChallenge({ step }: { step: number }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function CanvasRenderStep() {
-  const { shapes } = useWhiteboard();
+  const { shapes, setShapes } = useWhiteboard();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [renderMode, setRenderMode] = useState<"canvas" | "svg">("canvas");
+  const [extraCount, setExtraCount] = useState(0);
+  const [canvasMs, setCanvasMs] = useState<number | null>(null);
+
+  const allShapes = useMemo(() => {
+    const extras: Shape[] = [];
+    for (let i = 0; i < extraCount; i++) {
+      extras.push({
+        id: `stress-${i}`,
+        kind: i % 2 === 0 ? "rect" : "ellipse",
+        points: [],
+        x: 10 + (i % 20) * 20,
+        y: 10 + Math.floor(i / 20) * 16,
+        w: 16 + (i % 5) * 2,
+        h: 12 + (i % 3) * 2,
+        rotation: 0,
+        fill: `var(--diagram-layer-${i % 5})`,
+        stroke: `var(--diagram-layer-${i % 5})`,
+        strokeWidth: 1,
+        selected: false,
+        locked: false,
+        zIndex: shapes.length + i,
+      });
+    }
+    return [...shapes, ...extras];
+  }, [shapes, extraCount]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -423,10 +449,16 @@ function CanvasRenderStep() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const t0 = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const el = canvas.parentElement;
+    const computedStyle = el ? getComputedStyle(el) : null;
+
     // Grid
-    ctx.strokeStyle = "color-mix(in srgb, var(--color-border) 40%, transparent)";
+    const gridColor = computedStyle?.getPropertyValue("--color-border").trim() || "#888";
+    ctx.strokeStyle = gridColor;
+    ctx.globalAlpha = 0.15;
     ctx.lineWidth = 0.5;
     for (let x = 0; x < canvas.width; x += 20) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -434,12 +466,9 @@ function CanvasRenderStep() {
     for (let y = 0; y < canvas.height; y += 20) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
+    ctx.globalAlpha = 1;
 
-    // Resolve CSS variable colors to computed values
-    const el = canvas.parentElement;
-    const computedStyle = el ? getComputedStyle(el) : null;
-
-    for (const shape of shapes) {
+    for (const shape of allShapes) {
       ctx.save();
       const fillColor = resolveColor(shape.fill, computedStyle);
       const strokeColor = resolveColor(shape.stroke, computedStyle);
@@ -482,7 +511,6 @@ function CanvasRenderStep() {
         ctx.strokeStyle = strokeColor;
         ctx.lineWidth = shape.strokeWidth;
         ctx.stroke();
-        // arrowhead
         const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
         const headLen = 10;
         ctx.beginPath();
@@ -494,29 +522,75 @@ function CanvasRenderStep() {
       }
       ctx.restore();
     }
-  }, [shapes]);
 
-  useEffect(() => { draw(); }, [draw]);
+    setCanvasMs(Number((performance.now() - t0).toFixed(2)));
+  }, [allShapes]);
+
+  useEffect(() => {
+    if (renderMode === "canvas") draw();
+  }, [draw, renderMode]);
+
+  const svgDomNodes = allShapes.length * 2 + 1;
 
   return (
     <>
       <div className={styles.widgetPanel}>
-        <div className={styles.widgetTitle}>Immediate-Mode Rendering</div>
+        <div className={styles.widgetTitle}>Canvas vs SVG Rendering</div>
         <div className={styles.widgetNote}>
-          Canvas 2D is a bitmap — once pixels are drawn, they are forgotten. Every update requires clearing and redrawing the entire scene. Below is a read-only render of the shape model.
+          Canvas is a flat bitmap — one DOM node regardless of shape count. SVG retains a DOM tree per shape. Toggle between them and stress-test with hundreds of shapes to see the difference.
         </div>
       </div>
-      <div className={styles.canvasWrapper}>
-        <canvas
-          ref={canvasRef}
-          width={440}
-          height={260}
-          className={styles.canvas}
-          role="img"
-          aria-label={`Canvas showing ${shapes.length} shapes: ${shapes.map(s => s.kind).join(", ")}`}
-        />
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.toolButton} data-active={renderMode === "canvas" ? "true" : undefined} onClick={() => setRenderMode("canvas")}>Canvas</button>
+        <button type="button" className={styles.toolButton} data-active={renderMode === "svg" ? "true" : undefined} onClick={() => setRenderMode("svg")}>SVG</button>
+        <button type="button" className={styles.toolButton} onClick={() => setExtraCount((c) => c + 50)}>+50 shapes</button>
+        <button type="button" className={styles.toolButton} onClick={() => setExtraCount((c) => c + 200)}>+200</button>
+        {extraCount > 0 && (
+          <button type="button" className={styles.toolButton} onClick={() => setExtraCount(0)}>Reset</button>
+        )}
       </div>
-      <ShapeListWidget />
+      <div className={styles.canvasWrapper}>
+        {renderMode === "canvas" ? (
+          <canvas
+            ref={canvasRef}
+            width={440}
+            height={260}
+            className={styles.canvas}
+            role="img"
+            aria-label={`Canvas rendering ${allShapes.length} shapes`}
+          />
+        ) : (
+          <svg viewBox="0 0 440 260" style={{ display: "block", width: "100%", background: "var(--color-surface)" }}>
+            {allShapes.map((shape) => {
+              if (shape.kind === "rect") return (
+                <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
+              );
+              if (shape.kind === "ellipse") return (
+                <ellipse key={shape.id} cx={shape.x + shape.w / 2} cy={shape.y + shape.h / 2} rx={shape.w / 2} ry={shape.h / 2} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
+              );
+              return null;
+            })}
+          </svg>
+        )}
+      </div>
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Shapes</div>
+          <div className={styles.metricValue}>{allShapes.length}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>DOM nodes</div>
+          <div className={styles.metricValue} data-status={renderMode === "svg" && allShapes.length > 200 ? "bad" : "good"}>
+            {renderMode === "canvas" ? 1 : svgDomNodes}
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Render time</div>
+          <div className={styles.metricValue}>
+            {renderMode === "canvas" && canvasMs !== null ? `${canvasMs}ms` : "—"}
+          </div>
+        </div>
+      </div>
     </>
   );
 }
@@ -986,38 +1060,67 @@ const CANVAS_LAYERS = [
   { id: "cursors", label: "Cursor Layer", color: "var(--diagram-layer-4)", fps: "60fps", desc: "Remote user cursors — redraws every pointermove" },
 ];
 
+type LayerRedrawState = Record<string, number>;
+
 function LayerSeparationStep() {
-  const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const [redraws, setRedraws] = useState<LayerRedrawState>({ grid: 1, shapes: 0, selection: 0, cursors: 0 });
+  const [flashLayer, setFlashLayer] = useState<string | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+
+  const triggerAction = useCallback((action: "moveCursor" | "moveShape" | "addShape") => {
+    const affected: string[] =
+      action === "moveCursor" ? ["cursors"] :
+      action === "moveShape" ? ["shapes", "selection"] :
+      ["shapes"];
+
+    setRedraws((prev) => {
+      const next = { ...prev };
+      for (const l of affected) next[l] = (next[l] ?? 0) + 1;
+      return next;
+    });
+
+    if (!reducedMotion) {
+      for (let i = 0; i < affected.length; i++) {
+        setTimeout(() => setFlashLayer(affected[i]!), i * 120);
+      }
+      setTimeout(() => setFlashLayer(null), affected.length * 120 + 400);
+    }
+  }, [reducedMotion]);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Dual-Canvas Architecture</div>
         <div className={styles.widgetNote}>
-          Separate canvases for different update frequencies. Cursor movement at 60fps should never trigger a redraw of 10,000 shapes. Each layer is an independent &lt;canvas&gt; element stacked via absolute positioning.
+          Each layer is a separate &lt;canvas&gt; stacked via absolute positioning. Trigger actions below to see which layers redraw — cursor movement should never touch the shape layer.
         </div>
       </div>
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.toolButton} onClick={() => triggerAction("moveCursor")}>Move Cursor</button>
+        <button type="button" className={styles.toolButton} onClick={() => triggerAction("moveShape")}>Drag Shape</button>
+        <button type="button" className={styles.toolButton} onClick={() => triggerAction("addShape")}>Add Shape</button>
+        <button type="button" className={styles.toolButton} onClick={() => setRedraws({ grid: 1, shapes: 0, selection: 0, cursors: 0 })}>Reset</button>
+      </div>
       <div className={styles.layerDiagram}>
-        {CANVAS_LAYERS.map((layer) => (
-          <button
+        {CANVAS_LAYERS.map((layer, i) => (
+          <div
             key={layer.id}
-            type="button"
             className={styles.layerRow}
-            data-active={activeLayer === layer.id ? "true" : undefined}
-            onClick={() => setActiveLayer(activeLayer === layer.id ? null : layer.id)}
-            style={{ cursor: "pointer", border: "none", textAlign: "left", width: "100%", fontFamily: "var(--font-mono)" }}
+            data-active={flashLayer === layer.id ? "true" : undefined}
+            style={{ position: "relative", overflow: "hidden" }}
           >
             <div className={styles.layerColor} style={{ background: layer.color }} />
             <span className={styles.layerName}>{layer.label}</span>
             <span className={styles.layerFps}>{layer.fps}</span>
-          </button>
+            <span style={{ fontSize: "0.6rem", fontWeight: 800, color: redraws[layer.id]! > 0 ? "var(--color-accent)" : "var(--color-muted)", minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+              {redraws[layer.id] ?? 0}×
+            </span>
+          </div>
         ))}
       </div>
-      {activeLayer && (
-        <div className={styles.stepMessage}>
-          {CANVAS_LAYERS.find((l) => l.id === activeLayer)?.desc}
-        </div>
-      )}
+      <div className={styles.stepMessage}>
+        Moving the cursor triggers {redraws.cursors} cursor redraws but 0 shape redraws. Without layer separation, every cursor move at 60fps would redraw all shapes.
+      </div>
     </>
   );
 }
@@ -1199,79 +1302,103 @@ const SYNC_STRATEGIES: { id: SyncStrategy; name: string; desc: string }[] = [
   { id: "crdt", name: "CRDT", desc: "Conflict-free — converges without server, peer-to-peer ready" },
 ];
 
+type ConflictStep = { alice: string; bob: string; server: string; result: string; note: string };
+
+const CONFLICT_SCENARIOS: Record<SyncStrategy, ConflictStep[]> = {
+  lww: [
+    { alice: "fill: blue", bob: "fill: blue", server: "—", result: "fill: blue", note: "Both see blue rectangle" },
+    { alice: "fill → red (t=1)", bob: "fill → green (t=2)", server: "—", result: "fill: blue", note: "Both edit fill concurrently" },
+    { alice: "sends red (t=1)", bob: "sends green (t=2)", server: "compares timestamps", result: "pending...", note: "Server receives both ops" },
+    { alice: "fill: green ✓", bob: "fill: green ✓", server: "t=2 wins", result: "fill: green", note: "Alice's red LOST — t=2 > t=1" },
+  ],
+  ot: [
+    { alice: "fill: blue", bob: "fill: blue", server: "canonical state", result: "fill: blue", note: "Server is source of truth" },
+    { alice: "fill → red", bob: "fill → green", server: "queues ops", result: "fill: blue", note: "Concurrent edits queued" },
+    { alice: "transform(red, green)", bob: "transform(green, red)", server: "orders: red first", result: "pending...", note: "Server picks canonical order" },
+    { alice: "fill: green ✓", bob: "fill: green ✓", server: "green wins (last)", result: "fill: green", note: "Both converge — server-ordered" },
+  ],
+  crdt: [
+    { alice: "fill: blue {v:1}", bob: "fill: blue {v:1}", server: "—", result: "fill: blue", note: "Both replicas start at v1" },
+    { alice: "fill: red {v:2a}", bob: "fill: green {v:2b}", server: "—", result: "fill: blue", note: "Concurrent versions diverge" },
+    { alice: "merge(2a, 2b)", bob: "merge(2b, 2a)", server: "no server needed", result: "pending...", note: "Replicas exchange + merge" },
+    { alice: "fill: green {v:3}", bob: "fill: green {v:3}", server: "—", result: "fill: green", note: "Deterministic tie-break converges" },
+  ],
+};
+
 function CrdtSyncStep() {
   const { syncStrategy, setSyncStrategy } = useWhiteboard();
+  const [conflictStep, setConflictStep] = useState(0);
+  const reducedMotion = usePrefersReducedMotion();
+
+  const scenario = CONFLICT_SCENARIOS[syncStrategy];
+
+  const runConflict = useCallback(() => {
+    setConflictStep(0);
+    if (reducedMotion) { setConflictStep(scenario.length - 1); return; }
+    for (let i = 1; i < scenario.length; i++) {
+      setTimeout(() => setConflictStep(i), i * 800);
+    }
+  }, [scenario, reducedMotion]);
+
+  useEffect(() => { setConflictStep(0); }, [syncStrategy]);
+
+  const current = scenario[conflictStep]!;
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Sync Strategy Comparison</div>
         <div className={styles.widgetNote}>
-          Figma uses per-property LWW (simple, works for most cases). Google Docs uses OT (server-canonical ordering). Excalidraw experiments with CRDTs (peer-to-peer capable). Pick one:
+          Alice and Bob both change a rectangle&apos;s fill color at the same time. Pick a strategy, then run the conflict to see how each resolves it.
         </div>
       </div>
       <div className={styles.strategyGroup}>
         {SYNC_STRATEGIES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={styles.strategyOption}
-            data-active={syncStrategy === s.id ? "true" : undefined}
-            onClick={() => setSyncStrategy(s.id)}
-          >
+          <button key={s.id} type="button" className={styles.strategyOption} data-active={syncStrategy === s.id ? "true" : undefined} onClick={() => setSyncStrategy(s.id)}>
             <span className={styles.strategyName}>{s.name}</span>
             <span className={styles.strategyDesc}>{s.desc}</span>
           </button>
         ))}
       </div>
-      <CrdtComparisonWidget strategy={syncStrategy} />
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.toolButton} onClick={runConflict}>
+          ▶ Simulate Conflict
+        </button>
+      </div>
+      <div className={styles.crdtComparison}>
+        {(["alice", "bob", "server", "result"] as const).map((role) => (
+          <div key={role} className={styles.crdtCard}>
+            <div className={styles.crdtCardTitle} style={{ color: role === "alice" ? "var(--diagram-layer-2)" : role === "bob" ? "var(--diagram-layer-4)" : role === "server" ? "var(--color-muted)" : "var(--color-accent)" }}>
+              {role === "alice" ? "Alice" : role === "bob" ? "Bob" : role === "server" ? "Server" : "Result"}
+            </div>
+            <div className={styles.crdtRow}>
+              <span className={styles.crdtValue} style={{ fontSize: "0.7rem" }}>{current[role]}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Step</div>
+          <div className={styles.metricValue}>{conflictStep + 1}/{scenario.length}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Strategy</div>
+          <div className={styles.metricValue}>{syncStrategy.toUpperCase()}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Data loss?</div>
+          <div className={styles.metricValue} data-status={syncStrategy === "lww" && conflictStep === 3 ? "bad" : "good"}>
+            {syncStrategy === "lww" && conflictStep === 3 ? "Yes" : "No"}
+          </div>
+        </div>
+      </div>
+      {conflictStep > 0 && (
+        <div className={styles.stepMessage} data-severity={syncStrategy === "lww" && conflictStep === 3 ? "warning" : undefined}>
+          {current.note}
+        </div>
+      )}
     </>
-  );
-}
-
-function CrdtComparisonWidget({ strategy }: { strategy: SyncStrategy }) {
-  const data: Record<SyncStrategy, { serverRequired: string; convergence: string; bandwidth: string; complexity: string; peerToPeer: string }> = {
-    lww: { serverRequired: "Optional", convergence: "Eventual (lossy)", bandwidth: "Low", complexity: "Simple", peerToPeer: "Yes" },
-    ot: { serverRequired: "Required", convergence: "Strong", bandwidth: "Medium", complexity: "High", peerToPeer: "No" },
-    crdt: { serverRequired: "No", convergence: "Strong", bandwidth: "Higher", complexity: "Medium", peerToPeer: "Yes" },
-  };
-  const info = data[strategy];
-
-  return (
-    <div className={styles.crdtComparison}>
-      <div className={styles.crdtCard}>
-        <div className={styles.crdtCardTitle}>{strategy.toUpperCase()} Properties</div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>Server</span>
-          <span className={styles.crdtValue}>{info.serverRequired}</span>
-        </div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>Convergence</span>
-          <span className={styles.crdtValue}>{info.convergence}</span>
-        </div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>Bandwidth</span>
-          <span className={styles.crdtValue}>{info.bandwidth}</span>
-        </div>
-      </div>
-      <div className={styles.crdtCard}>
-        <div className={styles.crdtCardTitle}>Trade-offs</div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>Complexity</span>
-          <span className={styles.crdtValue}>{info.complexity}</span>
-        </div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>P2P</span>
-          <span className={styles.crdtValue}>{info.peerToPeer}</span>
-        </div>
-        <div className={styles.crdtRow}>
-          <span className={styles.crdtLabel}>Used by</span>
-          <span className={styles.crdtValue}>
-            {strategy === "lww" ? "Figma" : strategy === "ot" ? "Google Docs" : "Excalidraw"}
-          </span>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1279,86 +1406,121 @@ function CrdtComparisonWidget({ strategy }: { strategy: SyncStrategy }) {
 // Step 13: Cursor Presence
 // ═══════════════════════════════════════════════════════════════════
 
+const SIM_USERS = [
+  { id: "alice", name: "Alice", color: "var(--diagram-layer-2)" },
+  { id: "bob", name: "Bob", color: "var(--diagram-layer-4)" },
+  { id: "carol", name: "Carol", color: "var(--diagram-layer-5)" },
+  { id: "dan", name: "Dan", color: "var(--diagram-layer-1)" },
+  { id: "eve", name: "Eve", color: "var(--color-warning)" },
+];
+
 function CursorPresenceStep() {
-  const { remoteCursors } = useWhiteboard();
   const [throttleMs, setThrottleMs] = useState(33);
-  const [userCount, setUserCount] = useState(2);
+  const [userCount, setUserCount] = useState(3);
+  const [running, setRunning] = useState(false);
+  const [msgCount, setMsgCount] = useState(0);
+  const [cursors, setCursors] = useState<Record<string, { x: number; y: number }>>({});
+  const reducedMotion = usePrefersReducedMotion();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const areaRef = useRef<HTMLDivElement>(null);
 
   const msgsPerSec = Math.round((1000 / throttleMs) * userCount);
+
+  const startSim = useCallback(() => {
+    setRunning(true);
+    setMsgCount(0);
+    const angles: Record<string, number> = {};
+    SIM_USERS.slice(0, userCount).forEach((u, i) => { angles[u.id] = (i * Math.PI * 2) / userCount; });
+
+    timerRef.current = setInterval(() => {
+      const nextCursors: Record<string, { x: number; y: number }> = {};
+      SIM_USERS.slice(0, userCount).forEach((u) => {
+        angles[u.id] = (angles[u.id] ?? 0) + 0.04 + Math.random() * 0.02;
+        const a = angles[u.id]!;
+        nextCursors[u.id] = {
+          x: 200 + Math.cos(a) * (60 + Math.sin(a * 0.7) * 40),
+          y: 60 + Math.sin(a) * (30 + Math.cos(a * 1.3) * 20),
+        };
+      });
+      setCursors(nextCursors);
+      setMsgCount((c) => c + userCount);
+    }, reducedMotion ? 200 : throttleMs);
+  }, [throttleMs, userCount, reducedMotion]);
+
+  const stopSim = useCallback(() => {
+    setRunning(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+  }, []);
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Cursor Presence</div>
         <div className={styles.widgetNote}>
-          Each connected user broadcasts their cursor position at ~30fps. With N users, the server relays N×30 cursor messages/sec. Throttling and delta compression keep bandwidth manageable.
+          Each user broadcasts cursor position. Watch the bandwidth spike as you increase users or reduce throttle interval. Colored dots animate at the selected rate.
         </div>
       </div>
-      <div className={styles.toggleStrip}>
-        <div className={styles.toggleRow}>
-          <span className={styles.toggleLabel}>Throttle interval</span>
-          <select
-            value={throttleMs}
-            onChange={(e) => setThrottleMs(Number(e.target.value))}
-            style={{
-              padding: "4px 8px", minHeight: 36, border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-1)", background: "var(--color-surface)",
-              color: "var(--color-fg)", fontFamily: "var(--font-mono)", fontSize: "0.7rem",
-            }}
-          >
-            <option value={16}>16ms (60fps)</option>
-            <option value={33}>33ms (30fps)</option>
-            <option value={100}>100ms (10fps)</option>
-          </select>
-        </div>
-        <div className={styles.toggleRow}>
-          <span className={styles.toggleLabel}>Concurrent users</span>
-          <select
-            value={userCount}
-            onChange={(e) => setUserCount(Number(e.target.value))}
-            style={{
-              padding: "4px 8px", minHeight: 36, border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-1)", background: "var(--color-surface)",
-              color: "var(--color-fg)", fontFamily: "var(--font-mono)", fontSize: "0.7rem",
-            }}
-          >
-            <option value={2}>2 users</option>
-            <option value={5}>5 users</option>
-            <option value={10}>10 users</option>
-            <option value={25}>25 users</option>
-          </select>
-        </div>
+      <div className={styles.toolbar}>
+        {!running ? (
+          <button type="button" className={styles.toolButton} onClick={startSim}>▶ Start Cursors</button>
+        ) : (
+          <button type="button" className={styles.toolButton} onClick={stopSim}>■ Stop</button>
+        )}
+        {[2, 3, 5].map((n) => (
+          <button key={n} type="button" className={styles.toolButton} data-active={userCount === n ? "true" : undefined} onClick={() => { setUserCount(n); if (running) { stopSim(); } }}>
+            {n} users
+          </button>
+        ))}
+        {[16, 33, 100].map((ms) => (
+          <button key={ms} type="button" className={styles.toolButton} data-active={throttleMs === ms ? "true" : undefined} onClick={() => { setThrottleMs(ms); if (running) { stopSim(); } }}>
+            {ms}ms
+          </button>
+        ))}
+      </div>
+      <div
+        ref={areaRef}
+        className={styles.canvasWrapper}
+        style={{ height: 140, position: "relative" }}
+      >
+        {SIM_USERS.slice(0, userCount).map((u) => {
+          const pos = cursors[u.id];
+          if (!pos) return null;
+          return (
+            <React.Fragment key={u.id}>
+              <div className={styles.cursorDot} style={{ left: pos.x, top: pos.y, background: u.color, transition: reducedMotion ? "none" : `left ${throttleMs}ms linear, top ${throttleMs}ms linear` }} />
+              <div className={styles.cursorLabel} style={{ left: pos.x, top: pos.y, color: u.color, transition: reducedMotion ? "none" : `left ${throttleMs}ms linear, top ${throttleMs}ms linear` }}>
+                {u.name}
+              </div>
+            </React.Fragment>
+          );
+        })}
+        {!running && Object.keys(cursors).length === 0 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "0.7rem", color: "var(--color-muted)" }}>
+            Press ▶ to simulate cursor broadcasts
+          </div>
+        )}
       </div>
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Msgs/sec</div>
-          <div className={styles.metricValue} data-status={msgsPerSec > 500 ? "bad" : "good"}>
+          <div className={styles.metricValue} data-status={msgsPerSec > 300 ? "bad" : "good"}>
             {msgsPerSec}
           </div>
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Bandwidth</div>
-          <div className={styles.metricValue} data-status={msgsPerSec > 500 ? "bad" : "good"}>
+          <div className={styles.metricValue} data-status={msgsPerSec > 300 ? "bad" : "good"}>
             ~{((msgsPerSec * 40) / 1024).toFixed(1)} KB/s
           </div>
         </div>
         <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Active cursors</div>
-          <div className={styles.metricValue}>{remoteCursors.length}</div>
+          <div className={styles.metricLabel}>Total sent</div>
+          <div className={styles.metricValue}>{msgCount}</div>
         </div>
       </div>
-      {remoteCursors.length > 0 && (
-        <div className={styles.widgetPanel} style={{ borderLeftColor: "var(--diagram-layer-4)" }}>
-          <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-4)" }}>Simulated Cursors</div>
-          {remoteCursors.map((c) => (
-            <div key={c.userId} style={{ fontSize: "0.7rem", display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-              <span style={{ width: 10, height: 10, borderRadius: "50%", background: c.color, display: "inline-block" }} />
-              <span style={{ fontWeight: 700, color: c.color }}>{c.name}</span>
-              <span style={{ color: "var(--color-muted)" }}>({c.x}, {c.y})</span>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }
@@ -1481,22 +1643,104 @@ function RtreeVisualization({ shapeCount }: { shapeCount: number }) {
 // ═══════════════════════════════════════════════════════════════════
 
 function AccessibleCanvasStep() {
-  const { shapes } = useWhiteboard();
+  const { shapes, setShapes } = useWhiteboard();
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
+  const [announcements, setAnnouncements] = useState<string[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const announce = useCallback((msg: string) => {
+    setAnnouncements((prev) => [...prev.slice(-4), msg]);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (shapes.length === 0) return;
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const next = e.shiftKey
+        ? (focusedIdx === null || focusedIdx === 0 ? shapes.length - 1 : focusedIdx - 1)
+        : (focusedIdx === null ? 0 : (focusedIdx + 1) % shapes.length);
+      setFocusedIdx(next);
+      const s = shapes[next]!;
+      announce(`${s.kind} at ${Math.round(s.x)}, ${Math.round(s.y)}, ${s.w} by ${s.h}`);
+      return;
+    }
+
+    if (focusedIdx === null) return;
+
+    const GRID = 10;
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      e.preventDefault();
+      const dx = e.key === "ArrowRight" ? GRID : e.key === "ArrowLeft" ? -GRID : 0;
+      const dy = e.key === "ArrowDown" ? GRID : e.key === "ArrowUp" ? -GRID : 0;
+      setShapes((prev) => prev.map((s, i) => i === focusedIdx ? { ...s, x: s.x + dx, y: s.y + dy } : s));
+      const s = shapes[focusedIdx]!;
+      announce(`Moved ${s.kind} to ${Math.round(s.x + dx)}, ${Math.round(s.y + dy)}`);
+    }
+
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      const removed = shapes[focusedIdx]!;
+      setShapes((prev) => prev.filter((_, i) => i !== focusedIdx));
+      setFocusedIdx(null);
+      announce(`Removed ${removed.kind}`);
+    }
+
+    if (e.key === "Escape") {
+      setFocusedIdx(null);
+      announce("Deselected");
+    }
+  }, [shapes, focusedIdx, setShapes, announce]);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Accessible Canvas</div>
         <div className={styles.widgetNote}>
-          Canvas is opaque to screen readers. The solution: maintain a hidden DOM tree that mirrors the canvas shapes. Each shape gets a focusable element with role, position, and transform announcements via aria-live regions.
+          Canvas is opaque to assistive tech. Try the keyboard navigation below — Tab between shapes, arrow keys to move, Delete to remove. The &quot;Screen Reader Output&quot; panel shows what would be announced.
         </div>
+      </div>
+      <div
+        ref={containerRef}
+        className={styles.canvasWrapper}
+        style={{ height: 180, position: "relative", outline: "none" }}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        role="application"
+        aria-label="Accessible canvas with keyboard navigation"
+      >
+        {shapes.map((shape, i) => (
+          <div
+            key={shape.id}
+            style={{
+              position: "absolute",
+              left: shape.x,
+              top: shape.y,
+              width: shape.w,
+              height: shape.h,
+              background: shape.fill,
+              opacity: 0.3,
+              borderRadius: shape.kind === "ellipse" ? "50%" : 4,
+              outline: i === focusedIdx ? "3px solid var(--color-accent)" : "1px solid var(--color-border)",
+              outlineOffset: i === focusedIdx ? 2 : 0,
+              transition: "left 100ms ease, top 100ms ease",
+            }}
+            role="img"
+            aria-label={`${shape.kind} at ${Math.round(shape.x)}, ${Math.round(shape.y)}`}
+          />
+        ))}
+        {shapes.length === 0 && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "0.7rem", color: "var(--color-muted)" }}>
+            (no shapes — go to step 6 to add some)
+          </div>
+        )}
       </div>
       <div className={styles.a11yMirror}>
         <div style={{ fontSize: "0.625rem", fontWeight: 800, color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--space-1)" }}>
           Hidden DOM Mirror
         </div>
-        {shapes.map((shape) => (
-          <div key={shape.id} className={styles.a11yRow}>
+        {shapes.map((shape, i) => (
+          <div key={shape.id} className={styles.a11yRow} data-active={i === focusedIdx ? "true" : undefined}>
             <span className={styles.a11yRole}>role=&quot;img&quot;</span>
             <span className={styles.a11yLabel}>
               {shape.kind} — {shape.text ?? `${shape.w}×${shape.h}`}
@@ -1506,37 +1750,23 @@ function AccessibleCanvasStep() {
             </span>
           </div>
         ))}
-        {shapes.length === 0 && (
-          <div style={{ fontSize: "0.625rem", color: "var(--color-muted)", fontStyle: "italic" }}>
-            (no shapes to mirror)
-          </div>
-        )}
       </div>
       <div className={styles.widgetPanel} style={{ borderLeftColor: "var(--diagram-layer-2)" }}>
-        <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-2)" }}>Keyboard Navigation</div>
-        <div className={styles.widgetNote}>
-          Tab cycles through shapes. Arrow keys move the focused shape by grid increments. Delete removes it. All changes announced via aria-live=&quot;polite&quot;.
-        </div>
-        <div style={{ display: "flex", gap: "var(--space-1)", flexWrap: "wrap" }}>
-          {[
-            { key: "Tab", action: "Next shape" },
-            { key: "Shift+Tab", action: "Previous shape" },
-            { key: "Arrow keys", action: "Move shape" },
-            { key: "Delete", action: "Remove shape" },
-            { key: "Escape", action: "Deselect" },
-          ].map(({ key, action }) => (
-            <div key={key} style={{ fontSize: "0.65rem", display: "flex", gap: "var(--space-1)" }}>
-              <kbd style={{
-                padding: "1px 6px", border: "1px solid var(--color-border)",
-                borderRadius: 3, background: "var(--color-surface-2)",
-                fontFamily: "var(--font-mono)", fontSize: "0.6rem", fontWeight: 700,
-              }}>
-                {key}
-              </kbd>
-              <span style={{ color: "var(--color-muted)" }}>{action}</span>
+        <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-2)" }}>Screen Reader Output</div>
+        {announcements.length === 0 ? (
+          <div style={{ fontSize: "0.65rem", color: "var(--color-muted)", fontStyle: "italic" }}>
+            Click the canvas area above, then press Tab to start navigating
+          </div>
+        ) : (
+          announcements.map((msg, i) => (
+            <div key={i} style={{ fontSize: "0.65rem", color: i === announcements.length - 1 ? "var(--color-text)" : "var(--color-muted)", fontWeight: i === announcements.length - 1 ? 700 : 500 }}>
+              → {msg}
             </div>
-          ))}
-        </div>
+          ))
+        )}
+      </div>
+      <div aria-live="polite" className={styles.srOnly}>
+        {announcements[announcements.length - 1] ?? ""}
       </div>
     </>
   );

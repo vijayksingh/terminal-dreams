@@ -855,6 +855,13 @@
   font-variant-numeric: tabular-nums;
 }
 
+.a11yRow[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border-radius: var(--radius-1);
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
 /* ── Coalesced events viz ──────────────────────────────────── */
 
 .coalescedViz {
