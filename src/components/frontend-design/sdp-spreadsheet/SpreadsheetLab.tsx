@@ -118,7 +118,11 @@ function PlanningView({ activeStep }: { activeStep: number }) {
 }
 
 function RequirementsView() {
-  const { scopeEnabled, toggleScope } = useSpreadsheet();
+  const { scopeEnabled, toggleScope, markStepComplete } = useSpreadsheet();
+
+  useEffect(() => {
+    if (scopeEnabled.size >= 2) markStepComplete(1);
+  }, [scopeEnabled.size, markStepComplete]);
   const summary = useMemo(() => {
     if (scopeEnabled.size === 0) return "Toggle items to define scope";
     return SCOPE_ITEMS.filter((s) => scopeEnabled.has(s.id))
@@ -195,11 +199,16 @@ function ApiDesignView() {
 const METHODS = ["GET", "POST", "PUT", "DELETE"] as const;
 
 function EndpointChallenge() {
+  const { markStepComplete } = useSpreadsheet();
   const [guesses, setGuesses] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
+
+  useEffect(() => {
+    if (revealed.size === API_ENDPOINTS.length) markStepComplete(2);
+  }, [revealed.size, markStepComplete]);
 
   return (
     <div className={styles.endpointList}>

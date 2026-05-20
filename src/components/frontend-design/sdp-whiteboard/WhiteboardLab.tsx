@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSITION } from "@/lib/motion";
+import { TRANSITION, SPRING } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
@@ -637,8 +637,21 @@ function CanvasRenderStep() {
               if (shape.kind === "ellipse") return (
                 <ellipse key={shape.id} cx={shape.x + shape.w / 2} cy={shape.y + shape.h / 2} rx={shape.w / 2} ry={shape.h / 2} fill={shape.fill} fillOpacity={0.5} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
               );
+              if (shape.kind === "freehand" && shape.points.length > 1) return (
+                <polyline key={shape.id} points={shape.points.map(p => `${p.x},${p.y}`).join(" ")} fill="none" stroke={shape.stroke} strokeWidth={shape.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+              );
+              if (shape.kind === "arrow" && shape.points.length >= 2) {
+                const p0 = shape.points[0]!;
+                const p1 = shape.points[shape.points.length - 1]!;
+                return <line key={shape.id} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke={shape.stroke} strokeWidth={shape.strokeWidth} markerEnd="url(#svgArrow)" />;
+              }
               return null;
             })}
+            <defs>
+              <marker id="svgArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8" fill="var(--color-muted)" />
+              </marker>
+            </defs>
           </svg>
         )}
       </div>
@@ -1657,17 +1670,26 @@ function UndoRedoStep() {
         <svg viewBox="0 0 320 200" className={styles.renderSvg} role="img" aria-label={`Undo canvas with ${shapes.length} shapes`}>
           {shapes.map((s) => {
             const isFlash = s.id === flashId;
-            return s.kind === "rect" ? (
-              <g key={s.id}>
-                <rect x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={isFlash ? "var(--color-accent)" : s.stroke} strokeWidth={isFlash ? 3 : s.strokeWidth} />
-                {isFlash && <rect x={s.x - 4} y={s.y - 4} width={s.w + 8} height={s.h + 8} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />}
-              </g>
-            ) : s.kind === "ellipse" ? (
-              <g key={s.id}>
-                <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={isFlash ? "var(--color-accent)" : s.stroke} strokeWidth={isFlash ? 3 : s.strokeWidth} />
-                {isFlash && <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2 + 4} ry={s.h / 2 + 4} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />}
-              </g>
-            ) : null;
+            const stroke = isFlash ? "var(--color-accent)" : s.stroke;
+            const sw = isFlash ? 3 : s.strokeWidth;
+            return (
+              <motion.g key={s.id}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.6, opacity: 0 }}
+                transition={SPRING.snappy}
+              >
+                {s.kind === "rect" && (
+                  <rect x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={stroke} strokeWidth={sw} />
+                )}
+                {s.kind === "ellipse" && (
+                  <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={stroke} strokeWidth={sw} />
+                )}
+                {isFlash && (
+                  <rect x={s.x - 4} y={s.y - 4} width={s.w + 8} height={s.h + 8} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />
+                )}
+              </motion.g>
+            );
           })}
           {shapes.length === 0 && (
             <text x="160" y="100" textAnchor="middle" fill="var(--color-muted)" fontSize="14" fontFamily="var(--font-mono)">
@@ -1800,7 +1822,11 @@ function CrdtSyncStep() {
       </div>
       {merged && (
         <>
-          <div className={styles.mergeResult}>
+          <motion.div className={styles.mergeResult}
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={SPRING.snappy}
+          >
             <div className={styles.mergePreview}>
               <div className={styles.mergeBox} style={{ background: COLOR_VAR[aliceChoice] }} data-lost={merged.aliceLost ? "true" : undefined}>
                 <span className={styles.mergeBoxLabel}>Alice</span>
@@ -1819,7 +1845,7 @@ function CrdtSyncStep() {
                 {merged.bobLost && <span className={styles.mergeBoxLost}>LOST</span>}
               </div>
             </div>
-          </div>
+          </motion.div>
           <div className={styles.metricsBar} aria-live="polite">
             <div className={styles.metricCard}>
               <div className={styles.metricLabel}>Strategy</div>
