@@ -704,6 +704,27 @@
   margin-top: 2px;
 }
 
+/* ── Scope badge ──────────────────────────────────────────── */
+
+.scopeBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.scopeBadge[data-in-scope="true"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+}
+
+.scopeBadge[data-in-scope="false"] {
+  color: var(--color-muted);
+  background: var(--color-surface);
+}
+
 /* ── Widget panel ──────────────────────────────────────────── */
 
 .widgetPanel {
@@ -1131,17 +1152,70 @@
 /* ── Coalesced draw area ───────────────────────────────────── */
 
 .coalescedArea {
-  height: 120px;
+  min-height: 160px;
   border-radius: var(--radius-2);
   background: var(--color-surface);
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   cursor: crosshair;
   touch-action: none;
   font-size: 0.7rem;
   color: var(--color-muted);
   font-family: var(--font-mono);
+  position: relative;
+}
+
+.coalescedSplit {
+  display: flex;
+  width: 100%;
+  gap: 0;
+}
+
+.coalescedHalf {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2);
+  gap: var(--space-1);
+}
+
+.coalescedDivider {
+  width: 1px;
+  background: var(--color-border);
+  align-self: stretch;
+}
+
+.coalescedLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+}
+
+.coalescedSvg {
+  width: 100%;
+  flex: 1;
+  min-height: 80px;
+}
+
+.coalescedCount {
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.coalescedPrompt {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--color-muted);
+  font-size: 0.7rem;
 }
 
 /* ── Cursor area ───────────────────────────────────────────── */

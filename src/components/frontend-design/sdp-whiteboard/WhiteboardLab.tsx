@@ -59,10 +59,10 @@ export function WhiteboardLab({ activeStep }: { activeStep: number }) {
 
 const STEP_LABELS = [
   "R", "A", "C",
-  "◻", "✎", "△", "⊡",
-  "⬡", "▤", "⇌",
-  "↺", "⚡", "👤",
-  "🌳", "♿",
+  "CAN", "PTR", "SHP", "HIT",
+  "SEL", "LAY", "EVT",
+  "UND", "SYN", "CUR",
+  "IDX", "A11Y",
 ];
 
 const STEP_TITLES = [
@@ -75,7 +75,7 @@ const STEP_TITLES = [
 
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
-    <nav className={styles.stepBar} aria-label="Build steps">
+    <div className={styles.stepBar} aria-label="Build progress">
       <ol role="list" className={styles.stepBarList}>
         {STEP_LABELS.map((label, i) => (
           <li
@@ -90,7 +90,7 @@ function StepBar({ activeStep }: { activeStep: number }) {
           </li>
         ))}
       </ol>
-    </nav>
+    </div>
   );
 }
 
@@ -342,9 +342,30 @@ function WhiteboardEvolution() {
   );
 }
 
+const WB_STEP_SCOPE_MAP: Record<number, string> = {
+  5: "freehand", 10: "freehand",
+  6: "shapes", 7: "shapes",
+  8: "transforms",
+  12: "multiUser", 13: "multiUser",
+  14: "spatialIndex",
+};
+
+function WbScopeBadge({ step }: { step: number }) {
+  const { scopeEnabled } = useWhiteboard();
+  const scopeId = WB_STEP_SCOPE_MAP[step];
+  if (!scopeId) return null;
+  const inScope = !!scopeEnabled[scopeId];
+  return (
+    <div className={styles.scopeBadge} data-in-scope={inScope ? "true" : "false"}>
+      {inScope ? "✓ In your scope" : "Not in scope — bonus topic"}
+    </div>
+  );
+}
+
 function StepContent({ step }: { step: number }) {
   return (
     <div className={styles.stepContentStack}>
+      <WbScopeBadge step={step} />
       <PredictionChallenge step={step} />
       <StepInteractive step={step} />
     </div>
@@ -451,78 +472,9 @@ function CanvasRenderStep() {
 
     const t0 = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const el = canvas.parentElement;
-    const computedStyle = el ? getComputedStyle(el) : null;
-
-    // Grid
-    const gridColor = computedStyle?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
-    ctx.strokeStyle = gridColor;
-    ctx.globalAlpha = 0.15;
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    for (const shape of allShapes) {
-      ctx.save();
-      const fillColor = resolveColor(shape.fill, computedStyle);
-      const strokeColor = resolveColor(shape.stroke, computedStyle);
-
-      if (shape.kind === "rect") {
-        ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.3;
-        ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = shape.strokeWidth;
-        ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
-      } else if (shape.kind === "ellipse") {
-        ctx.beginPath();
-        ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
-        ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.3;
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = shape.strokeWidth;
-        ctx.stroke();
-      } else if (shape.kind === "freehand" && shape.points.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(shape.points[0]!.x, shape.points[0]!.y);
-        for (let i = 1; i < shape.points.length; i++) {
-          ctx.lineTo(shape.points[i]!.x, shape.points[i]!.y);
-        }
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = shape.strokeWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.stroke();
-      } else if (shape.kind === "arrow" && shape.points.length >= 2) {
-        const p0 = shape.points[0]!;
-        const p1 = shape.points[shape.points.length - 1]!;
-        ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
-        ctx.lineTo(p1.x, p1.y);
-        ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = shape.strokeWidth;
-        ctx.stroke();
-        const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
-        const headLen = 10;
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p1.x - headLen * Math.cos(angle - 0.4), p1.y - headLen * Math.sin(angle - 0.4));
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p1.x - headLen * Math.cos(angle + 0.4), p1.y - headLen * Math.sin(angle + 0.4));
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
+    const cs = canvas.parentElement ? getComputedStyle(canvas.parentElement) : null;
+    drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
+    for (const shape of allShapes) drawCanvasShape(ctx, shape, cs);
     setCanvasMs(Number((performance.now() - t0).toFixed(2)));
   }, [allShapes]);
 
@@ -604,6 +556,78 @@ function resolveColor(cssVar: string, style: CSSStyleDeclaration | null): string
   return style.getPropertyValue(prop).trim() || CANVAS_FALLBACK;
 }
 
+function drawCanvasGrid(ctx: CanvasRenderingContext2D, w: number, h: number, cs: CSSStyleDeclaration | null) {
+  const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
+  ctx.save();
+  ctx.strokeStyle = gridColor;
+  ctx.globalAlpha = 0.15;
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < w; x += 20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  ctx.restore();
+}
+
+function drawCanvasShape(ctx: CanvasRenderingContext2D, shape: Shape, cs: CSSStyleDeclaration | null, opts?: { highlight?: boolean }) {
+  ctx.save();
+  const fillColor = resolveColor(shape.fill, cs);
+  const strokeColor = resolveColor(shape.stroke, cs);
+
+  if (shape.kind === "rect") {
+    ctx.fillStyle = fillColor;
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = shape.strokeWidth;
+    ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
+  } else if (shape.kind === "ellipse") {
+    ctx.beginPath();
+    ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.globalAlpha = 0.3;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = shape.strokeWidth;
+    ctx.stroke();
+  } else if (shape.kind === "freehand" && shape.points.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(shape.points[0]!.x, shape.points[0]!.y);
+    for (let i = 1; i < shape.points.length; i++) ctx.lineTo(shape.points[i]!.x, shape.points[i]!.y);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = shape.strokeWidth;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
+  } else if (shape.kind === "arrow" && shape.points.length >= 2) {
+    const p0 = shape.points[0]!;
+    const p1 = shape.points[shape.points.length - 1]!;
+    ctx.beginPath();
+    ctx.moveTo(p0.x, p0.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = shape.strokeWidth;
+    ctx.stroke();
+    const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
+    const headLen = 10;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p1.x - headLen * Math.cos(angle - 0.4), p1.y - headLen * Math.sin(angle - 0.4));
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p1.x - headLen * Math.cos(angle + 0.4), p1.y - headLen * Math.sin(angle + 0.4));
+    ctx.stroke();
+  }
+
+  if (opts?.highlight && shape.selected) {
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = cs?.getPropertyValue("--color-accent").trim() || CANVAS_FALLBACK;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Step 5: Pointer Capture
 // ═══════════════════════════════════════════════════════════════════
@@ -622,46 +646,14 @@ function PointerCaptureStep() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cs = canvas.parentElement ? getComputedStyle(canvas.parentElement) : null;
+    drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
+    for (const shape of shapes) drawCanvasShape(ctx, shape, cs);
 
-    const el = canvas.parentElement;
-    const cs = el ? getComputedStyle(el) : null;
-    const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
-
-    // grid
-    ctx.strokeStyle = gridColor;
-    ctx.globalAlpha = 0.25;
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // existing strokes
-    for (const shape of shapes) {
-      if (shape.kind === "freehand" && shape.points.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(shape.points[0]!.x, shape.points[0]!.y);
-        for (let i = 1; i < shape.points.length; i++) {
-          ctx.lineTo(shape.points[i]!.x, shape.points[i]!.y);
-        }
-        ctx.strokeStyle = resolveColor(shape.stroke, cs);
-        ctx.lineWidth = shape.strokeWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.stroke();
-      }
-    }
-
-    // current stroke
     if (currentPath.length > 1) {
       ctx.beginPath();
       ctx.moveTo(currentPath[0]!.x, currentPath[0]!.y);
-      for (let i = 1; i < currentPath.length; i++) {
-        ctx.lineTo(currentPath[i]!.x, currentPath[i]!.y);
-      }
+      for (let i = 1; i < currentPath.length; i++) ctx.lineTo(currentPath[i]!.x, currentPath[i]!.y);
       ctx.strokeStyle = resolveColor("var(--color-accent)", cs);
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
@@ -855,24 +847,10 @@ function HitTestingStep() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const el = canvas.parentElement;
-    const cs = el ? getComputedStyle(el) : null;
+    const cs = canvas.parentElement ? getComputedStyle(canvas.parentElement) : null;
     const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
+    drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
 
-    // grid
-    ctx.strokeStyle = gridColor;
-    ctx.globalAlpha = 0.25;
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x < canvas.width; x += 20) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 20) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-
-    // shapes with bounding boxes
     for (const shape of shapes) {
       ctx.save();
       const isSelected = shape.id === selectedShapeId;
@@ -1173,14 +1151,8 @@ function LayerSeparationStep() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const cs = getComputedStyle(canvas);
-    const W = canvas.width;
-    const H = canvas.height;
-    ctx.clearRect(0, 0, W, H);
-    const gridColor = cs.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
-    ctx.strokeStyle = gridColor;
-    ctx.lineWidth = 0.5;
-    for (let x = 0; x <= W; x += 20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y <= H; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
     const { x, y, w, h } = shapePos.current;
     ctx.fillStyle = resolveColor("var(--diagram-layer-1)", cs);
     ctx.fillRect(x, y, w, h);
@@ -1306,25 +1278,38 @@ function LayerSeparationStep() {
 // ═══════════════════════════════════════════════════════════════════
 
 function CoalescedEventsStep() {
-  const [regular, setRegular] = useState(0);
-  const [coalesced, setCoalesced] = useState(0);
+  const [regularPts, setRegularPts] = useState<{x:number;y:number}[]>([]);
+  const [coalescedPts, setCoalescedPts] = useState<{x:number;y:number}[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const drawingRef = useRef(false);
   const areaRef = useRef<HTMLDivElement>(null);
 
+  const getRelPos = (e: PointerEvent | React.PointerEvent, rect: DOMRect) => ({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+  });
+
   const onPointerDown = (e: React.PointerEvent) => {
     drawingRef.current = true;
     setIsDrawing(true);
-    setRegular(0);
-    setCoalesced(0);
+    setRegularPts([]);
+    setCoalescedPts([]);
     areaRef.current?.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!drawingRef.current) return;
-    const extra = e.nativeEvent.getCoalescedEvents?.()?.length ?? 1;
-    setRegular((r) => r + 1);
-    setCoalesced((c) => c + extra);
+    if (!drawingRef.current || !areaRef.current) return;
+    const rect = areaRef.current.getBoundingClientRect();
+    const hw = rect.width / 2;
+    const regPt = getRelPos(e.nativeEvent, rect);
+    setRegularPts(prev => [...prev, { x: regPt.x > hw ? regPt.x - hw : regPt.x, y: regPt.y }]);
+
+    const coalEvents = e.nativeEvent.getCoalescedEvents?.() ?? [e.nativeEvent];
+    const newCoalesced = coalEvents.map(ce => {
+      const p = getRelPos(ce, rect);
+      return { x: p.x > hw ? p.x - hw : p.x, y: p.y };
+    });
+    setCoalescedPts(prev => [...prev, ...newCoalesced]);
   };
 
   const onPointerUp = () => {
@@ -1332,14 +1317,17 @@ function CoalescedEventsStep() {
     setIsDrawing(false);
   };
 
-  const ratio = regular > 0 ? (coalesced / regular).toFixed(1) : "—";
+  const toPath = (pts: {x:number;y:number}[]) =>
+    pts.length < 2 ? "" : `M${pts.map(p => `${p.x},${p.y}`).join("L")}`;
+
+  const ratio = regularPts.length > 0 ? (coalescedPts.length / regularPts.length).toFixed(1) : "—";
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>getCoalescedEvents()</div>
         <div className={styles.widgetNote}>
-          Browsers batch hardware pointer samples into single events. getCoalescedEvents() recovers the in-between points — typically 2-6x more samples, giving smoother freehand paths.
+          Draw below to compare paths — left uses only pointermove events, right uses getCoalescedEvents() for all hardware samples. The coalesced path is noticeably smoother.
         </div>
       </div>
       <div
@@ -1350,19 +1338,40 @@ function CoalescedEventsStep() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         role="application"
-        aria-label="Draw area — drag to measure coalesced events"
+        aria-label="Split draw area — drag to compare regular vs coalesced event paths"
       >
-        {isDrawing ? "Drawing..." : "Press and drag to measure"}
+        <div className={styles.coalescedSplit}>
+          <div className={styles.coalescedHalf}>
+            <span className={styles.coalescedLabel}>pointermove only</span>
+            <svg className={styles.coalescedSvg} viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
+              {regularPts.length >= 2 && <path d={toPath(regularPts)} fill="none" stroke="var(--color-muted)" strokeWidth="2" strokeLinecap="round" />}
+              {regularPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="var(--color-muted)" />)}
+            </svg>
+            <span className={styles.coalescedCount}>{regularPts.length} pts</span>
+          </div>
+          <div className={styles.coalescedDivider} />
+          <div className={styles.coalescedHalf}>
+            <span className={styles.coalescedLabel}>+ getCoalescedEvents()</span>
+            <svg className={styles.coalescedSvg} viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
+              {coalescedPts.length >= 2 && <path d={toPath(coalescedPts)} fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />}
+              {coalescedPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="var(--color-accent)" />)}
+            </svg>
+            <span className={styles.coalescedCount}>{coalescedPts.length} pts</span>
+          </div>
+        </div>
+        {!isDrawing && regularPts.length === 0 && (
+          <div className={styles.coalescedPrompt}>Press and drag to draw</div>
+        )}
       </div>
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>pointermove events</div>
-          <div className={styles.metricValue}>{regular}</div>
+          <div className={styles.metricValue}>{regularPts.length}</div>
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Coalesced points</div>
-          <div className={styles.metricValue} data-status={coalesced > regular ? "good" : undefined}>
-            {coalesced}
+          <div className={styles.metricValue} data-status={coalescedPts.length > regularPts.length ? "good" : undefined}>
+            {coalescedPts.length}
           </div>
         </div>
         <div className={styles.metricCard}>

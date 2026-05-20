@@ -71,10 +71,11 @@ const STEP_TITLES = [
 
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
-    <nav className={styles.stepBar} aria-label="Build steps">
+    <div className={styles.stepBar} role="list" aria-label="Build progress">
       {STEP_LABELS.map((label, i) => (
         <span
           key={i}
+          role="listitem"
           className={styles.stepDot}
           data-active={i + 1 <= activeStep ? "true" : undefined}
           data-current={i + 1 === activeStep ? "true" : undefined}
@@ -84,7 +85,7 @@ function StepBar({ activeStep }: { activeStep: number }) {
           {label}
         </span>
       ))}
-    </nav>
+    </div>
   );
 }
 
@@ -418,21 +419,44 @@ function StepControls() {
 function MiniSpreadsheet() {
   const ctx = useSpreadsheet();
   const { cells, editingCell, startEditing, commitEdit, cancelEdit, selection, setSelection, affectedCells, isActive } = ctx;
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const ROWS = 6;
   const COLS = 4;
   const COL_LABELS = ["A", "B", "C", "D"];
 
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    if (!target.matches('[role="gridcell"]') || editingCell) return;
+    const cellId = target.getAttribute("aria-label")?.split(":")[0] ?? "";
+    const col = COL_LABELS.indexOf(cellId[0]);
+    const row = parseInt(cellId.slice(1), 10) - 1;
+    if (col < 0 || isNaN(row)) return;
+
+    let nextR = row, nextC = col;
+    switch (e.key) {
+      case "ArrowUp": nextR = Math.max(0, row - 1); break;
+      case "ArrowDown": nextR = Math.min(ROWS - 1, row + 1); break;
+      case "ArrowLeft": nextC = Math.max(0, col - 1); break;
+      case "ArrowRight": nextC = Math.min(COLS - 1, col + 1); break;
+      case "Home": nextC = 0; if (e.ctrlKey) nextR = 0; break;
+      case "End": nextC = COLS - 1; if (e.ctrlKey) nextR = ROWS - 1; break;
+      default: return;
+    }
+    e.preventDefault();
+    const nextId = `${COL_LABELS[nextC]}${nextR + 1}`;
+    const nextCell = gridRef.current?.querySelector(`[aria-label^="${nextId}:"]`) as HTMLElement;
+    nextCell?.focus();
+  }, [editingCell]);
+
   return (
-    <div className={styles.spreadsheet} role="grid" aria-label="Mini spreadsheet">
-      {/* Column headers */}
+    <div ref={gridRef} className={styles.spreadsheet} role="grid" aria-label="Mini spreadsheet" onKeyDown={handleGridKeyDown}>
       <div className={styles.sheetRow} role="row">
         <div className={styles.rowHeader} role="columnheader" />
         {COL_LABELS.map(col => (
           <div key={col} className={styles.colHeader} role="columnheader">{col}</div>
         ))}
       </div>
-      {/* Data rows */}
       {Array.from({ length: ROWS }, (_, r) => (
         <div key={r} className={styles.sheetRow} role="row">
           <div className={styles.rowHeader} role="rowheader">{r + 1}</div>
@@ -441,7 +465,6 @@ function MiniSpreadsheet() {
             const cell = cells.get(id);
             const isEditing = editingCell === id;
             const isAffected = affectedCells.has(id);
-            const hasError = !!cell?.error;
 
             return (
               <CellComponent
@@ -647,24 +670,55 @@ function DepGraphViz() {
   );
 }
 
+// ── Scope badge (connects planning → building) ──────────────────
+
+const STEP_SCOPE_MAP: Record<number, string> = {
+  6: "formulas", 7: "formulas", 8: "formulas",
+  9: "multiSelect",
+  10: "virtualGrid",
+  11: "formatting",
+  15: "collaboration",
+};
+
+function ScopeBadge({ step }: { step: number }) {
+  const { scopeEnabled } = useSpreadsheet();
+  const scopeId = STEP_SCOPE_MAP[step];
+  if (!scopeId) return null;
+  const inScope = scopeEnabled.has(scopeId);
+  return (
+    <div className={styles.scopeBadge} data-in-scope={inScope ? "true" : "false"}>
+      {inScope ? "✓ In your scope" : "Not in scope — bonus topic"}
+    </div>
+  );
+}
+
 // ── Step widgets ──────────────────────────────────────────────────
 
 function StepWidget({ step }: { step: number }) {
-  switch (step) {
-    case 4: return <GridWidget />;
-    case 5: return <CellEditWidget />;
-    case 6: return <FormulaWidget />;
-    case 7: return <DepGraphWidget />;
-    case 8: return <PropagationWidget />;
-    case 9: return <SelectionWidget />;
-    case 10: return <VirtualGridWidget />;
-    case 11: return <FormatWidget />;
-    case 12: return <UndoWidget />;
-    case 13: return <ClipboardWidget />;
-    case 14: return <PerformanceWidget />;
-    case 15: return <CollaborationWidget />;
-    default: return null;
-  }
+  const Widget = (() => {
+    switch (step) {
+      case 4: return GridWidget;
+      case 5: return CellEditWidget;
+      case 6: return FormulaWidget;
+      case 7: return DepGraphWidget;
+      case 8: return PropagationWidget;
+      case 9: return SelectionWidget;
+      case 10: return VirtualGridWidget;
+      case 11: return FormatWidget;
+      case 12: return UndoWidget;
+      case 13: return ClipboardWidget;
+      case 14: return PerformanceWidget;
+      case 15: return CollaborationWidget;
+      default: return null;
+    }
+  })();
+  if (!Widget) return null;
+  return (
+    <>
+      <ScopeBadge step={step} />
+      <Widget />
+    </>
+  );
 }
 
 function GridWidget() {
@@ -731,7 +785,7 @@ function CellEditWidget() {
               <span className={styles.cellInspectId}>{id}</span>
               <span className={styles.cellInspectRaw}>{cell?.raw || "(empty)"}</span>
               <span className={styles.cellInspectComputed}>
-                {cell?.error ? <span style={{ color: "var(--color-error)" }}>ERR</span> : cell?.computed != null ? String(cell.computed) : "—"}
+                {cell?.error ? <span className={styles.cellInspectError}>ERR</span> : cell?.computed != null ? String(cell.computed) : "—"}
               </span>
             </div>
           );
@@ -823,18 +877,16 @@ function DepGraphWidget() {
 
 function PropagationWidget() {
   const { affectedCells, recalcOrder, recalcCount, cells } = useSpreadsheet();
-  const [highlightIdx, setHighlightIdx] = useState<number | null>(null);
-  const reducedMotion = usePrefersReducedMotion();
+  const [stepIdx, setStepIdx] = useState(-1);
 
-  const replayPropagation = useCallback(() => {
+  useEffect(() => { setStepIdx(-1); }, [recalcOrder]);
+
+  const stepForward = () => {
     if (recalcOrder.length === 0) return;
-    if (reducedMotion) { setHighlightIdx(recalcOrder.length - 1); return; }
-    setHighlightIdx(0);
-    for (let i = 1; i < recalcOrder.length; i++) {
-      setTimeout(() => setHighlightIdx(i), i * 300);
-    }
-    setTimeout(() => setHighlightIdx(null), recalcOrder.length * 300 + 600);
-  }, [recalcOrder, reducedMotion]);
+    setStepIdx(prev => Math.min(prev + 1, recalcOrder.length - 1));
+  };
+  const stepBack = () => setStepIdx(prev => Math.max(prev - 1, -1));
+  const reset = () => setStepIdx(-1);
 
   return (
     <div className={styles.widgetPanel}>
@@ -844,19 +896,23 @@ function PropagationWidget() {
           <div className={styles.propagationStats}>
             {recalcOrder.map((id, i) => {
               const cell = cells.get(id);
+              const reached = i <= stepIdx;
+              const current = i === stepIdx;
               return (
-                <div key={id} className={styles.statRow} data-active={highlightIdx === i ? "true" : undefined}>
+                <div key={id} className={styles.statRow} data-active={current ? "true" : undefined} data-reached={reached ? "true" : undefined}>
                   <span className={styles.propIndex}>{i + 1}.</span>
                   <span className={styles.statLabel}>{id}</span>
                   <span className={styles.statValue}>{cell?.raw ?? "—"}</span>
-                  <span className={`${styles.statValue} ${styles.propArrow}`}>→ {cell?.computed != null ? String(cell.computed) : "—"}</span>
+                  <span className={`${styles.statValue} ${styles.propArrow}`}>→ {reached && cell?.computed != null ? String(cell.computed) : "?"}</span>
                 </div>
               );
             })}
           </div>
           <div className={styles.propControls}>
-            <button type="button" className={styles.actionButton} onClick={replayPropagation}>▶ Replay cascade</button>
-            <span className={styles.propCount}>{recalcOrder.length} cells in topo order</span>
+            <button type="button" className={styles.actionButton} onClick={stepBack} disabled={stepIdx < 0} aria-label="Step backward">◀</button>
+            <span className={styles.propCount}>{stepIdx < 0 ? "—" : `${stepIdx + 1}/${recalcOrder.length}`}</span>
+            <button type="button" className={styles.actionButton} onClick={stepForward} disabled={stepIdx >= recalcOrder.length - 1} aria-label="Step forward">▶</button>
+            <button type="button" className={styles.actionButton} onClick={reset} aria-label="Reset">↺</button>
           </div>
         </>
       ) : (
@@ -884,6 +940,7 @@ function PropagationWidget() {
 
 function SelectionWidget() {
   const [mode, setMode] = useState<"single" | "range" | "multi">("single");
+  const selGridRef = useRef<HTMLDivElement>(null);
   const GRID_ROWS = 5;
   const GRID_COLS = 4;
   const [anchor, setAnchor] = useState<{r: number; c: number} | null>(null);
@@ -936,7 +993,28 @@ function SelectionWidget() {
           </button>
         ))}
       </div>
-      <div className={styles.selectionGrid} role="grid" aria-label="Selection demo grid">
+      <div ref={selGridRef} className={styles.selectionGrid} role="grid" aria-label="Selection demo grid"
+        onKeyDown={(e) => {
+          const target = e.target as HTMLElement;
+          if (!target.matches('[role="gridcell"]')) return;
+          const label = target.getAttribute("aria-label") ?? "";
+          const col = label.charCodeAt(0) - 65;
+          const row = parseInt(label.slice(1), 10) - 1;
+          if (col < 0 || isNaN(row)) return;
+          let nR = row, nC = col;
+          switch (e.key) {
+            case "ArrowUp": nR = Math.max(0, row - 1); break;
+            case "ArrowDown": nR = Math.min(GRID_ROWS - 1, row + 1); break;
+            case "ArrowLeft": nC = Math.max(0, col - 1); break;
+            case "ArrowRight": nC = Math.min(GRID_COLS - 1, col + 1); break;
+            default: return;
+          }
+          e.preventDefault();
+          const nextLabel = `${String.fromCharCode(65 + nC)}${nR + 1}`;
+          const nextEl = selGridRef.current?.querySelector(`[aria-label^="${nextLabel}"]`) as HTMLElement;
+          nextEl?.focus();
+        }}
+      >
         {Array.from({ length: GRID_ROWS }, (_, r) => (
           <div key={r} className={styles.selectionRow} role="row">
             {Array.from({ length: GRID_COLS }, (_, c) => {
@@ -1017,7 +1095,18 @@ function VirtualGridWidget() {
           onPointerDown={handleMinimapPointerDown}
           onPointerMove={handleMinimapPointerMove}
           onPointerUp={handleMinimapPointerUp}
-          style={{ cursor: "ns-resize", touchAction: "none" }}
+          onKeyDown={(e) => {
+            const step = e.shiftKey ? 10 : 1;
+            switch (e.key) {
+              case "ArrowUp": setViewportTop(v => Math.max(0, v - step)); break;
+              case "ArrowDown": setViewportTop(v => Math.min(maxScroll, v + step)); break;
+              case "Home": setViewportTop(0); break;
+              case "End": setViewportTop(maxScroll); break;
+              default: return;
+            }
+            e.preventDefault();
+          }}
+          tabIndex={0}
           role="slider"
           aria-label="Scroll viewport"
           aria-valuemin={0}

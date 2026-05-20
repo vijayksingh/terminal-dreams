@@ -464,7 +464,7 @@
 .toggleButton {
   position: relative;
   width: 44px;
-  min-height: 24px;
+  min-height: 44px;
   border-radius: 12px;
   border: 2px solid var(--color-border);
   background: var(--color-surface-2);
@@ -719,6 +719,27 @@
   border-left: 3px solid var(--color-accent);
 }
 
+/* ── Scope badge ───────────────────────────────────────────────── */
+
+.scopeBadge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.scopeBadge[data-in-scope="true"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, transparent);
+}
+
+.scopeBadge[data-in-scope="false"] {
+  color: var(--color-muted);
+  background: var(--color-surface);
+}
+
 .widgetTitle {
   font-size: 0.75rem;
   font-weight: 800;
@@ -757,6 +778,13 @@
   border-radius: var(--radius-1);
   overflow: hidden;
   flex-shrink: 0;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.viewportMinimap:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .minimapGrid {
@@ -817,6 +845,7 @@
 .cellInspectId { font-weight: 800; color: var(--color-accent); }
 .cellInspectRaw { color: var(--color-muted); }
 .cellInspectComputed { font-weight: 700; }
+.cellInspectError { color: var(--color-error); }
 
 /* ── Formula tokenizer ──────────────────────────────────────────── */
 
@@ -878,6 +907,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.propagationStats .statRow:not([data-reached="true"]):not([data-active="true"]) {
+  opacity: 0.4;
 }
 
 .statRow[data-active="true"] {
