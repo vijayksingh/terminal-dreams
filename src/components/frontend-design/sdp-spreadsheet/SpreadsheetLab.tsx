@@ -163,12 +163,14 @@ function RequirementsView() {
 
 function ApiDesignView() {
   const [tab, setTab] = useState<"endpoints" | "types">("endpoints");
+  const rafRef = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
   const handleTabKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowRight") setTab(tab === "endpoints" ? "types" : "endpoints");
     else if (e.key === "ArrowLeft") setTab(tab === "endpoints" ? "types" : "endpoints");
     else return;
     e.preventDefault();
-    requestAnimationFrame(() => {
+    rafRef.current = requestAnimationFrame(() => {
       const next = (e.currentTarget as HTMLElement).parentElement?.querySelector('[aria-selected="true"]') as HTMLElement;
       next?.focus();
     });
@@ -1205,12 +1207,14 @@ function DepGraphWidget() {
 function PropagationWidget() {
   const { affectedCells, recalcOrder, recalcCount, cells, setHighlightedCell, markStepComplete } = useSpreadsheet();
   const [stepIdx, setStepIdx] = useState(-1);
+  const [cascadeGuess, setCascadeGuess] = useState("");
+  const [guessChecked, setGuessChecked] = useState(false);
 
   useEffect(() => {
     if (recalcOrder.length > 0 && stepIdx >= recalcOrder.length - 1) markStepComplete(8);
   }, [stepIdx, recalcOrder.length, markStepComplete]);
 
-  useEffect(() => { setStepIdx(-1); }, [recalcOrder]);
+  useEffect(() => { setStepIdx(-1); setGuessChecked(false); setCascadeGuess(""); }, [recalcOrder]);
 
   useEffect(() => {
     if (recalcOrder.length === 0 && cells.has("A1")) setHighlightedCell("A1");
@@ -1230,6 +1234,38 @@ function PropagationWidget() {
       <div className={styles.widgetTitle}>Change propagation</div>
       {recalcOrder.length > 0 ? (
         <>
+          {!guessChecked && (
+            <div className={styles.collabInput}>
+              <span className={styles.collabInputLabel}>
+                A cell changed — how many cells need to recalculate?
+              </span>
+              <div className={styles.toggleRow}>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={cascadeGuess}
+                  onChange={e => setCascadeGuess(e.target.value)}
+                  className={styles.collabInputField}
+                  placeholder="e.g. 3"
+                  aria-label="Predict cascade count"
+                  style={{ maxWidth: 100 }}
+                />
+                <button type="button" className={styles.actionButton}
+                  onClick={() => setGuessChecked(true)}
+                  disabled={!cascadeGuess}>
+                  Check
+                </button>
+              </div>
+            </div>
+          )}
+          {guessChecked && (
+            <div className={styles.predictionResult} data-correct={parseInt(cascadeGuess) === recalcOrder.length ? "true" : undefined}>
+              {parseInt(cascadeGuess) === recalcOrder.length
+                ? `✓ Correct! ${recalcOrder.length} cells in the cascade.`
+                : `✗ ${recalcOrder.length} cells, not ${cascadeGuess}. Step through to see why.`}
+            </div>
+          )}
           <div className={styles.propagationStats}>
             {recalcOrder.map((id, i) => {
               const cell = cells.get(id);

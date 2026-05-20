@@ -1533,7 +1533,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .actionButton:hover { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
 .actionButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.actionButton:disabled { opacity: 0.5; cursor: not-allowed; }
+.actionButton:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Propagation cell grid ──────────────────────────────────────── */
 
