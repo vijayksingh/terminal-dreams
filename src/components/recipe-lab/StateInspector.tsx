@@ -33,16 +33,14 @@ export function StateInspector({ entries, title = "State", renderCount }: StateI
     <div
       className="font-mono text-xs"
       style={{
-        background: "var(--color-surface)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-1)",
+        borderLeft: "3px solid var(--color-muted)",
+        paddingLeft: "var(--space-3)",
       }}
     >
       <div
-        className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider flex items-center justify-between"
+        className="py-1 font-mono text-[10px] uppercase tracking-wider flex items-center justify-between"
         style={{
           color: "var(--color-muted)",
-          borderBottom: "1px solid var(--color-border)",
         }}
       >
         <span>{title}</span>
@@ -57,7 +55,7 @@ export function StateInspector({ entries, title = "State", renderCount }: StateI
           </motion.span>
         )}
       </div>
-      <div className="px-3 py-2 flex flex-col gap-1.5">
+      <div className="py-1.5 flex flex-col gap-1.5">
         <AnimatePresence mode="popLayout">
           {entries.map((entry) => (
             <motion.div

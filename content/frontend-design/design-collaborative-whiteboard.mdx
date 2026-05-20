@@ -1,0 +1,269 @@
+---
+title: "Design a Collaborative Whiteboard"
+slug: design-collaborative-whiteboard
+section: system-design-problems
+stopId: sdp-whiteboard
+order: 7
+kind: system-design-problem
+summary: "Design a collaborative whiteboard with Canvas 2D rendering, pointer capture, hit testing, CRDT-based sync, and accessible canvas patterns"
+tags:
+  - system-design
+  - canvas-api
+  - crdt
+  - collaboration
+  - pointer-events
+  - spatial-index
+  - accessibility
+intersections:
+  - core-event-loop
+  - webapi-observer
+  - net-websockets
+prerequisites: []
+demo: design-collaborative-whiteboard
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design a collaborative whiteboard like Figma or Excalidraw."
+
+Before drawing a single pixel, scope the problem. The panel on the right shows five capability dimensions — each multiplies both canvas rendering cost and sync complexity.
+
+**Freehand drawing?** The pen tool captures pointer events at 60+ samples/sec. Smooth paths require `getCoalescedEvents()` to recover hardware-batched intermediate points. Without it, fast strokes appear as jagged line segments. Each stroke becomes a `Shape` object with a `points[]` array — this is the vector data that enables selection, undo, and sync.
+
+**Shape primitives?** Rectangles, ellipses, arrows, and text add a `kind` discriminator to the shape model. Each kind has its own rendering path (fillRect vs ellipse vs lineTo) and its own hit-testing geometry. Text adds font measurement complexity (`measureText()` for bounding box calculation).
+
+**Multi-user sync?** This is where whiteboards diverge from drawing apps. Two users moving different shapes = no conflict. Two users moving THE SAME shape = conflict resolution needed. Figma uses per-property Last-Writer-Wins (simple, occasionally lossy). Excalidraw experiments with CRDTs (convergent without a server). Google Docs uses OT (server-canonical, complex).
+
+**Transform handles?** A selected shape needs 8 resize handles (4 corners + 4 edge midpoints) plus a rotation handle. Each handle constrains different axes — corner handles resize both dimensions, edge midpoints only one. The cursor must change to match the constraint direction.
+
+**Spatial indexing?** At 500 shapes, linear-scan hit testing takes < 1ms. At 10,000 shapes with 60 pointermove events/sec, that's 600,000 bounding-box checks per second. An R-tree reduces each query to O(log n).
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API Design
+
+The whiteboard needs both REST (board load/save) and WebSocket (real-time sync) APIs. Toggle between endpoints and type definitions — note the WebSocket endpoint for CRDT operations and cursor position broadcasting.
+
+**REST** handles initial board load (`GET /api/board/:id`) and shape CRUD. The response includes all shapes, viewport state, and board metadata.
+
+**WebSocket** handles real-time: CRDT operations (shape add/update/remove), cursor position broadcasts (throttled to ~30fps), and presence indicators (who's online, who's viewing what).
+
+The shape model is the core type — every operation references shapes by ID and sends partial updates (`Partial<Shape>`), not full replacements. This minimizes bandwidth and enables per-property conflict resolution.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+The architecture separates five concerns:
+
+**CanvasRenderer** — dual-canvas architecture. A static canvas for shapes (redraws only on mutation) and an interactive canvas for cursors/selection (redraws at 60fps). This ensures cursor movement never triggers an expensive full-scene redraw.
+
+**PointerTracker** — captures pointer events, calls `setPointerCapture()` to maintain tracking outside canvas bounds, and uses `getCoalescedEvents()` for smooth freehand input.
+
+**HitTester** — given a click point, determines which shape (if any) was hit. Iterates shapes in reverse z-order, checking bounding boxes. At scale, delegates to an R-tree spatial index.
+
+**SceneGraph** — the source of truth for shapes. Manages the shape array, z-ordering, selection state, and emits CRDT operations on mutation.
+
+**SyncEngine** — WebSocket client that broadcasts local operations and merges remote operations. The merge strategy (LWW/OT/CRDT) determines how concurrent edits converge.
+
+**CommandStack** — undo/redo via the command pattern. Each mutation produces an inverse command. Local undo reverses the current user's last action, not the global last action.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Canvas Rendering
+
+Canvas 2D uses **immediate-mode** rendering — once you call `fillRect()` or `stroke()`, the pixels are baked into the bitmap and forgotten. To update anything, you must `clearRect()` the entire canvas and redraw every shape from scratch. This is the opposite of SVG, which retains a DOM tree.
+
+The upside: you control exactly what redraws and when. No layout recalculation, no DOM diffing. For 10,000 shapes, canvas renders in ~2ms while SVG would stall on DOM operations.
+
+The downside: you must maintain your own scene graph (the `shapes[]` array) since the canvas has no memory of what it drew. Selection, hit testing, undo — all require this external data structure.
+
+The canvas below renders the initial shape model. It's read-only — shapes are drawn from the data, not from pixel manipulation.
+
+<WhiteboardDemo />
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Pointer Capture
+
+`setPointerCapture(pointerId)` routes ALL subsequent pointer events to the canvas element until `pointerup`, regardless of where the pointer goes — even outside the browser window.
+
+Without it, dragging outside the canvas bounds stops `pointermove` events. The stroke breaks abruptly. Users who draw fast regularly exceed the canvas boundary (especially on smaller viewports), and the broken-stroke experience feels buggy.
+
+Toggle the capture on/off below and try drawing — drag outside the canvas boundary. With capture OFF, the stroke breaks. With capture ON, it continues smoothly.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Shape Model
+
+Each shape is a data object, not raw pixels. The object stores: `id` (UUID), `kind` (rect/ellipse/freehand/arrow/text), bounding box (`x, y, w, h`), `rotation`, visual properties (`fill, stroke, strokeWidth`), and `zIndex`.
+
+This object model is what enables everything else:
+- **Selection**: check if click point is inside bounding box
+- **Transforms**: modify `x/y/w/h/rotation` numerically
+- **Undo**: store operation (add/remove/modify) with before/after state
+- **Serialization**: JSON.stringify the array for save/sync
+- **Z-ordering**: sort by `zIndex` for layered rendering
+
+Pixel data alone cannot support any of these operations — you can't "select that rectangle" from a flat bitmap.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Hit Testing
+
+Click on the canvas to hit-test shapes. The algorithm iterates shapes in **reverse z-order** (topmost first) and checks if the click point falls inside each bounding box:
+
+```
+for i = shapes.length - 1 to 0:
+  if point inside shapes[i].boundingBox:
+    return shapes[i]  // first hit wins (topmost)
+return null  // clicked empty space
+```
+
+This is O(n) per click. At 500 shapes × 60 pointermove events/sec (for hover effects), that's 30,000 bounding-box checks per second. Acceptable for hundreds of shapes, but at 10,000+ you need the R-tree from step 14.
+
+The dashed outlines show each shape's bounding box — what the hit tester actually checks against.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Selection Handles
+
+A selected shape shows 8 resize handles plus a rotation handle:
+
+- **4 corner handles** (nw, ne, se, sw): resize both width and height simultaneously
+- **4 edge midpoint handles** (n, e, s, w): resize only one dimension (height-only or width-only)
+- **Rotation handle**: offset above top center, rotates around the shape's center point
+
+Each handle has a distinct cursor (`nw-resize`, `n-resize`, `e-resize`, etc.) that communicates its constraint direction before the user starts dragging.
+
+Select a shape from the scene graph to see its handle map.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Layer Separation
+
+The dual-canvas architecture separates rendering by update frequency:
+
+1. **Grid layer** — rendered once at initialization, never redrawn
+2. **Shape layer** — redraws only when shapes are added/moved/deleted
+3. **Selection layer** — redraws during active drag/resize operations
+4. **Cursor layer** — redraws every pointermove (60fps) for remote cursors
+
+Each layer is a separate `<canvas>` element, stacked via `position: absolute`. When the cursor moves, only the cursor canvas clears and redraws — the shape canvas with 10,000 shapes stays untouched.
+
+This is the same principle as video game sprite layers: separate concerns by update frequency to avoid unnecessary work.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Coalesced Events
+
+Browsers batch multiple hardware pointer positions into a single `pointermove` event for performance. `getCoalescedEvents()` unpacks those batched positions — typically recovering 2-6 additional points per event.
+
+Without it, fast pen strokes appear as a series of straight-line segments connecting sparse sample points. With it, the path includes the full hardware sampling rate, producing smooth curves.
+
+Drag in the area below to measure the ratio. On a 120Hz display, you may see 4-6x more coalesced points than regular events.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Undo/Redo
+
+The command pattern stores each mutation as an invertible operation:
+
+- **AddShape** → inverse = RemoveShape
+- **RemoveShape** → inverse = AddShape(snapshot)
+- **MoveShape(delta)** → inverse = MoveShape(-delta)
+- **ResizeShape(before, after)** → inverse = ResizeShape(after, before)
+
+In collaborative mode, undo must be **local** — pressing Ctrl+Z reverses YOUR last action, not the globally-last action. If Alice draws a circle, then Bob draws a square, Alice's Ctrl+Z removes her circle, not Bob's square.
+
+The stack stores operations per-user with `actorId`. The undo stack has a cap (typically 100 operations) to bound memory.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — CRDT Sync
+
+Three approaches to real-time collaborative editing:
+
+**LWW (Last-Writer-Wins)** — Figma's approach. Each property (x, y, fill, etc.) has a timestamp. Concurrent writes to the same property: latest timestamp wins. Simple, occasional data loss on true conflicts (rare in practice — users rarely edit the exact same property simultaneously).
+
+**OT (Operational Transform)** — Google Docs' approach. A central server determines canonical operation order. Clients transform their local operations against the server's ordering. Correct, but the transform functions are notoriously complex (O(n²) for n operation types).
+
+**CRDT (Conflict-free Replicated Data Types)** — Mathematical convergence guarantee. Any two replicas that have seen the same set of operations reach the same state, regardless of application order. Enables peer-to-peer sync via WebRTC data channels — no server needed for ordering.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Cursor Presence
+
+Cursor presence broadcasts each user's pointer position to all other users. The challenge is bandwidth:
+
+At 60 pointermove events/sec per user, 10 concurrent users generate 600 cursor messages per second. Each message is ~40 bytes (userId + x + y + timestamp), so 600 × 40 = 24 KB/sec of pure cursor data.
+
+**Throttling** to 30fps halves the bandwidth while being visually indistinguishable — receiving clients interpolate between updates for smooth cursor movement.
+
+**Delta compression** only sends positions when the cursor has moved more than a threshold distance (e.g., 2px), eliminating idle cursor noise.
+
+Adjust the controls below to see how throttle interval and user count affect bandwidth.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Spatial Index
+
+An R-tree partitions shapes into a balanced tree of minimum bounding rectangles (MBRs). Each internal node contains child MBRs; leaves contain actual shapes.
+
+**Query**: to find shapes at point (x, y), start at the root. Only descend into children whose MBR contains the point — pruning entire subtrees that can't possibly contain hits. Result: O(log n) instead of O(n).
+
+**Insert**: find the leaf whose MBR needs the least enlargement, insert the shape, split if overflow (typically max 9-16 entries per node).
+
+**Crossover point**: below ~500 shapes, linear scan is faster (simpler code, cache-friendly). Above ~1,000 shapes with 60 hit tests/sec, R-tree dominates. The slider below shows the performance difference.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Accessible Canvas
+
+Canvas is an opaque bitmap to assistive technology. A screen reader sees a single `<canvas>` element — it cannot access individual shapes, their positions, or their relationships.
+
+The solution: **parallel hidden DOM**. Maintain a visually-hidden tree of focusable elements that mirrors the canvas:
+
+- Each shape → `<div role="img" aria-label="Blue rectangle at 100, 200, 140x90">`
+- Position elements match canvas coordinates (absolute positioning)
+- `aria-live="polite"` region announces changes: "Rectangle moved to 200, 300"
+
+Keyboard navigation:
+- **Tab** cycles through shapes (matching visual z-order)
+- **Arrow keys** move the focused shape by grid increments
+- **Delete** removes the focused shape
+- **Escape** deselects
+
+This pattern is used by Figma, Excalidraw, and tldraw — all canvas-based with hidden DOM accessibility layers.
+
+</section>

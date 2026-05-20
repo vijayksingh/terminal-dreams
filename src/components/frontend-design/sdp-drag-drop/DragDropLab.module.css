@@ -83,18 +83,18 @@
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
   text-align: left;
   cursor: pointer;
-  transition: border-color 150ms ease;
+  transition: background 150ms ease;
   font-family: var(--font-mono);
   min-height: 44px;
 }
 
-.checkItem:hover { border-color: var(--color-accent); }
+.checkItem:hover { background: var(--color-surface-2); }
 
 .checkItem:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -102,7 +102,6 @@
 }
 
 .checkItem[data-checked="true"] {
-  border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
@@ -351,7 +350,7 @@
 .evolutionStack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4, 24px);
 }
 
 /* ── Metrics bar ─────────────────────────────────────────────── */
@@ -359,10 +358,7 @@
 .metricsBar {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
+  padding: var(--space-1) 0;
 }
 
 .metricCard { flex: 1; text-align: center; }
@@ -375,17 +371,16 @@
 
 .stepMessage {
   font-size: 0.75rem;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
+  padding: var(--space-2) 0;
   color: var(--color-text);
   font-weight: 500;
+  line-height: 1.5;
 }
 
 .stepMessage[data-severity="warning"] {
-  border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--color-warning);
+  color: var(--color-warning);
 }
 
 /* ── Toggle strip ────────────────────────────────────────────── */
@@ -394,10 +389,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
+  padding: var(--space-2) 0;
 }
 
 .toggleRow {
@@ -468,22 +460,21 @@
   flex: 1;
   min-width: 100px;
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
   font-family: var(--font-mono);
-  transition: border-color 150ms ease;
+  transition: background 150ms ease;
   min-height: 44px;
 }
 
-.strategyOption:hover { border-color: var(--color-accent); }
+.strategyOption:hover { background: var(--color-surface-2); }
 .strategyOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .strategyOption[data-active="true"] {
-  border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
@@ -504,10 +495,7 @@
 /* ── Prediction challenge ───────────────────────────────────── */
 
 .prediction {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
+  padding: var(--space-2) 0;
 }
 
 .predictionQ {
@@ -527,13 +515,13 @@
 .predictionOption {
   font-size: 0.7rem;
   font-family: var(--font-mono);
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  border: none;
   border-radius: var(--radius-1);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease;
+  transition: background 150ms ease, color 150ms ease;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -550,14 +538,14 @@
 }
 
 .predictionOption[data-correct="true"] {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
   opacity: 1;
 }
 
 .predictionOption[data-wrong="true"] {
-  border-color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  background: color-mix(in srgb, var(--color-error) 18%, transparent);
+  color: var(--color-error);
   opacity: 1;
 }
 
@@ -567,14 +555,14 @@
   margin-top: var(--space-2);
   font-size: 0.7rem;
   font-family: var(--font-mono);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--color-error) 8%, transparent);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-error);
   color: var(--color-text);
+  line-height: 1.5;
 }
 
 .predictionResult[data-correct="true"] {
-  background: color-mix(in srgb, var(--color-success) 8%, transparent);
+  border-left-color: var(--color-success);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -591,16 +579,14 @@
 }
 
 .column {
-  border: 2px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  transition: border-color 150ms ease;
+  transition: background 200ms ease;
 }
 
 .column[data-drag-over="true"] {
-  border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
@@ -609,7 +595,6 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-2);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .columnTitle {
@@ -638,13 +623,13 @@
 }
 
 .kanbanItem {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: none;
   border-left: 3px solid;
   border-radius: var(--radius-1);
   background: var(--color-bg);
   cursor: grab;
-  transition: box-shadow 150ms ease, opacity 150ms ease;
+  transition: background 150ms ease, opacity 150ms ease;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -653,7 +638,7 @@
 }
 
 .kanbanItem:hover {
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--color-text) 12%, transparent);
+  background: var(--color-surface-2);
 }
 
 .kanbanItem:focus-visible {
@@ -667,7 +652,6 @@
 }
 
 .kanbanItem[data-selected="true"] {
-  border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
@@ -738,10 +722,8 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .widgetPanel {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border-left: 3px solid var(--color-accent);
   padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -752,7 +734,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-muted);
+  color: var(--color-accent);
 }
 
 .widgetNote {
@@ -820,13 +802,13 @@
 
 .comparisonCard {
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
-  transition: border-color 150ms ease;
+  background: var(--color-surface);
+  transition: background 150ms ease;
 }
 
 .comparisonCard[data-active="true"] {
-  border-color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 

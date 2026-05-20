@@ -18,6 +18,8 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-autocomplete"),
   "design-spreadsheet": () =>
     import("@/mdx/frontend-design/design-spreadsheet"),
+  "design-collaborative-whiteboard": () =>
+    import("@/mdx/frontend-design/design-collaborative-whiteboard"),
   "design-booking-platform": () =>
     import("@/mdx/frontend-design/design-booking-platform"),
   "design-news-feed": () =>

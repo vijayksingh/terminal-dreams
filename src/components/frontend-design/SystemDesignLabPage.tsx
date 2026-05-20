@@ -10,6 +10,7 @@ import { AutocompleteLab } from "./sdp-autocomplete/AutocompleteLab";
 import { DragDropLab } from "./sdp-drag-drop/DragDropLab";
 import { SpreadsheetLab } from "./sdp-spreadsheet/SpreadsheetLab";
 import { WindowingLab } from "./sdp-windowing/WindowingLab";
+import { WhiteboardLab } from "./sdp-whiteboard/WhiteboardLab";
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -145,6 +146,15 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <SpreadsheetLab activeStep={activeStep} />
+    ),
+  },
+  "design-collaborative-whiteboard": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <WhiteboardLab activeStep={activeStep} />
     ),
   },
 };
