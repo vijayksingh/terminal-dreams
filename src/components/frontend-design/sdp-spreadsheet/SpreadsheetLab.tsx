@@ -711,24 +711,48 @@ function GridWidget() {
 }
 
 function CellEditWidget() {
-  const { cells, editingCell, startEditing, commitEdit } = useSpreadsheet();
+  const { cells, editingCell } = useSpreadsheet();
+  const activeId = editingCell;
+  const watchIds = activeId
+    ? [activeId, ...Array.from(cells.values()).filter(c => c.deps.includes(activeId)).map(c => c.id).slice(0, 3)]
+    : ["A1", "B2", "C2", "D2"];
+
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Cell editing — raw vs computed</div>
+      <div className={styles.widgetTitle}>
+        {activeId ? `Editing ${activeId}` : "Cell anatomy — raw vs computed"}
+      </div>
       <div className={styles.cellInspector}>
-        {["A2", "B2", "C2", "D2"].map(id => {
+        {watchIds.map(id => {
           const cell = cells.get(id);
+          const isEditing = id === activeId;
           return (
-            <div key={id} className={styles.cellInspectRow}>
+            <div key={id} className={styles.cellInspectRow} data-active={isEditing ? "true" : undefined}>
               <span className={styles.cellInspectId}>{id}</span>
               <span className={styles.cellInspectRaw}>{cell?.raw || "(empty)"}</span>
-              <span className={styles.cellInspectComputed}>{cell?.computed != null ? String(cell.computed) : "(null)"}</span>
+              <span className={styles.cellInspectComputed}>
+                {cell?.error ? <span style={{ color: "var(--color-error)" }}>ERR</span> : cell?.computed != null ? String(cell.computed) : "—"}
+              </span>
             </div>
           );
         })}
       </div>
+      <div className={styles.metricsBar}>
+        <div className={styles.metric}>
+          <div className={styles.metricValue}>{activeId ? "EDITING" : "IDLE"}</div>
+          <div className={styles.metricLabel}>State</div>
+        </div>
+        <div className={styles.metric}>
+          <div className={styles.metricValue}>{cells.get(activeId ?? "")?.formula ? "FORMULA" : cells.get(activeId ?? "")?.raw ? "VALUE" : "—"}</div>
+          <div className={styles.metricLabel}>Type</div>
+        </div>
+        <div className={styles.metric}>
+          <div className={styles.metricValue}>{cells.get(activeId ?? "")?.deps.length ?? 0}</div>
+          <div className={styles.metricLabel}>Deps</div>
+        </div>
+      </div>
       <div className={styles.widgetNote}>
-        Double-click any cell in the grid above to edit. The raw input and computed value are always separate. Try entering a number, then a formula like =B2*2.
+        Double-click any cell above to edit. This panel tracks the active cell in real time — watch raw input, parsing, and computed value update as you type.
       </div>
     </div>
   );
@@ -798,23 +822,61 @@ function DepGraphWidget() {
 }
 
 function PropagationWidget() {
-  const { affectedCells, recalcOrder, recalcCount } = useSpreadsheet();
+  const { affectedCells, recalcOrder, recalcCount, cells } = useSpreadsheet();
+  const [highlightIdx, setHighlightIdx] = useState<number | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+
+  const replayPropagation = useCallback(() => {
+    if (recalcOrder.length === 0) return;
+    if (reducedMotion) { setHighlightIdx(recalcOrder.length - 1); return; }
+    setHighlightIdx(0);
+    for (let i = 1; i < recalcOrder.length; i++) {
+      setTimeout(() => setHighlightIdx(i), i * 300);
+    }
+    setTimeout(() => setHighlightIdx(null), recalcOrder.length * 300 + 600);
+  }, [recalcOrder, reducedMotion]);
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Change propagation</div>
-      <div className={styles.propagationStats}>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>Cells affected</span>
-          <span className={styles.statValue} data-status={affectedCells.size > 0 ? "warning" : undefined}>{affectedCells.size}</span>
+      {recalcOrder.length > 0 ? (
+        <>
+          <div className={styles.propagationStats}>
+            {recalcOrder.map((id, i) => {
+              const cell = cells.get(id);
+              return (
+                <div key={id} className={styles.statRow} data-active={highlightIdx === i ? "true" : undefined} style={highlightIdx === i ? { background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", borderRadius: "var(--radius-1)", padding: "2px 4px", margin: "-2px -4px" } : undefined}>
+                  <span className={styles.statLabel} style={{ fontWeight: 800, color: "var(--color-accent)", minWidth: 28 }}>{i + 1}.</span>
+                  <span className={styles.statLabel}>{id}</span>
+                  <span className={styles.statValue}>{cell?.raw ?? "—"}</span>
+                  <span className={styles.statValue} style={{ color: "var(--color-accent)" }}>→ {cell?.computed != null ? String(cell.computed) : "—"}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+            <button type="button" className={styles.actionButton} onClick={replayPropagation}>▶ Replay cascade</button>
+            <span style={{ fontSize: "0.625rem", color: "var(--color-muted)" }}>{recalcOrder.length} cells in topo order</span>
+          </div>
+        </>
+      ) : (
+        <div className={styles.widgetNote}>
+          Edit a cell that other cells depend on — try changing A1 or B2. The cascade path will appear here showing which cells recalculate and in what order.
         </div>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>Total recalculations</span>
-          <span className={styles.statValue}>{recalcCount}</span>
+      )}
+      <div className={styles.metricsBar}>
+        <div className={styles.metric}>
+          <div className={styles.metricValue} data-status={affectedCells.size > 0 ? "warning" : undefined}>{affectedCells.size}</div>
+          <div className={styles.metricLabel}>Affected</div>
         </div>
-      </div>
-      <div className={styles.widgetNote}>
-        Edit a cell that other cells depend on (try changing B2). Watch the affected cells highlight in the grid and the DAG. Only transitive dependents are recalculated — not the entire sheet.
+        <div className={styles.metric}>
+          <div className={styles.metricValue}>{recalcCount}</div>
+          <div className={styles.metricLabel}>Total recalcs</div>
+        </div>
+        <div className={styles.metric}>
+          <div className={styles.metricValue} data-status="good">{cells.size}</div>
+          <div className={styles.metricLabel}>Total cells</div>
+        </div>
       </div>
     </div>
   );
@@ -920,50 +982,112 @@ function SelectionWidget() {
 function VirtualGridWidget() {
   const { isActive, cellsInDom, totalRows, totalCols } = useSpreadsheet();
   const on = isActive("virtualGrid");
+  const [viewportTop, setViewportTop] = useState(0);
+  const VISIBLE = 20;
+  const minimapH = 80;
+  const viewH = (VISIBLE / totalRows) * minimapH;
+  const maxScroll = totalRows - VISIBLE;
+  const dragging = useRef(false);
+
+  const handleMinimapPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    updateFromPointer(e);
+  };
+
+  const updateFromPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+    setViewportTop(Math.round(ratio * maxScroll));
+  };
+
+  const handleMinimapPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    updateFromPointer(e);
+  };
+
+  const handleMinimapPointerUp = () => { dragging.current = false; };
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Virtual grid</div>
-      <div className={styles.virtualCompare}>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>Total cells</span>
-          <span className={styles.statValue}>{(totalRows * totalCols).toLocaleString()}</span>
+      <div className={styles.widgetTitle}>Virtual grid viewport</div>
+      <div className={styles.viewportDemo}>
+        <div
+          className={styles.viewportMinimap}
+          onPointerDown={handleMinimapPointerDown}
+          onPointerMove={handleMinimapPointerMove}
+          onPointerUp={handleMinimapPointerUp}
+          style={{ cursor: "ns-resize", touchAction: "none" }}
+          role="slider"
+          aria-label="Scroll viewport"
+          aria-valuemin={0}
+          aria-valuemax={maxScroll}
+          aria-valuenow={viewportTop}
+        >
+          <div className={styles.minimapGrid} style={{ height: minimapH }} />
+          <div className={styles.minimapViewport} style={{ top: (viewportTop / totalRows) * minimapH, height: viewH }} />
         </div>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>DOM nodes</span>
-          <span className={styles.statValue} data-status={on ? "good" : "warning"}>{cellsInDom}</span>
-        </div>
-        <div className={styles.statRow}>
-          <span className={styles.statLabel}>Memory saved</span>
-          <span className={styles.statValue} data-status="good">{on ? `${Math.round((1 - cellsInDom / (totalRows * totalCols)) * 100)}%` : "0%"}</span>
+        <div className={styles.viewportStats}>
+          <div className={styles.statRow}>
+            <span className={styles.statLabel}>Showing rows</span>
+            <span className={styles.statValue}>{viewportTop + 1}–{Math.min(viewportTop + VISIBLE, totalRows)}</span>
+          </div>
+          <div className={styles.statRow}>
+            <span className={styles.statLabel}>DOM nodes</span>
+            <span className={styles.statValue} data-status={on ? "good" : "warning"}>{on ? cellsInDom : (totalRows * totalCols).toLocaleString()}</span>
+          </div>
+          <div className={styles.statRow}>
+            <span className={styles.statLabel}>Recycled</span>
+            <span className={styles.statValue} data-status="good">{on ? "Yes" : "No"}</span>
+          </div>
+          <div className={styles.statRow}>
+            <span className={styles.statLabel}>translateY</span>
+            <span className={styles.statValue}>{viewportTop * 28}px</span>
+          </div>
         </div>
       </div>
       <div className={styles.widgetNote}>
-        {on ? "Virtual grid active — only 200 DOM elements for 2,600 cells. Cell recycling reuses DOM nodes as you scroll." : "Toggle the feature above to see the DOM count drop from 2,600 to 200."}
+        {on ? "Drag the minimap viewport — DOM count stays constant at ~200 regardless of scroll position. Cells are repositioned via CSS transform." : "Enable virtual grid above. Then drag the minimap to scroll."}
       </div>
     </div>
   );
 }
 
 function FormatWidget() {
-  const [value] = useState(0.5);
-  const [format, setFormat] = useState<"number" | "percent" | "currency">("number");
+  const { cells, selection } = useSpreadsheet();
+  const [format, setFormat] = useState<"text" | "number" | "percent" | "currency">("text");
 
-  const display = format === "percent" ? `${value * 100}%` : format === "currency" ? `$${value.toFixed(2)}` : String(value);
+  const COL_LABELS = ["A", "B", "C", "D"];
+  const targetId = selection ? `${COL_LABELS[selection.start.col] ?? "A"}${selection.start.row + 1}` : "A1";
+  const cell = cells.get(targetId);
+  const rawVal = cell?.computed ?? cell?.raw ?? "";
+  const numVal = typeof rawVal === "number" ? rawVal : parseFloat(String(rawVal));
+  const isNum = !isNaN(numVal);
+
+  const display = !isNum ? String(rawVal)
+    : format === "percent" ? `${(numVal * 100).toFixed(0)}%`
+    : format === "currency" ? `$${numVal.toFixed(2)}`
+    : format === "number" ? numVal.toFixed(2)
+    : String(rawVal);
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Format pipeline</div>
+      <div className={styles.widgetTitle}>Format pipeline — {targetId}</div>
       <div className={styles.formatPipeline}>
         <div className={styles.pipelineStage}>
-          <span className={styles.pipelineLabel}>raw</span>
-          <span className={styles.pipelineValue}>0.5</span>
+          <span className={styles.pipelineLabel}>stored</span>
+          <span className={styles.pipelineValue}>{cell?.raw || "(empty)"}</span>
+        </div>
+        <span className={styles.pipelineArrow}>→</span>
+        <div className={styles.pipelineStage}>
+          <span className={styles.pipelineLabel}>computed</span>
+          <span className={styles.pipelineValue}>{isNum ? numVal : String(rawVal)}</span>
         </div>
         <span className={styles.pipelineArrow}>→</span>
         <div className={styles.pipelineStage} data-active="true">
           <span className={styles.pipelineLabel}>format</span>
           <div className={styles.formatOptions} role="radiogroup" aria-label="Number format">
-            {(["number", "percent", "currency"] as const).map(f => (
+            {(["text", "number", "percent", "currency"] as const).map(f => (
               <button key={f} type="button" role="radio" aria-checked={format === f}
                 className={styles.formatOption} data-active={format === f ? "true" : undefined}
                 onClick={() => setFormat(f)}>
@@ -979,7 +1103,8 @@ function FormatWidget() {
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Same stored value (0.5), different display. The format layer is a pure transformation — it never mutates the stored data.
+        Click a cell in the grid above to select it. The pipeline shows how the stored value transforms through formatting — the raw data never changes.
+        {!isNum && cell?.raw ? " (Enter a number to see format options work)" : ""}
       </div>
     </div>
   );
@@ -1020,42 +1145,76 @@ function UndoWidget() {
   );
 }
 
+function adjustFormula(formula: string, rowOffset: number, colOffset: number): string {
+  if (!formula.startsWith("=")) return formula;
+  return "=" + formula.slice(1).replace(/(\$?)([A-Z])(\$?)(\d+)/g, (_match, colLock, col, rowLock, row) => {
+    const newCol = colLock === "$" ? col : String.fromCharCode(col.charCodeAt(0) + colOffset);
+    const newRow = rowLock === "$" ? row : String(parseInt(row) + rowOffset);
+    return `${colLock}${newCol}${rowLock}${newRow}`;
+  });
+}
+
 function ClipboardWidget() {
-  const [refType, setRefType] = useState<"relative" | "mixed" | "absolute">("relative");
+  const [sourceFormula, setSourceFormula] = useState("=A1+$B$1");
+  const [rowOffset, setRowOffset] = useState(2);
+  const [colOffset, setColOffset] = useState(0);
 
-  const examples: Record<string, { source: string; pasted: string }> = {
-    relative: { source: "=A1+B1", pasted: "=A3+B3" },
-    mixed: { source: "=A1+$B$1", pasted: "=A3+$B$1" },
-    absolute: { source: "=$A$1+$B$1", pasted: "=$A$1+$B$1" },
-  };
-
-  const ex = examples[refType]!;
+  const pasted = adjustFormula(sourceFormula, rowOffset, colOffset);
+  const sourceCell = `C1`;
+  const destRow = 1 + rowOffset;
+  const destCol = String.fromCharCode("C".charCodeAt(0) + colOffset);
+  const destCell = `${destCol}${destRow}`;
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Copy/paste & reference types</div>
-      <div className={styles.strategyGroup} role="radiogroup" aria-label="Reference type">
-        {(["relative", "mixed", "absolute"] as const).map(r => (
-          <button key={r} type="button" role="radio" aria-checked={refType === r}
-            className={styles.strategyOption} data-active={refType === r ? "true" : undefined}
-            onClick={() => setRefType(r)}>
-            <span className={styles.strategyName}>{r}</span>
-          </button>
-        ))}
+      <div className={styles.widgetTitle}>Copy/paste formula adjustment</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+        <div className={styles.toggleRow}>
+          <span className={styles.toggleLabel}>Source formula</span>
+          <input
+            type="text"
+            value={sourceFormula}
+            onChange={(e) => setSourceFormula(e.target.value)}
+            className={styles.formulaInput}
+            style={{ flex: 1, minHeight: 44 }}
+            aria-label="Source formula"
+            placeholder="=A1+$B$1"
+          />
+        </div>
+        <div className={styles.toggleRow}>
+          <span className={styles.toggleLabel}>Row offset</span>
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+            {[0, 1, 2, 3, 5].map(n => (
+              <button key={n} type="button" className={styles.toolButton} data-active={rowOffset === n ? "true" : undefined} onClick={() => setRowOffset(n)}>
+                +{n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={styles.toggleRow}>
+          <span className={styles.toggleLabel}>Col offset</span>
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+            {[0, 1, 2].map(n => (
+              <button key={n} type="button" className={styles.toolButton} data-active={colOffset === n ? "true" : undefined} onClick={() => setColOffset(n)}>
+                +{n}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
       <div className={styles.clipboardDemo}>
         <div className={styles.clipboardRow}>
-          <span className={styles.clipboardLabel}>C1 (source)</span>
-          <span className={styles.clipboardFormula}>{ex.source}</span>
+          <span className={styles.clipboardLabel}>{sourceCell} (source)</span>
+          <span className={styles.clipboardFormula}>{sourceFormula}</span>
         </div>
-        <div className={styles.clipboardArrow}>↓ paste to C3 (2 rows down)</div>
+        <div className={styles.clipboardArrow}>↓ paste to {destCell} ({rowOffset > 0 ? `${rowOffset} row${rowOffset > 1 ? "s" : ""} down` : "same row"}{colOffset > 0 ? `, ${colOffset} col${colOffset > 1 ? "s" : ""} right` : ""})</div>
         <div className={styles.clipboardRow}>
-          <span className={styles.clipboardLabel}>C3 (pasted)</span>
-          <span className={styles.clipboardFormula} data-result="true">{ex.pasted}</span>
+          <span className={styles.clipboardLabel}>{destCell} (pasted)</span>
+          <span className={styles.clipboardFormula} data-result="true">{pasted}</span>
         </div>
       </div>
       <div className={styles.widgetNote}>
-        Relative refs shift with the paste offset. $ locks a column or row. $A$1 is fully absolute — never changes on paste.
+        Type any formula with $ locks. Relative refs (A1) shift by the paste offset. $ locks a column ($A) or row ($1). Try =A1+$B$1 vs =$A$1+$B$1.
       </div>
     </div>
   );
