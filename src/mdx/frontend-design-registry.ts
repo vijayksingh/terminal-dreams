@@ -20,6 +20,10 @@ const frontendDesignComponentLoaders: Record<string, FdComponentLoader> = {
     import("@/mdx/frontend-design/design-spreadsheet"),
   "design-collaborative-whiteboard": () =>
     import("@/mdx/frontend-design/design-collaborative-whiteboard"),
+  "design-offline-first-app": () =>
+    import("@/mdx/frontend-design/design-offline-first-app"),
+  "design-multi-tab-sync": () =>
+    import("@/mdx/frontend-design/design-multi-tab-sync"),
   "design-booking-platform": () =>
     import("@/mdx/frontend-design/design-booking-platform"),
   "design-news-feed": () =>

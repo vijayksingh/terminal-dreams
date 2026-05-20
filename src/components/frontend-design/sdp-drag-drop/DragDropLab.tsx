@@ -622,7 +622,26 @@ function KanbanBoard() {
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragState.status !== "dragging") return;
     updateDrag(e.clientX, e.clientY);
-  }, [dragState.status, updateDrag]);
+
+    // Pointer capture (set on the dragged item) retargets pointermove to that
+    // element, so sibling columns never fire their own onPointerMove. Resolve
+    // the drop target here via DOM hit-test, which is unaffected by capture.
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    const columnEl = hit?.closest<HTMLElement>("[data-zone-id]");
+    if (!columnEl) {
+      setDropIndicator(null);
+      return;
+    }
+    const zoneId = columnEl.dataset.zoneId!;
+    const zone = zones.find(z => z.id === zoneId);
+    if (!zone) return;
+    const bodyEl = columnEl.querySelector<HTMLElement>("[data-zone-body]") ?? columnEl;
+    const rect = bodyEl.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const itemHeight = rect.height / Math.max(zone.items.length, 1);
+    const index = Math.max(0, Math.min(Math.round(y / itemHeight), zone.items.length));
+    setDropIndicator({ zoneId, index });
+  }, [dragState.status, updateDrag, zones, setDropIndicator]);
 
   const handlePointerUp = useCallback(() => {
     if (dragState.status !== "dragging") return;
@@ -671,37 +690,22 @@ function KanbanColumn({ zone, canDrag, showKeyboard, announce }: {
   showKeyboard: boolean;
   announce: (msg: string) => void;
 }) {
-  const {
-    dragState, dropIndicator, selectedItems,
-    startDrag, setDropIndicator, toggleSelectItem, moveItemKeyboard,
-    isActive,
-  } = useDragDrop();
-  const columnRef = useRef<HTMLDivElement>(null);
+  const { dragState, dropIndicator, selectedItems, isActive } = useDragDrop();
 
   const isDragOver = dropIndicator?.zoneId === zone.id;
   const showPlaceholder = isActive("placeholder");
 
-  const handleDragOver = useCallback((e: React.PointerEvent) => {
-    if (dragState.status !== "dragging") return;
-    const rect = columnRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const y = e.clientY - rect.top;
-    const itemHeight = rect.height / Math.max(zone.items.length, 1);
-    const index = Math.min(Math.round(y / itemHeight), zone.items.length);
-    setDropIndicator({ zoneId: zone.id, index });
-  }, [dragState.status, zone.id, zone.items.length, setDropIndicator]);
-
   return (
     <div
       className={styles.column}
+      data-zone-id={zone.id}
       data-drag-over={isDragOver ? "true" : undefined}
-      onPointerMove={canDrag ? handleDragOver : undefined}
     >
       <div className={styles.columnHeader}>
         <span className={styles.columnTitle}>{zone.label}</span>
         <span className={styles.columnCount}>{zone.items.length}</span>
       </div>
-      <div ref={columnRef} className={styles.columnBody}>
+      <div data-zone-body="" className={styles.columnBody}>
         {zone.items.map((item, idx) => {
           const isDragging = dragState.status === "dragging" && dragState.itemId === item.id;
           const isSelected = selectedItems.has(item.id);

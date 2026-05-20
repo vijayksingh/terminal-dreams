@@ -1596,7 +1596,7 @@ function CoalescedEventsStep() {
 function UndoRedoStep() {
   const { shapes, setShapes, undoStack, redoStack, undo, redo, pushUndo } = useWhiteboard();
   const [flashId, setFlashId] = useState<string | null>(null);
-  const flashTimer = useRef<ReturnType<typeof setTimeout>>();
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const flash = useCallback((id: string) => {
     clearTimeout(flashTimer.current);

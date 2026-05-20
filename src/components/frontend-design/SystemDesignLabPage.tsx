@@ -11,6 +11,8 @@ import { DragDropLab } from "./sdp-drag-drop/DragDropLab";
 import { SpreadsheetLab } from "./sdp-spreadsheet/SpreadsheetLab";
 import { WindowingLab } from "./sdp-windowing/WindowingLab";
 import { WhiteboardLab } from "./sdp-whiteboard/WhiteboardLab";
+import { OfflineFirstLab } from "./sdp-offline-first/OfflineFirstLab";
+import { MultiTabLab } from "./sdp-multi-tab/MultiTabLab";
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -155,6 +157,24 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <WhiteboardLab activeStep={activeStep} />
+    ),
+  },
+  "design-offline-first-app": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <OfflineFirstLab activeStep={activeStep} />
+    ),
+  },
+  "design-multi-tab-sync": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <MultiTabLab activeStep={activeStep} />
     ),
   },
 };
