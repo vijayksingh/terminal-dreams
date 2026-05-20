@@ -249,10 +249,9 @@ function EndpointChallenge() {
 
         return (
           <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
-            <div className={styles.endpointDesc}>{ep.description}</div>
             <div className={styles.endpointPath}>{ep.path}</div>
             {!isRevealed ? (
-              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.description}`}>
+              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.path}`}>
                 {WB_METHODS.map(m => (
                   <button
                     key={m} type="button" role="radio"
@@ -278,8 +277,9 @@ function EndpointChallenge() {
               </div>
             )}
             {guess && !isCorrect && !isRevealed && (
-              <div className={styles.methodHint}>Not quite — consider the operation type.</div>
+              <div className={styles.methodHint}>Not quite — think about what this route does to the resource.</div>
             )}
+            {isRevealed && <div className={styles.endpointDesc}>{ep.description}</div>}
             {isRevealed && (
               <div className={styles.endpointDetail}>
                 <div className={styles.endpointDesc}>{ep.description}</div>
@@ -1514,16 +1514,24 @@ function UndoRedoStep() {
     pushUndo({ type: "add", shapeId: newShape.id, after: newShape });
   };
 
+  const deleteLastShape = () => {
+    if (shapes.length === 0) return;
+    const removed = shapes[shapes.length - 1]!;
+    setShapes((prev) => prev.slice(0, -1));
+    pushUndo({ type: "remove", shapeId: removed.id, before: removed });
+  };
+
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Command Pattern Undo</div>
         <div className={styles.widgetNote}>
-          Each mutation produces an inverse command. Undo reverses YOUR last action (local undo), not the global last action — critical for multi-user contexts. The stack stores operation type, shape ID, and before/after state.
+          Each mutation produces an inverse command. Try adding and deleting shapes, then undo — notice both operations are reversible. The stack stores operation type, shape ID, and before/after state.
         </div>
       </div>
       <div className={styles.toolbar}>
-        <button type="button" className={styles.toolButton} onClick={addRandomShape}>+ Add Shape</button>
+        <button type="button" className={styles.toolButton} onClick={addRandomShape}>+ Add</button>
+        <button type="button" className={styles.toolButton} onClick={deleteLastShape} disabled={shapes.length === 0}>− Delete</button>
         <button type="button" className={styles.undoButton} onClick={undo} disabled={undoStack.length === 0}>↶ Undo</button>
         <button type="button" className={styles.undoButton} onClick={redo} disabled={redoStack.length === 0}>↷ Redo</button>
       </div>

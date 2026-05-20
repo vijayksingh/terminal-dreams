@@ -158,17 +158,29 @@ function RequirementsView() {
 
 function ApiDesignView() {
   const [tab, setTab] = useState<"endpoints" | "types">("endpoints");
+  const handleTabKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") setTab(tab === "endpoints" ? "types" : "endpoints");
+    else if (e.key === "ArrowLeft") setTab(tab === "endpoints" ? "types" : "endpoints");
+    else return;
+    e.preventDefault();
+    requestAnimationFrame(() => {
+      const next = (e.currentTarget as HTMLElement).parentElement?.querySelector('[aria-selected="true"]') as HTMLElement;
+      next?.focus();
+    });
+  };
   return (
     <div className={styles.planningPanel}>
-      <div className={styles.panelTabs}>
-        <button type="button" className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} onClick={() => setTab("endpoints")}>
+      <div className={styles.panelTabs} role="tablist" aria-label="API design views">
+        <button type="button" role="tab" className={styles.panelTab} data-active={tab === "endpoints" ? "true" : undefined} aria-selected={tab === "endpoints"} onClick={() => setTab("endpoints")} onKeyDown={handleTabKeyDown} tabIndex={tab === "endpoints" ? 0 : -1} id="tab-endpoints" aria-controls="panel-endpoints">
           Endpoints
         </button>
-        <button type="button" className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} onClick={() => setTab("types")}>
+        <button type="button" role="tab" className={styles.panelTab} data-active={tab === "types" ? "true" : undefined} aria-selected={tab === "types"} onClick={() => setTab("types")} onKeyDown={handleTabKeyDown} tabIndex={tab === "types" ? 0 : -1} id="tab-types" aria-controls="panel-types">
           Types
         </button>
       </div>
-      {tab === "endpoints" ? <EndpointChallenge /> : <TypeCards />}
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === "endpoints" ? <EndpointChallenge /> : <TypeCards />}
+      </div>
     </div>
   );
 }
@@ -189,10 +201,9 @@ function EndpointChallenge() {
 
         return (
           <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
-            <div className={styles.endpointDesc}>{ep.description}</div>
             <div className={styles.endpointPath}>{ep.path}</div>
             {!isRevealed ? (
-              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.description}`}>
+              <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.path}`}>
                 {METHODS.map(m => (
                   <button
                     key={m} type="button" role="radio"
@@ -222,6 +233,7 @@ function EndpointChallenge() {
             )}
             {isRevealed && (
               <div className={styles.endpointDetail}>
+                <div className={styles.endpointDesc}>{ep.description}</div>
                 {ep.params.length > 0 && (
                   <>
                     <div className={styles.endpointDetailLabel}>Parameters</div>
@@ -680,7 +692,7 @@ function DepGraphViz() {
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Dependency DAG</div>
-      <svg viewBox={`0 0 ${width} ${height}`} className={styles.dagSvg}>
+      <svg viewBox={`0 0 ${width} ${height}`} className={styles.dagSvg} role="img" aria-label={`Dependency graph: ${nodeArr.length} cells, ${[...depGraph.values()].reduce((n, d) => n + d.length, 0)} edges`}>
         {/* Edges */}
         {nodeArr.map(cell => {
           const deps = depGraph.get(cell) ?? [];
@@ -734,7 +746,7 @@ function DepGraphViz() {
         })}
       </svg>
       {recalcOrder.length > 0 && (
-        <div className={styles.recalcOrder}>
+        <div className={styles.recalcOrder} role="status" aria-live="polite">
           <span className={styles.recalcLabel}>Recalc order:</span>
           {recalcOrder.map((id, i) => (
             <span key={id} className={styles.recalcStep} data-affected={affectedCells.has(id) ? "true" : undefined}>
