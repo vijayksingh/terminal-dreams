@@ -1668,6 +1668,7 @@ function UndoRedoStep() {
       </div>
       <div className={styles.canvasWrapper}>
         <svg viewBox="0 0 320 200" className={styles.renderSvg} role="img" aria-label={`Undo canvas with ${shapes.length} shapes`}>
+          <AnimatePresence>
           {shapes.map((s) => {
             const isFlash = s.id === flashId;
             const stroke = isFlash ? "var(--color-accent)" : s.stroke;
@@ -1678,6 +1679,7 @@ function UndoRedoStep() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.6, opacity: 0 }}
                 transition={SPRING.snappy}
+                style={{ transformOrigin: `${s.x + s.w / 2}px ${s.y + s.h / 2}px` }}
               >
                 {s.kind === "rect" && (
                   <rect x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={stroke} strokeWidth={sw} />
@@ -1691,6 +1693,7 @@ function UndoRedoStep() {
               </motion.g>
             );
           })}
+          </AnimatePresence>
           {shapes.length === 0 && (
             <text x="160" y="100" textAnchor="middle" fill="var(--color-muted)" fontSize="14" fontFamily="var(--font-mono)">
               Add shapes to see them here
