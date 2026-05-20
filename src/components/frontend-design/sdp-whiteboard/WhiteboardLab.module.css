@@ -1023,6 +1023,38 @@ button.scopeBadge[data-in-scope="false"]:hover {
   width: 100%;
 }
 
+.queryArea {
+  position: relative;
+  height: 120px;
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+  border-radius: var(--radius-2);
+  cursor: crosshair;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 44px;
+}
+
+.queryAreaLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.queryDot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-bg), 0 0 12px var(--color-accent);
+  pointer-events: none;
+}
+
 .rtreeStats {
   display: flex;
   gap: var(--space-3);
@@ -1050,6 +1082,41 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .rtreeStatValue[data-status="good"] { color: var(--color-success); }
 .rtreeStatValue[data-status="warning"] { color: var(--color-warning); }
+
+/* ── A11y label editor ──────────────────────────────────────── */
+
+.a11yLabelEditor {
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--diagram-layer-3) 8%, var(--color-surface));
+  border-radius: var(--radius-1);
+}
+
+.a11yEditorLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.a11yEditorInput {
+  flex: 1;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  padding: 6px 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  min-height: 44px;
+}
+
+.a11yEditorInput:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-color: var(--color-accent);
+}
 
 /* ── A11y DOM mirror ───────────────────────────────────────── */
 

@@ -776,8 +776,10 @@ function PointerCaptureStep() {
   useEffect(() => { draw(); }, [draw]);
 
   const getPos = (e: React.PointerEvent): Point => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const scale = canvasRef.current!.width / rect.width;
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / rect.width;
     return { x: (e.clientX - rect.left) * scale, y: (e.clientY - rect.top) * scale };
   };
 
@@ -791,7 +793,8 @@ function PointerCaptureStep() {
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drawing.current) return;
     const pos = getPos(e);
-    const canvas = canvasRef.current!;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const isOutside = pos.x < 0 || pos.y < 0 || pos.x > canvas.width || pos.y > canvas.height;
     setCurrentPath((prev) => [...prev, pos]);
     setStats((prev) => ({
@@ -896,18 +899,18 @@ function ShapeModelStep() {
   const [zIndexEnabled, setZIndexEnabled] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const addShape = () => {
-    const x = 40 + Math.random() * 280;
-    const y = 30 + Math.random() * 160;
+  const addShapeAt = useCallback((x: number, y: number) => {
     const colors = ["var(--diagram-layer-1)", "var(--diagram-layer-2)", "var(--diagram-layer-4)", "var(--diagram-layer-6)"];
     const color = colors[Math.floor(Math.random() * colors.length)]!;
+    const w = addKind === "rect" ? 100 + Math.random() * 60 : 80 + Math.random() * 40;
+    const h = addKind === "rect" ? 60 + Math.random() * 40 : 80 + Math.random() * 40;
     const newShape: Shape = {
       id: `shape-${Date.now()}`,
       kind: addKind,
       points: [],
-      x, y,
-      w: addKind === "rect" ? 100 + Math.random() * 60 : 80 + Math.random() * 40,
-      h: addKind === "rect" ? 60 + Math.random() * 40 : 80 + Math.random() * 40,
+      x: Math.max(0, x - w / 2),
+      y: Math.max(0, y - h / 2),
+      w, h,
       rotation: 0,
       fill: color,
       stroke: color,
@@ -918,7 +921,14 @@ function ShapeModelStep() {
     };
     setShapes((prev) => [...prev, newShape]);
     pushUndo({ type: "add", shapeId: newShape.id, after: newShape });
-  };
+  }, [addKind, shapes.length, setShapes, pushUndo]);
+
+  const handleCanvasClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (CANVAS_W / rect.width);
+    const y = (e.clientY - rect.top) * (CANVAS_H / rect.height);
+    addShapeAt(x, y);
+  }, [addShapeAt]);
 
   const sortedShapes = useMemo(() => {
     if (zIndexEnabled) return [...shapes].sort((a, b) => a.zIndex - b.zIndex);
@@ -941,7 +951,7 @@ function ShapeModelStep() {
       <div className={styles.widgetPanel} data-category="model">
         <div className={styles.widgetTitle}>Shape Object Model</div>
         <div className={styles.widgetNote}>
-          Each shape is a data object with id, kind, bounding box, fill, and z-index. Add overlapping shapes, then toggle z-index sorting off to see why render order matters.
+          Click anywhere on the canvas to place a shape. Choose the shape type below, then toggle z-index sorting off to see why render order matters.
         </div>
       </div>
       <canvas
@@ -950,7 +960,9 @@ function ShapeModelStep() {
         height={CANVAS_H}
         className={styles.canvas}
         role="img"
-        aria-label={`Shape preview: ${shapes.length} shapes`}
+        aria-label={`Shape canvas: ${shapes.length} shapes — click to add`}
+        onClick={handleCanvasClick}
+        style={{ cursor: "crosshair" }}
       />
       <div className={styles.toolbar}>
         <button type="button" className={styles.toolButton} data-active={addKind === "rect" ? "true" : undefined} onClick={() => setAddKind("rect")}>
@@ -958,9 +970,6 @@ function ShapeModelStep() {
         </button>
         <button type="button" className={styles.toolButton} data-active={addKind === "ellipse" ? "true" : undefined} onClick={() => setAddKind("ellipse")}>
           ○ Ellipse
-        </button>
-        <button type="button" className={styles.toolButton} onClick={addShape}>
-          + Add Shape
         </button>
         <button type="button" className={styles.toolButton}
           data-active={!zIndexEnabled ? "true" : undefined}
@@ -1087,8 +1096,10 @@ function HitTestingStep() {
   };
 
   const onClick = (e: React.PointerEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const scale = canvasRef.current!.width / rect.width;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / rect.width;
     const pt = { x: (e.clientX - rect.left) * scale, y: (e.clientY - rect.top) * scale };
     setQueryPoint(pt);
     const { id, log, checks } = hitTestWithTrace(pt);
@@ -1915,6 +1926,7 @@ function CursorPresenceStep() {
 function SpatialIndexStep() {
   const [shapeCount, setShapeCount] = useState(500);
   const [queryPath, setQueryPath] = useState<number[]>([]);
+  const [queryPoint, setQueryPoint] = useState<{ x: number; y: number } | null>(null);
   const reducedMotion = usePrefersReducedMotion();
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -1926,18 +1938,26 @@ function SpatialIndexStep() {
   const rtreeMs = (Math.log2(shapeCount) * 60 * 0.002).toFixed(2);
   const depth = Math.max(1, Math.ceil(Math.log(shapeCount) / Math.log(9)));
 
-  const runQuery = useCallback(() => {
+  const runQueryAt = useCallback((x: number, y: number) => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
-    const path = [0, Math.floor(Math.random() * 3)];
-    if (depth >= 2) path.push(Math.floor(Math.random() * 3));
-    if (depth >= 3) path.push(Math.floor(Math.random() * 3));
+    setQueryPoint({ x, y });
+    const path = [0, Math.min(2, Math.floor(x / 120))];
+    if (depth >= 2) path.push(Math.min(2, Math.floor(y / 80)));
+    if (depth >= 3) path.push(Math.min(2, Math.floor((x + y) / 200)));
     if (reducedMotion) { setQueryPath(path); return; }
     setQueryPath([]);
     path.forEach((_, i) => {
       timersRef.current.push(setTimeout(() => setQueryPath(path.slice(0, i + 1)), i * 300));
     });
   }, [depth, reducedMotion]);
+
+  const handleQueryCanvasClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    runQueryAt(x, y);
+  }, [runQueryAt]);
 
   const checksAvoided = shapeCount - Math.ceil(shapeCount / Math.pow(3, depth));
 
@@ -1946,12 +1966,26 @@ function SpatialIndexStep() {
       <div className={styles.widgetPanel} data-category="perf">
         <div className={styles.widgetTitle}>R-tree Spatial Index</div>
         <div className={styles.widgetNote}>
-          Click &quot;Query&quot; to trace a hit-test through the R-tree. Watch how the search prunes subtrees — at {shapeCount.toLocaleString()} shapes, it skips ~{checksAvoided.toLocaleString()} bounding-box checks per query.
+          Click anywhere in the query area below to pick a hit-test point. Watch the R-tree prune subtrees — at {shapeCount.toLocaleString()} shapes, it skips ~{checksAvoided.toLocaleString()} bounding-box checks per query.
         </div>
       </div>
-      <div className={styles.toolbar}>
-        <button type="button" className={styles.toolButton} onClick={runQuery}>▶ Query</button>
-        <button type="button" className={styles.toolButton} onClick={() => setQueryPath([])}>Reset</button>
+      <div
+        className={styles.queryArea}
+        onClick={handleQueryCanvasClick}
+        role="button"
+        tabIndex={0}
+        aria-label="Click to set R-tree query point"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            runQueryAt(180, 100);
+          }
+        }}
+      >
+        <div className={styles.queryAreaLabel}>Click to query</div>
+        {queryPoint && (
+          <div className={styles.queryDot} style={{ left: queryPoint.x - 6, top: queryPoint.y - 6 }} />
+        )}
       </div>
       <div className={styles.toggleStrip}>
         <div className={styles.toggleRow}>
@@ -2151,7 +2185,7 @@ function AccessibleCanvasStep() {
               borderRadius: shape.kind === "ellipse" ? "50%" : 4,
             }}
             role="img"
-            aria-label={`${shape.kind} at ${Math.round(shape.x)}, ${Math.round(shape.y)}`}
+            aria-label={shape.text || `${shape.kind} at ${Math.round(shape.x)}, ${Math.round(shape.y)}`}
           />
         ))}
         {shapes.length === 0 && (
@@ -2160,6 +2194,25 @@ function AccessibleCanvasStep() {
           </div>
         )}
       </div>
+      {focusedIdx !== null && shapes[focusedIdx] && (
+        <div className={styles.a11yLabelEditor}>
+          <label className={styles.a11yEditorLabel}>
+            aria-label for <strong>{shapes[focusedIdx]!.kind}</strong>:
+            <input
+              type="text"
+              className={styles.a11yEditorInput}
+              value={shapes[focusedIdx]!.text ?? ""}
+              placeholder={`${shapes[focusedIdx]!.kind} at ${Math.round(shapes[focusedIdx]!.x)}, ${Math.round(shapes[focusedIdx]!.y)}`}
+              onChange={(e) => {
+                const text = e.target.value;
+                setShapes((prev) => prev.map((s, i) => i === focusedIdx ? { ...s, text } : s));
+                announce(`Label updated: ${text || shapes[focusedIdx]!.kind}`);
+              }}
+              aria-label="Edit accessible label for focused shape"
+            />
+          </label>
+        </div>
+      )}
       <div className={styles.a11yMirror}>
         <div className={styles.a11yMirrorHeading}>
           Hidden DOM Mirror
