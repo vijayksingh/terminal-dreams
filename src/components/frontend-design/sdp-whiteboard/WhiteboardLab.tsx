@@ -1943,7 +1943,7 @@ function SpatialIndexStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel} data-category="collab">
+      <div className={styles.widgetPanel} data-category="perf">
         <div className={styles.widgetTitle}>R-tree Spatial Index</div>
         <div className={styles.widgetNote}>
           Click &quot;Query&quot; to trace a hit-test through the R-tree. Watch how the search prunes subtrees — at {shapeCount.toLocaleString()} shapes, it skips ~{checksAvoided.toLocaleString()} bounding-box checks per query.
@@ -2123,7 +2123,7 @@ function AccessibleCanvasStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel} data-category="collab">
+      <div className={styles.widgetPanel} data-category="a11y">
         <div className={styles.widgetTitle}>Accessible Canvas</div>
         <div className={styles.widgetNote}>
           Canvas is opaque to assistive tech. Try the keyboard navigation below — Tab between shapes, arrow keys to move, Delete to remove. The &quot;Screen Reader Output&quot; panel shows what would be announced.

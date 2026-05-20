@@ -203,8 +203,11 @@ function EndpointChallenge() {
 
         return (
           <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
-            <div className={styles.endpointPath}>{ep.path}</div>
             {!isRevealed ? (
+              <>
+              <div className={styles.endpointHeader}>
+                <div className={styles.endpointPath}>{ep.path}</div>
+              </div>
               <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.path}`}>
                 {METHODS.map(m => (
                   <button
@@ -224,6 +227,7 @@ function EndpointChallenge() {
                   </button>
                 ))}
               </div>
+              </>
             ) : (
               <div className={styles.endpointHeader}>
                 <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
@@ -493,17 +497,17 @@ function StepControls() {
   const { activeStep } = useSpreadsheet();
 
   switch (activeStep) {
-    case 4: return <PredictionChallenge question="A spreadsheet has 100K rows × 26 columns (2.6M cells). How many DOM elements should the grid render?" options={["2,600,000 — one per cell", "~200 — only cells visible in the viewport plus buffer", "26 — one per column, rows are virtual"]} correctIndex={1} explanation="The grid renders only the ~20 visible rows × 10 visible columns = 200 cells. Cell positions are computed from scroll offset. This is the same windowing technique used in virtual lists, extended to two dimensions." />;
+    case 4: return null;
     case 5: return null;
     case 6: return <PredictionChallenge question="For the formula =A1+B2*C3, what is the root node of the AST?" options={["A1 — the first operand", "+ (addition) — last operation applied", "* (multiply) — highest precedence"]} correctIndex={1} explanation="The root is the addition operator. Due to operator precedence, B2*C3 evaluates first (as a subtree), then is added to A1. The root is always the last operation to execute — the lowest-precedence operator at the top level." />;
     case 7: return <PredictionToggle feature="depGraph" label="Dependency DAG" question="Cell D1=C1+1, C1=B1+1, B1=A1+1, A1=5. In what order must cells be recalculated?" options={["D1, C1, B1, A1 — reverse alphabetical", "A1, B1, C1, D1 — topological order", "Any order — all values are independent"]} correctIndex={1} explanation="Topological sort on the dependency DAG yields A1 first (no dependencies), then B1 (depends only on A1), then C1, then D1. This is the only order that guarantees each cell's dependencies are resolved before it's evaluated." />;
-    case 8: return <PredictionChallenge question="A spreadsheet has 10K cells. Cell A1 changes. 15 cells transitively depend on A1. How many cells should be recalculated?" options={["10,000 — recalculate everything to be safe", "15 — only the transitive dependents", "16 — A1 itself plus its 15 dependents"]} correctIndex={2} explanation="A1 itself is re-evaluated, plus its 15 transitive dependents. The dirty-marking traversal is O(affected), not O(total). Without the DAG, you'd have to recalculate all 10K cells on every edit." />;
+    case 8: return null;
     case 9: return null;
     case 10: return <PredictionToggle feature="virtualGrid" label="Virtual Grid" question="When the user scrolls down 50 rows in a virtual grid, what happens to the DOM?" options={["50 new rows are created, 50 old rows are destroyed", "The same DOM elements are recycled with new cell data", "All 100K rows are in the DOM but only 20 are visible"]} correctIndex={1} explanation="Cell recycling: the existing DOM elements are repositioned (via CSS transform) and their content is swapped to reflect the new scroll position. No createElement or removeChild needed — just data swaps. This keeps the DOM node count constant regardless of scroll position." />;
     case 11: return null;
     case 12: return <PredictionToggle feature="undoRedo" label="Undo (Ctrl+Z)" question="A user pastes a 3×3 block (9 cell edits). They press Ctrl+Z once. What should undo?" options={["The last single cell edit", "All 9 cell edits — the entire paste operation", "Nothing — paste can't be undone"]} correctIndex={1} explanation="The paste is a single user action, even though it modifies 9 cells internally. The Command pattern groups them into one compound command. Undoing cell-by-cell would require 9 Ctrl+Z presses for one logical action." />;
     case 13: return null;
-    case 14: return <PredictionChallenge question="Cell A1 is referenced by B1, C1, D1. All three are referenced by E1. A1 changes. Without batching, how many times is E1 evaluated?" options={["1 — E1 is only evaluated once", "3 — once for each dependency triggering it", "0 — E1 isn't dirty"]} correctIndex={1} explanation="Without batching, each dependency propagation triggers E1 independently: B1→E1, C1→E1, D1→E1 = 3 evaluations. With batch recalculation, dirty-mark the entire subgraph first, then evaluate in topo order — E1 runs once after B1, C1, D1 are all resolved." />;
+    case 14: return null;
     case 15: return <PredictionChallenge question="Two users simultaneously edit cell A1 — one sets 10, the other sets 20. With last-writer-wins, what is A1?" options={["10 — first edit wins", "15 — system averages concurrent edits", "Depends on server timestamp — non-deterministic from clients"]} correctIndex={2} explanation="Last-writer-wins uses server-side timestamps. The result depends on which edit the server processes last, which is non-deterministic from either client's perspective. One edit is silently discarded — LWW is simple but lossy." />;
     default: return null;
   }
@@ -513,7 +517,7 @@ function StepControls() {
 
 function MiniSpreadsheet() {
   const ctx = useSpreadsheet();
-  const { cells, editingCell, startEditing, commitEdit, cancelEdit, affectedCells } = ctx;
+  const { cells, editingCell, startEditing, commitEdit, cancelEdit, affectedCells, highlightedCell } = ctx;
   const gridRef = useRef<HTMLDivElement>(null);
 
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -567,6 +571,7 @@ function MiniSpreadsheet() {
                 error={cell?.error ?? null}
                 isEditing={isEditing}
                 isAffected={isAffected}
+                isHighlighted={highlightedCell === id}
                 bold={cell?.format.bold ?? false}
                 onDoubleClick={() => startEditing(id)}
                 onCommit={(val) => commitEdit(id, val)}
@@ -580,7 +585,7 @@ function MiniSpreadsheet() {
   );
 }
 
-function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAffected, bold, onDoubleClick, onCommit, onCancel }: {
+function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAffected, isHighlighted, bold, onDoubleClick, onCommit, onCancel }: {
   cellId: string;
   raw: string;
   computed: string | number | null;
@@ -588,6 +593,7 @@ function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAff
   error: string | null;
   isEditing: boolean;
   isAffected: boolean;
+  isHighlighted: boolean;
   bold: boolean;
   onDoubleClick: () => void;
   onCommit: (value: string) => void;
@@ -621,6 +627,7 @@ function CellComponent({ cellId, raw, computed, formula, error, isEditing, isAff
       data-error={error ? "true" : undefined}
       data-affected={isAffected ? "true" : undefined}
       data-editing={isEditing ? "true" : undefined}
+      data-highlighted={isHighlighted ? "true" : undefined}
       data-bold={bold ? "true" : undefined}
       role="gridcell"
       aria-label={`${cellId}: ${display || "empty"}`}
@@ -881,7 +888,7 @@ const EDIT_PROMPTS = [
 ] as const;
 
 function CellEditWidget() {
-  const { cells, startEditing, commitEdit } = useSpreadsheet();
+  const { cells, setHighlightedCell } = useSpreadsheet();
   const [promptIdx, setPromptIdx] = useState(0);
 
   const applied = useMemo(() => {
@@ -898,11 +905,12 @@ function CellEditWidget() {
     if (nextUndone >= 0 && nextUndone !== promptIdx) setPromptIdx(nextUndone);
   }, [applied, promptIdx]);
 
-  const focusPrompt = (idx: number) => {
-    const p = EDIT_PROMPTS[idx]!;
-    startEditing(p.cell);
-    setPromptIdx(idx);
-  };
+  useEffect(() => {
+    if (allDone) { setHighlightedCell(null); return; }
+    const p = EDIT_PROMPTS[promptIdx];
+    if (p && !applied[promptIdx]) setHighlightedCell(p.cell);
+    return () => setHighlightedCell(null);
+  }, [promptIdx, allDone, applied, setHighlightedCell]);
 
   return (
     <div className={styles.widgetPanel} data-category="core">
@@ -929,15 +937,10 @@ function CellEditWidget() {
                   </span>
                 )}
               </div>
-              {!isDone && (
-                <button
-                  type="button"
-                  className={styles.actionButton}
-                  onClick={() => focusPrompt(i)}
-                  aria-label={`Focus ${p.cell} — type ${p.value}`}
-                >
-                  Focus {p.cell}
-                </button>
+              {!isDone && isCurrent && (
+                <span className={styles.cellClickHint}>
+                  Double-click <strong>{p.cell}</strong> in the grid, then type <code>{p.value}</code>
+                </span>
               )}
             </div>
           );
@@ -950,7 +953,7 @@ function CellEditWidget() {
       )}
       {!allDone && (
         <div className={styles.widgetNote}>
-          Click &ldquo;Focus&rdquo; to select a cell, then type the value shown and press Enter. Watch raw vs computed diverge.
+          Double-click the pulsing cell in the grid, type the value shown, and press Enter. Watch raw vs computed diverge.
         </div>
       )}
     </div>
@@ -1085,7 +1088,7 @@ const DAG_PROMPTS = [
 ] as const;
 
 function DepGraphWidget() {
-  const { cells, commitEdit, startEditing } = useSpreadsheet();
+  const { cells, setHighlightedCell } = useSpreadsheet();
   const [promptIdx, setPromptIdx] = useState(0);
 
   const applied = useMemo(() => {
@@ -1102,11 +1105,12 @@ function DepGraphWidget() {
     if (nextUndone >= 0 && nextUndone !== promptIdx) setPromptIdx(nextUndone);
   }, [applied, promptIdx]);
 
-  const focusPrompt = (idx: number) => {
-    const p = DAG_PROMPTS[idx]!;
-    startEditing(p.cell);
-    setPromptIdx(idx);
-  };
+  useEffect(() => {
+    if (allDone) { setHighlightedCell(null); return; }
+    const p = DAG_PROMPTS[promptIdx];
+    if (p && !applied[promptIdx]) setHighlightedCell(p.cell);
+    return () => setHighlightedCell(null);
+  }, [promptIdx, allDone, applied, setHighlightedCell]);
 
   return (
     <div className={styles.widgetPanel} data-category="formula">
@@ -1127,15 +1131,10 @@ function DepGraphWidget() {
                 <span className={styles.dagPromptCell}>{p.cell} = {p.value}</span>
                 <span className={styles.dagPromptHint}>{p.hint}</span>
               </div>
-              {!isDone && (
-                <button
-                  type="button"
-                  className={styles.actionButton}
-                  onClick={() => focusPrompt(i)}
-                  aria-label={`Focus ${p.cell} — type ${p.value}`}
-                >
-                  Focus {p.cell}
-                </button>
+              {!isDone && isCurrent && (
+                <span className={styles.cellClickHint}>
+                  Double-click <strong>{p.cell}</strong> in the grid, then type <code>{p.value}</code>
+                </span>
               )}
             </div>
           );
@@ -1148,7 +1147,7 @@ function DepGraphWidget() {
       )}
       {!allDone && (
         <div className={styles.widgetNote}>
-          Click Apply to inject each formula step by step. Watch the DAG visualization above grow as dependencies form.
+          Double-click the pulsing cell in the grid, type the formula shown, and press Enter. Watch the DAG visualization grow as dependencies form.
         </div>
       )}
     </div>

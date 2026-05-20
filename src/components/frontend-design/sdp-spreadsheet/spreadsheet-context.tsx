@@ -399,6 +399,9 @@ type SpreadsheetContextValue = {
   // Undo
   undoStack: UndoOp[];
   undo: () => void;
+  // Guided editing
+  highlightedCell: string | null;
+  setHighlightedCell: (id: string | null) => void;
   // Feature system
   isActive: (feature: string) => boolean;
   featureToggled: Record<string, boolean>;
@@ -437,6 +440,9 @@ export function SpreadsheetProvider({
       return next;
     });
   }, []);
+
+  // Guided editing highlight
+  const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
 
   // Feature toggles
   const [featureToggled, setFeatureToggled] = useState<Record<string, boolean>>({});
@@ -689,6 +695,8 @@ export function SpreadsheetProvider({
       startEditing,
       commitEdit,
       cancelEdit,
+      highlightedCell,
+      setHighlightedCell,
       depGraph,
       affectedCells,
       recalcOrder,
@@ -713,6 +721,8 @@ export function SpreadsheetProvider({
       startEditing,
       commitEdit,
       cancelEdit,
+      highlightedCell,
+      setHighlightedCell,
       depGraph,
       affectedCells,
       recalcOrder,

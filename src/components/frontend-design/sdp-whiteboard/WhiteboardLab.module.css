@@ -363,7 +363,7 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
 }
 
 .typeCardHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-1); }
@@ -832,6 +832,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .widgetPanel[data-category="model"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
 .widgetPanel[data-category="perf"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
 .widgetPanel[data-category="collab"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-surface)); }
+.widgetPanel[data-category="a11y"] { background: color-mix(in srgb, var(--diagram-layer-3) 10%, var(--color-surface)); }
 
 .widgetTitle {
   font-size: 0.68rem;
@@ -972,7 +973,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   transition: opacity 300ms ease;
 }
 
-.mergeBox[data-lost="true"] { opacity: 0.4; }
+.mergeBox[data-lost="true"] { opacity: 0.5; text-decoration: line-through; }
 
 .mergeBoxLabel {
   font-size: 0.6rem;
@@ -1097,7 +1098,6 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-size: 0.625rem;
   font-weight: 700;
   color: var(--color-muted);
-  min-width: 90px;
 }
 
 .coalescedCount {
@@ -1247,6 +1247,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-muted);
+  min-width: 90px;
 }
 
 .coalescedSvg {
