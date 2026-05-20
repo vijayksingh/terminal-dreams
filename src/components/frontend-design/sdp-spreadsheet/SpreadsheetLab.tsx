@@ -894,13 +894,15 @@ function CellEditWidget() {
 
   const allDone = applied.every(Boolean);
 
-  const applyPrompt = (idx: number) => {
+  useEffect(() => {
+    const nextUndone = applied.findIndex(done => !done);
+    if (nextUndone >= 0 && nextUndone !== promptIdx) setPromptIdx(nextUndone);
+  }, [applied, promptIdx]);
+
+  const focusPrompt = (idx: number) => {
     const p = EDIT_PROMPTS[idx]!;
     startEditing(p.cell);
-    commitEdit(p.cell, p.value);
-    if (idx < EDIT_PROMPTS.length - 1) {
-      setPromptIdx(idx + 1);
-    }
+    setPromptIdx(idx);
   };
 
   return (
@@ -932,10 +934,10 @@ function CellEditWidget() {
                 <button
                   type="button"
                   className={styles.actionButton}
-                  onClick={() => applyPrompt(i)}
-                  aria-label={`Apply ${p.cell} = ${p.value}`}
+                  onClick={() => focusPrompt(i)}
+                  aria-label={`Focus ${p.cell} — type ${p.value}`}
                 >
-                  Apply
+                  Focus {p.cell}
                 </button>
               )}
             </div>
@@ -949,7 +951,7 @@ function CellEditWidget() {
       )}
       {!allDone && (
         <div className={styles.widgetNote}>
-          Apply each prompt in order. Watch the grid above update — then compare raw vs computed in this panel.
+          Click &ldquo;Focus&rdquo; to select a cell, then type the value shown and press Enter. Watch raw vs computed diverge.
         </div>
       )}
     </div>
@@ -1096,13 +1098,15 @@ function DepGraphWidget() {
 
   const allDone = applied.every(Boolean);
 
-  const applyPrompt = (idx: number) => {
+  useEffect(() => {
+    const nextUndone = applied.findIndex(done => !done);
+    if (nextUndone >= 0 && nextUndone !== promptIdx) setPromptIdx(nextUndone);
+  }, [applied, promptIdx]);
+
+  const focusPrompt = (idx: number) => {
     const p = DAG_PROMPTS[idx]!;
     startEditing(p.cell);
-    commitEdit(p.cell, p.value);
-    if (idx < DAG_PROMPTS.length - 1) {
-      setPromptIdx(idx + 1);
-    }
+    setPromptIdx(idx);
   };
 
   return (
@@ -1128,10 +1132,10 @@ function DepGraphWidget() {
                 <button
                   type="button"
                   className={styles.actionButton}
-                  onClick={() => applyPrompt(i)}
-                  aria-label={`Apply ${p.cell} = ${p.value}`}
+                  onClick={() => focusPrompt(i)}
+                  aria-label={`Focus ${p.cell} — type ${p.value}`}
                 >
-                  Apply
+                  Focus {p.cell}
                 </button>
               )}
             </div>
