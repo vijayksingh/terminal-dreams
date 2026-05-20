@@ -1,0 +1,143 @@
+---
+title: "Design an Offline-First App"
+slug: design-offline-first-app
+section: system-design-problems
+stopId: sdp-offline-first
+order: 8
+kind: system-design-problem
+summary: "Design an offline-first application with Service Workers, IndexedDB, sync queues, conflict resolution, and background sync strategies"
+tags:
+  - system-design
+  - offline-first
+  - service-worker
+  - indexeddb
+  - sync-queue
+  - conflict-resolution
+  - background-sync
+intersections:
+  - state-storage
+  - net-intro
+  - render-csr-ssr-ssg
+prerequisites: []
+demo: design-offline-first-app
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design an application that works offline and syncs when connectivity returns."
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API & Data Model
+
+Define the sync protocol and storage schema.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+Map the offline-first data flow: local store → sync queue → conflict resolver → remote server.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Cache Strategy
+
+Choose between cache-first, network-first, and stale-while-revalidate approaches.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Service Worker Lifecycle
+
+Understand install → wait → activate → redundant state machine.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — IndexedDB Schema
+
+Design object stores for documents, sync queue, and cache metadata.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Offline Queue
+
+Queue mutations while offline and drain them on reconnect.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Sync Engine
+
+Step through the sync algorithm: dequeue → send → confirm → advance.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Conflict Detection
+
+Detect conflicts using vector clocks when two devices edit the same item.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Conflict Resolution
+
+Choose a strategy: last-write-wins, field-level merge, or manual resolution.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Optimistic UI
+
+Show changes instantly and roll back on sync failure.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Background Sync
+
+Retry failed syncs with exponential backoff using the Background Sync API.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Cache Invalidation
+
+Version cached assets and invalidate stale entries on deploy.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Storage Quota
+
+Monitor storage usage and evict least-recently-used entries under pressure.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Network Status
+
+Detect online/offline/slow transitions and adapt UI behavior accordingly.
+
+</section>

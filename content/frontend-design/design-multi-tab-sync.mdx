@@ -1,0 +1,142 @@
+---
+title: "Design Multi-tab Sync"
+slug: design-multi-tab-sync
+section: system-design-problems
+stopId: sdp-multi-tab
+order: 9
+kind: system-design-problem
+summary: "Design a multi-tab synchronization system with BroadcastChannel, SharedWorker, localStorage events, leader election, and crash recovery"
+tags:
+  - system-design
+  - multi-tab
+  - broadcast-channel
+  - shared-worker
+  - leader-election
+  - local-storage
+  - state-sync
+intersections:
+  - api-mutation
+  - state-storage
+prerequisites: []
+demo: design-multi-tab-sync
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Requirements
+
+"Design a system that keeps state synchronized across multiple browser tabs."
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — API & Data Model
+
+Define message protocols and shared state shape.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Architecture
+
+Map the sync topology: tabs → channel → leader → shared store.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — BroadcastChannel
+
+Send structured messages between tabs using the BroadcastChannel API.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Message Protocol
+
+Design message types: state-sync, action, heartbeat, election.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Tab Registry
+
+Track open tabs with heartbeat-based liveness detection.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Leader Election
+
+Implement the Bully algorithm for single-leader coordination.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — State Sync
+
+Synchronize edits across tabs with immediate propagation.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Conflict Resolution
+
+Handle concurrent edits with last-write-wins, merge queue, or leader-decides strategies.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — localStorage Events
+
+Use storage events as a cross-tab communication fallback.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — SharedWorker
+
+Route messages through a single SharedWorker for large state payloads.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Tab Lifecycle
+
+Handle visibility states: visible, hidden, frozen, terminated.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Background Throttling
+
+Detect and compensate for timer throttling in hidden tabs.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Memory Pressure
+
+Discard and restore tab state under memory constraints.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Lock API
+
+Coordinate exclusive access to shared resources across tabs.
+
+</section>

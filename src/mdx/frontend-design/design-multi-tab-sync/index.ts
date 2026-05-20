@@ -1,0 +1,1 @@
+export { MultiTabDemo } from "./MultiTabDemo";
