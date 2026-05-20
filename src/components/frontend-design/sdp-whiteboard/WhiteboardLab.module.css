@@ -27,6 +27,8 @@
   flex-wrap: wrap;
 }
 
+.stepBarList { display: contents; }
+
 .stepDot {
   font-size: 0.625rem;
   font-weight: 600;
@@ -820,8 +822,8 @@
 }
 
 .colorSwatch {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: var(--radius-1);
   cursor: pointer;
@@ -862,15 +864,15 @@
   font-size: 0.6rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.9);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  color: color-mix(in srgb, white 90%, transparent);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 
 .mergeBoxColor {
   font-size: 0.7rem;
   font-weight: 700;
-  color: rgba(255,255,255,0.95);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  color: color-mix(in srgb, white 95%, transparent);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 50%, transparent);
 }
 
 .mergeBoxLost {
@@ -1108,6 +1110,147 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── StepContent layout ────────────────────────────────────── */
+
+.stepContentStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Canvas render SVG ─────────────────────────────────────── */
+
+.renderSvg {
+  display: block;
+  width: 100%;
+  background: var(--color-surface);
+}
+
+/* ── Coalesced draw area ───────────────────────────────────── */
+
+.coalescedArea {
+  height: 120px;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: crosshair;
+  touch-action: none;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+/* ── Cursor area ───────────────────────────────────────────── */
+
+.cursorArea {
+  height: 140px;
+  position: relative;
+}
+
+/* ── Redo hint ─────────────────────────────────────────────── */
+
+.redoHint {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  padding: var(--space-1) 0;
+}
+
+/* ── A11y canvas container ─────────────────────────────────── */
+
+.a11yCanvasArea {
+  height: 180px;
+  position: relative;
+}
+
+.a11yCanvasArea:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── A11y shape marker ─────────────────────────────────────── */
+
+.a11yShapeMarker {
+  position: absolute;
+  opacity: 0.3;
+  transition: left 100ms ease, top 100ms ease;
+}
+
+.a11yShapeMarker[data-focused="true"] {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.a11yShapeMarker:not([data-focused="true"]) {
+  outline: 1px solid var(--color-border);
+}
+
+/* ── A11y DOM mirror heading ───────────────────────────────── */
+
+.a11yMirrorHeading {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-1);
+}
+
+/* ── SR output panel ───────────────────────────────────────── */
+
+.srPanelAccent {
+  border-left-color: var(--diagram-layer-2);
+}
+
+.srPanelTitleColor {
+  color: var(--diagram-layer-2);
+}
+
+.srEmptyHint {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.srMessage {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.srMessage[data-latest="true"] {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* ── Empty center placeholder ──────────────────────────────── */
+
+.emptyCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+}
+
+/* ── Shape list accent ─────────────────────────────────────── */
+
+.shapeListAccent {
+  border-left-color: var(--diagram-layer-1);
+}
+
+.shapeListTitleColor {
+  color: var(--diagram-layer-1);
+}
+
+/* ── Touch target fix for shape row button ─────────────────── */
+
+button.shapeRow {
+  min-height: 44px;
 }
 
 /* ── Reduced motion ──────────────────────────────────────────── */

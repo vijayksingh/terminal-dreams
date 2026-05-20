@@ -76,7 +76,7 @@ const STEP_TITLES = [
 function StepBar({ activeStep }: { activeStep: number }) {
   return (
     <nav className={styles.stepBar} aria-label="Build steps">
-      <ol className={styles.stepBar} role="list" style={{ display: "contents" }}>
+      <ol role="list" className={styles.stepBarList}>
         {STEP_LABELS.map((label, i) => (
           <li
             key={i}
@@ -344,7 +344,7 @@ function WhiteboardEvolution() {
 
 function StepContent({ step }: { step: number }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+    <div className={styles.stepContentStack}>
       <PredictionChallenge step={step} />
       <StepInteractive step={step} />
     </div>
@@ -560,7 +560,7 @@ function CanvasRenderStep() {
             aria-label={`Canvas rendering ${allShapes.length} shapes`}
           />
         ) : (
-          <svg viewBox="0 0 440 260" style={{ display: "block", width: "100%", background: "var(--color-surface)" }}>
+          <svg viewBox="0 0 440 260" className={styles.renderSvg}>
             {allShapes.map((shape) => {
               if (shape.kind === "rect") return (
                 <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.3} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
@@ -1341,19 +1341,7 @@ function CoalescedEventsStep() {
       </div>
       <div
         ref={areaRef}
-        style={{
-          height: 120,
-          borderRadius: "var(--radius-2)",
-          background: "var(--color-surface)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "crosshair",
-          touchAction: "none",
-          fontSize: "0.7rem",
-          color: "var(--color-muted)",
-          fontFamily: "var(--font-mono)",
-        }}
+        className={styles.coalescedArea}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -1440,7 +1428,7 @@ function UndoRedoStep() {
               </div>
             ))}
             {redoStack.length > 0 && (
-              <div style={{ fontSize: "0.6rem", color: "var(--color-muted)", padding: "var(--space-1) 0" }}>
+              <div className={styles.redoHint}>
                 — redo available: {redoStack.length} op{redoStack.length > 1 ? "s" : ""} —
               </div>
             )}
@@ -1673,8 +1661,7 @@ function CursorPresenceStep() {
       </div>
       <div
         ref={areaRef}
-        className={styles.canvasWrapper}
-        style={{ height: 140, position: "relative" }}
+        className={`${styles.canvasWrapper} ${styles.cursorArea}`}
       >
         {SIM_USERS.slice(0, userCount).map((u) => {
           const pos = cursors[u.id];
@@ -1689,7 +1676,7 @@ function CursorPresenceStep() {
           );
         })}
         {!running && Object.keys(cursors).length === 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "0.7rem", color: "var(--color-muted)" }}>
+          <div className={styles.emptyCenter}>
             Press ▶ to simulate cursor broadcasts
           </div>
         )}
@@ -1932,8 +1919,7 @@ function AccessibleCanvasStep() {
       </div>
       <div
         ref={containerRef}
-        className={styles.canvasWrapper}
-        style={{ height: 180, position: "relative", outline: "none" }}
+        className={`${styles.canvasWrapper} ${styles.a11yCanvasArea}`}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         role="application"
@@ -1942,31 +1928,28 @@ function AccessibleCanvasStep() {
         {shapes.map((shape, i) => (
           <div
             key={shape.id}
+            className={styles.a11yShapeMarker}
+            data-focused={i === focusedIdx ? "true" : undefined}
             style={{
-              position: "absolute",
               left: shape.x,
               top: shape.y,
               width: shape.w,
               height: shape.h,
               background: shape.fill,
-              opacity: 0.3,
               borderRadius: shape.kind === "ellipse" ? "50%" : 4,
-              outline: i === focusedIdx ? "3px solid var(--color-accent)" : "1px solid var(--color-border)",
-              outlineOffset: i === focusedIdx ? 2 : 0,
-              transition: "left 100ms ease, top 100ms ease",
             }}
             role="img"
             aria-label={`${shape.kind} at ${Math.round(shape.x)}, ${Math.round(shape.y)}`}
           />
         ))}
         {shapes.length === 0 && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "0.7rem", color: "var(--color-muted)" }}>
+          <div className={styles.emptyCenter}>
             (no shapes — go to step 6 to add some)
           </div>
         )}
       </div>
       <div className={styles.a11yMirror}>
-        <div style={{ fontSize: "0.625rem", fontWeight: 800, color: "var(--color-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "var(--space-1)" }}>
+        <div className={styles.a11yMirrorHeading}>
           Hidden DOM Mirror
         </div>
         {shapes.map((shape, i) => (
@@ -1981,15 +1964,15 @@ function AccessibleCanvasStep() {
           </div>
         ))}
       </div>
-      <div className={styles.widgetPanel} style={{ borderLeftColor: "var(--diagram-layer-2)" }}>
-        <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-2)" }}>Screen Reader Output</div>
+      <div className={`${styles.widgetPanel} ${styles.srPanelAccent}`}>
+        <div className={`${styles.widgetTitle} ${styles.srPanelTitleColor}`}>Screen Reader Output</div>
         {announcements.length === 0 ? (
-          <div style={{ fontSize: "0.65rem", color: "var(--color-muted)", fontStyle: "italic" }}>
+          <div className={styles.srEmptyHint}>
             Click the canvas area above, then press Tab to start navigating
           </div>
         ) : (
           announcements.map((msg, i) => (
-            <div key={i} style={{ fontSize: "0.65rem", color: i === announcements.length - 1 ? "var(--color-text)" : "var(--color-muted)", fontWeight: i === announcements.length - 1 ? 700 : 500 }}>
+            <div key={i} className={styles.srMessage} data-latest={i === announcements.length - 1 ? "true" : undefined}>
               → {msg}
             </div>
           ))
@@ -2010,8 +1993,8 @@ function ShapeListWidget({ selectable }: { selectable?: boolean }) {
   const { shapes, selectedShapeId, setSelectedShapeId } = useWhiteboard();
 
   return (
-    <div className={styles.widgetPanel} style={{ borderLeftColor: "var(--diagram-layer-1)" }}>
-      <div className={styles.widgetTitle} style={{ color: "var(--diagram-layer-1)" }}>
+    <div className={`${styles.widgetPanel} ${styles.shapeListAccent}`}>
+      <div className={`${styles.widgetTitle} ${styles.shapeListTitleColor}`}>
         Scene Graph ({shapes.length} shape{shapes.length !== 1 ? "s" : ""})
       </div>
       <div className={styles.shapeList}>

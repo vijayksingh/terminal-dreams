@@ -845,18 +845,18 @@ function PropagationWidget() {
             {recalcOrder.map((id, i) => {
               const cell = cells.get(id);
               return (
-                <div key={id} className={styles.statRow} data-active={highlightIdx === i ? "true" : undefined} style={highlightIdx === i ? { background: "color-mix(in srgb, var(--color-accent) 14%, transparent)", borderRadius: "var(--radius-1)", padding: "2px 4px", margin: "-2px -4px" } : undefined}>
-                  <span className={styles.statLabel} style={{ fontWeight: 800, color: "var(--color-accent)", minWidth: 28 }}>{i + 1}.</span>
+                <div key={id} className={styles.statRow} data-active={highlightIdx === i ? "true" : undefined}>
+                  <span className={styles.propIndex}>{i + 1}.</span>
                   <span className={styles.statLabel}>{id}</span>
                   <span className={styles.statValue}>{cell?.raw ?? "—"}</span>
-                  <span className={styles.statValue} style={{ color: "var(--color-accent)" }}>→ {cell?.computed != null ? String(cell.computed) : "—"}</span>
+                  <span className={`${styles.statValue} ${styles.propArrow}`}>→ {cell?.computed != null ? String(cell.computed) : "—"}</span>
                 </div>
               );
             })}
           </div>
-          <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
+          <div className={styles.propControls}>
             <button type="button" className={styles.actionButton} onClick={replayPropagation}>▶ Replay cascade</button>
-            <span style={{ fontSize: "0.625rem", color: "var(--color-muted)" }}>{recalcOrder.length} cells in topo order</span>
+            <span className={styles.propCount}>{recalcOrder.length} cells in topo order</span>
           </div>
         </>
       ) : (
@@ -1168,22 +1168,21 @@ function ClipboardWidget() {
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Copy/paste formula adjustment</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+      <div className={styles.clipboardFields}>
         <div className={styles.toggleRow}>
           <span className={styles.toggleLabel}>Source formula</span>
           <input
             type="text"
             value={sourceFormula}
             onChange={(e) => setSourceFormula(e.target.value)}
-            className={styles.formulaInput}
-            style={{ flex: 1, minHeight: 44 }}
+            className={`${styles.formulaInput} ${styles.formulaInputWide}`}
             aria-label="Source formula"
             placeholder="=A1+$B$1"
           />
         </div>
         <div className={styles.toggleRow}>
           <span className={styles.toggleLabel}>Row offset</span>
-          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+          <div className={styles.offsetGroup}>
             {[0, 1, 2, 3, 5].map(n => (
               <button key={n} type="button" className={styles.toolButton} data-active={rowOffset === n ? "true" : undefined} onClick={() => setRowOffset(n)}>
                 +{n}
@@ -1193,7 +1192,7 @@ function ClipboardWidget() {
         </div>
         <div className={styles.toggleRow}>
           <span className={styles.toggleLabel}>Col offset</span>
-          <div style={{ display: "flex", gap: "var(--space-1)" }}>
+          <div className={styles.offsetGroup}>
             {[0, 1, 2].map(n => (
               <button key={n} type="button" className={styles.toolButton} data-active={colOffset === n ? "true" : undefined} onClick={() => setColOffset(n)}>
                 +{n}
@@ -1223,52 +1222,46 @@ function ClipboardWidget() {
 function PerformanceWidget() {
   const [mode, setMode] = useState<"naive" | "batched">("naive");
   const [step, setStep] = useState(0);
-  const [running, setRunning] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fanOut, setFanOut] = useState(3);
 
-  const naiveSteps = [
-    { active: ["A1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "A1 changed" },
-    { active: ["B1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 0 }, label: "B1 recalcs (dep of A1)" },
-    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 1 }, label: "E1 recalcs (dep of B1) — eval #1" },
-    { active: ["C1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 1 }, label: "C1 recalcs (dep of A1)" },
-    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 2 }, label: "E1 recalcs AGAIN (dep of C1) — eval #2" },
-    { active: ["D1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 2 }, label: "D1 recalcs (dep of A1)" },
-    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 3 }, label: "E1 recalcs AGAIN (dep of D1) — eval #3!" },
-  ];
+  type PropStep = { active: string[]; evalCount: Record<string, number>; label: string };
 
-  const batchedSteps = [
-    { active: ["A1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "A1 changed → dirty-mark subgraph" },
-    { active: ["B1", "C1", "D1", "E1"], evalCount: { A1: 1, B1: 0, C1: 0, D1: 0, E1: 0 }, label: "All dependents marked dirty" },
-    { active: ["B1"], evalCount: { A1: 1, B1: 1, C1: 0, D1: 0, E1: 0 }, label: "Topo order: eval B1" },
-    { active: ["C1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 0, E1: 0 }, label: "Topo order: eval C1" },
-    { active: ["D1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 0 }, label: "Topo order: eval D1" },
-    { active: ["E1"], evalCount: { A1: 1, B1: 1, C1: 1, D1: 1, E1: 1 }, label: "Topo order: eval E1 — just once!" },
-  ];
-
-  const steps = mode === "naive" ? naiveSteps : batchedSteps;
-  const currentStep = steps[Math.min(step, steps.length - 1)]!;
-
-  const runAnimation = useCallback(() => {
-    setStep(0);
-    setRunning(true);
-    let s = 0;
-    const tick = () => {
-      s++;
-      if (s < steps.length) {
-        setStep(s);
-        timerRef.current = setTimeout(tick, 600);
-      } else {
-        setRunning(false);
+  const buildSteps = useMemo((): PropStep[] => {
+    const deps = Array.from({ length: fanOut }, (_, i) => String.fromCharCode(66 + i) + "1");
+    const sink = "E1";
+    if (mode === "naive") {
+      const steps: PropStep[] = [{ active: ["A1"], evalCount: { A1: 1 }, label: "A1 changed" }];
+      let sinkEvals = 0;
+      const counts: Record<string, number> = { A1: 1 };
+      for (const dep of deps) {
+        counts[dep] = 1;
+        steps.push({ active: [dep], evalCount: { ...counts, [sink]: sinkEvals }, label: `${dep} recalcs (dep of A1)` });
+        sinkEvals++;
+        counts[sink] = sinkEvals;
+        steps.push({ active: [sink], evalCount: { ...counts }, label: `${sink} recalcs (dep of ${dep}) — eval #${sinkEvals}${sinkEvals > 1 ? "!" : ""}` });
       }
-    };
-    timerRef.current = setTimeout(tick, 600);
-  }, [steps.length]);
+      return steps;
+    }
+    const all = deps.concat(sink);
+    const steps: PropStep[] = [
+      { active: ["A1"], evalCount: { A1: 1 }, label: "A1 changed → dirty-mark subgraph" },
+      { active: all, evalCount: { A1: 1 }, label: `All ${all.length} dependents marked dirty` },
+    ];
+    const counts: Record<string, number> = { A1: 1 };
+    for (const dep of deps) {
+      counts[dep] = 1;
+      steps.push({ active: [dep], evalCount: { ...counts }, label: `Topo order: eval ${dep}` });
+    }
+    counts[sink] = 1;
+    steps.push({ active: [sink], evalCount: { ...counts }, label: `Topo order: eval ${sink} — just once!` });
+    return steps;
+  }, [mode, fanOut]);
 
-  useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
+  const currentStep = buildSteps[Math.min(step, buildSteps.length - 1)]!;
+  const cells = ["A1", ...Array.from({ length: fanOut }, (_, i) => String.fromCharCode(66 + i) + "1"), "E1"];
 
-  const cells = ["A1", "B1", "C1", "D1", "E1"];
+  const canPrev = step > 0;
+  const canNext = step < buildSteps.length - 1;
 
   return (
     <div className={styles.widgetPanel}>
@@ -1277,7 +1270,7 @@ function PerformanceWidget() {
         {(["naive", "batched"] as const).map(m => (
           <button key={m} type="button" role="radio" aria-checked={mode === m}
             className={styles.strategyOption} data-active={mode === m ? "true" : undefined}
-            onClick={() => { setMode(m); setStep(0); setRunning(false); if (timerRef.current) clearTimeout(timerRef.current); }}>
+            onClick={() => { setMode(m); setStep(0); }}>
             <span className={styles.strategyName}>{m}</span>
             <span className={styles.strategyDesc}>
               {m === "naive" ? "Propagate on each dep change" : "Dirty-mark, then topo-sort eval"}
@@ -1285,10 +1278,22 @@ function PerformanceWidget() {
           </button>
         ))}
       </div>
+      <div className={styles.toggleRow}>
+        <span className={styles.toggleLabel}>Fan-out (deps of A1)</span>
+        <div className={styles.offsetGroup}>
+          {[2, 3, 4, 5].map(n => (
+            <button key={n} type="button" className={styles.toolButton}
+              data-active={fanOut === n ? "true" : undefined}
+              onClick={() => { setFanOut(n); setStep(0); }}>
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className={styles.propCellRow}>
         {cells.map(cell => {
           const isActive = currentStep.active.includes(cell);
-          const evals = currentStep.evalCount[cell as keyof typeof currentStep.evalCount] ?? 0;
+          const evals = currentStep.evalCount[cell] ?? 0;
           return (
             <div key={cell} className={styles.propCell}
               data-active={isActive ? "true" : undefined}
@@ -1303,15 +1308,12 @@ function PerformanceWidget() {
         })}
       </div>
       <div className={styles.stepMessage}>{currentStep.label}</div>
-      <button
-        type="button"
-        className={styles.undoButton}
-        onClick={runAnimation}
-        disabled={running}
-        style={{ width: "100%" }}
-      >
-        {running ? "Running..." : "▶ Run propagation"}
-      </button>
+      <div className={styles.propControls}>
+        <button type="button" className={styles.toolButton} disabled={!canPrev} onClick={() => setStep(s => s - 1)} aria-label="Previous step">◀</button>
+        <span className={styles.propCount}>Step {step + 1} / {buildSteps.length}</span>
+        <button type="button" className={styles.toolButton} disabled={!canNext} onClick={() => setStep(s => s + 1)} aria-label="Next step">▶</button>
+        <button type="button" className={styles.toolButton} onClick={() => setStep(0)} aria-label="Reset">↺</button>
+      </div>
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>E1 evals</div>
@@ -1325,71 +1327,60 @@ function PerformanceWidget() {
             {Object.values(currentStep.evalCount).reduce((a, b) => a + b, 0)}
           </div>
         </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Naive would eval E1</div>
+          <div className={styles.metricValue} data-status={mode === "batched" ? "good" : undefined}>
+            {mode === "batched" ? `${fanOut}× → 1×` : `${fanOut}×`}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
+function resolveCollabConflict(strategy: "lww" | "ot" | "crdt", a: string, b: string): { result: string; lost: "alice" | "bob" | null; explanation: string } {
+  if (a === b) return { result: a, lost: null, explanation: "No conflict — both typed the same value." };
+  switch (strategy) {
+    case "lww": return { result: b, lost: "alice", explanation: `Bob's timestamp was later (t=2 > t=1). Alice's "${a}" is silently overwritten to "${b}". No merge, no notification.` };
+    case "ot": return { result: b, lost: "alice", explanation: `Server orders ops sequentially: Alice's set(A1, "${a}") applied first, then Bob's set(A1, "${b}") overwrites. Both clients converge, but Alice's intent is lost.` };
+    case "crdt": {
+      const winner = a < b ? a : b;
+      const loserVal = a < b ? b : a;
+      const who = winner === a ? null : "alice" as const;
+      return { result: winner, lost: who, explanation: `Deterministic tie-break (lexicographic): "${winner}" < "${loserVal}". Both replicas converge to "${winner}" without a server.` };
+    }
+  }
+}
+
 function CollaborationWidget() {
   const [strategy, setStrategy] = useState<"lww" | "ot" | "crdt">("lww");
-  const [step, setStep] = useState(0);
-  const [running, setRunning] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [aliceVal, setAliceVal] = useState("100");
+  const [bobVal, setBobVal] = useState("250");
+  const [result, setResult] = useState<ReturnType<typeof resolveCollabConflict> | null>(null);
 
-  type TimelineStep = { alice: string; bob: string; server: string; result: string; lost?: boolean };
-
-  const timelines: Record<string, TimelineStep[]> = {
-    lww: [
-      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
-      { alice: "sends A1=10 (t=1)", bob: "—", server: "A1=10", result: "10" },
-      { alice: "—", bob: "sends A1=20 (t=2)", server: "A1=20", result: "20" },
-      { alice: "receives A1=20", bob: "✓", server: "A1=20", result: "20", lost: true },
-    ],
-    ot: [
-      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
-      { alice: "sends op(A1, 10)", bob: "sends op(A1, 20)", server: "queue", result: "?" },
-      { alice: "—", bob: "—", server: "transforms: 10 → 20", result: "20" },
-      { alice: "receives transform", bob: "receives transform", server: "canonical", result: "20" },
-    ],
-    crdt: [
-      { alice: "types 10", bob: "types 20", server: "—", result: "?" },
-      { alice: "lww(A1, 10, t=1, alice)", bob: "lww(A1, 20, t=2, bob)", server: "—", result: "?" },
-      { alice: "merges bob's op", bob: "merges alice's op", server: "no server needed", result: "?" },
-      { alice: "A1=20 (t=2 wins)", bob: "A1=20 (t=2 wins)", server: "converged", result: "20" },
-    ],
-  };
-
-  const timeline = timelines[strategy]!;
-  const currentStep = timeline[Math.min(step, timeline.length - 1)]!;
-
-  const runAnimation = useCallback(() => {
-    setStep(0);
-    setRunning(true);
-    let s = 0;
-    const tick = () => {
-      s++;
-      if (s < timeline.length) {
-        setStep(s);
-        timerRef.current = setTimeout(tick, 900);
-      } else {
-        setRunning(false);
-      }
-    };
-    timerRef.current = setTimeout(tick, 900);
-  }, [timeline.length]);
-
-  useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
+  useEffect(() => { setResult(null); }, [strategy, aliceVal, bobVal]);
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Conflict resolution</div>
+      <div className={styles.widgetNote}>
+        Alice and Bob both edit cell A1 at the same time. Type what each enters, pick a strategy, and hit Merge.
+      </div>
+      <div className={styles.collabInputRow}>
+        <div className={styles.collabInput}>
+          <span className={styles.collabInputLabel} data-role="alice">Alice types</span>
+          <input type="text" className={styles.collabInputField} value={aliceVal} onChange={e => setAliceVal(e.target.value)} aria-label="Alice's value for A1" />
+        </div>
+        <div className={styles.collabInput}>
+          <span className={styles.collabInputLabel} data-role="bob">Bob types</span>
+          <input type="text" className={styles.collabInputField} value={bobVal} onChange={e => setBobVal(e.target.value)} aria-label="Bob's value for A1" />
+        </div>
+      </div>
       <div className={styles.strategyGroup} role="radiogroup" aria-label="Sync strategy">
         {(["lww", "ot", "crdt"] as const).map(s => (
           <button key={s} type="button" role="radio" aria-checked={strategy === s}
             className={styles.strategyOption} data-active={strategy === s ? "true" : undefined}
-            onClick={() => { setStrategy(s); setStep(0); setRunning(false); if (timerRef.current) clearTimeout(timerRef.current); }}>
+            onClick={() => setStrategy(s)}>
             <span className={styles.strategyName}>{s === "lww" ? "LWW" : s.toUpperCase()}</span>
             <span className={styles.strategyDesc}>
               {s === "lww" ? "Last writer wins" : s === "ot" ? "Server transforms" : "Convergent replicas"}
@@ -1397,32 +1388,36 @@ function CollaborationWidget() {
           </button>
         ))}
       </div>
-      <div className={styles.timelineRows}>
-        {["alice", "bob", "server", "result"].map(row => {
-          const val = currentStep[row as keyof TimelineStep];
-          const isActive = val !== "—" && val !== "?";
-          return (
-            <div key={row} className={styles.timelineRow}>
-              <span className={styles.timelineLabel} data-role={row}>{row}</span>
-              <span className={styles.timelineValue}
-                data-active={isActive ? "true" : undefined}
-                data-lost={row === "result" && currentStep.lost ? "true" : undefined}>
-                {val}
-                {row === "result" && currentStep.lost && " (alice's edit lost)"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        className={styles.undoButton}
-        onClick={runAnimation}
-        disabled={running}
-        style={{ width: "100%" }}
-      >
-        {running ? "Simulating..." : "▶ Simulate conflict"}
+      <button type="button" className={`${styles.undoButton} ${styles.fullWidthButton}`}
+        onClick={() => setResult(resolveCollabConflict(strategy, aliceVal, bobVal))}>
+        ⚡ Merge
       </button>
+      {result && (
+        <>
+          <div className={styles.collabResult}>
+            <span className={styles.collabResultLabel}>A1 =</span>
+            <span className={styles.collabResultValue} data-lost={result.lost ? "true" : undefined}>
+              {result.result}
+              {result.lost && ` (${result.lost === "alice" ? "Alice" : "Bob"}'s edit lost)`}
+            </span>
+          </div>
+          <div className={styles.stepMessage} data-severity={result.lost ? "warning" : undefined}>
+            {result.explanation}
+          </div>
+          <div className={styles.metricsBar}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Strategy</div>
+              <div className={styles.metricValue}>{strategy.toUpperCase()}</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Data loss?</div>
+              <div className={styles.metricValue} data-status={result.lost ? "bad" : "good"}>
+                {result.lost ? "Yes" : "No"}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
