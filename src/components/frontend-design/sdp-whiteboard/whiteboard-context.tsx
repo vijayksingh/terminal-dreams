@@ -609,17 +609,15 @@ export function WhiteboardProvider({
       setSyncStrategy,
       remoteCursors,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setShapes, setActiveTool, setSelectedShapeId, setSyncStrategy are stable React setters
     [
       activeStep,
       phase,
       scopeEnabled,
       toggleScope,
       shapes,
-      setShapes,
       activeTool,
-      setActiveTool,
       selectedShapeId,
-      setSelectedShapeId,
       undoStack,
       redoStack,
       pushUndo,
@@ -628,7 +626,6 @@ export function WhiteboardProvider({
       isActive,
       stateEntries,
       syncStrategy,
-      setSyncStrategy,
       remoteCursors,
     ]
   );

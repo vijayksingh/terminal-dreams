@@ -404,7 +404,6 @@ type SpreadsheetContextValue = {
   featureToggled: Record<string, boolean>;
   toggleFeature: (feature: string) => void;
   // Metrics
-  renderCount: number;
   cellsInDom: number;
   recalcCount: number;
   // State inspector
@@ -532,11 +531,6 @@ export function SpreadsheetProvider({
     setEditingCell(null);
   }, []);
 
-  const [renderCount, setRenderCount] = useState(0);
-  const bumpRenderCount = useCallback(() => {
-    setRenderCount(c => c + 1);
-  }, []);
-
   const isUndoing = useRef(false);
 
   const commitEdit = useCallback(
@@ -634,9 +628,8 @@ export function SpreadsheetProvider({
         return next;
       });
       setEditingCell(null);
-      bumpRenderCount();
     },
-    [isActive, bumpRenderCount]
+    [isActive]
   );
 
   const undo = useCallback(() => {
@@ -704,7 +697,6 @@ export function SpreadsheetProvider({
       isActive,
       featureToggled,
       toggleFeature,
-      renderCount,
       cellsInDom,
       recalcCount,
       stateEntries,
@@ -729,7 +721,6 @@ export function SpreadsheetProvider({
       isActive,
       featureToggled,
       toggleFeature,
-      renderCount,
       cellsInDom,
       recalcCount,
       stateEntries,

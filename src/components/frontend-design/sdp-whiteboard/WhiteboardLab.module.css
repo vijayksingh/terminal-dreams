@@ -241,20 +241,21 @@
 }
 
 .endpointCard {
-  border-left: 3px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
   overflow: hidden;
+  transition: background 200ms ease;
+}
+
+.endpointCard[data-revealed="true"] {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
 }
 
 .endpointHeader {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
   padding: var(--space-2);
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  cursor: pointer;
   font-family: var(--font-mono);
   font-size: 0.7rem;
   text-align: left;
