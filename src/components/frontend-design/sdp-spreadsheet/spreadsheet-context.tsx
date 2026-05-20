@@ -532,11 +532,9 @@ export function SpreadsheetProvider({
     setEditingCell(null);
   }, []);
 
-  const renderCountRef = useRef(0);
   const [renderCount, setRenderCount] = useState(0);
   const bumpRenderCount = useCallback(() => {
-    renderCountRef.current += 1;
-    setRenderCount(renderCountRef.current);
+    setRenderCount(c => c + 1);
   }, []);
 
   const commitEdit = useCallback(

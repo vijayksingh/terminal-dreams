@@ -1090,6 +1090,9 @@ function SelectionHandlesStep() {
                   strokeWidth={2}
                   style={{ cursor: h.cursor }}
                   onPointerDown={(e) => handlePointerDown(e, h.id)}
+                  role="slider"
+                  aria-label={`Resize handle: ${h.label}`}
+                  tabIndex={0}
                 />
               );
             })}
@@ -1477,7 +1480,7 @@ const SYNC_STRATEGIES: { id: SyncStrategy; name: string; desc: string }[] = [
 
 const CONFLICT_COLORS = ["red", "blue", "green", "orange", "purple"] as const;
 type ConflictColor = typeof CONFLICT_COLORS[number];
-const COLOR_HEX: Record<ConflictColor, string> = { red: "#e74c3c", blue: "#3498db", green: "#27ae60", orange: "#e67e22", purple: "#9b59b6" };
+const COLOR_VAR: Record<ConflictColor, string> = { red: "var(--diagram-layer-8)", blue: "var(--diagram-layer-0)", green: "var(--diagram-layer-1)", orange: "var(--diagram-layer-4)", purple: "var(--diagram-layer-2)" };
 
 function resolveMerge(strategy: SyncStrategy, alice: ConflictColor, bob: ConflictColor): { result: ConflictColor; aliceLost: boolean; bobLost: boolean; explanation: string } {
   if (alice === bob) return { result: alice, aliceLost: false, bobLost: false, explanation: "No conflict — both chose the same color." };
@@ -1518,7 +1521,7 @@ function CrdtSyncStep() {
             {CONFLICT_COLORS.map(c => (
               <button key={c} type="button" className={styles.colorSwatch}
                 data-active={aliceChoice === c ? "true" : undefined}
-                style={{ background: COLOR_HEX[c] }}
+                style={{ background: COLOR_VAR[c] }}
                 aria-label={`Alice: ${c}`} aria-pressed={aliceChoice === c}
                 onClick={() => setAliceChoice(c)} />
             ))}
@@ -1530,7 +1533,7 @@ function CrdtSyncStep() {
             {CONFLICT_COLORS.map(c => (
               <button key={c} type="button" className={styles.colorSwatch}
                 data-active={bobChoice === c ? "true" : undefined}
-                style={{ background: COLOR_HEX[c] }}
+                style={{ background: COLOR_VAR[c] }}
                 aria-label={`Bob: ${c}`} aria-pressed={bobChoice === c}
                 onClick={() => setBobChoice(c)} />
             ))}
@@ -1554,18 +1557,18 @@ function CrdtSyncStep() {
         <>
           <div className={styles.mergeResult}>
             <div className={styles.mergePreview}>
-              <div className={styles.mergeBox} style={{ background: COLOR_HEX[aliceChoice] }} data-lost={merged.aliceLost ? "true" : undefined}>
+              <div className={styles.mergeBox} style={{ background: COLOR_VAR[aliceChoice] }} data-lost={merged.aliceLost ? "true" : undefined}>
                 <span className={styles.mergeBoxLabel}>Alice</span>
                 <span className={styles.mergeBoxColor}>{aliceChoice}</span>
                 {merged.aliceLost && <span className={styles.mergeBoxLost}>LOST</span>}
               </div>
               <div className={styles.mergeArrow}>→</div>
-              <div className={styles.mergeBox} style={{ background: COLOR_HEX[merged.result] }}>
+              <div className={styles.mergeBox} style={{ background: COLOR_VAR[merged.result] }}>
                 <span className={styles.mergeBoxLabel}>Result</span>
                 <span className={styles.mergeBoxColor}>{merged.result}</span>
               </div>
               <div className={styles.mergeArrow}>←</div>
-              <div className={styles.mergeBox} style={{ background: COLOR_HEX[bobChoice] }} data-lost={merged.bobLost ? "true" : undefined}>
+              <div className={styles.mergeBox} style={{ background: COLOR_VAR[bobChoice] }} data-lost={merged.bobLost ? "true" : undefined}>
                 <span className={styles.mergeBoxLabel}>Bob</span>
                 <span className={styles.mergeBoxColor}>{bobChoice}</span>
                 {merged.bobLost && <span className={styles.mergeBoxLost}>LOST</span>}
