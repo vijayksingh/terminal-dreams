@@ -877,6 +877,18 @@ button.scopeBadge[data-in-scope="false"]:hover {
   color: var(--color-muted);
 }
 
+.cellInspectCompact {
+  font-size: 0.6rem;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+}
+
+.cellInspectCompact code {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
 .widgetSliderLabel {
   font-size: 0.7rem;
   font-weight: 700;

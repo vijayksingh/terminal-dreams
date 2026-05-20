@@ -871,50 +871,84 @@ function GridWidget() {
   );
 }
 
+const EDIT_PROMPTS = [
+  { cell: "A1", value: "42", observe: "Plain number: raw and computed are identical." },
+  { cell: "A2", value: "01/02", observe: "String input: raw preserves '01/02' — no coercion to date or fraction." },
+  { cell: "A3", value: "=A1*2", observe: "Formula: raw is '=A1*2', computed is 84. The two layers diverge." },
+  { cell: "A4", value: "=A1/0", observe: "Error: raw is valid syntax, computed shows ERR. Error doesn't propagate upward." },
+] as const;
+
 function CellEditWidget() {
-  const { cells, editingCell } = useSpreadsheet();
-  const activeId = editingCell;
-  const watchIds = activeId
-    ? [activeId, ...Array.from(cells.values()).filter(c => c.deps.includes(activeId)).map(c => c.id).slice(0, 3)]
-    : ["A1", "B2", "C2", "D2"];
+  const { cells, startEditing, commitEdit } = useSpreadsheet();
+  const [promptIdx, setPromptIdx] = useState(0);
+
+  const applied = useMemo(() => {
+    return EDIT_PROMPTS.map(p => {
+      const cell = cells.get(p.cell);
+      return cell?.raw === p.value;
+    });
+  }, [cells]);
+
+  const allDone = applied.every(Boolean);
+
+  const applyPrompt = (idx: number) => {
+    const p = EDIT_PROMPTS[idx]!;
+    startEditing(p.cell);
+    commitEdit(p.cell, p.value);
+    if (idx < EDIT_PROMPTS.length - 1) {
+      setPromptIdx(idx + 1);
+    }
+  };
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>
-        {activeId ? `Editing ${activeId}` : "Cell anatomy — raw vs computed"}
-      </div>
-      <div className={styles.cellInspector}>
-        {watchIds.map(id => {
-          const cell = cells.get(id);
-          const isEditing = id === activeId;
+      <div className={styles.widgetTitle}>Cell anatomy — raw vs computed</div>
+      <div className={styles.dagPromptList}>
+        {EDIT_PROMPTS.map((p, i) => {
+          const isDone = applied[i];
+          const isCurrent = i === promptIdx && !allDone;
+          const cell = cells.get(p.cell);
           return (
-            <div key={id} className={styles.cellInspectRow} data-active={isEditing ? "true" : undefined}>
-              <span className={styles.cellInspectId}>{id}</span>
-              <span className={styles.cellInspectRaw}>{cell?.raw || "(empty)"}</span>
-              <span className={styles.cellInspectComputed}>
-                {cell?.error ? <span className={styles.cellInspectError}>ERR</span> : cell?.computed != null ? String(cell.computed) : "—"}
-              </span>
+            <div
+              key={p.cell}
+              className={styles.dagPrompt}
+              data-done={isDone ? "true" : undefined}
+              data-current={isCurrent ? "true" : undefined}
+            >
+              <span className={styles.dagPromptIndex}>{isDone ? "✓" : i + 1}</span>
+              <div className={styles.dagPromptBody}>
+                <span className={styles.dagPromptCell}>{p.cell} = {p.value}</span>
+                <span className={styles.dagPromptHint}>{p.observe}</span>
+                {isDone && (
+                  <span className={styles.cellInspectCompact}>
+                    raw: <code>{cell?.raw}</code> → computed: <code>{cell?.error ?? (cell?.computed != null ? String(cell.computed) : "—")}</code>
+                  </span>
+                )}
+              </div>
+              {!isDone && (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => applyPrompt(i)}
+                  aria-label={`Apply ${p.cell} = ${p.value}`}
+                >
+                  Apply
+                </button>
+              )}
             </div>
           );
         })}
       </div>
-      <div className={styles.metricsBar}>
-        <div className={styles.metric}>
-          <div className={styles.metricValue}>{activeId ? "EDITING" : "IDLE"}</div>
-          <div className={styles.metricLabel}>State</div>
+      {allDone && (
+        <div className={styles.widgetNote} data-tone="success">
+          All four cases covered. Notice: raw input is always preserved as-is. The computed layer handles parsing, evaluation, and error detection — never mutating the stored string.
         </div>
-        <div className={styles.metric}>
-          <div className={styles.metricValue}>{cells.get(activeId ?? "")?.formula ? "FORMULA" : cells.get(activeId ?? "")?.raw ? "VALUE" : "—"}</div>
-          <div className={styles.metricLabel}>Type</div>
+      )}
+      {!allDone && (
+        <div className={styles.widgetNote}>
+          Apply each prompt in order. Watch the grid above update — then compare raw vs computed in this panel.
         </div>
-        <div className={styles.metric}>
-          <div className={styles.metricValue}>{cells.get(activeId ?? "")?.deps.length ?? 0}</div>
-          <div className={styles.metricLabel}>Deps</div>
-        </div>
-      </div>
-      <div className={styles.widgetNote}>
-        Double-click any cell above to edit. This panel tracks the active cell in real time — watch raw input, parsing, and computed value update as you type.
-      </div>
+      )}
     </div>
   );
 }
@@ -1372,36 +1406,107 @@ function FormatWidget() {
 }
 
 function UndoWidget() {
-  const { undoStack, undo, isActive } = useSpreadsheet();
+  const { undoStack, undo, isActive, cells, startEditing, commitEdit } = useSpreadsheet();
   const on = isActive("undoRedo");
+  const [phase, setPhase] = useState<"build" | "undo">("build");
+
+  const buildSteps = [
+    { cell: "B1", value: "10", label: "Set B1 = 10" },
+    { cell: "B2", value: "=B1*3", label: "Set B2 = B1×3" },
+    { cell: "B1", value: "20", label: "Change B1 to 20 (B2 recalculates)" },
+  ];
+
+  const applied = buildSteps.filter((_, i) => undoStack.length > i).length;
+  const allBuilt = applied >= buildSteps.length;
+
+  const applyBuildStep = () => {
+    const step = buildSteps[applied];
+    if (!step) return;
+    startEditing(step.cell);
+    commitEdit(step.cell, step.value);
+  };
+
+  const b2Val = cells.get("B2")?.computed;
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Undo stack</div>
+      <div className={styles.widgetTitle}>Undo stack — command pattern</div>
       {on && (
         <>
-          <div className={styles.undoStack}>
-            {undoStack.length === 0 ? (
-              <div className={styles.undoEmpty}>No operations yet — edit a cell to add to the stack</div>
-            ) : (
-              undoStack.map((op, i) => (
-                <div key={`${op.cellId}-${i}`} className={styles.undoEntry}>
-                  <span className={styles.undoIndex}>{i + 1}</span>
-                  <span className={styles.undoOp}>{op.cellId}: &quot;{op.prevRaw}&quot; → &quot;{op.newRaw}&quot;</span>
-                </div>
-              ))
-            )}
-          </div>
-          {undoStack.length > 0 && (
-            <button type="button" className={styles.undoButton} onClick={undo} aria-label="Undo last operation">
-              ↩ Undo
+          <div className={styles.strategyGroup} role="radiogroup" aria-label="Undo exercise phase">
+            <button type="button" role="radio" aria-checked={phase === "build"}
+              className={styles.strategyOption} data-active={phase === "build" ? "true" : undefined}
+              onClick={() => setPhase("build")}>
+              <span className={styles.strategyName}>Build</span>
+              <span className={styles.strategyDesc}>Create edits to fill the stack</span>
             </button>
+            <button type="button" role="radio" aria-checked={phase === "undo"}
+              className={styles.strategyOption} data-active={phase === "undo" ? "true" : undefined}
+              onClick={() => setPhase("undo")}>
+              <span className={styles.strategyName}>Undo</span>
+              <span className={styles.strategyDesc}>Walk backwards through the stack</span>
+            </button>
+          </div>
+
+          {phase === "build" && (
+            <div className={styles.dagPromptList}>
+              {buildSteps.map((step, i) => {
+                const isDone = i < applied;
+                const isCurrent = i === applied;
+                return (
+                  <div key={i} className={styles.dagPrompt} data-done={isDone ? "true" : undefined} data-current={isCurrent ? "true" : undefined}>
+                    <span className={styles.dagPromptIndex}>{isDone ? "✓" : i + 1}</span>
+                    <div className={styles.dagPromptBody}>
+                      <span className={styles.dagPromptCell}>{step.label}</span>
+                    </div>
+                    {isCurrent && (
+                      <button type="button" className={styles.actionButton} onClick={applyBuildStep}>Apply</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
+
+          {phase === "undo" && (
+            <>
+              <div className={styles.undoStack}>
+                {undoStack.length === 0 ? (
+                  <div className={styles.undoEmpty}>Stack empty — all operations reversed</div>
+                ) : (
+                  undoStack.map((op, i) => (
+                    <div key={`${op.cellId}-${i}`} className={styles.undoEntry}>
+                      <span className={styles.undoIndex}>{i + 1}</span>
+                      <span className={styles.undoOp}>{op.cellId}: &quot;{op.prevRaw}&quot; → &quot;{op.newRaw}&quot;</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              {undoStack.length > 0 && (
+                <button type="button" className={styles.undoButton} onClick={undo} aria-label="Undo last operation">
+                  ↩ Undo (watch B2 recalculate: {b2Val != null ? String(b2Val) : "—"})
+                </button>
+              )}
+            </>
+          )}
+
+          <div className={styles.metricsBar}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Stack depth</div>
+              <div className={styles.metricValue}>{undoStack.length}</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>B2 value</div>
+              <div className={styles.metricValue} data-status="good">{b2Val != null ? String(b2Val) : "—"}</div>
+            </div>
+          </div>
         </>
       )}
-      <div className={styles.widgetNote}>
-        Each edit pushes a command. Undo restores the previous raw value and triggers re-evaluation of the dependency chain.
-      </div>
+      {!on && (
+        <div className={styles.widgetNote}>
+          Enable Undo above. Then build the edit history and walk backwards to see how each undo restores state AND triggers dependency re-evaluation.
+        </div>
+      )}
     </div>
   );
 }

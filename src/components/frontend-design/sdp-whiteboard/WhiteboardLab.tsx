@@ -279,7 +279,6 @@ function EndpointChallenge() {
             {guess && !isCorrect && !isRevealed && (
               <div className={styles.methodHint}>Not quite — think about what this route does to the resource.</div>
             )}
-            {isRevealed && <div className={styles.endpointDesc}>{ep.description}</div>}
             {isRevealed && (
               <div className={styles.endpointDetail}>
                 <div className={styles.endpointDesc}>{ep.description}</div>
@@ -321,16 +320,29 @@ const TYPE_CATEGORY_COLORS: Record<string, string> = {
 };
 
 function TypeCards() {
+  const totalFields = DATA_MODELS.reduce((sum, t) => sum + t.fields.length, 0);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+
+  const revealField = (key: string) => setRevealed(prev => new Set(prev).add(key));
+
   return (
     <div className={styles.typeCardGrid}>
       {DATA_MODELS.map((t) => (
-        <TypeCard key={t.name} typeDef={t} />
+        <TypeCard key={t.name} typeDef={t} revealed={revealed} onReveal={revealField} />
       ))}
+      <div className={styles.metricsBar}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Explored</div>
+          <div className={styles.metricValue} data-status={revealed.size === totalFields ? "good" : undefined}>
+            {revealed.size}/{totalFields}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function TypeCard({ typeDef }: { typeDef: TypeDef }) {
+function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed: Set<string>; onReveal: (key: string) => void }) {
   const color = TYPE_CATEGORY_COLORS[typeDef.category] ?? "var(--color-accent)";
   return (
     <div className={styles.typeCard} style={{ borderTopColor: color }}>
@@ -339,13 +351,30 @@ function TypeCard({ typeDef }: { typeDef: TypeDef }) {
         <span className={styles.typeCardCategory} style={{ color }}>{typeDef.category}</span>
       </div>
       <div className={styles.typeCardFields}>
-        {typeDef.fields.map((f) => (
-          <div key={f.name} className={styles.typeFieldRow}>
-            <span className={styles.typeFieldName}>{f.name}</span>
-            <span className={styles.typeFieldType}>{f.type}</span>
-            {f.note && <span className={styles.typeFieldNote}>{f.note}</span>}
-          </div>
-        ))}
+        {typeDef.fields.map((f, i) => {
+          const key = `${typeDef.name}-${i}`;
+          const isRevealed = revealed.has(key);
+          return (
+            <button
+              key={i}
+              type="button"
+              className={styles.typeFieldRow}
+              data-revealed={isRevealed ? "true" : undefined}
+              onClick={() => onReveal(key)}
+              aria-expanded={isRevealed}
+            >
+              {f.name && <span className={styles.typeFieldName}>{f.name}</span>}
+              {isRevealed ? (
+                <>
+                  <span className={styles.typeFieldType}>{f.type}</span>
+                  {f.note && <span className={styles.typeFieldNote}>{f.note}</span>}
+                </>
+              ) : (
+                <span className={styles.typeFieldType}>tap to reveal type</span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

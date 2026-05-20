@@ -371,9 +371,31 @@
 .typeCardName { font-size: 0.75rem; font-weight: 800; }
 .typeCardCategory { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; }
 .typeCardFields { display: flex; flex-direction: column; gap: 3px; }
-.typeFieldRow { display: flex; gap: var(--space-1); font-size: 0.625rem; }
+
+button.typeFieldRow {
+  display: flex;
+  gap: var(--space-1);
+  font-size: 0.625rem;
+  font-family: var(--font-mono);
+  background: transparent;
+  border: none;
+  padding: 6px var(--space-1);
+  min-height: 44px;
+  align-items: center;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text);
+  transition: background 200ms ease;
+}
+
+button.typeFieldRow:hover { background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+button.typeFieldRow:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+button.typeFieldRow[data-revealed="true"] { background: color-mix(in srgb, var(--color-accent) 8%, transparent); cursor: default; }
+
 .typeFieldName { font-weight: 700; color: var(--color-text); }
 .typeFieldType { color: var(--color-accent); }
+button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--color-muted); font-style: italic; }
 .typeFieldNote { color: var(--color-muted); }
 
 /* ── Evolution stack ─────────────────────────────────────────── */
