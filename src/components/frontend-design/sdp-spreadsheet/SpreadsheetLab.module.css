@@ -47,6 +47,10 @@
   background: var(--color-accent);
 }
 
+.stepDot[data-completed="true"] {
+  color: var(--color-success);
+}
+
 /* ── Planning panel ─────────────────────────────────────────────── */
 
 .planningPanel {

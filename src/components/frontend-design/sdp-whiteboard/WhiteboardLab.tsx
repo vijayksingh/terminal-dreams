@@ -2194,25 +2194,29 @@ function AccessibleCanvasStep() {
           </div>
         )}
       </div>
-      {focusedIdx !== null && shapes[focusedIdx] && (
-        <div className={styles.a11yLabelEditor}>
-          <label className={styles.a11yEditorLabel}>
-            aria-label for <strong>{shapes[focusedIdx]!.kind}</strong>:
-            <input
-              type="text"
-              className={styles.a11yEditorInput}
-              value={shapes[focusedIdx]!.text ?? ""}
-              placeholder={`${shapes[focusedIdx]!.kind} at ${Math.round(shapes[focusedIdx]!.x)}, ${Math.round(shapes[focusedIdx]!.y)}`}
-              onChange={(e) => {
-                const text = e.target.value;
-                setShapes((prev) => prev.map((s, i) => i === focusedIdx ? { ...s, text } : s));
-                announce(`Label updated: ${text || shapes[focusedIdx]!.kind}`);
-              }}
-              aria-label="Edit accessible label for focused shape"
-            />
-          </label>
-        </div>
-      )}
+      {(() => {
+        const focused = focusedIdx !== null ? shapes[focusedIdx] : undefined;
+        if (!focused) return null;
+        return (
+          <div className={styles.a11yLabelEditor}>
+            <label className={styles.a11yEditorLabel}>
+              aria-label for <strong>{focused.kind}</strong>:
+              <input
+                type="text"
+                className={styles.a11yEditorInput}
+                value={focused.text ?? ""}
+                placeholder={`${focused.kind} at ${Math.round(focused.x)}, ${Math.round(focused.y)}`}
+                onChange={(e) => {
+                  const text = e.target.value;
+                  setShapes((prev) => prev.map((s, i) => i === focusedIdx ? { ...s, text } : s));
+                  announce(`Label updated: ${text || focused.kind}`);
+                }}
+                aria-label="Edit accessible label for focused shape"
+              />
+            </label>
+          </div>
+        );
+      })()}
       <div className={styles.a11yMirror}>
         <div className={styles.a11yMirrorHeading}>
           Hidden DOM Mirror

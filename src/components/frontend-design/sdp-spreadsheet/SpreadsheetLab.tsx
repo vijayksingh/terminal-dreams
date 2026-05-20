@@ -82,21 +82,27 @@ const STEP_TITLES = [
 ];
 
 function StepBar({ activeStep }: { activeStep: number }) {
+  const { stepCompleted } = useSpreadsheet();
   return (
     <div className={styles.stepBar} role="list" aria-label="Build progress">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          role="listitem"
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-          aria-label={`Step ${i + 1}: ${STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
-        >
-          {label}
-        </span>
-      ))}
+      {STEP_LABELS.map((label, i) => {
+        const step = i + 1;
+        const completed = stepCompleted[step] || step < activeStep;
+        return (
+          <span
+            key={i}
+            role="listitem"
+            className={styles.stepDot}
+            data-active={step <= activeStep ? "true" : undefined}
+            data-current={step === activeStep ? "true" : undefined}
+            data-completed={completed ? "true" : undefined}
+            aria-current={step === activeStep ? "step" : undefined}
+            aria-label={`Step ${step}: ${STEP_TITLES[i]}${completed ? " (complete)" : ""}`}
+          >
+            {completed && step < activeStep ? "✓" : label}
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -508,7 +514,7 @@ function StepControls() {
     case 12: return <PredictionToggle feature="undoRedo" label="Undo (Ctrl+Z)" question="A user pastes a 3×3 block (9 cell edits). They press Ctrl+Z once. What should undo?" options={["The last single cell edit", "All 9 cell edits — the entire paste operation", "Nothing — paste can't be undone"]} correctIndex={1} explanation="The paste is a single user action, even though it modifies 9 cells internally. The Command pattern groups them into one compound command. Undoing cell-by-cell would require 9 Ctrl+Z presses for one logical action." />;
     case 13: return null;
     case 14: return null;
-    case 15: return <PredictionChallenge question="Two users simultaneously edit cell A1 — one sets 10, the other sets 20. With last-writer-wins, what is A1?" options={["10 — first edit wins", "15 — system averages concurrent edits", "Depends on server timestamp — non-deterministic from clients"]} correctIndex={2} explanation="Last-writer-wins uses server-side timestamps. The result depends on which edit the server processes last, which is non-deterministic from either client's perspective. One edit is silently discarded — LWW is simple but lossy." />;
+    case 15: return null;
     default: return null;
   }
 }
@@ -907,7 +913,7 @@ const EDIT_PROMPTS = [
 ] as const;
 
 function CellEditWidget() {
-  const { cells, setHighlightedCell } = useSpreadsheet();
+  const { cells, setHighlightedCell, markStepComplete } = useSpreadsheet();
   const [promptIdx, setPromptIdx] = useState(0);
 
   const applied = useMemo(() => {
@@ -925,11 +931,11 @@ function CellEditWidget() {
   }, [applied, promptIdx]);
 
   useEffect(() => {
-    if (allDone) { setHighlightedCell(null); return; }
+    if (allDone) { setHighlightedCell(null); markStepComplete(5); return; }
     const p = EDIT_PROMPTS[promptIdx];
     if (p && !applied[promptIdx]) setHighlightedCell(p.cell);
     return () => setHighlightedCell(null);
-  }, [promptIdx, allDone, applied, setHighlightedCell]);
+  }, [promptIdx, allDone, applied, setHighlightedCell, markStepComplete]);
 
   return (
     <div className={styles.widgetPanel} data-category="core">
@@ -1107,7 +1113,7 @@ const DAG_PROMPTS = [
 ] as const;
 
 function DepGraphWidget() {
-  const { cells, setHighlightedCell } = useSpreadsheet();
+  const { cells, setHighlightedCell, markStepComplete } = useSpreadsheet();
   const [promptIdx, setPromptIdx] = useState(0);
 
   const applied = useMemo(() => {
@@ -1125,11 +1131,11 @@ function DepGraphWidget() {
   }, [applied, promptIdx]);
 
   useEffect(() => {
-    if (allDone) { setHighlightedCell(null); return; }
+    if (allDone) { setHighlightedCell(null); markStepComplete(7); return; }
     const p = DAG_PROMPTS[promptIdx];
     if (p && !applied[promptIdx]) setHighlightedCell(p.cell);
     return () => setHighlightedCell(null);
-  }, [promptIdx, allDone, applied, setHighlightedCell]);
+  }, [promptIdx, allDone, applied, setHighlightedCell, markStepComplete]);
 
   return (
     <div className={styles.widgetPanel} data-category="formula">
@@ -1827,6 +1833,7 @@ function CollaborationWidget() {
   const [strategy, setStrategy] = useState<"lww" | "ot" | "crdt">("lww");
   const [aliceVal, setAliceVal] = useState("100");
   const [bobVal, setBobVal] = useState("250");
+  const [prediction, setPrediction] = useState("");
   const [result, setResult] = useState<ReturnType<typeof resolveCollabConflict> | null>(null);
 
   useEffect(() => { setResult(null); }, [strategy, aliceVal, bobVal]);
@@ -1859,6 +1866,15 @@ function CollaborationWidget() {
           </button>
         ))}
       </div>
+      {!result && (
+        <div className={styles.collabInput}>
+          <span className={styles.collabInputLabel}>Your prediction for A1</span>
+          <input type="text" className={styles.collabInputField} value={prediction}
+            onChange={e => setPrediction(e.target.value)}
+            placeholder={`What will A1 be after ${strategy.toUpperCase()} merge?`}
+            aria-label="Predict the merge result" />
+        </div>
+      )}
       <button type="button" className={`${styles.undoButton} ${styles.fullWidthButton}`}
         onClick={() => setResult(resolveCollabConflict(strategy, aliceVal, bobVal))}>
         ⚡ Merge
@@ -1872,10 +1888,17 @@ function CollaborationWidget() {
               {result.lost && ` (${result.lost === "alice" ? "Alice" : "Bob"}'s edit lost)`}
             </span>
           </div>
+          {prediction && (
+            <div className={styles.predictionResult} data-correct={prediction.trim() === String(result.result).trim() ? "true" : undefined}>
+              {prediction.trim() === String(result.result).trim()
+                ? `✓ You predicted "${prediction}" — correct!`
+                : `✗ You predicted "${prediction}" — actual result is "${result.result}". ${strategy === "lww" ? "With LWW, the winner depends on server timestamps — non-deterministic from the client side." : ""}`}
+            </div>
+          )}
           <div className={styles.stepMessage} data-severity={result.lost ? "warning" : undefined}>
             {result.explanation}
           </div>
-          <div className={styles.metricsBar}>
+          <div className={styles.metricsBar} aria-live="polite">
             <div className={styles.metricCard}>
               <div className={styles.metricLabel}>Strategy</div>
               <div className={styles.metricValue}>{strategy.toUpperCase()}</div>

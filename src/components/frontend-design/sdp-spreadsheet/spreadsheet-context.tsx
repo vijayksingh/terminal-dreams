@@ -402,6 +402,9 @@ type SpreadsheetContextValue = {
   // Guided editing
   highlightedCell: string | null;
   setHighlightedCell: (id: string | null) => void;
+  // Step completion
+  stepCompleted: Record<number, boolean>;
+  markStepComplete: (step: number) => void;
   // Feature system
   isActive: (feature: string) => boolean;
   featureToggled: Record<string, boolean>;
@@ -443,6 +446,12 @@ export function SpreadsheetProvider({
 
   // Guided editing highlight
   const [highlightedCell, setHighlightedCell] = useState<string | null>(null);
+
+  // Step completion
+  const [stepCompleted, setStepCompleted] = useState<Record<number, boolean>>({});
+  const markStepComplete = useCallback((step: number) => {
+    setStepCompleted(prev => prev[step] ? prev : { ...prev, [step]: true });
+  }, []);
 
   // Feature toggles
   const [featureToggled, setFeatureToggled] = useState<Record<string, boolean>>({});
@@ -697,6 +706,8 @@ export function SpreadsheetProvider({
       cancelEdit,
       highlightedCell,
       setHighlightedCell,
+      stepCompleted,
+      markStepComplete,
       depGraph,
       affectedCells,
       recalcOrder,
@@ -723,6 +734,8 @@ export function SpreadsheetProvider({
       cancelEdit,
       highlightedCell,
       setHighlightedCell,
+      stepCompleted,
+      markStepComplete,
       depGraph,
       affectedCells,
       recalcOrder,

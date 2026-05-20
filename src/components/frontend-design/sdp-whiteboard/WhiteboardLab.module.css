@@ -980,14 +980,14 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-weight: 800;
   text-transform: uppercase;
   color: var(--color-bg);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--color-bg) 50%, transparent);
 }
 
 .mergeBoxColor {
   font-size: 0.7rem;
   font-weight: 700;
   color: var(--color-bg);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--color-bg) 50%, transparent);
 }
 
 .mergeBoxLost {

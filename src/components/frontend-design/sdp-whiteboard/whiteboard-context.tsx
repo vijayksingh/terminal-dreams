@@ -346,17 +346,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     explanation: "CRDTs (Conflict-free Replicated Data Types) guarantee convergence through mathematical properties — any two replicas that have seen the same set of operations will have the same state, regardless of the order they were applied. This enables peer-to-peer sync (WebRTC data channels) without routing through a server. OT requires a centralized server to determine canonical operation order.",
   },
   // Step 13 omitted — cursor throttle widget shows bandwidth cost through slider interaction
-  14: {
-    question: "At what shape count does an R-tree become worthwhile over linear scan?",
-    options: [
-      "~1,000+ shapes — R-tree overhead is amortized by O(log n) queries",
-      "Always — R-tree is strictly better than linear scan",
-      "~10 shapes — even small collections benefit from spatial indexing",
-      "~100,000+ shapes — the constant factor of R-tree is very high",
-    ],
-    correctIndex: 0,
-    explanation: "Below ~500 shapes, linear scan is fast enough (< 1ms per hit test). The R-tree has insertion/deletion overhead and memory cost for internal nodes. At 1,000+ shapes with 60 hit tests/sec (pointermove), linear scan costs ~2-3ms per frame while R-tree stays under 0.1ms. The crossover point depends on shape complexity, but 1,000 is a reasonable rule of thumb.",
-  },
+  // Step 14 omitted — R-tree widget with clickable query area teaches through spatial exploration
   // Step 15 omitted — accessible canvas widget teaches through keyboard navigation
 };
 
