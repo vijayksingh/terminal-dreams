@@ -345,6 +345,7 @@
 }
 
 .metricValue[data-status="good"] { color: var(--color-success); }
+.metricValue[data-status="bad"] { color: var(--color-error); }
 .metricValue[data-status="warning"] { color: var(--color-warning); }
 
 .metricLabel {
@@ -352,6 +353,17 @@
   font-weight: 600;
   color: var(--color-muted);
   text-transform: uppercase;
+}
+
+.metricCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-1);
+  flex: 1;
 }
 
 /* ── Prediction challenge ──────────────────────────────────────── */
@@ -521,6 +533,29 @@
 }
 
 .strategyName { font-weight: 700; }
+
+.strategyDesc {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+/* ── Step message ──────────────────────────────────────────────── */
+
+.stepMessage {
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.stepMessage[data-severity="warning"] {
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-surface));
+}
 
 /* ── Mini spreadsheet ──────────────────────────────────────────── */
 
@@ -1396,7 +1431,10 @@
   .toggleButton,
   .toggleKnob,
   .predictionOption,
-  .strategyOption {
+  .strategyOption,
+  .propCell,
+  .timelineValue,
+  .metricCard {
     transition: none;
   }
 }

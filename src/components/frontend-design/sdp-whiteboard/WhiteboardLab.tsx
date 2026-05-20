@@ -752,6 +752,7 @@ function PointerCaptureStep() {
           width={440}
           height={260}
           className={styles.canvas}
+          tabIndex={0}
           role="application"
           aria-label="Drawing canvas — draw freehand strokes"
           onPointerDown={onPointerDown}
@@ -975,6 +976,7 @@ function HitTestingStep() {
           width={440}
           height={260}
           className={styles.canvas}
+          tabIndex={0}
           data-tool="select"
           role="application"
           aria-label="Hit testing canvas — click to select shapes"
@@ -1083,7 +1085,8 @@ function SelectionHandlesStep() {
           <svg
             ref={svgRef}
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-            style={{ display: "block", width: "100%", cursor: dragCursor, touchAction: "none" }}
+            className={styles.selectionSvg}
+            style={{ cursor: dragCursor }}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             role="application"
@@ -1711,19 +1714,26 @@ function SpatialIndexStep() {
   const [shapeCount, setShapeCount] = useState(500);
   const [queryPath, setQueryPath] = useState<number[]>([]);
   const reducedMotion = usePrefersReducedMotion();
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => { timersRef.current.forEach(clearTimeout); };
+  }, []);
 
   const linearMs = (shapeCount * 60 * 0.005).toFixed(1);
   const rtreeMs = (Math.log2(shapeCount) * 60 * 0.002).toFixed(2);
   const depth = Math.max(1, Math.ceil(Math.log(shapeCount) / Math.log(9)));
 
   const runQuery = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
     const path = [0, Math.floor(Math.random() * 3)];
     if (depth >= 2) path.push(Math.floor(Math.random() * 3));
     if (depth >= 3) path.push(Math.floor(Math.random() * 3));
     if (reducedMotion) { setQueryPath(path); return; }
     setQueryPath([]);
     path.forEach((_, i) => {
-      setTimeout(() => setQueryPath(path.slice(0, i + 1)), i * 300);
+      timersRef.current.push(setTimeout(() => setQueryPath(path.slice(0, i + 1)), i * 300));
     });
   }, [depth, reducedMotion]);
 
@@ -1743,18 +1753,18 @@ function SpatialIndexStep() {
       </div>
       <div className={styles.toggleStrip}>
         <div className={styles.toggleRow}>
-          <span className={styles.toggleLabel}>Shape count</span>
+          <label className={styles.toggleLabel} htmlFor="rtree-shape-count">Shape count</label>
           <input
+            id="rtree-shape-count"
             type="range"
             min={10}
             max={10000}
             step={10}
             value={shapeCount}
             onChange={(e) => { setShapeCount(Number(e.target.value)); setQueryPath([]); }}
-            style={{ flex: 1, minHeight: 44, accentColor: "var(--color-accent)" }}
-            aria-label="Number of shapes"
+            className={styles.rangeInput}
           />
-          <span style={{ fontSize: "0.75rem", fontWeight: 800, minWidth: 48, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+          <span className={styles.shapeCountValue}>
             {shapeCount.toLocaleString()}
           </span>
         </div>

@@ -1253,6 +1253,35 @@ button.shapeRow {
   min-height: 44px;
 }
 
+/* ── Selection handles SVG ──────────────────────────────────── */
+
+.selectionSvg {
+  display: block;
+  width: 100%;
+  touch-action: none;
+}
+
+/* ── R-tree range input ────────────────────────────────────── */
+
+.rangeInput {
+  flex: 1;
+  min-height: 44px;
+  accent-color: var(--color-accent);
+}
+
+.rangeInput:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.shapeCountValue {
+  font-size: 0.75rem;
+  font-weight: 800;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Reduced motion ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
