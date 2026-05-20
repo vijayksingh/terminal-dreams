@@ -828,6 +828,11 @@ button.scopeBadge[data-in-scope="false"]:hover {
   border-radius: var(--radius-2);
 }
 
+.widgetPanel[data-category="render"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, var(--color-surface)); }
+.widgetPanel[data-category="model"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
+.widgetPanel[data-category="perf"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
+.widgetPanel[data-category="collab"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-surface)); }
+
 .widgetTitle {
   font-size: 0.68rem;
   font-weight: 800;

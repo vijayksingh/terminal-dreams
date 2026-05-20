@@ -593,7 +593,7 @@ function CanvasRenderStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="render">
         <div className={styles.widgetTitle}>Canvas vs SVG Rendering</div>
         <div className={styles.widgetNote}>
           Canvas is a flat bitmap — one DOM node regardless of shape count. SVG retains a DOM tree per shape. Toggle between them and stress-test with hundreds of shapes to see the difference.
@@ -828,7 +828,7 @@ function PointerCaptureStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="render">
         <div className={styles.widgetTitle}>Pointer Capture</div>
         <div className={styles.widgetNote}>
           setPointerCapture() routes all pointer events to the canvas even when the pointer leaves its bounds. Toggle it off and try drawing outside the canvas to see the difference.
@@ -938,7 +938,7 @@ function ShapeModelStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="model">
         <div className={styles.widgetTitle}>Shape Object Model</div>
         <div className={styles.widgetNote}>
           Each shape is a data object with id, kind, bounding box, fill, and z-index. Add overlapping shapes, then toggle z-index sorting off to see why render order matters.
@@ -1100,7 +1100,7 @@ function HitTestingStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="model">
         <div className={styles.widgetTitle}>Bounding Box Hit Testing</div>
         <div className={styles.widgetNote}>
           Click anywhere on the canvas. The trace log below shows each shape checked in reverse z-order — red boxes were tested and missed, green is the first hit. Early exit means we stop at the first match.
@@ -1217,7 +1217,7 @@ function SelectionHandlesStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="model">
         <div className={styles.widgetTitle}>Selection Handles</div>
         <div className={styles.widgetNote}>
           Select a shape below, then drag any handle to resize. Corner handles resize both dimensions, edge handles resize only one. Watch the dimensions update in real time.
@@ -1405,7 +1405,7 @@ function LayerSeparationStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="perf">
         <div className={styles.widgetTitle}>Dual-Canvas Architecture</div>
         <div className={styles.widgetNote}>
           Move your pointer over the area — the cursor layer redraws continuously while the shape layer stays untouched. Drag the rectangle to see the shape layer redraw only when needed.
@@ -1499,7 +1499,7 @@ function CoalescedEventsStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="perf">
         <div className={styles.widgetTitle}>getCoalescedEvents()</div>
         <div className={styles.widgetNote}>
           Draw below to compare paths — left uses only pointermove events, right uses getCoalescedEvents() for all hardware samples. The coalesced path is noticeably smoother.
@@ -1599,7 +1599,7 @@ function UndoRedoStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="collab">
         <div className={styles.widgetTitle}>Command Pattern Undo</div>
         <div className={styles.widgetNote}>
           Each mutation produces an inverse command. Try adding and deleting shapes, then undo — notice both operations are reversible. The stack stores operation type, shape ID, and before/after state.
@@ -1688,7 +1688,7 @@ function CrdtSyncStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="collab">
         <div className={styles.widgetTitle}>Create a Conflict</div>
         <div className={styles.widgetNote}>
           Pick what Alice and Bob each set as the rectangle&apos;s fill color, then hit Merge to see how each strategy resolves it.
@@ -1837,7 +1837,7 @@ function CursorPresenceStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="collab">
         <div className={styles.widgetTitle}>Cursor Presence</div>
         <div className={styles.widgetNote}>
           Each user broadcasts cursor position. Watch the bandwidth spike as you increase users or reduce throttle interval. Colored dots animate at the selected rate.
@@ -1943,7 +1943,7 @@ function SpatialIndexStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="collab">
         <div className={styles.widgetTitle}>R-tree Spatial Index</div>
         <div className={styles.widgetNote}>
           Click &quot;Query&quot; to trace a hit-test through the R-tree. Watch how the search prunes subtrees — at {shapeCount.toLocaleString()} shapes, it skips ~{checksAvoided.toLocaleString()} bounding-box checks per query.
@@ -2123,7 +2123,7 @@ function AccessibleCanvasStep() {
 
   return (
     <>
-      <div className={styles.widgetPanel}>
+      <div className={styles.widgetPanel} data-category="collab">
         <div className={styles.widgetTitle}>Accessible Canvas</div>
         <div className={styles.widgetNote}>
           Canvas is opaque to assistive tech. Try the keyboard navigation below — Tab between shapes, arrow keys to move, Delete to remove. The &quot;Screen Reader Output&quot; panel shows what would be announced.
