@@ -1029,7 +1029,7 @@ function HitTestingStep() {
 
       if (shape.kind === "rect") {
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = isTraced && !isHit ? 0.2 : 0.5;
+        ctx.globalAlpha = isTraced && !isHit ? 0.35 : 0.5;
         ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -1039,7 +1039,7 @@ function HitTestingStep() {
         ctx.beginPath();
         ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = isTraced && !isHit ? 0.2 : 0.5;
+        ctx.globalAlpha = isTraced && !isHit ? 0.35 : 0.5;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -1582,6 +1582,16 @@ function CoalescedEventsStep() {
 
 function UndoRedoStep() {
   const { shapes, setShapes, undoStack, redoStack, undo, redo, pushUndo } = useWhiteboard();
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const flash = useCallback((id: string) => {
+    clearTimeout(flashTimer.current);
+    setFlashId(id);
+    flashTimer.current = setTimeout(() => setFlashId(null), 600);
+  }, []);
+
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   const addRandomShape = () => {
     const kinds: Shape["kind"][] = ["rect", "ellipse"];
@@ -1606,6 +1616,7 @@ function UndoRedoStep() {
     };
     setShapes((prev) => [...prev, newShape]);
     pushUndo({ type: "add", shapeId: newShape.id, after: newShape });
+    flash(newShape.id);
   };
 
   const deleteLastShape = () => {
@@ -1613,6 +1624,19 @@ function UndoRedoStep() {
     const removed = shapes[shapes.length - 1]!;
     setShapes((prev) => prev.slice(0, -1));
     pushUndo({ type: "remove", shapeId: removed.id, before: removed });
+    flash(removed.id);
+  };
+
+  const handleUndo = () => {
+    const op = undoStack[undoStack.length - 1];
+    undo();
+    if (op) flash(op.shapeId);
+  };
+
+  const handleRedo = () => {
+    const op = redoStack[redoStack.length - 1];
+    redo();
+    if (op) flash(op.shapeId);
   };
 
   return (
@@ -1626,18 +1650,25 @@ function UndoRedoStep() {
       <div className={styles.toolbar}>
         <button type="button" className={styles.toolButton} onClick={addRandomShape}>+ Add</button>
         <button type="button" className={styles.toolButton} onClick={deleteLastShape} disabled={shapes.length === 0}>− Delete</button>
-        <button type="button" className={styles.undoButton} onClick={undo} disabled={undoStack.length === 0}>↶ Undo</button>
-        <button type="button" className={styles.undoButton} onClick={redo} disabled={redoStack.length === 0}>↷ Redo</button>
+        <button type="button" className={styles.undoButton} onClick={handleUndo} disabled={undoStack.length === 0}>↶ Undo</button>
+        <button type="button" className={styles.undoButton} onClick={handleRedo} disabled={redoStack.length === 0}>↷ Redo</button>
       </div>
       <div className={styles.canvasWrapper}>
         <svg viewBox="0 0 320 200" className={styles.renderSvg} role="img" aria-label={`Undo canvas with ${shapes.length} shapes`}>
-          {shapes.map((s) =>
-            s.kind === "rect" ? (
-              <rect key={s.id} x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={s.stroke} strokeWidth={s.strokeWidth} />
+          {shapes.map((s) => {
+            const isFlash = s.id === flashId;
+            return s.kind === "rect" ? (
+              <g key={s.id}>
+                <rect x={s.x} y={s.y} width={s.w} height={s.h} fill={s.fill} fillOpacity={0.6} stroke={isFlash ? "var(--color-accent)" : s.stroke} strokeWidth={isFlash ? 3 : s.strokeWidth} />
+                {isFlash && <rect x={s.x - 4} y={s.y - 4} width={s.w + 8} height={s.h + 8} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />}
+              </g>
             ) : s.kind === "ellipse" ? (
-              <ellipse key={s.id} cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={s.stroke} strokeWidth={s.strokeWidth} />
-            ) : null
-          )}
+              <g key={s.id}>
+                <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={isFlash ? "var(--color-accent)" : s.stroke} strokeWidth={isFlash ? 3 : s.strokeWidth} />
+                {isFlash && <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2 + 4} ry={s.h / 2 + 4} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />}
+              </g>
+            ) : null;
+          })}
           {shapes.length === 0 && (
             <text x="160" y="100" textAnchor="middle" fill="var(--color-muted)" fontSize="14" fontFamily="var(--font-mono)">
               Add shapes to see them here

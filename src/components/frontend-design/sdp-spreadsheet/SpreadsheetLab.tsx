@@ -555,7 +555,7 @@ function MiniSpreadsheet() {
   return (
     <div ref={gridRef} className={styles.spreadsheet} role="grid" aria-label="Mini spreadsheet" onKeyDown={handleGridKeyDown}>
       <div className={styles.sheetRow} role="row">
-        <div className={styles.rowHeader} role="columnheader" />
+        <div className={styles.rowHeader} role="columnheader" aria-label="Row" />
         {COL_LABELS.map(col => (
           <div key={col} className={styles.colHeader} role="columnheader">{col}</div>
         ))}
@@ -1725,7 +1725,7 @@ function ClipboardWidget() {
   const [colOffset, setColOffset] = useState(0);
 
   useEffect(() => {
-    if (sourceFormula !== "=A1+$B$1" || rowOffset !== 2 || colOffset !== 0) markStepComplete(13);
+    if (sourceFormula !== "=A1+$B$1" && (rowOffset !== 2 || colOffset !== 0)) markStepComplete(13);
   }, [sourceFormula, rowOffset, colOffset, markStepComplete]);
 
   const pasted = adjustFormula(sourceFormula, rowOffset, colOffset);

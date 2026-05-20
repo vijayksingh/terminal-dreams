@@ -739,7 +739,7 @@
 .dagEdge {
   stroke: var(--color-muted);
   stroke-width: 1.5;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .dagEdge[data-affected="true"] {
