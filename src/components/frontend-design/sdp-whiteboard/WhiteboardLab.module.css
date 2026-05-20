@@ -493,7 +493,7 @@
   background: var(--color-surface);
   color: var(--color-muted);
   cursor: pointer;
-  min-height: 36px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -734,7 +734,7 @@
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
-  min-height: 36px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;

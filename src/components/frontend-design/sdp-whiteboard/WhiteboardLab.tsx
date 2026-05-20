@@ -621,8 +621,13 @@ function PointerCaptureStep() {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const el = canvas.parentElement;
+    const cs = el ? getComputedStyle(el) : null;
+    const gridColor = cs?.getPropertyValue("--color-border").trim() || "#888";
+
     // grid
-    ctx.strokeStyle = "rgba(128,128,128,0.15)";
+    ctx.strokeStyle = gridColor;
+    ctx.globalAlpha = 0.25;
     ctx.lineWidth = 0.5;
     for (let x = 0; x < canvas.width; x += 20) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -630,10 +635,9 @@ function PointerCaptureStep() {
     for (let y = 0; y < canvas.height; y += 20) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
+    ctx.globalAlpha = 1;
 
     // existing strokes
-    const el = canvas.parentElement;
-    const cs = el ? getComputedStyle(el) : null;
     for (const shape of shapes) {
       if (shape.kind === "freehand" && shape.points.length > 1) {
         ctx.beginPath();
@@ -849,8 +853,13 @@ function HitTestingStep() {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const el = canvas.parentElement;
+    const cs = el ? getComputedStyle(el) : null;
+    const gridColor = cs?.getPropertyValue("--color-border").trim() || "#888";
+
     // grid
-    ctx.strokeStyle = "rgba(128,128,128,0.15)";
+    ctx.strokeStyle = gridColor;
+    ctx.globalAlpha = 0.25;
     ctx.lineWidth = 0.5;
     for (let x = 0; x < canvas.width; x += 20) {
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -858,9 +867,7 @@ function HitTestingStep() {
     for (let y = 0; y < canvas.height; y += 20) {
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
-
-    const el = canvas.parentElement;
-    const cs = el ? getComputedStyle(el) : null;
+    ctx.globalAlpha = 1;
 
     // shapes with bounding boxes
     for (const shape of shapes) {
@@ -909,7 +916,8 @@ function HitTestingStep() {
       // bounding box for hit-test visualization
       if (shape.kind !== "freehand") {
         ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = "rgba(128,128,128,0.3)";
+        ctx.strokeStyle = gridColor;
+        ctx.globalAlpha = 0.4;
         ctx.lineWidth = 1;
         ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
         ctx.setLineDash([]);
@@ -1791,6 +1799,7 @@ function ShapeListWidget({ selectable }: { selectable?: boolean }) {
             className={styles.shapeRow}
             data-selected={shape.id === selectedShapeId ? "true" : undefined}
             onClick={selectable ? () => setSelectedShapeId(shape.id === selectedShapeId ? null : shape.id) : undefined}
+            onKeyDown={selectable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedShapeId(shape.id === selectedShapeId ? null : shape.id); } } : undefined}
             style={selectable ? { cursor: "pointer" } : undefined}
             role={selectable ? "button" : undefined}
             tabIndex={selectable ? 0 : undefined}
