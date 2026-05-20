@@ -1,0 +1,1618 @@
+/* ── Chat Scenario Stage ──────────────────────────────────────────
+ *
+ * Bespoke widget: renders an actual mocked chat client as the diagram.
+ * Each "node" is a real component (WebSocket wire, ChatPane frame
+ * with state badges, StatusBar, MessageList, MessageBubble, ComposeBar).
+ * Scenarios drive UI changes in-place and animate FlyingChip particles
+ * along the data-flow paths between components. There's no separate
+ * "info panel" — the components ARE the message. */
+
+.root {
+  --stage-font: var(--font-geist-mono, var(--font-mono));
+  --stage-font-display: var(--font-geist-pixel-square, var(--stage-font));
+  --stage-text-micro: 0.64rem;
+  --stage-text-xs: 0.76rem;
+  --stage-text-sm: 0.86rem;
+  --stage-text-md: 0.95rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  font-family: var(--stage-font);
+  color: var(--color-text);
+}
+
+/* ── Header: tabs + split toggle ────────────────────────────────── */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.tab:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, var(--color-border));
+}
+
+.tab[data-active="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+}
+
+.tabIndex {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--stage-font-display);
+  font-size: 9px;
+  font-weight: 700;
+  background: var(--color-bg);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.tab[data-active="true"] .tabIndex {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+
+.tabLabel {
+  white-space: nowrap;
+}
+
+.splitToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.splitToggleLabel {
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.splitToggleTrack {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.splitToggleOption {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.splitToggleOption:hover {
+  color: var(--color-text);
+}
+
+.splitToggleOption[data-active="true"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.splitToggleOption[data-active="true"][data-mode="blocking"] {
+  background: var(--color-error, #e5534b);
+}
+
+/* ── X-ray view toggle ─────────────────────────────────────────── */
+
+.headerRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.viewToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.viewToggleLabel {
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.viewToggleTrack {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.viewToggleOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.viewToggleOption:hover {
+  color: var(--color-text);
+}
+
+.viewToggleOption[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg));
+  color: var(--color-text);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 40%, transparent) inset;
+}
+
+.viewToggleOption[data-active="true"][data-mode="state"] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  box-shadow:
+    0 0 0 1px var(--color-accent) inset,
+    0 0 12px -2px color-mix(in srgb, var(--color-accent) 55%, transparent);
+}
+
+/* ── Blurb ──────────────────────────────────────────────────────── */
+
+.blurb {
+  margin: 0;
+  font-size: var(--stage-text-xs);
+  line-height: 1.55;
+  color: var(--color-muted);
+  max-width: 70ch;
+}
+
+/* ── Stage board ────────────────────────────────────────────────── */
+
+.board {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 28px; /* visible "wire gap" between Network and ChatPane */
+  padding: 24px 22px 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 50% 0%,
+      color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 6%, transparent),
+      transparent 80%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent) 3%, var(--color-surface)) 0%,
+      var(--color-surface) 60%
+    );
+  overflow: hidden;
+  transition: background 280ms ease;
+}
+
+/* Decorative vertical "between layers" guideline — visualises the
+ * cable from server down to client, sitting in the gap between the
+ * Network region and the ChatPane container. */
+.board::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: repeating-linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 25%, transparent) 0 3px,
+    transparent 3px 9px
+  );
+  opacity: 0.35;
+  pointer-events: none;
+  transform: translateX(-0.5px);
+  z-index: 0;
+}
+
+/* ── Network (outermost architectural layer) ─────────────────────── */
+
+.network {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 35%, var(--color-border));
+  border-radius: var(--radius-2);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 3%, transparent) 0 2px,
+      transparent 2px 10px
+    ),
+    color-mix(in srgb, var(--color-bg) 78%, var(--diagram-layer-1, #6db1ff));
+  z-index: 1;
+}
+
+.network::before {
+  content: "Network";
+  position: absolute;
+  top: -8px;
+  left: 14px;
+  padding: 1px 8px;
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--diagram-layer-1, #6db1ff);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 35%, var(--color-border));
+  border-radius: 999px;
+}
+
+.network[data-state="disconnected"],
+.network[data-state="reconnecting"] {
+  border-color: color-mix(in srgb, var(--color-error, #e5534b) 45%, var(--color-border));
+}
+
+.networkHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 16px 4px;
+}
+
+.networkEyebrow {
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.networkRegion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-micro);
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.networkRegionDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--diagram-layer-9);
+  display: inline-block;
+  box-shadow: 0 0 6px var(--diagram-layer-9);
+}
+
+.networkBody {
+  padding: 2px 16px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.serverCard {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 35%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 85%, var(--color-surface));
+  font-size: var(--stage-text-xs);
+}
+
+.serverIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 18%, transparent);
+  color: var(--diagram-layer-1, #6db1ff);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.serverLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.serverName {
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+}
+
+.serverSub {
+  font-size: var(--stage-text-micro);
+  color: var(--color-muted);
+  letter-spacing: 0;
+}
+
+.network[data-state="disconnected"] .serverSub,
+.network[data-state="reconnecting"] .serverSub {
+  color: var(--color-error, #e5534b);
+}
+
+.serverPort {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 14%, transparent);
+  color: var(--diagram-layer-1, #6db1ff);
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* Small auxiliary stat card in Network header row (clients, uptime). */
+.networkStat {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 22%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 85%, transparent);
+  min-width: 78px;
+}
+
+.networkStatLabel {
+  font-family: var(--stage-font-display);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  line-height: 1;
+}
+
+.networkStatValue {
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 700;
+  color: var(--diagram-layer-1, #6db1ff);
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── WebSocket wire ─────────────────────────────────────────────── */
+
+.wsWire {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 75%, var(--color-surface));
+}
+
+/* Embedded: wire is the bottom edge of the Network container —
+ * no outer border, no rounded corners, snug to the Network frame. */
+.wsWire[data-embedded="true"] {
+  margin: 0;
+  border: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 40%, var(--color-border));
+  border-radius: 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 6%, transparent)
+  );
+  padding: 8px 14px 10px;
+}
+
+.wsLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+}
+
+.wsCaret {
+  color: var(--color-accent);
+  font-size: 1.05em;
+  font-weight: 700;
+}
+
+.wsSub {
+  font-size: var(--stage-text-xs);
+  font-weight: 400;
+  color: var(--color-muted);
+  letter-spacing: 0;
+}
+
+.wsWire[data-state="disconnected"] .wsSub,
+.wsWire[data-state="reconnecting"] .wsSub {
+  color: var(--color-error, #e5534b);
+}
+
+.wsTrack {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.wsTrackLine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 0%, transparent),
+    color-mix(in srgb, var(--color-accent) 45%, transparent),
+    color-mix(in srgb, var(--color-accent) 0%, transparent)
+  );
+  opacity: 0.5;
+  transition: background 240ms ease, opacity 240ms ease;
+}
+
+.wsTrackLine[data-state="disconnected"],
+.wsTrackLine[data-state="reconnecting"] {
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-error, #e5534b) 70%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  opacity: 0.75;
+}
+
+.wsTrackPulse {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent),
+    transparent
+  );
+  border-radius: inherit;
+  filter: blur(0.5px);
+}
+
+/* ── ChatPane frame ─────────────────────────────────────────────── */
+
+.chatpane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 16px 16px;
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  border-radius: var(--radius-2);
+  background:
+    radial-gradient(
+      ellipse 60% 30% at 50% 0%,
+      color-mix(in srgb, var(--color-accent) 8%, transparent),
+      transparent
+    ),
+    var(--color-bg);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 6%, transparent) inset,
+    0 8px 28px -16px color-mix(in srgb, var(--color-accent) 65%, transparent);
+  z-index: 1;
+}
+
+.chatpane::before {
+  content: "ChatPane · React root";
+  position: absolute;
+  top: -8px;
+  left: 14px;
+  padding: 1px 10px;
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border-radius: 999px;
+}
+
+.chatpaneHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 10px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.chatpaneEyebrow {
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+}
+
+.chatpaneBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chatpaneBody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 14px 0 4px;
+  position: relative;
+}
+
+/* Tree rail — solid vertical line at the left, fading at the ends.
+ * The arms below branch off this rail with junction dots. */
+.chatpaneBody::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 1.5px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-accent) 28%, transparent) 5%,
+    color-mix(in srgb, var(--color-accent) 28%, transparent) 95%,
+    transparent 100%
+  );
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+/* ── State badges (in ChatPane header) ───────────────────────────── */
+
+.stateBadge {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px 4px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  line-height: 1.2;
+  overflow: hidden;
+}
+
+.stateBadgeLabel {
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+}
+
+.stateBadgeValue {
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stateBadge[data-accent="primary"] {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+}
+.stateBadge[data-accent="primary"] .stateBadgeValue {
+  color: var(--color-accent);
+}
+
+.stateBadge[data-accent="warn"] {
+  border-color: color-mix(in srgb, var(--diagram-layer-2, #c89000) 50%, var(--color-border));
+}
+.stateBadge[data-accent="warn"] .stateBadgeValue {
+  color: var(--diagram-layer-2, #c89000);
+}
+
+.stateBadge[data-accent="danger"] {
+  border-color: color-mix(in srgb, var(--color-error, #e5534b) 55%, var(--color-border));
+}
+.stateBadge[data-accent="danger"] .stateBadgeValue {
+  color: var(--color-error, #e5534b);
+}
+
+.stateBadgeFlash {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  pointer-events: none;
+}
+
+.stateBadge[data-accent="warn"] .stateBadgeFlash {
+  background: color-mix(in srgb, var(--diagram-layer-2, #c89000) 30%, transparent);
+}
+.stateBadge[data-accent="danger"] .stateBadgeFlash {
+  background: color-mix(in srgb, var(--color-error, #e5534b) 30%, transparent);
+}
+
+/* ── Component wrappers ─────────────────────────────────────────────
+ *
+ * Each child of ChatPane has:
+ *   - A junction dot on the rail
+ *   - A horizontal arm wire to the component pill
+ *   - A label on the wire (the prop or event flowing on it)
+ *   - The JSX-style pill (<Name />) terminating the wire
+ *   - The actual rendered UI below
+ *
+ * The arm + dot animate when the matching chip fires, so events have
+ * a persistent visible wire instead of dissolving into air. */
+
+.componentWrap {
+  position: relative;
+  padding-left: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* The arm: junction dot + wire + label + termination into pill. */
+.componentArm {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 52px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.componentArmDot {
+  width: 9px;
+  height: 9px;
+  flex-shrink: 0;
+  margin-left: 1.5px; /* aligns dot center with rail at left:6 */
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1.5px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.componentArmWire {
+  position: relative;
+  flex: 1;
+  height: 1.5px;
+  margin-left: -0.5px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 45%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent) 24%, transparent) 100%
+  );
+  transition: background 220ms ease, box-shadow 220ms ease;
+}
+
+.componentArmLabel {
+  position: absolute;
+  left: 8px;
+  bottom: 100%;
+  margin-bottom: 2px;
+  padding: 1px 5px;
+  font-family: var(--stage-font);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-bg) 70%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 3px;
+  line-height: 1.3;
+  white-space: nowrap;
+  transition: color 220ms ease, border-color 220ms ease, background 220ms ease;
+}
+
+.componentArmKind {
+  display: inline-block;
+  margin-right: 4px;
+  font-family: var(--stage-font-display);
+  font-size: 7.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--color-muted) 70%, transparent);
+}
+
+.componentArmKind[data-kind="event"] {
+  color: var(--diagram-layer-2, #c89000);
+}
+
+/* Wire pulse — a bright dot that travels along the wire from junction
+ * to pill when the arm activates. Sells the "signal arrived" moment. */
+.componentArmPulse {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--color-accent) 90%, transparent),
+    0 0 14px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  pointer-events: none;
+}
+
+/* Active state — fires when matching chip flies or state changes. */
+.componentArm[data-active="true"] .componentArmDot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent),
+    0 0 10px color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.componentArm[data-active="true"] .componentArmWire {
+  background: linear-gradient(
+    90deg,
+    var(--color-accent),
+    color-mix(in srgb, var(--color-accent) 75%, transparent) 90%,
+    color-mix(in srgb, var(--color-accent) 60%, transparent) 100%
+  );
+  box-shadow: 0 0 9px -1px color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.componentArm[data-active="true"] .componentArmLabel {
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
+}
+
+/* Pill — the JSX tag that terminates the wire. Refined typography
+ * (mono, not pixel-display), softer gradient, full rounded. */
+.componentTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  align-self: flex-start;
+  padding: 3px 11px;
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--color-accent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)) 0%,
+    color-mix(in srgb, var(--color-accent) 7%, var(--color-bg)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+  border-radius: 6px;
+  line-height: 1.3;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 16%, transparent),
+    0 1px 2px -1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.componentTagBracket {
+  color: color-mix(in srgb, var(--color-accent) 55%, var(--color-muted));
+  font-weight: 400;
+  margin: 0 1px;
+}
+
+/* The MessageBubble tag floats at the top-right of the active bubble. */
+.messageBubbleTag {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--stage-font);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--color-accent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-accent) 16%, var(--color-bg)),
+    color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))
+  );
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border-radius: 999px;
+  line-height: 1.2;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 20%, transparent),
+    0 2px 6px -2px color-mix(in srgb, var(--color-accent) 50%, transparent);
+}
+
+/* ── State Inspector (X-ray panel) ──────────────────────────────────
+ *
+ * Replaces the visible UI for a component when the X-ray toggle is on.
+ * Renders state/props/events as a code-like inspector panel — keys in
+ * muted color, values syntax-highlighted by type, sources shown with
+ * a small `← Parent` arrow. Rows that just changed get a brief
+ * accent-coloured highlight flash. */
+
+.inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 14px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-accent));
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  line-height: 1.45;
+}
+
+.inspector[data-accent="network"] {
+  border-color: color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-bg) 90%, var(--diagram-layer-1, #6db1ff));
+}
+
+.inspectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inspectorSection + .inspectorSection {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.inspectorOpen,
+.inspectorClose {
+  font-family: var(--stage-font);
+}
+
+.inspectorKeyword {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.inspector[data-accent="network"] .inspectorKeyword {
+  color: var(--diagram-layer-1, #6db1ff);
+}
+
+.inspectorBrace {
+  color: var(--color-muted);
+}
+
+.inspectorBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 16px;
+}
+
+.inspectorRow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 4px 1px 6px;
+  border-left: 2px solid transparent;
+  margin-left: -8px;
+  border-radius: 0 3px 3px 0;
+  transition: border-left-color 280ms ease;
+}
+
+.inspectorRow[data-changed="true"] {
+  border-left-color: color-mix(in srgb, var(--color-accent) 65%, transparent);
+}
+
+.inspectorRowFlash {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.inspectorPropKey {
+  color: var(--color-text);
+  font-weight: 600;
+  font-variant-ligatures: none;
+}
+
+.inspectorColon {
+  color: var(--color-muted);
+  margin: 0 -3px 0 -4px;
+}
+
+.inspectorPropValue {
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.inspectorPropValue[data-type="string"] {
+  color: var(--diagram-layer-9);
+}
+.inspectorPropValue[data-type="number"] {
+  color: var(--color-accent);
+}
+.inspectorPropValue[data-type="boolean"] {
+  color: var(--diagram-layer-2, #c89000);
+}
+.inspectorPropValue[data-type="ref"] {
+  color: var(--diagram-layer-1, #6db1ff);
+}
+.inspectorPropValue[data-type="fn"] {
+  color: var(--color-muted);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.inspectorSource {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  font-family: var(--stage-font-display);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 999px;
+  margin-left: 4px;
+}
+
+.inspectorSourceArrow {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* Subtle wash on board when in state mode — turns the lights "off"
+ * around the components so the state panels feel illuminated. */
+.board[data-view-mode="state"] {
+  background:
+    radial-gradient(
+      ellipse 60% 35% at 50% 0%,
+      color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 8%, transparent),
+      transparent 80%
+    ),
+    color-mix(in srgb, var(--color-bg) 70%, var(--color-surface));
+}
+
+/* ── StatusBar (mock) ────────────────────────────────────────────── */
+
+.statusBar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 5px 10px 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: var(--stage-text-xs);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.statusBar[data-state="connected"] {
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 50%, var(--color-border));
+}
+.statusBar[data-state="warn"] {
+  border-color: color-mix(in srgb, var(--diagram-layer-2, #c89000) 55%, var(--color-border));
+  color: var(--diagram-layer-2, #c89000);
+}
+.statusBar[data-state="disconnected"] {
+  border-color: color-mix(in srgb, var(--color-error, #e5534b) 55%, var(--color-border));
+  color: var(--color-error, #e5534b);
+}
+
+.statusDot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--diagram-layer-9);
+  flex-shrink: 0;
+}
+
+.statusBar[data-state="warn"] .statusDot {
+  background: var(--diagram-layer-2, #c89000);
+}
+.statusBar[data-state="disconnected"] .statusDot {
+  background: var(--color-error, #e5534b);
+}
+
+.statusDotRing {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.statusLabel {
+  letter-spacing: -0.005em;
+}
+
+/* ── MessageList (mock) ──────────────────────────────────────────── */
+
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-bg) 90%, var(--color-surface));
+  min-height: 170px;
+  max-height: 280px;
+  overflow: hidden;
+}
+
+.messageRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(48px, auto) auto 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 10px;
+  border-radius: var(--radius-1);
+  font-size: var(--stage-text-xs);
+  line-height: 1.5;
+  transition: background 200ms ease;
+}
+
+.messageRow[data-author="you"] {
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+}
+
+.messageRow[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  box-shadow:
+    inset 2px 0 0 var(--color-accent),
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+.messageAuthor {
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+}
+
+.messageRow[data-author="you"] .messageAuthor {
+  color: var(--color-accent);
+}
+
+.messageTime {
+  font-size: var(--stage-text-micro);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.messageText {
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+  min-width: 0;
+}
+
+.messageStatus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.messageStatus[data-status="sending"] {
+  color: var(--color-accent);
+}
+.messageStatus[data-status="sent"] {
+  color: var(--diagram-layer-9);
+}
+.messageStatus[data-status="queued"] {
+  color: var(--diagram-layer-2, #c89000);
+}
+.messageStatus[data-status="failed"] {
+  color: var(--color-error, #e5534b);
+}
+
+.messageStatusSpinner {
+  display: inline-block;
+  transform-origin: center;
+}
+
+/* ── Typing indicator ────────────────────────────────────────────── */
+
+.typingRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 4px 10px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  font-size: var(--stage-text-xs);
+  color: var(--color-muted);
+}
+
+.typingAuthor {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.typingDots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.typingDots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  display: inline-block;
+  animation: typing-dot 1.2s ease-in-out infinite;
+}
+
+.typingDots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typingDots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+.typingText {
+  color: var(--color-muted);
+  letter-spacing: -0.005em;
+}
+
+/* ── ComposeBar (mock) ───────────────────────────────────────────── */
+
+.composeBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.composeBar[data-focused="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+.composeInput {
+  position: relative;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 4px 0;
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-sm);
+  color: var(--color-text);
+}
+
+.composeText {
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.composeText[data-empty="true"] {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.composeCaret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1em;
+  background: var(--color-accent);
+  margin-left: 1px;
+  vertical-align: -2px;
+}
+
+.composeSend {
+  padding: 5px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-xs);
+  font-weight: 700;
+  letter-spacing: 0;
+  cursor: default;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+}
+
+.composeSend[data-glow="true"] {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent),
+    0 0 16px -2px color-mix(in srgb, var(--color-accent) 65%, transparent);
+  transform: scale(1.04);
+}
+
+/* ── Flying chips ───────────────────────────────────────────────── */
+
+.chipsLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.chip {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-accent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--color-accent) 60%, transparent);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  color: var(--color-accent);
+  white-space: nowrap;
+  letter-spacing: -0.005em;
+  will-change: transform, left, top;
+}
+
+.chip[data-kind="callback"] {
+  border-color: var(--diagram-layer-1, #6db1ff);
+  color: var(--diagram-layer-1, #6db1ff);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 16%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 55%, transparent);
+}
+
+.chip[data-kind="frame"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.chip[data-kind="ack"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 16%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--diagram-layer-9) 55%, transparent);
+}
+
+.chipLabel {
+  font-weight: 700;
+}
+
+.chipWeight {
+  font-family: var(--stage-font-display);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+
+/* Trail line drawn from source to destination behind the chip.
+ * Dashed accent line that traces the path the chip just flew. */
+.chipTrail {
+  position: absolute;
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 65%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+  pointer-events: none;
+  border-radius: 1px;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-accent) 50%, transparent));
+}
+
+/* Impact ring — expanding circle at chip's destination on arrival.
+ * Sells the "arrival" so the chip doesn't dissolve. */
+.chipImpactRing {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid var(--color-accent);
+  pointer-events: none;
+  background: transparent;
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--color-accent) 50%, transparent),
+    inset 0 0 12px -4px color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
+.chipImpactRing[data-kind="callback"] {
+  border-color: var(--diagram-layer-1, #6db1ff);
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 60%, transparent),
+    inset 0 0 12px -4px color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 60%, transparent);
+}
+
+.chipImpactRing[data-kind="ack"] {
+  border-color: var(--diagram-layer-9);
+  box-shadow:
+    0 0 18px -2px color-mix(in srgb, var(--diagram-layer-9) 60%, transparent),
+    inset 0 0 12px -4px color-mix(in srgb, var(--diagram-layer-9) 60%, transparent);
+}
+
+/* Solid burst dot — momentary flash at the destination right when
+ * the chip lands. Lives 0.5s, peaks before the ring expands. */
+.chipImpactDot {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--color-accent);
+  pointer-events: none;
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--color-accent) 70%, transparent);
+}
+
+.chipImpactDot[data-kind="callback"] {
+  background: var(--diagram-layer-1, #6db1ff);
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--diagram-layer-1, #6db1ff) 70%, transparent);
+}
+
+.chipImpactDot[data-kind="ack"] {
+  background: var(--diagram-layer-9);
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--diagram-layer-9) 70%, transparent);
+}
+
+/* ── Caption ───────────────────────────────────────────────────── */
+
+.captionWrap {
+  min-height: 2.6rem;
+  display: flex;
+  align-items: flex-start;
+}
+
+.caption {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  border-radius: 0 var(--radius-1) var(--radius-1) 0;
+  font-size: var(--stage-text-sm);
+  line-height: 1.5;
+  color: var(--color-text);
+  letter-spacing: -0.005em;
+  width: 100%;
+}
+
+.captionStep {
+  flex-shrink: 0;
+  font-family: var(--stage-font-display);
+  font-size: var(--stage-text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.captionText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Controls ───────────────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.scrubTrack {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.scrubDot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.25px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 180ms ease;
+}
+
+.scrubDot:hover {
+  border-color: var(--diagram-layer-9);
+}
+
+.scrubDot[data-state="visited"] {
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  opacity: 0.7;
+}
+
+.scrubDot[data-state="active"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  transform: scale(1.4);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 24%, transparent);
+}
+
+.controlBtn,
+.controlBtnPrimary {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--stage-font);
+  font-size: var(--stage-text-sm);
+  cursor: pointer;
+  transition: all 150ms ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.controlBtn:hover:not(:disabled),
+.controlBtnPrimary:hover {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+}
+
+.controlBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.controlBtnPrimary {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+  font-size: var(--stage-text-xs);
+  font-weight: 700;
+}
+
+.controlBtnPrimary:hover {
+  background: color-mix(in srgb, var(--color-accent) 82%, white);
+  color: var(--color-bg);
+  border-color: color-mix(in srgb, var(--color-accent) 82%, white);
+}
+
+/* ── Narrow viewport ────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .board {
+    padding: 14px 12px 18px;
+  }
+  .messageRow {
+    grid-template-columns: minmax(36px, auto) auto 1fr auto;
+    gap: 6px;
+    font-size: var(--stage-text-micro);
+  }
+  .composeText {
+    font-size: var(--stage-text-xs);
+  }
+  .chatpaneBadges {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
