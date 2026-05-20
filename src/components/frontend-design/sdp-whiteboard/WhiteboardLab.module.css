@@ -1439,4 +1439,7 @@ button.shapeRow {
   .toolButton { transition: none; }
   .strategyOption { transition: none; }
   .layerRow { transition: none; }
+  .colorSwatch { transition: none; }
+  .mergeBox { transition: none; }
+  .predictionOption { transition: none; }
 }

@@ -202,7 +202,7 @@ export const DATA_MODELS: TypeDef[] = [
 
 // ── Sample shapes ──────────────────────────────────────────────────
 
-let nextId = 1;
+let nextId = Date.now();
 function makeId() {
   return `shape-${nextId++}`;
 }
