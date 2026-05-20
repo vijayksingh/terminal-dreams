@@ -1551,15 +1551,22 @@ button.scopeBadge[data-in-scope="false"]:hover {
 @media (prefers-reduced-motion: reduce) {
   .stepDot,
   .checkItem,
+  .checkToggle,
   .panelTab,
   .endpointCard,
+  .methodOption,
   .cell,
   .toggleButton,
   .toggleKnob,
   .predictionOption,
   .strategyOption,
   .propCell,
-  .metricCard {
+  .metricCard,
+  .actionButton,
+  .toolButton,
+  .selectionCell,
+  .dagPrompt,
+  .undoEntry {
     transition: none;
   }
 }
