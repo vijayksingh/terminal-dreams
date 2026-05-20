@@ -839,7 +839,11 @@ function StepWidget({ step }: { step: number }) {
 
 function GridWidget() {
   const [cellCount, setCellCount] = useState(100);
-  const visibleCount = Math.min(cellCount, 200);
+  const [virtualized, setVirtualized] = useState(false);
+  const totalCells = cellCount * 26;
+  const domCount = virtualized ? Math.min(totalCells, 200) : totalCells;
+  const renderMs = virtualized ? 2 : Math.min(totalCells * 0.001, 9999);
+  const domStatus = domCount > 5000 ? "bad" : domCount > 1000 ? "warning" : "good";
 
   return (
     <div className={styles.widgetPanel} data-category="core">
@@ -847,24 +851,26 @@ function GridWidget() {
       <div className={styles.viewportDemo}>
         <div className={styles.viewportMinimap}>
           <div className={styles.minimapGrid} style={{ height: Math.min(80, cellCount / 100 * 80) }} />
-          <div className={styles.minimapViewport} style={{ height: Math.min(20, 20 * (200 / cellCount)), top: 0 }} />
+          {virtualized && <div className={styles.minimapViewport} style={{ height: Math.min(20, 20 * (200 / cellCount)), top: 0 }} />}
         </div>
-        <div className={styles.viewportStats}>
+        <div className={styles.viewportStats} aria-live="polite">
           <div className={styles.statRow}>
             <span className={styles.statLabel}>Total cells</span>
-            <span className={styles.statValue}>{(cellCount * 26).toLocaleString()}</span>
+            <span className={styles.statValue}>{totalCells.toLocaleString()}</span>
           </div>
           <div className={styles.statRow}>
             <span className={styles.statLabel}>DOM nodes</span>
-            <span className={styles.statValue} data-status="good">{visibleCount}</span>
+            <span className={styles.statValue} data-status={domStatus}>{domCount.toLocaleString()}</span>
           </div>
           <div className={styles.statRow}>
-            <span className={styles.statLabel}>Rows visible</span>
-            <span className={styles.statValue}>~20</span>
+            <span className={styles.statLabel}>Render time</span>
+            <span className={styles.statValue} data-status={renderMs > 100 ? "bad" : renderMs > 16 ? "warning" : "good"}>
+              {renderMs > 9000 ? "💀" : `${renderMs.toFixed(0)}ms`}
+            </span>
           </div>
         </div>
       </div>
-      <label className={styles.widgetSliderLabel} htmlFor="grid-rows">Rows: {cellCount}</label>
+      <label className={styles.widgetSliderLabel} htmlFor="grid-rows">Rows: {cellCount.toLocaleString()}</label>
       <input
         id="grid-rows"
         type="range" min={10} max={100000} step={100}
@@ -873,8 +879,21 @@ function GridWidget() {
         className={styles.widgetSlider}
         aria-valuetext={`${cellCount} rows`}
       />
+      <div className={styles.toggleRow}>
+        <span className={styles.toggleLabel}>Virtualization</span>
+        <button type="button" className={styles.toggleButton}
+          data-on={virtualized ? "true" : undefined}
+          onClick={() => setVirtualized(v => !v)}
+          aria-pressed={virtualized}>
+          <span className={styles.toggleKnob} />
+        </button>
+      </div>
       <div className={styles.widgetNote}>
-        Slide to see: DOM node count stays constant while total cells grow. The grid is a viewport window over virtual coordinate space.
+        {!virtualized && totalCells > 1000
+          ? `Without virtualization, the browser must create ${domCount.toLocaleString()} DOM nodes. Toggle "Virtualization" to see the difference.`
+          : virtualized
+            ? "DOM node count stays at ~200 regardless of total cells. The grid is a viewport window over virtual coordinate space."
+            : "Drag the slider up to see what happens when you render every cell. Then toggle virtualization."}
       </div>
     </div>
   );
