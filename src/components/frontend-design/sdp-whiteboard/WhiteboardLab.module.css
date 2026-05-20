@@ -51,8 +51,8 @@
 }
 
 @keyframes stepPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.15); }
 }
 
 /* ── Planning panel ──────────────────────────────────────────── */
@@ -361,10 +361,9 @@
 }
 
 .typeCard {
-  border-top: 3px solid;
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
 }
 
 .typeCardHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-1); }
@@ -411,7 +410,9 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 .metricsBar {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-1) 0;
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-radius: var(--radius-1);
 }
 
 .metricCard { flex: 1; text-align: center; }
@@ -436,6 +437,30 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
   border-radius: var(--radius-1);
   color: var(--color-warning);
   font-weight: 700;
+}
+
+/* ── Hit test trace ────────────────────────────────────────── */
+
+.traceLog {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: var(--space-1) var(--space-2);
+}
+
+.traceEntry {
+  font-size: 0.6rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+}
+
+.traceEntry[data-hit="true"] {
+  background: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
 }
 
 /* ── Prediction challenge ───────────────────────────────────── */
@@ -625,11 +650,12 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 
 .cursorDot {
   position: absolute;
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--color-bg);
 }
 
 .cursorLabel {
@@ -947,15 +973,15 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-size: 0.6rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-bg) 90%, transparent);
-  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 50%, transparent);
+  color: var(--color-bg);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .mergeBoxColor {
   font-size: 0.7rem;
   font-weight: 700;
-  color: color-mix(in srgb, var(--color-bg) 95%, transparent);
-  text-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 50%, transparent);
+  color: var(--color-bg);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .mergeBoxLost {
@@ -1358,7 +1384,27 @@ button.shapeRow {
   touch-action: none;
 }
 
-/* ── R-tree range input ────────────────────────────────────── */
+.sliderRow {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+}
+
+.sliderLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.sliderLabel strong {
+  color: var(--color-text);
+}
+
+/* ── Range input ──────────────────────────────────────────── */
 
 .rangeInput {
   flex: 1;

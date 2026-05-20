@@ -190,6 +190,9 @@ const METHODS = ["GET", "POST", "PUT", "DELETE"] as const;
 function EndpointChallenge() {
   const [guesses, setGuesses] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
 
   return (
     <div className={styles.endpointList}>
@@ -214,7 +217,7 @@ function EndpointChallenge() {
                     onClick={() => {
                       setGuesses(prev => ({ ...prev, [key]: m }));
                       if (m === ep.method) {
-                        setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400);
+                        timersRef.current.push(setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400));
                       }
                     }}
                   >

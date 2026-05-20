@@ -237,6 +237,9 @@ const WB_METHODS = ["GET", "POST", "PUT", "DELETE", "WS"] as const;
 function EndpointChallenge() {
   const [guesses, setGuesses] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
 
   return (
     <div className={styles.endpointList}>
@@ -248,8 +251,11 @@ function EndpointChallenge() {
 
         return (
           <div key={key} className={styles.endpointCard} data-revealed={isRevealed ? "true" : undefined}>
-            <div className={styles.endpointPath}>{ep.path}</div>
             {!isRevealed ? (
+              <>
+              <div className={styles.endpointHeader}>
+                <div className={styles.endpointPath}>{ep.path}</div>
+              </div>
               <div className={styles.methodPicker} role="radiogroup" aria-label={`HTTP method for ${ep.path}`}>
                 {WB_METHODS.map(m => (
                   <button
@@ -261,7 +267,7 @@ function EndpointChallenge() {
                     onClick={() => {
                       setGuesses(prev => ({ ...prev, [key]: m }));
                       if (m === ep.method) {
-                        setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400);
+                        timersRef.current.push(setTimeout(() => setRevealed(prev => new Set(prev).add(key)), 400));
                       }
                     }}
                   >
@@ -269,9 +275,11 @@ function EndpointChallenge() {
                   </button>
                 ))}
               </div>
+              </>
             ) : (
               <div className={styles.endpointHeader}>
                 <span className={styles.methodBadge} data-method={ep.method}>{ep.method}</span>
+                <span className={styles.endpointPath}>{ep.path}</span>
               </div>
             )}
             {guess && !isCorrect && !isRevealed && (
@@ -878,6 +886,7 @@ function PointerCaptureStep() {
 function ShapeModelStep() {
   const { shapes, setShapes, pushUndo } = useWhiteboard();
   const [addKind, setAddKind] = useState<"rect" | "ellipse">("rect");
+  const [zIndexEnabled, setZIndexEnabled] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const addShape = () => {
@@ -904,6 +913,11 @@ function ShapeModelStep() {
     pushUndo({ type: "add", shapeId: newShape.id, after: newShape });
   };
 
+  const sortedShapes = useMemo(() => {
+    if (zIndexEnabled) return [...shapes].sort((a, b) => a.zIndex - b.zIndex);
+    return shapes;
+  }, [shapes, zIndexEnabled]);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -912,15 +926,15 @@ function ShapeModelStep() {
     const cs = getComputedStyle(canvas);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
-    for (const shape of shapes) drawCanvasShape(ctx, shape, cs);
-  }, [shapes]);
+    for (const shape of sortedShapes) drawCanvasShape(ctx, shape, cs);
+  }, [sortedShapes]);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Shape Object Model</div>
         <div className={styles.widgetNote}>
-          Each shape is a data object: id, kind, bounding box (x, y, w, h), rotation, fill, stroke, z-index. Add shapes and watch both the canvas preview and the data list update — this dual representation is what makes selection, transforms, undo, and serialization possible.
+          Each shape is a data object with id, kind, bounding box, fill, and z-index. Add overlapping shapes, then toggle z-index sorting off to see why render order matters.
         </div>
       </div>
       <canvas
@@ -941,7 +955,17 @@ function ShapeModelStep() {
         <button type="button" className={styles.toolButton} onClick={addShape}>
           + Add Shape
         </button>
+        <button type="button" className={styles.toolButton}
+          data-active={!zIndexEnabled ? "true" : undefined}
+          onClick={() => setZIndexEnabled(v => !v)}>
+          {zIndexEnabled ? "☑ z-index sorted" : "☒ insertion order"}
+        </button>
       </div>
+      {!zIndexEnabled && shapes.length >= 2 && (
+        <div className={styles.stepMessage} data-severity="warning">
+          Without z-index sorting, shapes render in insertion order — later shapes always cover earlier ones regardless of &quot;bring to front&quot; intent. Try adding 3+ overlapping shapes to see the chaos.
+        </div>
+      )}
       <ShapeListWidget />
     </>
   );
@@ -956,6 +980,8 @@ function HitTestingStep() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hitResult, setHitResult] = useState<string>("none");
   const [queryPoint, setQueryPoint] = useState<Point | null>(null);
+  const [traceLog, setTraceLog] = useState<{ shapeId: string; hit: boolean }[]>([]);
+  const [checksUsed, setChecksUsed] = useState(0);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -967,15 +993,20 @@ function HitTestingStep() {
     const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
     drawCanvasGrid(ctx, canvas.width, canvas.height, cs);
 
+    const traceIds = new Set(traceLog.map(t => t.shapeId));
+    const hitId = traceLog.find(t => t.hit)?.shapeId;
+
     for (const shape of shapes) {
       ctx.save();
       const isSelected = shape.id === selectedShapeId;
+      const isTraced = traceIds.has(shape.id);
+      const isHit = shape.id === hitId;
       const fillColor = resolveColor(shape.fill, cs);
       const strokeColor = resolveColor(shape.stroke, cs);
 
       if (shape.kind === "rect") {
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = isTraced && !isHit ? 0.2 : 0.5;
         ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -985,7 +1016,7 @@ function HitTestingStep() {
         ctx.beginPath();
         ctx.ellipse(shape.x + shape.w / 2, shape.y + shape.h / 2, shape.w / 2, shape.h / 2, 0, 0, Math.PI * 2);
         ctx.fillStyle = fillColor;
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = isTraced && !isHit ? 0.2 : 0.5;
         ctx.fill();
         ctx.globalAlpha = 1;
         ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
@@ -1010,12 +1041,12 @@ function HitTestingStep() {
         ctx.stroke();
       }
 
-      // bounding box for hit-test visualization
       if (shape.kind !== "freehand") {
         ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = gridColor;
-        ctx.globalAlpha = 0.4;
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isHit ? resolveColor("var(--color-success)", cs) :
+          isTraced ? resolveColor("var(--color-error)", cs) : gridColor;
+        ctx.globalAlpha = isTraced ? 0.7 : 0.4;
+        ctx.lineWidth = isTraced ? 2 : 1;
         ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
         ctx.setLineDash([]);
       }
@@ -1023,7 +1054,6 @@ function HitTestingStep() {
       ctx.restore();
     }
 
-    // query crosshair
     if (queryPoint) {
       ctx.strokeStyle = resolveColor("var(--color-error)", cs);
       ctx.lineWidth = 1;
@@ -1032,18 +1062,21 @@ function HitTestingStep() {
       ctx.beginPath(); ctx.moveTo(0, queryPoint.y); ctx.lineTo(canvas.width, queryPoint.y); ctx.stroke();
       ctx.setLineDash([]);
     }
-  }, [shapes, selectedShapeId, queryPoint]);
+  }, [shapes, selectedShapeId, queryPoint, traceLog]);
 
   useEffect(() => { draw(); }, [draw]);
 
-  const hitTest = (pt: Point): string | null => {
+  const hitTestWithTrace = (pt: Point): { id: string | null; log: { shapeId: string; hit: boolean }[]; checks: number } => {
+    const log: { shapeId: string; hit: boolean }[] = [];
+    let checks = 0;
     for (let i = shapes.length - 1; i >= 0; i--) {
       const s = shapes[i]!;
-      if (pt.x >= s.x && pt.x <= s.x + s.w && pt.y >= s.y && pt.y <= s.y + s.h) {
-        return s.id;
-      }
+      checks++;
+      const inside = pt.x >= s.x && pt.x <= s.x + s.w && pt.y >= s.y && pt.y <= s.y + s.h;
+      log.push({ shapeId: s.id, hit: inside });
+      if (inside) return { id: s.id, log, checks };
     }
-    return null;
+    return { id: null, log, checks };
   };
 
   const onClick = (e: React.PointerEvent) => {
@@ -1051,9 +1084,11 @@ function HitTestingStep() {
     const scale = canvasRef.current!.width / rect.width;
     const pt = { x: (e.clientX - rect.left) * scale, y: (e.clientY - rect.top) * scale };
     setQueryPoint(pt);
-    const hit = hitTest(pt);
-    setHitResult(hit ?? "empty");
-    setSelectedShapeId(hit);
+    const { id, log, checks } = hitTestWithTrace(pt);
+    setHitResult(id ?? "empty");
+    setTraceLog(log);
+    setChecksUsed(checks);
+    setSelectedShapeId(id);
   };
 
   return (
@@ -1061,7 +1096,7 @@ function HitTestingStep() {
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Bounding Box Hit Testing</div>
         <div className={styles.widgetNote}>
-          Click anywhere on the canvas. The hit test iterates shapes in reverse z-order and checks if the click point falls within each bounding box. Dashed outlines show the bounding boxes.
+          Click anywhere on the canvas. The trace log below shows each shape checked in reverse z-order — red boxes were tested and missed, green is the first hit. Early exit means we stop at the first match.
         </div>
       </div>
       <div className={styles.canvasWrapper}>
@@ -1077,6 +1112,15 @@ function HitTestingStep() {
           onPointerDown={onClick}
         />
       </div>
+      {traceLog.length > 0 && (
+        <div className={styles.traceLog} aria-label="Hit test trace">
+          {traceLog.map((entry, i) => (
+            <span key={i} className={styles.traceEntry} data-hit={entry.hit ? "true" : undefined}>
+              {entry.shapeId.replace("shape-", "#").slice(0, 6)} {entry.hit ? "✓" : "✗"}
+            </span>
+          ))}
+        </div>
+      )}
       <div className={styles.metricsBar}>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Hit result</div>
@@ -1086,7 +1130,7 @@ function HitTestingStep() {
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Checks</div>
-          <div className={styles.metricValue}>{shapes.length}</div>
+          <div className={styles.metricValue}>{checksUsed > 0 ? `${checksUsed}/${shapes.length}` : shapes.length}</div>
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Complexity</div>
@@ -1263,7 +1307,6 @@ function LayerSeparationStep() {
   const shapePos = useRef({ x: 120, y: 60, w: 60, h: 40 });
   const cursorPos = useRef({ x: 0, y: 0 });
   const dragOffset = useRef({ x: 0, y: 0 });
-  const reducedMotion = usePrefersReducedMotion();
 
   const drawShapeLayer = useCallback(() => {
     const canvas = shapeCanvasRef.current;
@@ -1736,6 +1779,11 @@ const SIM_USERS = [
   { id: "carol", name: "Carol", color: "var(--diagram-layer-5)" },
   { id: "dan", name: "Dan", color: "var(--diagram-layer-1)" },
   { id: "eve", name: "Eve", color: "var(--color-warning)" },
+  { id: "frank", name: "Frank", color: "var(--diagram-layer-3)" },
+  { id: "grace", name: "Grace", color: "var(--diagram-layer-6)" },
+  { id: "heidi", name: "Heidi", color: "var(--diagram-layer-7)" },
+  { id: "ivan", name: "Ivan", color: "var(--color-error)" },
+  { id: "judy", name: "Judy", color: "var(--color-accent)" },
 ];
 
 function CursorPresenceStep() {
@@ -1794,16 +1842,20 @@ function CursorPresenceStep() {
         ) : (
           <button type="button" className={styles.toolButton} onClick={stopSim}>■ Stop</button>
         )}
-        {[2, 3, 5].map((n) => (
-          <button key={n} type="button" className={styles.toolButton} data-active={userCount === n ? "true" : undefined} onClick={() => { setUserCount(n); if (running) { stopSim(); } }}>
-            {n} users
-          </button>
-        ))}
-        {[16, 33, 100].map((ms) => (
-          <button key={ms} type="button" className={styles.toolButton} data-active={throttleMs === ms ? "true" : undefined} onClick={() => { setThrottleMs(ms); if (running) { stopSim(); } }}>
-            {ms}ms
-          </button>
-        ))}
+      </div>
+      <div className={styles.sliderRow}>
+        <label className={styles.sliderLabel}>
+          Users: <strong>{userCount}</strong>
+          <input type="range" min={1} max={10} step={1} value={userCount}
+            className={styles.rangeInput}
+            onChange={(e) => { setUserCount(+e.target.value); if (running) stopSim(); }} />
+        </label>
+        <label className={styles.sliderLabel}>
+          Throttle: <strong>{throttleMs}ms</strong>
+          <input type="range" min={8} max={200} step={1} value={throttleMs}
+            className={styles.rangeInput}
+            onChange={(e) => { setThrottleMs(+e.target.value); if (running) stopSim(); }} />
+        </label>
       </div>
       <div
         ref={areaRef}

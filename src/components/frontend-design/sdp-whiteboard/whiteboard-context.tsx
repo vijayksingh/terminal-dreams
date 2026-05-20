@@ -318,40 +318,10 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     explanation: "Without pointer capture, pointermove events stop firing when the pointer exits the canvas element. The user drags outside the canvas boundary (very common during fast drawing) and the stroke ends abruptly. setPointerCapture() routes ALL subsequent pointer events to the canvas until pointerup, regardless of where the pointer goes.",
   },
   // Step 6 omitted — shape model widget teaches through building
-  7: {
-    question: "With 500 shapes on canvas, what's the complexity of naive hit-testing on every pointermove?",
-    options: [
-      "O(n) per event × 60 events/sec = 30,000 checks/sec",
-      "O(1) because the canvas handles hit testing natively",
-      "O(log n) because shapes are already sorted",
-      "O(n²) because each shape must be checked against every other shape",
-    ],
-    correctIndex: 0,
-    explanation: "Naive hit testing iterates all shapes in reverse z-order and checks if the point is inside each bounding box. At 500 shapes × 60 pointermove events/sec, that's 30,000 bounding-box checks per second. Acceptable for 500 shapes, but at 10,000+ shapes you need spatial indexing (R-tree) for O(log n) per query.",
-  },
+  // Step 7 omitted — hit testing widget shows O(n) cost through interaction
   // Step 8 omitted — selection handles widget teaches through drag interaction
-  9: {
-    question: "Why separate the canvas into multiple layers (grid, shapes, selection, cursors)?",
-    options: [
-      "Each layer redraws independently — cursor movement doesn't redraw all shapes",
-      "Multiple canvases are always faster than a single canvas",
-      "The browser composites canvas layers on the GPU automatically",
-      "Layers allow different resolution settings for each concern",
-    ],
-    correctIndex: 0,
-    explanation: "The cursor layer updates at 60fps (every pointermove). If cursors share a canvas with shapes, you must redraw ALL shapes 60 times/second just to show a moving cursor. Separate layers mean cursor updates clear and redraw only the cursor canvas — shapes stay untouched. This is the same principle as video game sprite layers.",
-  },
-  10: {
-    question: "getCoalescedEvents() returns multiple points per pointermove. Why does this improve drawing?",
-    options: [
-      "It recovers intermediate points the browser batched, giving smoother curves",
-      "It reduces the number of events fired, improving performance",
-      "It provides pressure and tilt data not available in regular events",
-      "It converts touch events into mouse events for compatibility",
-    ],
-    correctIndex: 0,
-    explanation: "Browsers batch multiple hardware-reported pointer positions into a single pointermove event for performance. getCoalescedEvents() unpacks those batched positions — typically 2-6 extra points per event. Without it, fast pen strokes appear as a series of straight-line segments connecting sparse sample points. With it, the path is smooth because you get the full hardware sampling rate.",
-  },
+  // Step 9 omitted — layer separation widget visually proves the redraw savings
+  // Step 10 omitted — coalesced events split-view makes the difference visceral
   11: {
     question: "In a collaborative whiteboard, should undo reverse YOUR last action or THE last action?",
     options: [
@@ -375,17 +345,7 @@ export const STEP_PREDICTIONS: Record<number, PredictionEntry> = {
     correctIndex: 0,
     explanation: "CRDTs (Conflict-free Replicated Data Types) guarantee convergence through mathematical properties — any two replicas that have seen the same set of operations will have the same state, regardless of the order they were applied. This enables peer-to-peer sync (WebRTC data channels) without routing through a server. OT requires a centralized server to determine canonical operation order.",
   },
-  13: {
-    question: "Why throttle cursor position broadcasts to ~30fps instead of sending every pointermove?",
-    options: [
-      "60 cursor updates/sec per user saturates bandwidth — 10 users = 600 msgs/sec",
-      "The human eye can't perceive cursor movement above 30fps",
-      "WebSocket connections can only handle 30 messages per second",
-      "Canvas can only render at 30fps so faster updates are wasted",
-    ],
-    correctIndex: 0,
-    explanation: "pointermove fires at 60+ events/sec. With 10 concurrent users, that's 600+ cursor position messages per second on the WebSocket. Throttling to 30fps halves the bandwidth while being visually indistinguishable (cursor positions are interpolated on the receiving end). Further optimization: only send deltas when the cursor has actually moved more than a threshold distance.",
-  },
+  // Step 13 omitted — cursor throttle widget shows bandwidth cost through slider interaction
   14: {
     question: "At what shape count does an R-tree become worthwhile over linear scan?",
     options: [
