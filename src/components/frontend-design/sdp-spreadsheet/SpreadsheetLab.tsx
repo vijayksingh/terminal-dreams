@@ -11,7 +11,6 @@ import {
   SCOPE_ITEMS,
   API_ENDPOINTS,
   DATA_MODELS,
-  type ApiEndpoint,
   type TypeDef,
 } from "./spreadsheet-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
