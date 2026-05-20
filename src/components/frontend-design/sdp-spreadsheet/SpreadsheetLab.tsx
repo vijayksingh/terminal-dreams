@@ -1727,16 +1727,12 @@ function PerformanceWidget() {
         ))}
       </div>
       <div className={styles.toggleRow}>
-        <span className={styles.toggleLabel}>Fan-out (deps of A1)</span>
-        <div className={styles.offsetGroup}>
-          {[2, 3, 4, 5].map(n => (
-            <button key={n} type="button" className={styles.toolButton}
-              data-active={fanOut === n ? "true" : undefined}
-              onClick={() => { setFanOut(n); setStep(0); }}>
-              {n}
-            </button>
-          ))}
-        </div>
+        <label className={styles.toggleLabel}>
+          Fan-out: <strong>{fanOut}</strong> deps of A1
+          <input type="range" min={2} max={8} step={1} value={fanOut}
+            className={styles.rangeInput}
+            onChange={(e) => { setFanOut(+e.target.value); setStep(0); }} />
+        </label>
       </div>
       <div className={styles.propCellRow}>
         {cells.map(cell => {
