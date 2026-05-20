@@ -544,6 +544,8 @@ function CanvasRenderStep() {
   const [renderMode, setRenderMode] = useState<"canvas" | "svg">("canvas");
   const [extraCount, setExtraCount] = useState(0);
   const [canvasMs, setCanvasMs] = useState<number | null>(null);
+  const [svgMs, setSvgMs] = useState<number | null>(null);
+  const svgT0 = useRef(0);
 
   const allShapes = useMemo(() => {
     const extras: Shape[] = [];
@@ -584,7 +586,8 @@ function CanvasRenderStep() {
 
   useEffect(() => {
     if (renderMode === "canvas") draw();
-  }, [draw, renderMode]);
+    else svgT0.current = performance.now();
+  }, [draw, renderMode, allShapes]);
 
   const svgDomNodes = allShapes.length * 2 + 1;
 
@@ -599,11 +602,14 @@ function CanvasRenderStep() {
       <div className={styles.toolbar}>
         <button type="button" className={styles.toolButton} data-active={renderMode === "canvas" ? "true" : undefined} onClick={() => setRenderMode("canvas")}>Canvas</button>
         <button type="button" className={styles.toolButton} data-active={renderMode === "svg" ? "true" : undefined} onClick={() => setRenderMode("svg")}>SVG</button>
-        <button type="button" className={styles.toolButton} onClick={() => setExtraCount((c) => c + 50)}>+50 shapes</button>
-        <button type="button" className={styles.toolButton} onClick={() => setExtraCount((c) => c + 200)}>+200</button>
-        {extraCount > 0 && (
-          <button type="button" className={styles.toolButton} onClick={() => setExtraCount(0)}>Reset</button>
-        )}
+      </div>
+      <div className={styles.sliderRow}>
+        <label className={styles.sliderLabel}>
+          Extra shapes: <strong>{extraCount}</strong>
+          <input type="range" min={0} max={2000} step={50} value={extraCount}
+            className={styles.rangeInput}
+            onChange={(e) => setExtraCount(+e.target.value)} />
+        </label>
       </div>
       <div className={styles.canvasWrapper}>
         {renderMode === "canvas" ? (
@@ -616,7 +622,7 @@ function CanvasRenderStep() {
             aria-label={`Canvas rendering ${allShapes.length} shapes`}
           />
         ) : (
-          <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg}>
+          <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className={styles.renderSvg} ref={() => { if (svgT0.current > 0) { setSvgMs(Number((performance.now() - svgT0.current).toFixed(2))); svgT0.current = 0; } }}>
             {allShapes.map((shape) => {
               if (shape.kind === "rect") return (
                 <rect key={shape.id} x={shape.x} y={shape.y} width={shape.w} height={shape.h} fill={shape.fill} fillOpacity={0.5} stroke={shape.stroke} strokeWidth={shape.strokeWidth} />
@@ -642,8 +648,9 @@ function CanvasRenderStep() {
         </div>
         <div className={styles.metricCard}>
           <div className={styles.metricLabel}>Render time</div>
-          <div className={styles.metricValue}>
-            {renderMode === "canvas" && canvasMs !== null ? `${canvasMs}ms` : "—"}
+          <div className={styles.metricValue} data-status={((renderMode === "canvas" ? canvasMs : svgMs) ?? 0) > 16 ? "bad" : "good"}>
+            {renderMode === "canvas" && canvasMs !== null ? `${canvasMs}ms` :
+             renderMode === "svg" && svgMs !== null ? `${svgMs}ms` : "—"}
           </div>
         </div>
       </div>
