@@ -456,7 +456,7 @@ function CanvasRenderStep() {
     const computedStyle = el ? getComputedStyle(el) : null;
 
     // Grid
-    const gridColor = computedStyle?.getPropertyValue("--color-border").trim() || "#888";
+    const gridColor = computedStyle?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
     ctx.strokeStyle = gridColor;
     ctx.globalAlpha = 0.15;
     ctx.lineWidth = 0.5;
@@ -595,11 +595,13 @@ function CanvasRenderStep() {
   );
 }
 
+const CANVAS_FALLBACK = "rgba(128,128,128,0.2)";
+
 function resolveColor(cssVar: string, style: CSSStyleDeclaration | null): string {
   if (!cssVar.startsWith("var(")) return cssVar;
-  if (!style) return "#888";
+  if (!style) return CANVAS_FALLBACK;
   const prop = cssVar.replace(/^var\(--/, "--").replace(/\)$/, "");
-  return style.getPropertyValue(prop).trim() || "#888";
+  return style.getPropertyValue(prop).trim() || CANVAS_FALLBACK;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -623,7 +625,7 @@ function PointerCaptureStep() {
 
     const el = canvas.parentElement;
     const cs = el ? getComputedStyle(el) : null;
-    const gridColor = cs?.getPropertyValue("--color-border").trim() || "#888";
+    const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
 
     // grid
     ctx.strokeStyle = gridColor;
@@ -855,7 +857,7 @@ function HitTestingStep() {
 
     const el = canvas.parentElement;
     const cs = el ? getComputedStyle(el) : null;
-    const gridColor = cs?.getPropertyValue("--color-border").trim() || "#888";
+    const gridColor = cs?.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
 
     // grid
     ctx.strokeStyle = gridColor;
@@ -1145,72 +1147,152 @@ function SelectionHandlesStep() {
 // ═══════════════════════════════════════════════════════════════════
 
 const CANVAS_LAYERS = [
-  { id: "grid", label: "Grid Layer", color: "var(--color-border)", fps: "0 (static)", desc: "Background grid — rendered once and cached" },
-  { id: "shapes", label: "Shape Layer", color: "var(--diagram-layer-1)", fps: "on change", desc: "All vector shapes — only redraws when shapes mutate" },
-  { id: "selection", label: "Selection Layer", color: "var(--color-accent)", fps: "on drag", desc: "Handles and selection outlines — redraws during transforms" },
-  { id: "cursors", label: "Cursor Layer", color: "var(--diagram-layer-4)", fps: "60fps", desc: "Remote user cursors — redraws every pointermove" },
+  { id: "shapes", label: "Shape Canvas", colorVar: "--diagram-layer-1" },
+  { id: "cursors", label: "Cursor Canvas", colorVar: "--diagram-layer-4" },
 ];
 
-type LayerRedrawState = Record<string, number>;
-
 function LayerSeparationStep() {
-  const [redraws, setRedraws] = useState<LayerRedrawState>({ grid: 1, shapes: 0, selection: 0, cursors: 0 });
-  const [flashLayer, setFlashLayer] = useState<string | null>(null);
+  const shapeCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cursorCanvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shapeRedraws, setShapeRedraws] = useState(0);
+  const [cursorRedraws, setCursorRedraws] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const shapePos = useRef({ x: 120, y: 60, w: 60, h: 40 });
+  const cursorPos = useRef({ x: 0, y: 0 });
+  const dragOffset = useRef({ x: 0, y: 0 });
   const reducedMotion = usePrefersReducedMotion();
+  const rafRef = useRef<number>(0);
 
-  const triggerAction = useCallback((action: "moveCursor" | "moveShape" | "addShape") => {
-    const affected: string[] =
-      action === "moveCursor" ? ["cursors"] :
-      action === "moveShape" ? ["shapes", "selection"] :
-      ["shapes"];
+  const drawShapeLayer = useCallback(() => {
+    const canvas = shapeCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const cs = getComputedStyle(canvas);
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    const gridColor = cs.getPropertyValue("--color-border").trim() || CANVAS_FALLBACK;
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x <= W; x += 20) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 20) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    const { x, y, w, h } = shapePos.current;
+    ctx.fillStyle = resolveColor("var(--diagram-layer-1)", cs);
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = resolveColor("var(--diagram-layer-1)", cs);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+    setShapeRedraws(c => c + 1);
+  }, []);
 
-    setRedraws((prev) => {
-      const next = { ...prev };
-      for (const l of affected) next[l] = (next[l] ?? 0) + 1;
-      return next;
-    });
-
-    if (!reducedMotion) {
-      for (let i = 0; i < affected.length; i++) {
-        setTimeout(() => setFlashLayer(affected[i]!), i * 120);
-      }
-      setTimeout(() => setFlashLayer(null), affected.length * 120 + 400);
+  const drawCursorLayer = useCallback(() => {
+    const canvas = cursorCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const cs = getComputedStyle(canvas);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const { x, y } = cursorPos.current;
+    if (x > 0 && y > 0) {
+      const color = resolveColor("var(--diagram-layer-4)", cs);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 10, y + 14);
+      ctx.lineTo(x + 4, y + 14);
+      ctx.lineTo(x + 6, y + 20);
+      ctx.lineTo(x + 2, y + 21);
+      ctx.lineTo(x, y + 16);
+      ctx.lineTo(x - 4, y + 18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = "bold 9px monospace";
+      ctx.fillText("Bob", x + 12, y + 14);
     }
-  }, [reducedMotion]);
+    setCursorRedraws(c => c + 1);
+  }, []);
+
+  useEffect(() => {
+    drawShapeLayer();
+    drawCursorLayer();
+  }, [drawShapeLayer, drawCursorLayer]);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const s = shapePos.current;
+    if (px >= s.x && px <= s.x + s.w && py >= s.y && py <= s.y + s.h) {
+      setIsDragging(true);
+      dragOffset.current = { x: px - s.x, y: py - s.y };
+      containerRef.current?.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+
+    cursorPos.current = { x: px, y: py };
+    drawCursorLayer();
+
+    if (isDragging) {
+      shapePos.current = {
+        ...shapePos.current,
+        x: Math.max(0, px - dragOffset.current.x),
+        y: Math.max(0, py - dragOffset.current.y),
+      };
+      drawShapeLayer();
+    }
+  };
+
+  const onPointerUp = () => setIsDragging(false);
 
   return (
     <>
       <div className={styles.widgetPanel}>
         <div className={styles.widgetTitle}>Dual-Canvas Architecture</div>
         <div className={styles.widgetNote}>
-          Each layer is a separate &lt;canvas&gt; stacked via absolute positioning. Trigger actions below to see which layers redraw — cursor movement should never touch the shape layer.
+          Move your pointer over the area — the cursor layer redraws continuously while the shape layer stays untouched. Drag the rectangle to see the shape layer redraw only when needed.
         </div>
       </div>
-      <div className={styles.toolbar}>
-        <button type="button" className={styles.toolButton} onClick={() => triggerAction("moveCursor")}>Move Cursor</button>
-        <button type="button" className={styles.toolButton} onClick={() => triggerAction("moveShape")}>Drag Shape</button>
-        <button type="button" className={styles.toolButton} onClick={() => triggerAction("addShape")}>Add Shape</button>
-        <button type="button" className={styles.toolButton} onClick={() => setRedraws({ grid: 1, shapes: 0, selection: 0, cursors: 0 })}>Reset</button>
+      <div ref={containerRef} className={styles.dualCanvasDemo}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerLeave={onPointerUp}>
+        <canvas ref={shapeCanvasRef} width={300} height={140} className={styles.layerCanvas} />
+        <canvas ref={cursorCanvasRef} width={300} height={140} className={styles.layerCanvas} />
       </div>
       <div className={styles.layerDiagram}>
-        {CANVAS_LAYERS.map((layer, i) => (
-          <div
-            key={layer.id}
-            className={styles.layerRow}
-            data-active={flashLayer === layer.id ? "true" : undefined}
-            style={{ position: "relative", overflow: "hidden" }}
-          >
-            <div className={styles.layerColor} style={{ background: layer.color }} />
-            <span className={styles.layerName}>{layer.label}</span>
-            <span className={styles.layerFps}>{layer.fps}</span>
-            <span style={{ fontSize: "0.6rem", fontWeight: 800, color: redraws[layer.id]! > 0 ? "var(--color-accent)" : "var(--color-muted)", minWidth: 32, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
-              {redraws[layer.id] ?? 0}×
-            </span>
-          </div>
-        ))}
+        <div className={styles.layerRow}>
+          <div className={styles.layerColor} data-layer="shapes" />
+          <span className={styles.layerName}>Shape Canvas</span>
+          <span className={styles.layerFps}>on drag</span>
+          <span className={styles.layerCount} data-active={shapeRedraws > 1 ? "true" : undefined}>
+            {shapeRedraws}×
+          </span>
+        </div>
+        <div className={styles.layerRow}>
+          <div className={styles.layerColor} data-layer="cursors" />
+          <span className={styles.layerName}>Cursor Canvas</span>
+          <span className={styles.layerFps}>every move</span>
+          <span className={styles.layerCount} data-active={cursorRedraws > 1 ? "true" : undefined}>
+            {cursorRedraws}×
+          </span>
+        </div>
       </div>
       <div className={styles.stepMessage}>
-        Moving the cursor triggers {redraws.cursors} cursor redraws but 0 shape redraws. Without layer separation, every cursor move at 60fps would redraw all shapes.
+        {cursorRedraws > 5 && shapeRedraws <= 2
+          ? `Cursor layer redrew ${cursorRedraws}× while shape layer only ${shapeRedraws}×. Without separation, every cursor move would re-render all shapes.`
+          : isDragging
+            ? "Both layers are redrawing — shape canvas updates because you're moving the rectangle."
+            : "Move your pointer over the canvas to see cursor redraws accumulate independently."}
+      </div>
+      <div className={styles.toolbar}>
+        <button type="button" className={styles.toolButton} onClick={() => { setShapeRedraws(0); setCursorRedraws(0); drawShapeLayer(); }}>Reset Counters</button>
       </div>
     </>
   );
@@ -1388,59 +1470,71 @@ function UndoRedoStep() {
 // ═══════════════════════════════════════════════════════════════════
 
 const SYNC_STRATEGIES: { id: SyncStrategy; name: string; desc: string }[] = [
-  { id: "lww", name: "LWW", desc: "Last-Writer-Wins per property — simple, lossy on true conflicts" },
-  { id: "ot", name: "OT", desc: "Operational Transform — server-ordered, correct, complex" },
-  { id: "crdt", name: "CRDT", desc: "Conflict-free — converges without server, peer-to-peer ready" },
+  { id: "lww", name: "LWW", desc: "Last-Writer-Wins — simple, lossy on true conflicts" },
+  { id: "ot", name: "OT", desc: "Operational Transform — server reorders, correct" },
+  { id: "crdt", name: "CRDT", desc: "Conflict-free — converges peer-to-peer" },
 ];
 
-type ConflictStep = { alice: string; bob: string; server: string; result: string; note: string };
+const CONFLICT_COLORS = ["red", "blue", "green", "orange", "purple"] as const;
+type ConflictColor = typeof CONFLICT_COLORS[number];
+const COLOR_HEX: Record<ConflictColor, string> = { red: "#e74c3c", blue: "#3498db", green: "#27ae60", orange: "#e67e22", purple: "#9b59b6" };
 
-const CONFLICT_SCENARIOS: Record<SyncStrategy, ConflictStep[]> = {
-  lww: [
-    { alice: "fill: blue", bob: "fill: blue", server: "—", result: "fill: blue", note: "Both see blue rectangle" },
-    { alice: "fill → red (t=1)", bob: "fill → green (t=2)", server: "—", result: "fill: blue", note: "Both edit fill concurrently" },
-    { alice: "sends red (t=1)", bob: "sends green (t=2)", server: "compares timestamps", result: "pending...", note: "Server receives both ops" },
-    { alice: "fill: green ✓", bob: "fill: green ✓", server: "t=2 wins", result: "fill: green", note: "Alice's red LOST — t=2 > t=1" },
-  ],
-  ot: [
-    { alice: "fill: blue", bob: "fill: blue", server: "canonical state", result: "fill: blue", note: "Server is source of truth" },
-    { alice: "fill → red", bob: "fill → green", server: "queues ops", result: "fill: blue", note: "Concurrent edits queued" },
-    { alice: "transform(red, green)", bob: "transform(green, red)", server: "orders: red first", result: "pending...", note: "Server picks canonical order" },
-    { alice: "fill: green ✓", bob: "fill: green ✓", server: "green wins (last)", result: "fill: green", note: "Both converge — server-ordered" },
-  ],
-  crdt: [
-    { alice: "fill: blue {v:1}", bob: "fill: blue {v:1}", server: "—", result: "fill: blue", note: "Both replicas start at v1" },
-    { alice: "fill: red {v:2a}", bob: "fill: green {v:2b}", server: "—", result: "fill: blue", note: "Concurrent versions diverge" },
-    { alice: "merge(2a, 2b)", bob: "merge(2b, 2a)", server: "no server needed", result: "pending...", note: "Replicas exchange + merge" },
-    { alice: "fill: green {v:3}", bob: "fill: green {v:3}", server: "—", result: "fill: green", note: "Deterministic tie-break converges" },
-  ],
-};
+function resolveMerge(strategy: SyncStrategy, alice: ConflictColor, bob: ConflictColor): { result: ConflictColor; aliceLost: boolean; bobLost: boolean; explanation: string } {
+  if (alice === bob) return { result: alice, aliceLost: false, bobLost: false, explanation: "No conflict — both chose the same color." };
+  switch (strategy) {
+    case "lww": return { result: bob, aliceLost: true, bobLost: false, explanation: `Bob's timestamp was later → Alice's "${alice}" is silently overwritten. No merge, no notification.` };
+    case "ot": return { result: bob, aliceLost: true, bobLost: false, explanation: `Server orders ops sequentially: Alice's "${alice}" applied first, then Bob's "${bob}" overwrites. Both converge, but Alice's intent is lost.` };
+    case "crdt": {
+      const winner = alice < bob ? alice : bob;
+      const loser = alice < bob ? bob : alice;
+      const winnerIs = winner === alice ? "Alice" : "Bob";
+      return { result: winner, aliceLost: winner !== alice, bobLost: winner !== bob, explanation: `Deterministic tie-break (alphabetical): "${winner}" < "${loser}" → ${winnerIs}'s edit wins. Both replicas converge without a server.` };
+    }
+  }
+}
 
 function CrdtSyncStep() {
   const { syncStrategy, setSyncStrategy } = useWhiteboard();
-  const [conflictStep, setConflictStep] = useState(0);
-  const reducedMotion = usePrefersReducedMotion();
+  const [aliceChoice, setAliceChoice] = useState<ConflictColor>("red");
+  const [bobChoice, setBobChoice] = useState<ConflictColor>("green");
+  const [merged, setMerged] = useState<ReturnType<typeof resolveMerge> | null>(null);
 
-  const scenario = CONFLICT_SCENARIOS[syncStrategy];
+  useEffect(() => { setMerged(null); }, [syncStrategy, aliceChoice, bobChoice]);
 
-  const runConflict = useCallback(() => {
-    setConflictStep(0);
-    if (reducedMotion) { setConflictStep(scenario.length - 1); return; }
-    for (let i = 1; i < scenario.length; i++) {
-      setTimeout(() => setConflictStep(i), i * 800);
-    }
-  }, [scenario, reducedMotion]);
-
-  useEffect(() => { setConflictStep(0); }, [syncStrategy]);
-
-  const current = scenario[conflictStep]!;
+  const doMerge = () => setMerged(resolveMerge(syncStrategy, aliceChoice, bobChoice));
 
   return (
     <>
       <div className={styles.widgetPanel}>
-        <div className={styles.widgetTitle}>Sync Strategy Comparison</div>
+        <div className={styles.widgetTitle}>Create a Conflict</div>
         <div className={styles.widgetNote}>
-          Alice and Bob both change a rectangle&apos;s fill color at the same time. Pick a strategy, then run the conflict to see how each resolves it.
+          Pick what Alice and Bob each set as the rectangle&apos;s fill color, then hit Merge to see how each strategy resolves it.
+        </div>
+      </div>
+      <div className={styles.crdtComparison}>
+        <div className={styles.crdtCard}>
+          <div className={styles.crdtCardTitle} data-role="alice">Alice picks</div>
+          <div className={styles.colorPicker}>
+            {CONFLICT_COLORS.map(c => (
+              <button key={c} type="button" className={styles.colorSwatch}
+                data-active={aliceChoice === c ? "true" : undefined}
+                style={{ background: COLOR_HEX[c] }}
+                aria-label={`Alice: ${c}`} aria-pressed={aliceChoice === c}
+                onClick={() => setAliceChoice(c)} />
+            ))}
+          </div>
+        </div>
+        <div className={styles.crdtCard}>
+          <div className={styles.crdtCardTitle} data-role="bob">Bob picks</div>
+          <div className={styles.colorPicker}>
+            {CONFLICT_COLORS.map(c => (
+              <button key={c} type="button" className={styles.colorSwatch}
+                data-active={bobChoice === c ? "true" : undefined}
+                style={{ background: COLOR_HEX[c] }}
+                aria-label={`Bob: ${c}`} aria-pressed={bobChoice === c}
+                onClick={() => setBobChoice(c)} />
+            ))}
+          </div>
         </div>
       </div>
       <div className={styles.strategyGroup}>
@@ -1452,42 +1546,48 @@ function CrdtSyncStep() {
         ))}
       </div>
       <div className={styles.toolbar}>
-        <button type="button" className={styles.toolButton} onClick={runConflict}>
-          ▶ Simulate Conflict
+        <button type="button" className={styles.toolButton} onClick={doMerge}>
+          ⚡ Merge
         </button>
       </div>
-      <div className={styles.crdtComparison}>
-        {(["alice", "bob", "server", "result"] as const).map((role) => (
-          <div key={role} className={styles.crdtCard}>
-            <div className={styles.crdtCardTitle} style={{ color: role === "alice" ? "var(--diagram-layer-2)" : role === "bob" ? "var(--diagram-layer-4)" : role === "server" ? "var(--color-muted)" : "var(--color-accent)" }}>
-              {role === "alice" ? "Alice" : role === "bob" ? "Bob" : role === "server" ? "Server" : "Result"}
-            </div>
-            <div className={styles.crdtRow}>
-              <span className={styles.crdtValue} style={{ fontSize: "0.7rem" }}>{current[role]}</span>
+      {merged && (
+        <>
+          <div className={styles.mergeResult}>
+            <div className={styles.mergePreview}>
+              <div className={styles.mergeBox} style={{ background: COLOR_HEX[aliceChoice] }} data-lost={merged.aliceLost ? "true" : undefined}>
+                <span className={styles.mergeBoxLabel}>Alice</span>
+                <span className={styles.mergeBoxColor}>{aliceChoice}</span>
+                {merged.aliceLost && <span className={styles.mergeBoxLost}>LOST</span>}
+              </div>
+              <div className={styles.mergeArrow}>→</div>
+              <div className={styles.mergeBox} style={{ background: COLOR_HEX[merged.result] }}>
+                <span className={styles.mergeBoxLabel}>Result</span>
+                <span className={styles.mergeBoxColor}>{merged.result}</span>
+              </div>
+              <div className={styles.mergeArrow}>←</div>
+              <div className={styles.mergeBox} style={{ background: COLOR_HEX[bobChoice] }} data-lost={merged.bobLost ? "true" : undefined}>
+                <span className={styles.mergeBoxLabel}>Bob</span>
+                <span className={styles.mergeBoxColor}>{bobChoice}</span>
+                {merged.bobLost && <span className={styles.mergeBoxLost}>LOST</span>}
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-      <div className={styles.metricsBar}>
-        <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Step</div>
-          <div className={styles.metricValue}>{conflictStep + 1}/{scenario.length}</div>
-        </div>
-        <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Strategy</div>
-          <div className={styles.metricValue}>{syncStrategy.toUpperCase()}</div>
-        </div>
-        <div className={styles.metricCard}>
-          <div className={styles.metricLabel}>Data loss?</div>
-          <div className={styles.metricValue} data-status={syncStrategy === "lww" && conflictStep === 3 ? "bad" : "good"}>
-            {syncStrategy === "lww" && conflictStep === 3 ? "Yes" : "No"}
+          <div className={styles.metricsBar}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Strategy</div>
+              <div className={styles.metricValue}>{syncStrategy.toUpperCase()}</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Data loss?</div>
+              <div className={styles.metricValue} data-status={merged.aliceLost || merged.bobLost ? "bad" : "good"}>
+                {merged.aliceLost || merged.bobLost ? "Yes" : "No"}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      {conflictStep > 0 && (
-        <div className={styles.stepMessage} data-severity={syncStrategy === "lww" && conflictStep === 3 ? "warning" : undefined}>
-          {current.note}
-        </div>
+          <div className={styles.stepMessage} data-severity={merged.aliceLost ? "warning" : undefined}>
+            {merged.explanation}
+          </div>
+        </>
       )}
     </>
   );
@@ -1915,28 +2015,33 @@ function ShapeListWidget({ selectable }: { selectable?: boolean }) {
         Scene Graph ({shapes.length} shape{shapes.length !== 1 ? "s" : ""})
       </div>
       <div className={styles.shapeList}>
-        {shapes.map((shape) => (
-          <div
-            key={shape.id}
-            className={styles.shapeRow}
-            data-selected={shape.id === selectedShapeId ? "true" : undefined}
-            onClick={selectable ? () => setSelectedShapeId(shape.id === selectedShapeId ? null : shape.id) : undefined}
-            onKeyDown={selectable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedShapeId(shape.id === selectedShapeId ? null : shape.id); } } : undefined}
-            style={selectable ? { cursor: "pointer" } : undefined}
-            role={selectable ? "button" : undefined}
-            tabIndex={selectable ? 0 : undefined}
-          >
-            <div className={styles.shapeSwatch} style={{ background: shape.fill }} />
-            <span className={styles.shapeKind}>{shape.kind}</span>
-            <span className={styles.shapePos}>
-              ({Math.round(shape.x)}, {Math.round(shape.y)}) {shape.w}×{shape.h}
-            </span>
-          </div>
-        ))}
+        {shapes.map((shape) => {
+          const isSelected = shape.id === selectedShapeId;
+          const toggle = () => setSelectedShapeId(isSelected ? null : shape.id);
+          const inner = (
+            <>
+              <div className={styles.shapeSwatch} style={{ background: shape.fill }} />
+              <span className={styles.shapeKind}>{shape.kind}</span>
+              <span className={styles.shapePos}>
+                ({Math.round(shape.x)}, {Math.round(shape.y)}) {shape.w}×{shape.h}
+              </span>
+            </>
+          );
+          return selectable ? (
+            <button key={shape.id} type="button" className={styles.shapeRow}
+              data-selected={isSelected ? "true" : undefined}
+              aria-pressed={isSelected} onClick={toggle}>
+              {inner}
+            </button>
+          ) : (
+            <div key={shape.id} className={styles.shapeRow}
+              data-selected={isSelected ? "true" : undefined}>
+              {inner}
+            </div>
+          );
+        })}
         {shapes.length === 0 && (
-          <div style={{ fontSize: "0.625rem", color: "var(--color-muted)", fontStyle: "italic" }}>
-            (empty scene)
-          </div>
+          <div className={styles.emptyState}>(empty scene)</div>
         )}
       </div>
     </div>

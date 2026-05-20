@@ -1285,30 +1285,17 @@ function PerformanceWidget() {
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: "var(--space-1)", padding: "var(--space-2) 0" }}>
+      <div className={styles.propCellRow}>
         {cells.map(cell => {
           const isActive = currentStep.active.includes(cell);
           const evals = currentStep.evalCount[cell as keyof typeof currentStep.evalCount] ?? 0;
           return (
-            <div key={cell} style={{
-              flex: 1,
-              textAlign: "center",
-              padding: "var(--space-2)",
-              borderRadius: "var(--radius-1)",
-              background: isActive
-                ? "color-mix(in srgb, var(--color-accent) 25%, transparent)"
-                : evals > 0
-                  ? "var(--color-surface)"
-                  : "transparent",
-              transition: "background 300ms ease",
-            }}>
-              <div style={{ fontSize: "0.75rem", fontWeight: 800 }}>{cell}</div>
-              <div style={{
-                fontSize: "0.85rem",
-                fontWeight: 800,
-                color: evals > 1 ? "var(--color-error)" : evals > 0 ? "var(--color-success)" : "var(--color-muted)",
-                fontVariantNumeric: "tabular-nums",
-              }}>
+            <div key={cell} className={styles.propCell}
+              data-active={isActive ? "true" : undefined}
+              data-touched={!isActive && evals > 0 ? "true" : undefined}>
+              <div className={styles.propCellId}>{cell}</div>
+              <div className={styles.propCellEvals}
+                data-status={evals > 1 ? "bad" : evals > 0 ? "good" : "idle"}>
                 {evals > 0 ? `×${evals}` : "—"}
               </div>
             </div>
@@ -1410,29 +1397,22 @@ function CollaborationWidget() {
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)", padding: "var(--space-2) 0" }}>
-        {["alice", "bob", "server", "result"].map(row => (
-          <div key={row} style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", fontSize: "0.65rem" }}>
-            <span style={{
-              minWidth: 48,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              color: row === "alice" ? "var(--diagram-layer-1)" : row === "bob" ? "var(--diagram-layer-4)" : row === "server" ? "var(--color-muted)" : "var(--color-accent)",
-            }}>{row}</span>
-            <span style={{
-              flex: 1,
-              padding: "var(--space-1) var(--space-2)",
-              borderRadius: "var(--radius-1)",
-              background: currentStep[row as keyof TimelineStep] !== "—" && currentStep[row as keyof TimelineStep] !== "?" ? "var(--color-surface)" : "transparent",
-              color: row === "result" && currentStep.lost ? "var(--color-error)" : "var(--color-text)",
-              fontWeight: 600,
-              transition: "background 300ms ease",
-            }}>
-              {currentStep[row as keyof TimelineStep]}
-              {row === "result" && currentStep.lost && " (alice's edit lost)"}
-            </span>
-          </div>
-        ))}
+      <div className={styles.timelineRows}>
+        {["alice", "bob", "server", "result"].map(row => {
+          const val = currentStep[row as keyof TimelineStep];
+          const isActive = val !== "—" && val !== "?";
+          return (
+            <div key={row} className={styles.timelineRow}>
+              <span className={styles.timelineLabel} data-role={row}>{row}</span>
+              <span className={styles.timelineValue}
+                data-active={isActive ? "true" : undefined}
+                data-lost={row === "result" && currentStep.lost ? "true" : undefined}>
+                {val}
+                {row === "result" && currentStep.lost && " (alice's edit lost)"}
+              </span>
+            </div>
+          );
+        })}
       </div>
       <button
         type="button"

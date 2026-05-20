@@ -387,16 +387,17 @@
   font-weight: 600;
   text-align: left;
   color: var(--color-text);
-  background: var(--color-surface-2);
-  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  border: none;
+  border-left: 3px solid transparent;
   border-radius: var(--radius-1);
   cursor: pointer;
   transition: border-color 200ms ease, background 200ms ease;
 }
 
 .predictionOption:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  border-left-color: var(--color-accent);
 }
 
 .predictionOption:focus-visible {
@@ -405,13 +406,13 @@
 }
 
 .predictionOption[data-correct="true"] {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface-2));
+  border-left-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
 }
 
 .predictionOption[data-wrong="true"] {
-  border-color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface-2));
+  border-left-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 14%, var(--color-surface));
 }
 
 .predictionOption:disabled { cursor: default; opacity: 0.7; }
@@ -499,18 +500,20 @@
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 600;
-  border: 2px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
-  background: transparent;
+  background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  transition: border-color 200ms ease, background 200ms ease;
+  transition: background 200ms ease, box-shadow 200ms ease;
 }
 
-.strategyOption:hover { border-color: var(--color-accent); }
+.strategyOption:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
 .strategyOption[data-active="true"] {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 .strategyOption:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -1172,6 +1175,90 @@
 
 .cellInspectRow[data-active="true"] {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+/* ── Propagation cell grid ──────────────────────────────────────── */
+
+.propCellRow {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.propCell {
+  flex: 1;
+  text-align: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: transparent;
+  transition: background 300ms ease;
+}
+
+.propCell[data-active="true"] {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
+.propCell[data-touched="true"] {
+  background: var(--color-surface);
+}
+
+.propCellId {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.propCellEvals {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.propCellEvals[data-status="good"] { color: var(--color-success); }
+.propCellEvals[data-status="bad"] { color: var(--color-error); }
+.propCellEvals[data-status="idle"] { color: var(--color-muted); }
+
+/* ── Collaboration timeline ────────────────────────────────────── */
+
+.timelineRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.timelineRow {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 0.65rem;
+}
+
+.timelineLabel {
+  min-width: 48px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.timelineLabel[data-role="alice"] { color: var(--diagram-layer-1); }
+.timelineLabel[data-role="bob"] { color: var(--diagram-layer-4); }
+.timelineLabel[data-role="server"] { color: var(--color-muted); }
+.timelineLabel[data-role="result"] { color: var(--color-accent); }
+
+.timelineValue {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-weight: 600;
+  transition: background 300ms ease;
+  background: transparent;
+}
+
+.timelineValue[data-active="true"] {
+  background: var(--color-surface);
+}
+
+.timelineValue[data-lost="true"] {
+  color: var(--color-error);
 }
 
 /* ── Reduced motion ─────────────────────────────────────────────── */

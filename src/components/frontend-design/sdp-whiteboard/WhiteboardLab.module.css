@@ -521,16 +521,29 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
+  border: none;
   border-radius: var(--radius-1);
+  font-family: var(--font-mono);
   font-size: 0.65rem;
+  color: var(--color-text);
+  background: transparent;
+  width: 100%;
+  text-align: left;
   cursor: pointer;
   transition: background 150ms ease;
 }
 
 .shapeRow:hover { background: var(--color-surface); }
+.shapeRow:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .shapeRow[data-selected="true"] {
   background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.emptyState {
+  font-size: 0.625rem;
+  color: var(--color-muted);
+  font-style: italic;
 }
 
 .shapeSwatch {
@@ -611,6 +624,38 @@
   font-weight: 600;
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.layerColor[data-layer="shapes"] { background: var(--diagram-layer-1); }
+.layerColor[data-layer="cursors"] { background: var(--diagram-layer-4); }
+
+.layerCount {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.layerCount[data-active="true"] { color: var(--color-accent); }
+
+.dualCanvasDemo {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.layerCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Sync strategy selector ────────────────────────────────── */
@@ -762,6 +807,89 @@
   font-size: 0.75rem;
   font-weight: 800;
   margin-bottom: var(--space-1);
+}
+
+.crdtCardTitle[data-role="alice"] { color: var(--diagram-layer-2); }
+.crdtCardTitle[data-role="bob"] { color: var(--diagram-layer-4); }
+.crdtCardTitle[data-role="server"] { color: var(--color-muted); }
+.crdtCardTitle[data-role="result"] { color: var(--color-accent); }
+
+.colorPicker {
+  display: flex;
+  gap: 6px;
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-1);
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  opacity: 0.5;
+}
+
+.colorSwatch:hover { opacity: 0.8; transform: scale(1.1); }
+.colorSwatch:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.colorSwatch[data-active="true"] { opacity: 1; box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-accent); transform: scale(1.15); }
+
+.mergeResult {
+  padding: var(--space-3) 0;
+}
+
+.mergePreview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.mergeBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-1);
+  min-width: 64px;
+  position: relative;
+  transition: opacity 300ms ease;
+}
+
+.mergeBox[data-lost="true"] { opacity: 0.4; }
+
+.mergeBoxLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.mergeBoxColor {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.mergeBoxLost {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-15deg);
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: var(--color-error);
+  background: var(--color-bg);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.mergeArrow {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-muted);
 }
 
 .crdtRow {
