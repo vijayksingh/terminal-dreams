@@ -630,24 +630,69 @@ function CodeSplittingWidget() {
       )}
 
       <div className={styles.bundleCompare}>
-        <div className={styles.bundleCol}>
-          <div className={styles.bundleColLabel}>Before</div>
-          <div className={styles.bundleBlock} data-state={on ? "inactive" : "active"}>
-            <div className={styles.bundleBar} style={{ width: "100%", background: "var(--diagram-layer-4)" }} />
-            <span>main.js — 385 KB</span>
-          </div>
-        </div>
-        <div className={styles.bundleCol}>
-          <div className={styles.bundleColLabel}>After splitting</div>
-          <div className={styles.bundleBlock} data-state={on ? "active" : "inactive"}>
-            <div className={styles.bundleBar} style={{ width: "30%", background: "var(--diagram-layer-4)" }} />
-            <span>core.js — 115 KB</span>
-          </div>
-          <div className={styles.bundleBlock} data-state={on ? "active" : "inactive"}>
-            <div className={styles.bundleBar} style={{ width: "19%", background: "var(--diagram-layer-2)" }} />
-            <span>routes.js — 75 KB (lazy)</span>
-          </div>
-        </div>
+        <AnimatePresence mode="wait">
+          {!on ? (
+            <motion.div
+              key="before"
+              className={styles.bundleCol}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={TRANSITION.crossfade}
+            >
+              <div className={styles.bundleColLabel}>Monolithic bundle</div>
+              <div className={styles.bundleBlock} data-state="active">
+                <motion.div
+                  className={styles.bundleBar}
+                  style={{ background: "var(--diagram-layer-4)" }}
+                  animate={{ width: "100%" }}
+                  transition={SPRING.snappy}
+                />
+                <span>main.js — 385 KB (render-blocking)</span>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="after"
+              className={styles.bundleCol}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={TRANSITION.crossfade}
+            >
+              <div className={styles.bundleColLabel}>Route-split chunks</div>
+              <motion.div
+                className={styles.bundleBlock}
+                data-state="active"
+                layout
+                transition={SPRING.snappy}
+              >
+                <motion.div
+                  className={styles.bundleBar}
+                  style={{ background: "var(--diagram-layer-4)" }}
+                  animate={{ width: "30%" }}
+                  transition={SPRING.snappy}
+                />
+                <span>core.js — 115 KB (blocking)</span>
+              </motion.div>
+              <motion.div
+                className={styles.bundleBlock}
+                data-state="active"
+                layout
+                transition={SPRING.snappy}
+                style={{ opacity: 0.65, borderStyle: "dashed" }}
+              >
+                <motion.div
+                  className={styles.bundleBar}
+                  style={{ background: "var(--diagram-layer-2)" }}
+                  animate={{ width: "19%" }}
+                  transition={SPRING.snappy}
+                />
+                <span>routes.js — 75 KB (lazy, deferred)</span>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <p className={styles.widgetNote}>
         {on
@@ -1300,7 +1345,6 @@ function LongTaskWidget() {
   const isLongTask = longestChunk > 50;
   const overheadPct = Math.round(((chunkCount - 1) * 0.5 / TOTAL_WORK_MS) * 100);
 
-  const networkScale = Math.min(nw.multiplier / 4.2, 1.8);
   const [lastDelay, setLastDelay] = useState(0);
 
   const handleSimClick = () => {
@@ -1308,7 +1352,7 @@ function LongTaskWidget() {
     const taskDuration = on ? longestChunk : 280;
     const arrivalPct = Math.random();
     const arrivalMs = Math.round(arrivalPct * taskDuration);
-    const waitMs = Math.round((taskDuration - arrivalMs) * networkScale);
+    const waitMs = taskDuration - arrivalMs;
     setLastDelay(waitMs);
     setClickState("queued");
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -1399,7 +1443,7 @@ function LongTaskWidget() {
           {clickState === "processed" && "Processed!"}
         </button>
         <span className={styles.clickSimLabel}>
-          {clickState === "idle" && `Simulates a user click at a random point during the task (${nw.label})`}
+          {clickState === "idle" && "Simulates a user click at a random point during the task (CPU-bound, not network-dependent)"}
           {clickState === "queued" && (on ? "Yielded — browser processes input between chunks" : "Main thread blocked — click sits in queue")}
           {clickState === "processed" && `Input delay: ${lastDelay}ms — ${lastDelay <= 200 ? "passes" : "fails"} INP threshold (try again — timing varies)`}
         </span>
@@ -2007,6 +2051,84 @@ const REGRESSION_SCENARIOS: { revertedOpt: OptimizationId; alertMetric: string; 
   { revertedOpt: "layoutStability", alertMetric: "CLS", clue: "CLS +0.11 · LCP unchanged · INP unchanged · ad container has no min-height · total size unchanged" },
 ];
 
+const TRANSFER_PROFILE = {
+  name: "Server-rendered blog",
+  traits: "SSR HTML (no JS bundle), 8 unoptimized images, 2 web fonts, no third-party scripts",
+};
+const TRANSFER_OPTS: { id: OptimizationId; why: string; correct: boolean }[] = [
+  { id: "codeSplitting", why: "No JS bundle to split — SSR renders HTML on the server", correct: false },
+  { id: "criticalCSS", why: "Large stylesheet still blocks FCP on SSR pages", correct: true },
+  { id: "imageOptimization", why: "8 unoptimized images — format + lazy loading is high-impact", correct: true },
+  { id: "fontLoading", why: "2 web fonts cause FOIT/FOUT and CLS on any page", correct: true },
+  { id: "thirdPartyDefer", why: "No third-party scripts to defer", correct: false },
+  { id: "longTaskBreaking", why: "No long JS tasks — SSR means minimal client-side execution", correct: false },
+  { id: "layoutStability", why: "Images without dimensions still cause CLS on SSR pages, but font + image optimization covers it", correct: false },
+  { id: "caching", why: "Important for any site, but not the TOP 3 for this profile's initial load", correct: false },
+  { id: "prefetching", why: "Helpful but not the highest-impact for THIS page profile", correct: false },
+];
+
+function TransferChallenge() {
+  const [picks, setPicks] = useState<Set<OptimizationId>>(new Set());
+  const [checked, setChecked] = useState(false);
+
+  const togglePick = (id: OptimizationId) => {
+    if (checked) return;
+    setPicks((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 3) next.add(id);
+      return next;
+    });
+  };
+
+  const correctSet = new Set(TRANSFER_OPTS.filter((o) => o.correct).map((o) => o.id));
+  const score = [...picks].filter((id) => correctSet.has(id)).length;
+
+  return (
+    <div style={{ marginTop: "var(--space-3)", borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)" }}>
+      <div className={styles.widgetTitle}>Transfer Challenge</div>
+      <p className={styles.widgetNote}>
+        New page profile: <strong>{TRANSFER_PROFILE.name}</strong> — {TRANSFER_PROFILE.traits}. Pick the 3 most impactful optimizations:
+      </p>
+      <div className={styles.prefetchLinkGrid}>
+        {TRANSFER_OPTS.map((opt) => {
+          const meta = OPTIMIZATIONS.find((o) => o.id === opt.id);
+          const selected = picks.has(opt.id);
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              className={styles.prefetchLinkBtn}
+              data-selected={selected ? "true" : undefined}
+              data-correct={checked ? (opt.correct ? "true" : selected ? "wrong" : undefined) : undefined}
+              onClick={() => togglePick(opt.id)}
+              disabled={checked}
+            >
+              <span className={styles.prefetchLinkPath}>{meta?.label}</span>
+              {checked && <span className={styles.prefetchLinkClicks}>{opt.why}</span>}
+            </button>
+          );
+        })}
+      </div>
+      {!checked && picks.size === 3 && (
+        <button type="button" className={styles.cacheSubmitButton} onClick={() => setChecked(true)}>
+          Check selection
+        </button>
+      )}
+      {checked && (
+        <div className={styles.predictionResult} data-correct={score === 3 ? "true" : undefined}>
+          <span className={styles.predictionResultIcon}>{score === 3 ? "✓" : "✗"}</span>
+          <span>
+            {score === 3
+              ? "Perfect — Critical CSS, Image Optimization, and Font Loading are the highest-impact for a server-rendered blog with no JS. You learned the diagnostic reasoning, not just the SPA sequence."
+              : `${score}/3 correct. For an SSR blog: no JS to split, no third-party to defer, no long tasks to break. The bottlenecks are CSS blocking, unoptimized images, and font loading chains.`}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RUMWidget() {
   const { metrics, enabledOptimizations, networkCondition, activeProfile: nw, resources } = usePerfContext();
 
@@ -2208,6 +2330,8 @@ function RUMWidget() {
           ? "All p75 metrics pass CWV thresholds. The p95 tail may still be yellow — that's normal for users on the worst devices and networks."
           : "Toggle optimizations above to see alerts resolve. Each alert fires when the 7-day rolling p75 crosses a CWV threshold."}
       </p>
+
+      <TransferChallenge />
     </div>
   );
 }
