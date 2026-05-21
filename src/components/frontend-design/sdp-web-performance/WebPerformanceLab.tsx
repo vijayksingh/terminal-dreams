@@ -75,7 +75,7 @@ function PlanningView({ activeStep }: { activeStep: number }) {
 // ── Dashboard (steps 4-15) ─────────────────────────────────────────
 
 function PerfDashboard() {
-  const { activeStep, stateEntries } = usePerfContext();
+  const { activeStep } = usePerfContext();
 
   return (
     <div className={styles.dashboardLayout}>
@@ -97,7 +97,6 @@ function PerfDashboard() {
       </AnimatePresence>
 
       <WaterfallDrawer />
-      <StateInspector entries={stateEntries} title="Perf State" />
     </div>
   );
 }
@@ -182,6 +181,7 @@ function WaterfallDrawer() {
     visitType, setVisitType, enabledOptimizations,
     networkCondition, setNetworkCondition,
     bandwidthSlider, setBandwidthSlider, activeProfile,
+    stateEntries,
   } = usePerfContext();
   const [open, setOpen] = useState(false);
   const rm = usePrefersReducedMotion();
@@ -244,6 +244,7 @@ function WaterfallDrawer() {
                 </div>
               </div>
               <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
+              <StateInspector entries={stateEntries} title="Perf State" />
             </div>
           </motion.div>
         )}
