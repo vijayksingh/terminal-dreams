@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePerfContext } from "../perf-context";
 import { OPTIMIZATIONS, type OptimizationId } from "../engine/perf-simulator";
 import styles from "../WebPerformanceLab.module.css";
@@ -18,6 +18,10 @@ export function BudgetWidget() {
   const [regressionActive, setRegressionActive] = useState(false);
   const [regressionOpt, setRegressionOpt] = useState<OptimizationId | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   const simulateRegression = () => {
     if (regressionActive) return;

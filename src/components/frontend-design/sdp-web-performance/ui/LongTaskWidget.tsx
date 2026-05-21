@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
 
@@ -13,6 +13,10 @@ export function LongTaskWidget() {
   const [yieldMs, setYieldMs] = useState(50);
   const [clickState, setClickState] = useState<"idle" | "queued" | "processed">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   const chunkCount = Math.ceil(TOTAL_WORK_MS / yieldMs);
   const chunks = Array.from({ length: chunkCount }, (_, i) => {

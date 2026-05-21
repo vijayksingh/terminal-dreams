@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
@@ -33,6 +33,13 @@ export function PrefetchWidget() {
   const [attempts, setAttempts] = useState<{ path: string; hovered: boolean; prefetchPct: number; navTime: number }[]>([]);
   const intervalRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
   const navTimerRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(intervalRefs.current).forEach(clearInterval);
+      Object.values(navTimerRefs.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const startPrefetch = (path: string) => {
     if (!on || linkStates[path]?.navigating) return;
