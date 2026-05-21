@@ -80,11 +80,11 @@ export function ThirdPartyWidget() {
         </div>
       </div>
 
-      <div className={styles.thirdPartySavings}>
+      <p className={styles.widgetNote}>
         {on
           ? "215 KB deferred past load — TBT drops ~90ms, main thread freed for first interactions"
           : "215 KB of third-party JS executes during parse/hydrate, blocking your app from becoming interactive"}
-      </div>
+      </p>
     </div>
   );
 }

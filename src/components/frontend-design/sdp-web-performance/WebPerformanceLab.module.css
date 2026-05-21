@@ -711,6 +711,9 @@
   text-wrap: pretty;
 }
 
+.widgetNote strong[data-status="good"] { color: var(--color-success); }
+.widgetNote strong[data-status="bad"] { color: var(--color-error); }
+
 /* ── Step 5: Bundle compare ──────────────────────────────────────── */
 
 .bundleCompare {
@@ -1070,15 +1073,6 @@
   font-weight: 700;
 }
 
-.imageSavings {
-  font-size: 0.58rem;
-  color: var(--color-muted);
-  line-height: 1.5;
-}
-
-.imageSavings strong[data-status="good"] { color: var(--color-success); }
-.imageSavings strong[data-status="bad"] { color: var(--color-error); }
-
 /* ── Step 8: Font metrics summary ──────────────────────────────── */
 
 .fontMetrics {
@@ -1192,14 +1186,6 @@
   font-size: 0.44rem;
   color: var(--color-muted);
   padding: 0 2px;
-}
-
-/* ── Step 9: Third-party cards (legacy) ──────────────────────────── */
-
-.thirdPartySavings {
-  font-size: 0.58rem;
-  color: var(--color-muted);
-  line-height: 1.5;
 }
 
 /* ── Step 10: Task timeline ──────────────────────────────────────── */

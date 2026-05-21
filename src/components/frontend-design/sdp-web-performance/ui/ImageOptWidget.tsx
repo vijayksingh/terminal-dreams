@@ -41,12 +41,12 @@ export function ImageOptWidget() {
           </div>
         ))}
       </div>
-      <div className={styles.imageSavings}>
+      <p className={styles.widgetNote}>
         Initial image payload: <strong data-status={on ? "good" : "bad"}>
           {on ? `${totalAfter} KB` : `${totalBefore} KB`}
         </strong>
         {on && ` (saved ${totalBefore - totalAfter} KB — below-fold deferred)`}
-      </div>
+      </p>
     </div>
   );
 }
