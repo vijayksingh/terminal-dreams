@@ -1,59 +1,18 @@
 /* ── NewsFeedLab ──────────────────────────────────────────────────── */
 
 .labRoot {
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   font-family: var(--font-mono);
-}
-
-/* ── Step indicator bar ──────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  flex-shrink: 0;
-}
-
-.stepDot {
-  min-width: 1.4rem;
-  height: 1.4rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 0.56rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  padding: 0 var(--space-1);
-  transition: all 150ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--diagram-layer-9);
-  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-9);
-  border-color: var(--diagram-layer-9);
-  font-weight: 700;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
-  animation: stepPulse 2s ease-in-out infinite;
-}
-
-@keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+  line-height: 1.4;
+  container-type: inline-size;
 }
 
 /* ── Scroll area ─────────────────────────────────────────────────── */
@@ -130,7 +89,9 @@
   align-items: center;
   justify-content: center;
   margin-top: 1px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   color: transparent;
 }
 
@@ -195,7 +156,9 @@
   font-weight: 700;
   text-align: center;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -334,7 +297,7 @@
 
 .paramType {
   font-family: var(--font-mono);
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .paramNote {
@@ -401,7 +364,7 @@
 }
 
 .typeCardExtends span {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
@@ -425,7 +388,7 @@
 }
 
 .typeFieldType {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .typeFieldNote {
@@ -618,7 +581,9 @@
   font-weight: 600;
   color: var(--color-muted);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .postTypeChip[data-active="true"] {
@@ -945,7 +910,9 @@
   font-size: 0.62rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .insertModeButton[data-active="true"][data-variant="good"] {
@@ -1064,7 +1031,7 @@
   width: 20px;
   height: 20px;
   border-radius: 999px;
-  background: var(--diagram-layer-5);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   font-size: 0.56rem;
   font-weight: 800;
@@ -1140,7 +1107,9 @@
   border-radius: var(--radius-1);
   border: 1px solid var(--color-border);
   background: var(--color-bg);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .a11yCheckRow[data-passed="true"] {
@@ -1200,14 +1169,16 @@
 }
 
 .toggleButton {
-  width: 36px;
-  height: 20px;
-  border-radius: 999px;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
   border: 2px solid var(--color-border);
   background: var(--color-bg);
   cursor: pointer;
   position: relative;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   flex-shrink: 0;
 }
 
@@ -1220,15 +1191,17 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: var(--color-muted);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .toggleButton[data-on="true"] .toggleKnob {
-  left: 18px;
+  transform: translateX(20px);
   background: var(--color-bg);
 }
 
@@ -1268,7 +1241,9 @@
   font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .layoutModeButton[data-active="true"] {
@@ -1380,7 +1355,7 @@
 }
 
 .postCard[data-type="link"] {
-  border-left: 3px solid var(--diagram-layer-5);
+  border-left: 3px solid var(--diagram-layer-9);
 }
 
 .postCard[data-type="poll"] {
@@ -1568,7 +1543,9 @@
   cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--radius-1);
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .reactionButton:not(:disabled):hover {
@@ -1795,8 +1772,8 @@
 }
 
 .typeExplainerBadge[data-type="link"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 15%, transparent);
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 15%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .typeExplainerBadge[data-type="poll"] {
@@ -2182,7 +2159,6 @@
 /* ── Reduced motion ──────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .realtimeDot[data-active="true"] { animation: none; }
   .skeletonAvatar,
   .skeletonLine,

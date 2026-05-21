@@ -44,7 +44,7 @@
 
 .stepDot[data-current="true"] {
   color: var(--color-bg);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   animation: stepPulse 2s ease-in-out infinite;
 }
 
@@ -97,12 +97,12 @@
 .checkItem:hover { background: var(--color-surface-2); }
 
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .checkItem[data-checked="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .checkToggle {
@@ -119,8 +119,8 @@
 }
 
 .checkItem[data-checked="true"] .checkToggle {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -223,7 +223,7 @@
 }
 
 .panelTab:hover { color: var(--color-text); }
-.panelTab:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.panelTab:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: -2px; }
 
 .panelTab[data-active="true"] {
   color: var(--color-text);
@@ -263,7 +263,7 @@
 }
 
 .endpointHeader:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -276,7 +276,7 @@
 }
 
 .methodBadge[data-method="GET"] { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 12%, transparent); }
-.methodBadge[data-method="POST"] { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+.methodBadge[data-method="POST"] { color: var(--diagram-layer-9); background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
 .methodBadge[data-method="PATCH"] { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 12%, transparent); }
 .methodBadge[data-method="DELETE"] { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 12%, transparent); }
 
@@ -309,12 +309,12 @@
 
 .paramRow { display: flex; gap: var(--space-2); font-size: 0.625rem; }
 .paramName { font-weight: 700; color: var(--color-text); min-width: 80px; }
-.paramType { color: var(--color-accent); min-width: 60px; }
+.paramType { color: var(--diagram-layer-9); min-width: 60px; }
 .paramNote { color: var(--color-muted); }
 
 .responseType {
   font-size: 0.7rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 600;
   margin-top: var(--space-1);
 }
@@ -338,11 +338,11 @@
 .typeCardName { font-size: 0.75rem; font-weight: 800; }
 .typeCardCategory { font-size: 0.625rem; font-weight: 600; text-transform: uppercase; }
 .typeCardExtends { font-size: 0.625rem; color: var(--color-muted); margin-bottom: var(--space-1); }
-.typeCardExtends span { color: var(--color-accent); }
+.typeCardExtends span { color: var(--diagram-layer-9); }
 .typeCardFields { display: flex; flex-direction: column; gap: 3px; }
 .typeFieldRow { display: flex; gap: var(--space-1); font-size: 0.625rem; }
 .typeFieldName { font-weight: 700; color: var(--color-text); }
-.typeFieldType { color: var(--color-accent); }
+.typeFieldType { color: var(--diagram-layer-9); }
 .typeFieldNote { color: var(--color-muted); }
 
 /* ── Evolution stack ─────────────────────────────────────────── */
@@ -422,13 +422,13 @@
 }
 
 .toggleButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .toggleButton[data-on="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
 }
 
 .toggleKnob {
@@ -472,10 +472,10 @@
 }
 
 .strategyOption:hover { background: var(--color-surface-2); }
-.strategyOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.strategyOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .strategyOption[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .strategyName {
@@ -528,12 +528,12 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   background: var(--color-surface-2);
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -587,7 +587,7 @@
 }
 
 .column[data-drag-over="true"] {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
 }
 
 .columnHeader {
@@ -642,7 +642,7 @@
 }
 
 .kanbanItem:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -652,7 +652,7 @@
 }
 
 .kanbanItem[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .itemLabel {
@@ -662,16 +662,16 @@
 
 .itemCheck {
   font-size: 0.625rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 800;
 }
 
 .dropIndicator {
   height: 2px;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   border-radius: 1px;
   margin: 2px 0;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
   animation: indicatorPulse 1s ease-in-out infinite;
 }
 
@@ -698,7 +698,7 @@
   position: fixed;
   z-index: var(--z-overlay);
   padding: var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   border-left: 3px solid;
   border-radius: var(--radius-1);
   background: var(--color-bg);
@@ -714,7 +714,7 @@
 
 .dragPreview[data-strategy="custom"] {
   border-style: dashed;
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -722,7 +722,7 @@
    ═══════════════════════════════════════════════════════════════ */
 
 .widgetPanel {
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--diagram-layer-9);
   padding: var(--space-2) var(--space-3);
   display: flex;
   flex-direction: column;
@@ -734,7 +734,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .widgetNote {
@@ -789,7 +789,7 @@
 }
 
 .eventTime { color: var(--color-muted); font-weight: 600; min-width: 36px; }
-.eventName { color: var(--color-accent); font-weight: 700; min-width: 60px; }
+.eventName { color: var(--diagram-layer-9); font-weight: 700; min-width: 60px; }
 .eventDetail { color: var(--color-text); }
 
 /* ── Comparison grid (preview strategies) ────────────────────── */
@@ -809,7 +809,7 @@
 }
 
 .comparisonCard[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .comparisonName {
@@ -922,7 +922,9 @@
   font-weight: 700;
   color: var(--color-fg);
   background: var(--color-surface);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   position: relative;
 }
 
@@ -968,7 +970,7 @@
 .placeholderIndicator {
   height: 0;
   transition: height 200ms ease;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   border-radius: 1px;
   opacity: 0;
 }
@@ -976,7 +978,7 @@
 .placeholderIndicator[data-visible="true"] {
   height: 2px;
   opacity: 1;
-  box-shadow: 0 0 6px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
 }
 
 /* ── rAF diagram ─────────────────────────────────────────────── */
@@ -1094,7 +1096,7 @@
 
 .touchEvent[data-decision="true"] {
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .touchTime {
@@ -1124,17 +1126,17 @@
 
 .touchTestButton:hover {
   background: var(--color-surface-3);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .touchTestButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .touchTestButton:active {
-  background: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface-2));
-  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, var(--color-surface-2));
+  border-color: var(--diagram-layer-9);
 }
 
 /* ── Constraint sandbox ─────────────────────────────────────── */
@@ -1154,20 +1156,20 @@
   top: 0;
   left: 0;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   cursor: grab;
   will-change: transform;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 }
 
 .constraintDot:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 4px;
 }
 
 .constraintDot:active {
   cursor: grabbing;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-accent) 50%, transparent);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--diagram-layer-9) 50%, transparent);
 }
 
 .gridLine {
@@ -1215,10 +1217,10 @@
 
 .undoButton {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
@@ -1229,8 +1231,8 @@
   justify-content: center;
 }
 
-.undoButton:hover { background: color-mix(in srgb, var(--color-accent) 16%, transparent); }
-.undoButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.undoButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent); }
+.undoButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 /* ── Scale grid ──────────────────────────────────────────────── */
 
@@ -1250,11 +1252,11 @@
 .scaleSlider {
   flex: 1;
   min-height: 44px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
 }
 
 .scaleSlider:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1358,7 +1360,6 @@
 /* ── Reduced motion ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .dropIndicator { animation: none; }
   .toggleKnob { transition: none; }
   .kanbanItem { transition: none; }

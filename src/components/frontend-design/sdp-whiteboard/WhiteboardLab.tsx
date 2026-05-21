@@ -19,6 +19,7 @@ import {
 } from "./whiteboard-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { WHITEBOARD_ARCH_CONFIG } from "./architecture-scenarios";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./WhiteboardLab.module.css";
 
 const CANVAS_W = 440;
@@ -41,7 +42,7 @@ export function WhiteboardLab({ activeStep }: { activeStep: number }) {
   return (
     <WhiteboardProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div ref={scrollRef} className={styles.scrollArea}>
           {isPlanning ? (
             <AnimatePresence mode="wait">
@@ -64,10 +65,6 @@ export function WhiteboardLab({ activeStep }: { activeStep: number }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
 const STEP_LABELS = [
   "R", "A", "C",
   "CAN", "PTR", "SHP", "HIT",
@@ -75,35 +72,6 @@ const STEP_LABELS = [
   "UND", "SYN", "CUR",
   "IDX", "A11Y",
 ];
-
-const STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Canvas Render", "Pointer Capture", "Shape Model", "Hit Testing",
-  "Selection Handles", "Layer Separation", "Coalesced Events",
-  "Undo/Redo", "CRDT Sync", "Cursor Presence",
-  "Spatial Index", "Accessible Canvas",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar} aria-label="Build progress">
-      <ol role="list" className={styles.stepBarList}>
-        {STEP_LABELS.map((label, i) => (
-          <li
-            key={i}
-            className={styles.stepDot}
-            data-active={i + 1 <= activeStep ? "true" : undefined}
-            data-current={i + 1 === activeStep ? "true" : undefined}
-            aria-current={i + 1 === activeStep ? "step" : undefined}
-            aria-label={`Step ${i + 1}: ${STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
-          >
-            {label}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // Planning views (steps 1-3)

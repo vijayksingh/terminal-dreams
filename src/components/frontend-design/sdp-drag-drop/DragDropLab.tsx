@@ -20,8 +20,17 @@ import {
 } from "./drag-drop-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { DRAG_DROP_ARCH_CONFIG } from "./architecture-scenarios";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./DragDropLab.module.css";
 import { KanbanBoard } from "./ui/KanbanComponents";
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "Ptr", "Prv", "Hit", "Reord",
+  "Anim", "rAF", "X",
+  "Kb", "Tch", "Snap",
+  "Undo", "Scl",
+];
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -32,7 +41,7 @@ export function DragDropLab({ activeStep }: { activeStep: number }) {
   return (
     <DragDropProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             noMotion ? (
@@ -56,45 +65,6 @@ export function DragDropLab({ activeStep }: { activeStep: number }) {
         </div>
       </div>
     </DragDropProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "Ptr", "Prv", "Hit", "Reord",
-  "Anim", "rAF", "X",
-  "Kb", "Tch", "Snap",
-  "Undo", "Scl",
-];
-
-const STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Pointer Events", "Preview Strategy", "Hit Testing", "Reorder",
-  "Animation", "rAF Throttle", "Cross-Container",
-  "Keyboard", "Touch", "Constraints",
-  "Undo/Redo", "Scale",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <nav className={styles.stepBar} aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-          aria-label={`Step ${i + 1}: ${STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
-        >
-          {label}
-        </span>
-      ))}
-    </nav>
   );
 }
 

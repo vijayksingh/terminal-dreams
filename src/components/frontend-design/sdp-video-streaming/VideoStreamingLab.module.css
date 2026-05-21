@@ -37,7 +37,9 @@
   background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .stepDot[data-active="true"] {
@@ -47,16 +49,16 @@
 }
 
 .stepDot[data-current="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
   animation: stepPulse 2s ease-in-out infinite;
 }
 
 @keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
 }
 
 /* ── Planning panels ───────────────────────────────────────── */
@@ -103,11 +105,13 @@
   background: var(--color-surface);
   cursor: pointer;
   text-align: left;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .checkItem:hover {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .checkItem:focus-visible {
@@ -197,7 +201,9 @@
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   min-height: 44px;
@@ -218,7 +224,7 @@
 }
 
 .panelTab[data-active="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -235,7 +241,9 @@
   border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
 }
 
 .endpointCard:hover {
@@ -243,7 +251,7 @@
 }
 
 .endpointCard[data-expanded="true"] {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .endpointHeader {
@@ -262,7 +270,7 @@
 }
 
 .endpointHeader:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
   border-radius: var(--radius-1);
 }
@@ -281,8 +289,8 @@
 }
 
 .methodBadge[data-method="POST"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 20%, var(--color-surface));
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, var(--color-surface));
+  color: var(--diagram-layer-9);
 }
 
 .methodBadge[data-method="PUT"] {
@@ -310,7 +318,7 @@
 
 .endpointUsedBy {
   font-size: 0.625rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -352,13 +360,13 @@
 }
 
 .paramName { font-weight: 700; color: var(--color-text); }
-.paramType { color: var(--diagram-layer-5); font-weight: 600; }
+.paramType { color: var(--diagram-layer-9); font-weight: 600; }
 .paramNote { color: var(--color-muted); }
 
 .responseType {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 /* ── Type cards ───────────────────────────────────────────── */
@@ -378,7 +386,7 @@
   min-width: 0;
 }
 
-.typeCard[data-type-category="api"] { border-top-color: var(--diagram-layer-5); }
+.typeCard[data-type-category="api"] { border-top-color: var(--diagram-layer-9); }
 .typeCard[data-type-category="state"] { border-top-color: var(--diagram-layer-4); }
 .typeCard[data-type-category="props"] { border-top-color: var(--diagram-layer-1); }
 
@@ -407,7 +415,7 @@
   color: var(--color-muted);
 }
 
-.typeCardCategory[data-type-category="api"] { color: var(--diagram-layer-5); }
+.typeCardCategory[data-type-category="api"] { color: var(--diagram-layer-9); }
 .typeCardCategory[data-type-category="state"] { color: var(--diagram-layer-4); }
 .typeCardCategory[data-type-category="props"] { color: var(--diagram-layer-1); }
 
@@ -418,7 +426,7 @@
 }
 
 .typeCardExtends span {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
@@ -438,7 +446,7 @@
 }
 
 .typeFieldName { color: var(--color-text); font-weight: 600; }
-.typeFieldType { color: var(--diagram-layer-5); font-weight: 500; }
+.typeFieldType { color: var(--diagram-layer-9); font-weight: 500; }
 .typeFieldNote { color: var(--color-muted); font-style: italic; }
 
 /* ── Metrics bar ───────────────────────────────────────────── */
@@ -532,7 +540,7 @@
 }
 
 .widgetPanel[data-category="buffer"] {
-  border-left: 4px solid var(--diagram-layer-5);
+  border-left: 4px solid var(--diagram-layer-9);
 }
 
 .widgetPanel[data-category="network"] {
@@ -568,8 +576,8 @@
   font-style: italic;
   margin-top: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  border-left: 3px solid var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  border-left: 3px solid var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, transparent);
   border-radius: 0 var(--radius-1) var(--radius-1) 0;
 }
 
@@ -596,7 +604,7 @@
   text-align: left;
   background: none;
   border: none;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 0.625rem;
@@ -607,17 +615,17 @@
 }
 
 .jsonExpandBtn:hover {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .jsonExpandBtn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 1px;
 }
 
 .jsonExpanded {
   padding-left: var(--space-2);
-  border-left: 2px solid var(--diagram-layer-5);
+  border-left: 2px solid var(--diagram-layer-9);
   margin-left: var(--space-3);
   overflow: hidden;
 }
@@ -645,14 +653,16 @@
   background: var(--color-surface);
   color: var(--color-text);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
   display: flex;
   align-items: center;
 }
 
 .qualityBadge:hover {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .qualityBadge:focus-visible {
@@ -661,9 +671,9 @@
 }
 
 .qualityBadge[data-selected="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .bandwidthSlots {
@@ -682,12 +692,14 @@
   background: var(--color-surface);
   cursor: pointer;
   min-height: 44px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .bandwidthSlot:hover {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 5%, var(--color-surface));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-surface));
 }
 
 .bandwidthSlot:focus-visible {
@@ -725,7 +737,7 @@
   margin-left: auto;
   font-size: 0.7rem;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .slotAssigned[data-correct="true"] {
@@ -843,7 +855,9 @@
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -856,7 +870,7 @@
 }
 
 .actionButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -866,9 +880,9 @@
 }
 
 .actionButton[data-variant="primary"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .actionButton[data-variant="primary"]:hover:not(:disabled) {
@@ -905,7 +919,9 @@
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
 }
 
@@ -924,7 +940,7 @@
 }
 
 .toggleButton[data-active="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -944,7 +960,7 @@
 
 .rangeInput {
   width: 100%;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
   cursor: pointer;
   min-height: 44px;
 }
@@ -1004,27 +1020,27 @@
 .estimateLine {
   margin-top: var(--space-1);
   padding-top: var(--space-1);
-  border-top: 1px dashed var(--color-accent);
+  border-top: 1px dashed var(--diagram-layer-9);
 }
 
 .estimateLabel {
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .predictionMarker {
   width: 4px;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   border-radius: 2px 2px 0 0;
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   opacity: 0.8;
 }
 
 .predictionLabel {
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   margin-top: var(--space-1);
 }
 
@@ -1045,12 +1061,14 @@
   border-radius: var(--radius-1);
   font-size: 0.65rem;
   align-items: center;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .abrResultRow[data-active="true"] {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
 }
 
 .abrResultLabel {
@@ -1060,7 +1078,7 @@
 
 .abrResultQuality {
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .abrResultReason {
@@ -1151,7 +1169,7 @@
 }
 
 .qualityLabels span[data-active="true"] {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 800;
 }
 
@@ -1192,7 +1210,7 @@
 .timelineEvent[data-type="warning"] { border-left-color: var(--color-warning); }
 .timelineEvent[data-type="error"] { border-left-color: var(--color-error); }
 .timelineEvent[data-type="recovery"] { border-left-color: var(--color-success); }
-.timelineEvent[data-type="info"] { border-left-color: var(--diagram-layer-5); }
+.timelineEvent[data-type="info"] { border-left-color: var(--diagram-layer-9); }
 
 .timelineTime {
   font-weight: 700;
@@ -1230,7 +1248,7 @@
 
 .strategyFill {
   height: 100%;
-  background: var(--diagram-layer-5);
+  background: var(--diagram-layer-9);
   border-radius: 6px;
   transition: width 300ms ease;
 }
@@ -1266,7 +1284,7 @@
 }
 
 .timelineTrack:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1283,7 +1301,7 @@
   top: -2px;
   bottom: -2px;
   width: 4px;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   border-radius: 2px;
   transform: translateX(-2px);
   z-index: 1;
@@ -1466,7 +1484,9 @@
   color: var(--color-muted);
   font-family: var(--font-mono);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
 }
 
@@ -1559,7 +1579,7 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   background: var(--color-surface-2);
 }
 
@@ -1602,7 +1622,6 @@
 /* ── Reduced motion ──────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .metricValue[data-status="bad"] { animation: none; }
   .underrunAlert { animation: none; }
   .actionButton:hover { transform: none; }

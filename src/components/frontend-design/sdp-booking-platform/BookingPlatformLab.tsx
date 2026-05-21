@@ -21,7 +21,16 @@ import {
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { BOOKING_PLATFORM_ARCH_CONFIG } from "./architecture-scenarios";
 import { MiniCalendar, MiniMap, AvailabilityCalendar } from "./ui/BookingComponents";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./BookingPlatformLab.module.css";
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "G", "F", "D", "Det",
+  "$$", "BK", "Map",
+  "RT", "Opt", "Mob",
+  "Err", "∞",
+];
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -32,7 +41,7 @@ export function BookingPlatformLab({ activeStep }: { activeStep: number }) {
   return (
     <BookingProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             noMotion ? (
@@ -56,37 +65,6 @@ export function BookingPlatformLab({ activeStep }: { activeStep: number }) {
         </div>
       </div>
     </BookingProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "G", "F", "D", "Det",
-  "$$", "BK", "Map",
-  "RT", "Opt", "Mob",
-  "Err", "∞",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          role="listitem"
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
   );
 }
 

@@ -18,7 +18,16 @@ import {
 } from "./notification-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { NOTIFICATION_ARCH_CONFIG } from "./architecture-scenarios";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./NotificationLab.module.css";
+
+const STEP_LABELS = [
+  "Scope", "API", "Arch",
+  "Toast", "Queue", "Pri",
+  "Anim", "Center", "Perm",
+  "Push", "Group", "Rate",
+  "Pref", "A11y", "Test",
+];
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -69,6 +78,15 @@ function makeToast(priority: Priority, type: NotificationType, groupId?: string)
 // ── Public API ──────────────────────────────────────────────────────
 
 export function NotificationLab({ activeStep }: { activeStep: number }) {
+  return (
+    <NotificationProvider activeStep={activeStep}>
+      <NotificationLabContent activeStep={activeStep} />
+    </NotificationProvider>
+  );
+}
+
+function NotificationLabContent({ activeStep }: { activeStep: number }) {
+  const { stepCompleted } = useNotification();
   const isPlanning = activeStep <= 3;
   const noMotion = usePrefersReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -82,83 +100,25 @@ export function NotificationLab({ activeStep }: { activeStep: number }) {
   }, [activeStep]);
 
   return (
-    <NotificationProvider activeStep={activeStep}>
-      <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
-        <div ref={scrollRef} className={styles.scrollArea}>
-          {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={noMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <NotificationEvolution />
-          )}
-        </div>
+    <div className={styles.labRoot}>
+      <StepBar activeStep={activeStep} labels={STEP_LABELS} completedSteps={stepCompleted} />
+      <div ref={scrollRef} className={styles.scrollArea}>
+        {isPlanning ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`planning-${activeStep}`}
+              initial={noMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
+            >
+              <PlanningView activeStep={activeStep} />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <NotificationEvolution />
+        )}
       </div>
-    </NotificationProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "Scope", "API", "Arch",
-  "Toast", "Queue", "Pri",
-  "Anim", "Center", "Perm",
-  "Push", "Group", "Rate",
-  "Pref", "A11y", "Test",
-];
-
-const STEP_TITLES = [
-  "Define notification requirements",
-  "Design notification API",
-  "Map the notification architecture",
-  "Build a toast component",
-  "Implement toast queue",
-  "Add priority ordering",
-  "Animate toast lifecycle",
-  "Build notification center",
-  "Handle push permission",
-  "Integrate Push API",
-  "Group related notifications",
-  "Add rate limiting",
-  "Build preference controls",
-  "Ensure accessibility",
-  "Full system stress test",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  const { stepCompleted } = useNotification();
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build progress">
-      {STEP_LABELS.map((label, i) => {
-        const step = i + 1;
-        const completed = stepCompleted[step] || step < activeStep;
-        return (
-          <span
-            key={i}
-            role="listitem"
-            className={styles.stepDot}
-            data-active={step <= activeStep ? "true" : undefined}
-            data-current={step === activeStep ? "true" : undefined}
-            data-completed={completed ? "true" : undefined}
-            aria-current={step === activeStep ? "step" : undefined}
-            aria-label={`Step ${step}: ${STEP_TITLES[i]}${completed ? " (complete)" : ""}`}
-          >
-            {completed && step < activeStep ? "✓" : label}
-          </span>
-        );
-      })}
     </div>
   );
 }

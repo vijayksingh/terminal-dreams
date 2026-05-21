@@ -37,7 +37,9 @@
   background: transparent;
   color: var(--color-muted);
   border: 1px solid var(--color-border);
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .stepDot[data-active="true"] {
@@ -47,16 +49,16 @@
 }
 
 .stepDot[data-current="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
   animation: stepPulse 2s ease-in-out infinite;
 }
 
 @keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 12%, transparent); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
 }
 
 /* ── Planning panels ───────────────────────────────────────── */
@@ -95,11 +97,13 @@
   background: var(--color-surface);
   cursor: pointer;
   text-align: left;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .checkItem:hover {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .checkItem:focus-visible {
@@ -189,7 +193,9 @@
   font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -209,7 +215,7 @@
 }
 
 .panelTab[data-active="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -226,7 +232,9 @@
   border: 2px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-surface);
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
 }
 
 .endpointCard:hover {
@@ -234,7 +242,7 @@
 }
 
 .endpointCard[data-expanded="true"] {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .endpointHeader {
@@ -253,7 +261,7 @@
 }
 
 .endpointHeader:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
   border-radius: var(--radius-1);
 }
@@ -272,8 +280,8 @@
 }
 
 .methodBadge[data-method="POST"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 20%, var(--color-surface));
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, var(--color-surface));
+  color: var(--diagram-layer-9);
 }
 
 .methodBadge[data-method="DELETE"] {
@@ -301,7 +309,7 @@
 
 .endpointUsedBy {
   font-size: 0.625rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 600;
   margin-top: 2px;
 }
@@ -347,7 +355,7 @@
 }
 
 .paramType {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
@@ -358,7 +366,7 @@
 .responseType {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 /* ── Type cards ───────────────────────────────────────────── */
@@ -409,7 +417,7 @@
 }
 
 .typeCardExtends span {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
@@ -429,7 +437,7 @@
 }
 
 .typeFieldName { color: var(--color-text); font-weight: 600; }
-.typeFieldType { color: var(--diagram-layer-5); font-weight: 500; }
+.typeFieldType { color: var(--diagram-layer-9); font-weight: 500; }
 .typeFieldNote { color: var(--color-muted); font-style: italic; }
 
 /* ── Metrics bar ───────────────────────────────────────────── */
@@ -479,7 +487,7 @@
   color: var(--color-text);
   padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-border);
-  border-left: 4px solid var(--color-accent);
+  border-left: 4px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: var(--color-surface);
   line-height: 1.4;
@@ -561,7 +569,7 @@
 }
 
 .searchDateBtn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -588,7 +596,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
 }
 
 .guestBtn:focus-visible {
@@ -629,7 +639,9 @@
   color: var(--color-text);
   cursor: pointer;
   text-transform: capitalize;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .filterChip:hover {
@@ -637,14 +649,14 @@
 }
 
 .filterChip:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .filterChip[data-active="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .priceSlider {
@@ -663,7 +675,7 @@
 
 .rangeInput {
   width: 64px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
   cursor: pointer;
 }
 
@@ -697,7 +709,9 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-1);
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
 }
 
 .calendarArrow:focus-visible {
@@ -750,7 +764,9 @@
   border-radius: var(--radius-1);
   background: transparent;
   cursor: pointer;
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
   padding: 6px 2px;
 }
 
@@ -760,7 +776,7 @@
 }
 
 .dayCell:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 1px;
 }
 
@@ -771,15 +787,15 @@
 }
 
 .dayCell[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
 }
 
 .dayCell[data-checkin="true"],
 .dayCell[data-checkout="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   animation: datePop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -859,7 +875,9 @@
   overflow: hidden;
   background: var(--color-surface);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
@@ -872,12 +890,14 @@
 .listingCard:active {
   transform: translateY(0);
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent);
-  transition: all 80ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 80ms;
+  transition-timing-function: ease;
 }
 
 .listingCard[data-highlighted="true"] {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
 }
 
 .cardImage {
@@ -885,7 +905,7 @@
   width: 100%;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  background: color-mix(in srgb, var(--diagram-layer-5) 25%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--diagram-layer-9) 25%, var(--color-surface-2));
 }
 
 .cardImg {
@@ -960,7 +980,7 @@
 
 .cardRating {
   font-size: 0.65rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 700;
 }
 
@@ -1037,7 +1057,7 @@
 .backButton {
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   background: none;
   border: none;
   cursor: pointer;
@@ -1053,7 +1073,7 @@
 }
 
 .backButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1062,7 +1082,7 @@
   aspect-ratio: 4 / 3;
   border-radius: var(--radius-2);
   overflow: hidden;
-  background: color-mix(in srgb, var(--diagram-layer-5) 25%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--diagram-layer-9) 25%, var(--color-surface-2));
 }
 
 .detailImg {
@@ -1099,7 +1119,7 @@
 
 .detailRating {
   font-size: 0.65rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 700;
 }
 
@@ -1207,7 +1227,7 @@
   padding: 10px var(--space-3);
   border: none;
   border-radius: var(--radius-2);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   font-family: var(--font-mono);
   font-size: 0.78rem;
@@ -1227,7 +1247,7 @@
 .bookButton:hover {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-accent) 30%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 }
 
 .bookButton:active {
@@ -1262,7 +1282,7 @@
 }
 
 .bookingProgressStep[data-current="true"] {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .progressDot {
@@ -1278,13 +1298,13 @@
 }
 
 .bookingProgressStep[data-active="true"] .progressDot {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .bookingProgressStep[data-current="true"] .progressDot {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   animation: progressPop 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -1338,9 +1358,9 @@
 }
 
 .formField input:focus-visible {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   outline: 2px solid transparent;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 15%, transparent);
 }
 
 .bookingActions {
@@ -1359,7 +1379,9 @@
   font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 100ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -1370,7 +1392,7 @@
 }
 
 .bookingBackBtn:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1378,7 +1400,7 @@
   padding: 8px 16px;
   border: none;
   border-radius: var(--radius-1);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -1488,7 +1510,7 @@
 .confirmCode {
   font-size: 1.2rem;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   letter-spacing: 0.15em;
 }
 
@@ -1571,7 +1593,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   font-size: 0.625rem;
   font-weight: 800;
@@ -1601,11 +1623,13 @@
   border-radius: 3px;
   background: var(--color-surface-2);
   min-width: 4px;
-  transition: all 300ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
 }
 
 .funnelBar[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 35%, var(--color-surface-2));
+  background: color-mix(in srgb, var(--diagram-layer-9) 35%, var(--color-surface-2));
 }
 
 .funnelLabel {
@@ -1648,7 +1672,7 @@
 
 .eventRow[data-type="price"] { border-left-color: var(--diagram-layer-4); }
 .eventRow[data-type="booking"] { border-left-color: var(--color-success); }
-.eventRow[data-type="info"] { border-left-color: var(--diagram-layer-5); }
+.eventRow[data-type="info"] { border-left-color: var(--diagram-layer-9); }
 
 .eventTime {
   font-weight: 700;
@@ -1826,7 +1850,7 @@
 .conflictAltDates {
   font-size: 0.78rem;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 /* ── Price flash animation ───────────────────────────────────── */
@@ -1851,8 +1875,8 @@
 /* ── Searching indicator ─────────────────────────────────────── */
 
 .searchBar[data-searching="true"] {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 15%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-9) 15%, transparent);
 }
 
 /* ── Evolution stack ────────────────────────────────────────── */
@@ -1918,7 +1942,7 @@
 /* ── Listing card focus ────────────────────────────────────── */
 
 .listingCard:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1961,7 +1985,7 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   background: var(--color-surface-2);
 }
 
@@ -2004,7 +2028,6 @@
 /* ── Reduced motion ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .metricValue[data-status="bad"],
   .metricValue[data-status="good"] { animation: none; }
   .confirmCheck { animation: none; }

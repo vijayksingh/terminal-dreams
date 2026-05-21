@@ -17,11 +17,29 @@ import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenar
 import { SPREADSHEET_ARCH_CONFIG } from "./architecture-scenarios";
 import { MiniSpreadsheetGrid, COL_LABELS } from "./ui/MiniSpreadsheetGrid";
 import { DepGraphViz } from "./ui/DepGraphViz";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./SpreadsheetLab.module.css";
 
 // ── Public API ──────────────────────────────────────────────────────
 
+const STEP_LABELS = [
+  "R", "A", "C",
+  "Grid", "Edit", "Fx", "DAG",
+  "Prop", "Sel", "Virt",
+  "Fmt", "Undo", "Clip",
+  "Perf", "Collab",
+];
+
 export function SpreadsheetLab({ activeStep }: { activeStep: number }) {
+  return (
+    <SpreadsheetProvider activeStep={activeStep}>
+      <SpreadsheetLabContent activeStep={activeStep} />
+    </SpreadsheetProvider>
+  );
+}
+
+function SpreadsheetLabContent({ activeStep }: { activeStep: number }) {
+  const { stepCompleted } = useSpreadsheet();
   const isPlanning = activeStep <= 3;
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -34,74 +52,25 @@ export function SpreadsheetLab({ activeStep }: { activeStep: number }) {
   }, [activeStep]);
 
   return (
-    <SpreadsheetProvider activeStep={activeStep}>
-      <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
-        <div ref={scrollRef} className={styles.scrollArea}>
-          {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <SheetEvolution />
-          )}
-        </div>
+    <div className={styles.labRoot}>
+      <StepBar activeStep={activeStep} labels={STEP_LABELS} completedSteps={stepCompleted} />
+      <div ref={scrollRef} className={styles.scrollArea}>
+        {isPlanning ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`planning-${activeStep}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={TRANSITION.enterCard}
+            >
+              <PlanningView activeStep={activeStep} />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <SheetEvolution />
+        )}
       </div>
-    </SpreadsheetProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "Grid", "Edit", "Fx", "DAG",
-  "Prop", "Sel", "Virt",
-  "Fmt", "Undo", "Clip",
-  "Perf", "Collab",
-];
-
-const STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Grid Rendering", "Cell Editing", "Formula Engine", "Dependency DAG",
-  "Change Propagation", "Selection Model", "Virtual Grid",
-  "Formatting", "Undo/Redo", "Clipboard",
-  "Performance", "Collaboration",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  const { stepCompleted } = useSpreadsheet();
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build progress">
-      {STEP_LABELS.map((label, i) => {
-        const step = i + 1;
-        const completed = stepCompleted[step] || step < activeStep;
-        return (
-          <span
-            key={i}
-            role="listitem"
-            className={styles.stepDot}
-            data-active={step <= activeStep ? "true" : undefined}
-            data-current={step === activeStep ? "true" : undefined}
-            data-completed={completed ? "true" : undefined}
-            aria-current={step === activeStep ? "step" : undefined}
-            aria-label={`Step ${step}: ${STEP_TITLES[i]}${completed ? " (complete)" : ""}`}
-          >
-            {completed && step < activeStep ? "✓" : label}
-          </span>
-        );
-      })}
     </div>
   );
 }

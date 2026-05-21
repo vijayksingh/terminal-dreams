@@ -46,7 +46,7 @@
 
 .stepDot[data-current="true"] {
   color: var(--color-bg);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   animation: stepPulse 2s ease-in-out infinite;
 }
 
@@ -99,12 +99,12 @@
 .checkItem:hover { background: var(--color-surface-2); }
 
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .checkItem[data-checked="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .checkToggle {
@@ -121,8 +121,8 @@
 }
 
 .checkItem[data-checked="true"] .checkToggle {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -223,7 +223,7 @@
 }
 
 .panelTab:hover { color: var(--color-text); }
-.panelTab:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.panelTab:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: -2px; }
 
 .panelTab[data-active="true"] {
   color: var(--color-text);
@@ -248,7 +248,7 @@
 }
 
 .endpointCard[data-revealed="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .endpointHeader {
@@ -263,7 +263,7 @@
 }
 
 .endpointHeader:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -276,7 +276,7 @@
 }
 
 .methodBadge[data-method="GET"] { color: var(--color-success); background: color-mix(in srgb, var(--color-success) 14%, transparent); }
-.methodBadge[data-method="POST"] { color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
+.methodBadge[data-method="POST"] { color: var(--diagram-layer-9); background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent); }
 .methodBadge[data-method="PUT"] { color: var(--color-warning); background: color-mix(in srgb, var(--color-warning) 14%, transparent); }
 .methodBadge[data-method="DELETE"] { color: var(--color-error); background: color-mix(in srgb, var(--color-error) 14%, transparent); }
 .methodBadge[data-method="WS"] { color: var(--diagram-layer-6); background: color-mix(in srgb, var(--diagram-layer-6) 14%, transparent); }
@@ -305,11 +305,11 @@
 
 .methodOption:hover { background: var(--color-surface-2); }
 .methodOption[data-picked="true"][data-method="GET"] { background: color-mix(in srgb, var(--color-success) 20%, transparent); color: var(--color-success); }
-.methodOption[data-picked="true"][data-method="POST"] { background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: var(--color-accent); }
+.methodOption[data-picked="true"][data-method="POST"] { background: color-mix(in srgb, var(--diagram-layer-9) 20%, transparent); color: var(--diagram-layer-9); }
 .methodOption[data-picked="true"][data-method="PUT"] { background: color-mix(in srgb, var(--color-warning) 20%, transparent); color: var(--color-warning); }
 .methodOption[data-picked="true"][data-method="DELETE"] { background: color-mix(in srgb, var(--color-error) 20%, transparent); color: var(--color-error); }
 .methodOption[data-picked="true"][data-method="WS"] { background: color-mix(in srgb, var(--diagram-layer-6) 20%, transparent); color: var(--diagram-layer-6); }
-.methodOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.methodOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .methodHint {
   font-size: 0.6rem;
@@ -342,12 +342,12 @@
 
 .paramRow { display: flex; gap: var(--space-2); font-size: 0.625rem; }
 .paramName { font-weight: 700; color: var(--color-text); min-width: 80px; }
-.paramType { color: var(--color-accent); min-width: 60px; }
+.paramType { color: var(--diagram-layer-9); min-width: 60px; }
 .paramNote { color: var(--color-muted); }
 
 .responseType {
   font-size: 0.7rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 600;
   margin-top: var(--space-1);
 }
@@ -363,7 +363,7 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 
 .typeCardHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-1); }
@@ -388,12 +388,12 @@ button.typeFieldRow {
   transition: background 200ms ease;
 }
 
-button.typeFieldRow:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
-button.typeFieldRow:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
-button.typeFieldRow[data-revealed="true"] { background: color-mix(in srgb, var(--color-accent) 8%, transparent); cursor: default; }
+button.typeFieldRow:hover { background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent); }
+button.typeFieldRow:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
+button.typeFieldRow[data-revealed="true"] { background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent); cursor: default; }
 
 .typeFieldName { font-weight: 700; color: var(--color-text); }
-.typeFieldType { color: var(--color-accent); }
+.typeFieldType { color: var(--diagram-layer-9); }
 button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--color-muted); font-style: italic; }
 .typeFieldNote { color: var(--color-muted); }
 
@@ -503,7 +503,7 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -584,11 +584,11 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .toolButton:hover { background: var(--color-surface-2); color: var(--color-text); }
-.toolButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.toolButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .toolButton[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 /* ── Shape list ─────────────────────────────────────────────── */
@@ -617,10 +617,10 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .shapeRow:hover { background: var(--color-surface); }
-.shapeRow:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.shapeRow:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .shapeRow[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .emptyState {
@@ -630,8 +630,8 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .shapeSwatch {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -650,8 +650,8 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 
 .cursorDot {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   pointer-events: none;
   transform: translate(-50%, -50%);
@@ -686,7 +686,7 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .layerRow[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
 }
 
 .layerColor {
@@ -722,7 +722,7 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
   font-variant-numeric: tabular-nums;
 }
 
-.layerCount[data-active="true"] { color: var(--color-accent); }
+.layerCount[data-active="true"] { color: var(--diagram-layer-9); }
 
 .dualCanvasDemo {
   position: relative;
@@ -766,10 +766,10 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 }
 
 .strategyOption:hover { background: var(--color-surface-2); }
-.strategyOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.strategyOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .strategyOption[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .strategyName {
@@ -824,14 +824,14 @@ button.scopeBadge[data-in-scope="false"]:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
   border-radius: var(--radius-2);
 }
 
 .widgetPanel[data-category="render"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, var(--color-surface)); }
 .widgetPanel[data-category="model"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
 .widgetPanel[data-category="perf"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
-.widgetPanel[data-category="collab"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-surface)); }
+.widgetPanel[data-category="collab"] { background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface)); }
 .widgetPanel[data-category="a11y"] { background: color-mix(in srgb, var(--diagram-layer-3) 10%, var(--color-surface)); }
 
 .widgetTitle {
@@ -839,7 +839,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .widgetNote {
@@ -888,10 +888,10 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .undoButton {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
@@ -902,8 +902,8 @@ button.scopeBadge[data-in-scope="false"]:hover {
   justify-content: center;
 }
 
-.undoButton:hover { background: color-mix(in srgb, var(--color-accent) 16%, transparent); }
-.undoButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.undoButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent); }
+.undoButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .undoButton:disabled { opacity: 0.5; cursor: default; }
 
 /* ── CRDT comparison ────────────────────────────────────────── */
@@ -929,7 +929,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .crdtCardTitle[data-role="alice"] { color: var(--diagram-layer-2); }
 .crdtCardTitle[data-role="bob"] { color: var(--diagram-layer-4); }
 .crdtCardTitle[data-role="server"] { color: var(--color-muted); }
-.crdtCardTitle[data-role="result"] { color: var(--color-accent); }
+.crdtCardTitle[data-role="result"] { color: var(--diagram-layer-9); }
 
 .colorPicker {
   display: flex;
@@ -947,8 +947,8 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .colorSwatch:hover { transform: scale(1.1); }
-.colorSwatch:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.colorSwatch[data-active="true"] { opacity: 1; box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-accent); transform: scale(1.15); }
+.colorSwatch:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.colorSwatch[data-active="true"] { opacity: 1; box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--diagram-layer-9); transform: scale(1.15); }
 
 .mergeResult {
   padding: var(--space-3) 0;
@@ -1026,7 +1026,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .queryArea {
   position: relative;
   height: 120px;
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
   border-radius: var(--radius-2);
   cursor: crosshair;
   display: flex;
@@ -1047,11 +1047,11 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .queryDot {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-bg), 0 0 12px var(--color-accent);
+  background: var(--diagram-layer-9);
+  box-shadow: 0 0 0 3px var(--color-bg), 0 0 12px var(--diagram-layer-9);
   pointer-events: none;
 }
 
@@ -1113,9 +1113,9 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .a11yEditorInput:focus {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 /* ── A11y DOM mirror ───────────────────────────────────────── */
@@ -1138,7 +1138,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .a11yRole {
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   min-width: 48px;
 }
 
@@ -1153,7 +1153,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .a11yRow[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
   border-radius: var(--radius-1);
   padding: 2px 4px;
   margin: -2px -4px;
@@ -1214,13 +1214,13 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .toggleButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .toggleButton[data-on="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
 }
 
 .toggleKnob {
@@ -1364,7 +1364,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .a11yCanvasArea:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1377,7 +1377,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .a11yShapeMarker[data-focused="true"] {
-  outline: 3px solid var(--color-accent);
+  outline: 3px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1483,11 +1483,11 @@ button.shapeRow {
 .rangeInput {
   flex: 1;
   min-height: 44px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
 }
 
 .rangeInput:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1502,7 +1502,6 @@ button.shapeRow {
 /* ── Reduced motion ──────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .toggleKnob { transition: none; }
   .toolButton { transition: none; }
   .strategyOption { transition: none; }

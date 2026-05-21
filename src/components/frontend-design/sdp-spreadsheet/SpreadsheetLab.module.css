@@ -44,7 +44,7 @@
 
 .stepDot[data-current="true"] {
   color: var(--color-bg);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
 }
 
 .stepDot[data-completed="true"] {
@@ -93,12 +93,12 @@
 
 .checkItem:hover { background: var(--color-surface-2); }
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .checkItem[data-checked="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .checkToggle {
@@ -115,8 +115,8 @@
 }
 
 .checkItem[data-checked="true"] .checkToggle {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -181,10 +181,10 @@
 .panelTab:hover { color: var(--color-text); }
 .panelTab[data-active="true"] {
   color: var(--color-text);
-  border-bottom-color: var(--color-accent);
+  border-bottom-color: var(--diagram-layer-9);
 }
 .panelTab:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -210,7 +210,7 @@
 }
 
 .endpointCard[data-revealed="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .endpointHeader {
@@ -228,7 +228,7 @@
 }
 
 .methodBadge[data-method="GET"] { background: var(--color-success); }
-.methodBadge[data-method="POST"] { background: var(--color-accent); }
+.methodBadge[data-method="POST"] { background: var(--diagram-layer-9); }
 .methodBadge[data-method="PUT"] { background: var(--color-warning); }
 .methodBadge[data-method="DELETE"] { background: var(--color-error); }
 
@@ -264,9 +264,9 @@
 }
 
 .paramName { font-weight: 700; }
-.paramType { color: var(--color-accent); }
+.paramType { color: var(--diagram-layer-9); }
 .paramNote { color: var(--color-muted); }
-.responseType { font-size: 0.625rem; color: var(--color-accent); }
+.responseType { font-size: 0.625rem; color: var(--diagram-layer-9); }
 
 /* ── Type cards ─────────────────────────────────────────────────── */
 
@@ -305,7 +305,7 @@
 .methodOption[data-picked="true"][data-method="PUT"] { background: color-mix(in srgb, var(--diagram-layer-4) 20%, transparent); color: var(--diagram-layer-4); }
 .methodOption[data-picked="true"][data-method="DELETE"] { background: color-mix(in srgb, var(--diagram-layer-8) 20%, transparent); color: var(--diagram-layer-8); }
 
-.methodOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.methodOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .methodHint {
   font-size: 0.6rem;
@@ -316,7 +316,7 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 
 .typeCardHeader {
@@ -364,7 +364,7 @@
 }
 
 .typeFieldName { font-weight: 700; }
-.typeFieldType { color: var(--color-accent); }
+.typeFieldType { color: var(--diagram-layer-9); }
 .typeFieldNote { color: var(--color-muted); }
 
 /* ── Evolution layout ───────────────────────────────────────────── */
@@ -429,7 +429,7 @@
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-2);
-  background: var(--color-surface-1);
+  background: var(--color-surface);
 }
 
 .predictionQ {
@@ -462,12 +462,12 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
   font-weight: 800;
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -527,12 +527,12 @@
 }
 
 .toggleButton[data-on="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
 }
 
 .toggleButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -557,11 +557,11 @@
 .rangeInput {
   flex: 1;
   min-height: 44px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
 }
 
 .rangeInput:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -588,15 +588,15 @@
 }
 
 .strategyOption:hover {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 .strategyOption[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 18%, var(--color-surface));
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 .strategyOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -648,7 +648,7 @@
   font-size: 0.6rem;
   font-weight: 800;
   color: var(--color-muted);
-  background: var(--color-surface-1);
+  background: var(--color-surface);
   border-right: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -670,7 +670,7 @@
 }
 
 .cell:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
   z-index: 1;
 }
@@ -689,20 +689,20 @@
 }
 
 .cell[data-highlighted="true"] {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
   animation: cellPulse 1.2s ease-in-out infinite;
   z-index: 1;
 }
 
 @keyframes cellPulse {
-  0%, 100% { outline-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
-  50% { outline-color: color-mix(in srgb, var(--color-accent) 60%, transparent); background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+  0%, 100% { outline-color: var(--diagram-layer-9); background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent); }
+  50% { outline-color: color-mix(in srgb, var(--diagram-layer-9) 60%, transparent); background: color-mix(in srgb, var(--diagram-layer-9) 18%, transparent); }
 }
 
 .cell[data-editing="true"] {
   padding: 0;
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
   z-index: 1;
 }
@@ -796,14 +796,14 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
   border-radius: var(--radius-2);
 }
 
 .widgetPanel[data-category="core"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, var(--color-surface)); }
 .widgetPanel[data-category="formula"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
 .widgetPanel[data-category="ui"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
-.widgetPanel[data-category="advanced"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-surface)); }
+.widgetPanel[data-category="advanced"] { background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface)); }
 
 /* ── Scope badge ───────────────────────────────────────────────── */
 
@@ -878,7 +878,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .dagPrompt[data-current="true"] {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 
 .dagPromptIndex {
@@ -886,7 +886,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-weight: 800;
   min-width: 1.5em;
   text-align: center;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .dagPrompt[data-done="true"] .dagPromptIndex {
@@ -913,24 +913,24 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .cellInspectCompact {
   font-size: 0.6rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
 }
 
 .cellInspectCompact code {
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
   padding: 1px 4px;
   border-radius: 3px;
 }
 
 .cellClickHint {
   font-size: 0.625rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
 }
 
 .cellClickHint code {
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
   padding: 1px 4px;
   border-radius: 3px;
   font-weight: 700;
@@ -944,7 +944,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .widgetSlider {
   width: 100%;
   min-height: 44px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
 }
 
 /* ── Viewport demo ─────────────────────────────────────────────── */
@@ -968,7 +968,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .viewportMinimap:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -987,8 +987,8 @@ button.scopeBadge[data-in-scope="false"]:hover {
   position: absolute;
   left: 0;
   width: 100%;
-  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
-  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
+  border: 1px solid var(--diagram-layer-9);
 }
 
 .viewportStats {
@@ -1025,7 +1025,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .formulaInput:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1048,7 +1048,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .token[data-type="ref"] { background: color-mix(in srgb, var(--diagram-layer-2) 14%, var(--color-surface)); color: var(--diagram-layer-2); }
 .token[data-type="op"] { background: color-mix(in srgb, var(--diagram-layer-4) 14%, var(--color-surface)); color: var(--diagram-layer-4); }
 .token[data-type="lit"] { background: color-mix(in srgb, var(--diagram-layer-1) 14%, var(--color-surface)); color: var(--diagram-layer-1); }
-.token[data-type="fn"] { background: color-mix(in srgb, var(--diagram-layer-5) 14%, var(--color-surface)); color: var(--diagram-layer-5); }
+.token[data-type="fn"] { background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface)); color: var(--diagram-layer-9); }
 
 .tokenType {
   font-size: 0.6rem;
@@ -1147,7 +1147,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .statRow[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
   border-radius: var(--radius-1);
   padding: 2px 4px;
   margin: -2px -4px;
@@ -1155,12 +1155,12 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .propIndex {
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   min-width: 28px;
 }
 
 .propArrow {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .propControls {
@@ -1238,7 +1238,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .collabInputField:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1255,7 +1255,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   min-width: 48px;
 }
 
@@ -1302,16 +1302,16 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .selectionCell:hover { background: var(--color-surface-2); }
-.selectionCell:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.selectionCell:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .selectionCell[data-selected="true"] {
-  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .selectionCell[data-anchor="true"] {
-  background: color-mix(in srgb, var(--color-accent) 35%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 35%, transparent);
+  color: var(--diagram-layer-9);
   font-weight: 800;
 }
 
@@ -1334,7 +1334,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .pipelineStage[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .pipelineLabel {
@@ -1350,7 +1350,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .pipelineValue[data-result="true"] {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-size: 0.85rem;
 }
 
@@ -1379,12 +1379,12 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .formatOption[data-active="true"] {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .formatOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1415,7 +1415,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .undoIndex {
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   min-width: 18px;
   text-align: center;
 }
@@ -1430,20 +1430,20 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 700;
-  border: 2px solid var(--color-accent);
+  border: 2px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   cursor: pointer;
   transition: background 200ms ease;
 }
 
 .undoButton:hover {
-  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent);
 }
 
 .undoButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1477,8 +1477,8 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .clipboardFormula[data-result="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .clipboardArrow {
@@ -1509,12 +1509,12 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .toolButton:hover { background: var(--color-surface-2); color: var(--color-text); }
-.toolButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.toolButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .toolButton:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .toolButton[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .actionButton {
@@ -1522,18 +1522,18 @@ button.scopeBadge[data-in-scope="false"]:hover {
   font-family: var(--font-mono);
   font-weight: 700;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   cursor: pointer;
   min-height: 44px;
   display: flex;
   align-items: center;
 }
 
-.actionButton:hover { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
-.actionButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.actionButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent); }
+.actionButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .actionButton:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Propagation cell grid ──────────────────────────────────────── */
@@ -1554,7 +1554,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .propCell[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
 }
 
 .propCell[data-touched="true"] {
@@ -1602,7 +1602,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
   .cell[data-highlighted="true"] {
     animation: none;
-    outline: 2px solid var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    outline: 2px solid var(--diagram-layer-9);
+    background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
   }
 }

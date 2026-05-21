@@ -36,33 +36,6 @@ export const STEP_TITLES = [
   "Throttling", "Memory Pressure", "Lock API",
 ];
 
-// ── Step bar ────────────────────────────────────────────────────────
-
-export function StepBar({ activeStep }: { activeStep: number }) {
-  const { stepCompleted } = useMultiTab();
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build progress">
-      {STEP_LABELS.map((label, i) => {
-        const step = i + 1;
-        const completed = stepCompleted[step] || step < activeStep;
-        return (
-          <span
-            key={i}
-            role="listitem"
-            className={styles.stepDot}
-            data-active={step <= activeStep ? "true" : undefined}
-            data-current={step === activeStep ? "true" : undefined}
-            data-completed={completed ? "true" : undefined}
-            aria-current={step === activeStep ? "step" : undefined}
-            aria-label={`Step ${step}: ${STEP_TITLES[i]}${completed ? " (complete)" : ""}`}
-          >
-            {completed && step < activeStep ? "✓" : label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
 
 // ── Planning Views ──────────────────────────────────────────────────
 

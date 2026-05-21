@@ -44,7 +44,7 @@
 
 .stepDot[data-current="true"] {
   color: var(--color-bg);
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
 }
 
 .stepDot[data-completed="true"] {
@@ -93,12 +93,12 @@
 
 .checkItem:hover { background: var(--color-surface-2); }
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .checkItem[data-checked="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .checkToggle {
@@ -115,8 +115,8 @@
 }
 
 .checkItem[data-checked="true"] .checkToggle {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -181,10 +181,10 @@
 .panelTab:hover { color: var(--color-text); }
 .panelTab[data-active="true"] {
   color: var(--color-text);
-  border-bottom-color: var(--color-accent);
+  border-bottom-color: var(--diagram-layer-9);
 }
 .panelTab:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -210,7 +210,7 @@
 }
 
 .endpointCard[data-revealed="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .endpointHeader {
@@ -228,7 +228,7 @@
 }
 
 .methodBadge[data-method="GET"] { background: var(--color-success); }
-.methodBadge[data-method="POST"] { background: var(--color-accent); }
+.methodBadge[data-method="POST"] { background: var(--diagram-layer-9); }
 .methodBadge[data-method="PUT"] { background: var(--color-warning); }
 .methodBadge[data-method="DELETE"] { background: var(--color-error); }
 
@@ -264,9 +264,9 @@
 }
 
 .paramName { font-weight: 700; }
-.paramType { color: var(--color-accent); }
+.paramType { color: var(--diagram-layer-9); }
 .paramNote { color: var(--color-muted); }
-.responseType { font-size: 0.625rem; color: var(--color-accent); }
+.responseType { font-size: 0.625rem; color: var(--diagram-layer-9); }
 
 /* -- Method picker --------------------------------------------------- */
 
@@ -297,7 +297,7 @@
 .methodOption[data-picked="true"][data-method="PUT"] { background: color-mix(in srgb, var(--diagram-layer-4) 20%, transparent); color: var(--diagram-layer-4); }
 .methodOption[data-picked="true"][data-method="DELETE"] { background: color-mix(in srgb, var(--diagram-layer-8) 20%, transparent); color: var(--diagram-layer-8); }
 
-.methodOption:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.methodOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .methodHint {
   font-size: 0.6rem;
@@ -316,8 +316,8 @@
 .typeCard {
   border-radius: var(--radius-1);
   padding: var(--space-2);
-  border-top: 3px solid var(--type-color, var(--color-accent));
-  background: color-mix(in srgb, var(--type-color, var(--color-accent)) 10%, transparent);
+  border-top: 3px solid var(--type-color, var(--diagram-layer-9));
+  background: color-mix(in srgb, var(--type-color, var(--diagram-layer-9)) 10%, transparent);
 }
 
 .typeCardHeader {
@@ -328,7 +328,7 @@
 }
 
 .typeCardName { font-size: 0.7rem; font-weight: 800; }
-.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--type-color, var(--color-accent)); }
+.typeCardCategory { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; color: var(--type-color, var(--diagram-layer-9)); }
 
 .typeCardFields {
   display: flex;
@@ -365,7 +365,7 @@
 }
 
 .typeFieldName { font-weight: 700; }
-.typeFieldType { color: var(--color-accent); }
+.typeFieldType { color: var(--diagram-layer-9); }
 .typeFieldNote { color: var(--color-muted); }
 
 /* -- Evolution layout ------------------------------------------------ */
@@ -429,11 +429,11 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
   border-radius: var(--radius-2);
 }
 
-.widgetPanel[data-category="channel"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-surface)); }
+.widgetPanel[data-category="channel"] { background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface)); }
 .widgetPanel[data-category="election"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
 .widgetPanel[data-category="state"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
 .widgetPanel[data-category="lifecycle"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, var(--color-surface)); }
@@ -464,7 +464,7 @@
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-2);
-  background: var(--color-surface-1);
+  background: var(--color-surface);
 }
 
 .predictionQ {
@@ -497,12 +497,12 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
   font-weight: 800;
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -562,12 +562,12 @@
 }
 
 .toggleButton[data-on="true"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
 }
 
 .toggleButton:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -610,15 +610,15 @@
 }
 
 .strategyOption:hover {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 .strategyOption[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 18%, var(--color-surface));
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 .strategyOption:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -668,7 +668,7 @@
 }
 
 .tabCard[data-leader="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .tabCard[data-visibility="hidden"] { opacity: 0.6; }
@@ -697,7 +697,7 @@
 }
 
 .tabCardBadge[data-role="leader"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -748,7 +748,7 @@
 }
 
 .messageEntry[data-type="state-sync"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, transparent); }
-.messageEntry[data-type="action"] { background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent); }
+.messageEntry[data-type="action"] { background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent); }
 .messageEntry[data-type="heartbeat"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, transparent); }
 .messageEntry[data-type="election"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, transparent); }
 
@@ -813,7 +813,7 @@
 }
 
 .editorInput:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -830,7 +830,7 @@
 
 .syncArrow {
   font-size: 0.625rem;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   text-align: center;
   padding: var(--space-1) 0;
   font-weight: 700;
@@ -856,7 +856,7 @@
 }
 
 .electionStep[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
 }
 
 .electionStep[data-done="true"] {
@@ -869,7 +869,7 @@
   font-weight: 800;
   min-width: 1.5em;
   text-align: center;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .electionStep[data-done="true"] .electionIndex {
@@ -948,7 +948,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-2) var(--space-3);
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
   border-radius: var(--radius-2);
   font-size: 0.7rem;
   font-weight: 800;
@@ -973,7 +973,7 @@
 }
 
 .workerPort[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .workerPortLabel {
@@ -1018,17 +1018,17 @@
 }
 
 .lifecycleState:hover {
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
 }
 
 .lifecycleState[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 18%, var(--color-surface));
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .lifecycleState:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1105,7 +1105,7 @@
 }
 
 .lockRow[data-held="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-surface));
 }
 
 .lockRow[data-waiting="true"] {
@@ -1119,7 +1119,7 @@
 
 .lockHolder {
   font-weight: 600;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .lockStatus {
@@ -1164,12 +1164,12 @@
 }
 
 .toolButton:hover { background: var(--color-surface-2); color: var(--color-text); }
-.toolButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.toolButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .toolButton:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .toolButton[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
-  color: var(--color-accent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .actionButton {
@@ -1177,18 +1177,18 @@
   font-family: var(--font-mono);
   font-weight: 700;
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-accent);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   background: transparent;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   cursor: pointer;
   min-height: 44px;
   display: flex;
   align-items: center;
 }
 
-.actionButton:hover { background: color-mix(in srgb, var(--color-accent) 14%, transparent); }
-.actionButton:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.actionButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent); }
+.actionButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .actionButton:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* -- Prop controls --------------------------------------------------- */
@@ -1219,7 +1219,7 @@
   font-size: 0.65rem;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   min-width: 48px;
 }
 
@@ -1402,7 +1402,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 .rangeSlider {
   flex: 1;
   min-height: 44px;
-  accent-color: var(--color-accent);
+  accent-color: var(--diagram-layer-9);
 }
 
 .lockControls {
@@ -1440,7 +1440,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   transform: translateX(-50%);
 }
 
@@ -1493,7 +1493,7 @@ button.scopeBadge[data-in-scope="false"]:hover {
 }
 
 .messageFlowEntry[data-type="state-sync"] { border-left: 3px solid var(--diagram-layer-2); }
-.messageFlowEntry[data-type="action"] { border-left: 3px solid var(--diagram-layer-5); }
+.messageFlowEntry[data-type="action"] { border-left: 3px solid var(--diagram-layer-9); }
 .messageFlowEntry[data-type="heartbeat"] { border-left: 3px solid var(--diagram-layer-1); }
 .messageFlowEntry[data-type="election"] { border-left: 3px solid var(--diagram-layer-4); }
 

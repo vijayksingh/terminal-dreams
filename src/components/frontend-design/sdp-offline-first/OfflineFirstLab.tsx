@@ -18,11 +18,29 @@ import {
 } from "./offline-first-context";
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { OFFLINE_FIRST_ARCH_CONFIG } from "./architecture-scenarios";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./OfflineFirstLab.module.css";
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "Cache", "SW", "IDB", "Queue",
+  "Sync", "Detect", "Resolve",
+  "Opti", "BGSync", "Inv",
+  "Quota", "Net",
+];
 
 // ── Public API ──────────────────────────────────────────────────────
 
 export function OfflineFirstLab({ activeStep }: { activeStep: number }) {
+  return (
+    <OfflineFirstProvider activeStep={activeStep}>
+      <OfflineFirstLabContent activeStep={activeStep} />
+    </OfflineFirstProvider>
+  );
+}
+
+function OfflineFirstLabContent({ activeStep }: { activeStep: number }) {
+  const { stepCompleted } = useOfflineFirst();
   const isPlanning = activeStep <= 3;
   const noMotion = usePrefersReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -36,73 +54,25 @@ export function OfflineFirstLab({ activeStep }: { activeStep: number }) {
   }, [activeStep]);
 
   return (
-    <OfflineFirstProvider activeStep={activeStep}>
-      <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
-        <div ref={scrollRef} className={styles.scrollArea}>
-          {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={noMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <OfflineEvolution />
-          )}
-        </div>
+    <div className={styles.labRoot}>
+      <StepBar activeStep={activeStep} labels={STEP_LABELS} completedSteps={stepCompleted} />
+      <div ref={scrollRef} className={styles.scrollArea}>
+        {isPlanning ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`planning-${activeStep}`}
+              initial={noMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
+            >
+              <PlanningView activeStep={activeStep} />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <OfflineEvolution />
+        )}
       </div>
-    </OfflineFirstProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "Cache", "SW", "IDB", "Queue",
-  "Sync", "Detect", "Resolve",
-  "Opti", "BGSync", "Inv",
-  "Quota", "Net",
-];
-
-const STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Cache Strategy", "Service Worker Lifecycle", "IndexedDB Schema", "Offline Queue",
-  "Sync Engine", "Conflict Detection", "Conflict Resolution",
-  "Optimistic UI", "Background Sync", "Cache Invalidation",
-  "Storage Quota", "Network Status",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  const { stepCompleted } = useOfflineFirst();
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build progress">
-      {STEP_LABELS.map((label, i) => {
-        const step = i + 1;
-        const completed = stepCompleted[step] || step < activeStep;
-        return (
-          <span
-            key={i}
-            role="listitem"
-            className={styles.stepDot}
-            data-active={step <= activeStep ? "true" : undefined}
-            data-current={step === activeStep ? "true" : undefined}
-            data-completed={completed ? "true" : undefined}
-            aria-current={step === activeStep ? "step" : undefined}
-            aria-label={`Step ${step}: ${STEP_TITLES[i]}${completed ? " (complete)" : ""}`}
-          >
-            {completed && step < activeStep ? "✓" : label}
-          </span>
-        );
-      })}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   NAIVE_CAP,
 } from "./windowing-context";
 import styles from "./windowing-lab.module.css";
+import { StepBar } from "../_shared/StepBar";
 
 const INSTANT = { duration: 0 };
 const MINIMAP_HEIGHT = 320;
@@ -97,7 +98,7 @@ export function WindowingLab({ activeStep }: { activeStep: number }) {
   return (
     <WindowingProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           <AnimatePresence mode="wait">
             <motion.div
@@ -118,28 +119,7 @@ export function WindowingLab({ activeStep }: { activeStep: number }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// Step indicator
-// ═══════════════════════════════════════════════════════════════════════
-
 const STEP_LABELS = ["10K", "DOM", "VP", "WIN", "MATH", "OS"];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar}>
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════
 // Phase views — inner AnimatePresence for step-level transitions

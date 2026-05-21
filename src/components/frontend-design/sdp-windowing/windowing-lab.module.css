@@ -1,10 +1,10 @@
 /* ── Component tokens — derived from site design system ── */
 .labRoot {
   /* Viewport/active — site accent (blue-purple) */
-  --win-accent: var(--color-accent);
-  --win-accent-bg: color-mix(in srgb, var(--color-accent) 10%, transparent);
-  --win-accent-border: color-mix(in srgb, var(--color-accent) 35%, transparent);
-  --win-accent-glow: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  --win-accent: var(--diagram-layer-9);
+  --win-accent-bg: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
+  --win-accent-border: color-mix(in srgb, var(--diagram-layer-9) 35%, transparent);
+  --win-accent-glow: color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 
   /* Windowed/efficient — site success (green) */
   --win-good: var(--color-success);
@@ -64,7 +64,9 @@
   border: 1px solid var(--color-border);
   color: var(--color-muted);
   cursor: default;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .stepDot[data-active] {

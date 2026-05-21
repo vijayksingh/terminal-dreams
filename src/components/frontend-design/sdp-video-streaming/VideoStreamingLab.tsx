@@ -17,6 +17,7 @@ import {
 import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenario-player";
 import { VIDEO_STREAMING_ARCH_CONFIG } from "./architecture-scenarios";
 import styles from "./VideoStreamingLab.module.css";
+import { StepBar } from "../_shared/StepBar";
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ export function VideoStreamingLab({ activeStep }: { activeStep: number }) {
   return (
     <VideoStreamingProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             noMotion ? (
@@ -54,10 +55,6 @@ export function VideoStreamingLab({ activeStep }: { activeStep: number }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
 const STEP_LABELS = [
   "Scp", "API", "Arc",
   "Man", "Buf", "BW", "ABR",
@@ -65,25 +62,6 @@ const STEP_LABELS = [
   "Str", "Sek", "Liv",
   "Prd", "Int",
 ];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          role="listitem"
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // Planning views (steps 1-3)

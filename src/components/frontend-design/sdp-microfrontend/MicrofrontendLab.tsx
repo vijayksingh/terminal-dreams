@@ -26,6 +26,7 @@ import {
   LogConsole,
 } from "./ui/MicrofrontendUI";
 import { simulateMfeLoading } from "./engine/loader";
+import { StepBar } from "../_shared/StepBar";
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export function MicrofrontendLab({ activeStep }: { activeStep: number }) {
   return (
     <MicrofrontendProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             noMotion ? (
@@ -63,10 +64,6 @@ export function MicrofrontendLab({ activeStep }: { activeStep: number }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
 const STEP_LABELS = [
   "Scp", "API", "Arc",
   "Shl", "Rmt", "Shd", "Evt",
@@ -74,25 +71,6 @@ const STEP_LABELS = [
   "Err", "Ver", "Prf",
   "Tst", "Ful",
 ];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          role="listitem"
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // Planning views (steps 1-3)

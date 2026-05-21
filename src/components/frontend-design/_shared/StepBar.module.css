@@ -30,7 +30,7 @@
   border-radius: 999px;
   border: 1px solid var(--color-border);
   padding: 0 var(--space-1);
-  transition: all 150ms ease;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 
 .stepDot[data-active="true"] {

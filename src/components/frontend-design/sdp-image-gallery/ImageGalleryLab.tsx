@@ -23,7 +23,16 @@ import { IMAGE_GALLERY_ARCH_CONFIG } from "./architecture-scenarios";
 import { MetricsBar } from "./ui/MetricsBar";
 import { LightboxViewer } from "./ui/LightboxViewer";
 import { ResponsiveGrid } from "./ui/ResponsiveGrid";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./ImageGalleryLab.module.css";
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "G", "S", "L", "M",
+  "IO", "B", "V",
+  "R", "LB", "A11y",
+  "E", "∞",
+];
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -34,7 +43,7 @@ export function ImageGalleryLab({ activeStep }: { activeStep: number }) {
   return (
     <GalleryProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             noMotion ? (
@@ -58,37 +67,6 @@ export function ImageGalleryLab({ activeStep }: { activeStep: number }) {
         </div>
       </div>
     </GalleryProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "G", "S", "L", "M",
-  "IO", "B", "V",
-  "R", "LB", "A11y",
-  "E", "∞",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar} role="list" aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          role="listitem"
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
   );
 }
 

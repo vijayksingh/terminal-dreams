@@ -20,7 +20,16 @@ import { ArchitectureScenarioPlayer } from "@/components/sdp/architecture-scenar
 import { NEWS_FEED_ARCH_CONFIG } from "./architecture-scenarios";
 import { PostCard } from "./ui/PostCard";
 import { MetricsBar } from "./ui/MetricsBar";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./NewsFeedLab.module.css";
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "F", "T", "∞", "♡",
+  "RT", "Rk", "V",
+  "Sk", "E", "A11y",
+  "Err", "∞²",
+];
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -30,7 +39,7 @@ export function NewsFeedLab({ activeStep }: { activeStep: number }) {
   return (
     <FeedProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             <AnimatePresence mode="wait">
@@ -50,35 +59,6 @@ export function NewsFeedLab({ activeStep }: { activeStep: number }) {
         </div>
       </div>
     </FeedProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "F", "T", "∞", "♡",
-  "RT", "Rk", "V",
-  "Sk", "E", "A11y",
-  "Err", "∞²",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <div className={styles.stepBar}>
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-        >
-          {label}
-        </span>
-      ))}
-    </div>
   );
 }
 
