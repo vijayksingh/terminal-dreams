@@ -45,7 +45,7 @@ export function WebPerformanceLab({ activeStep }: { activeStep: number }) {
         <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`planning-${activeStep}`}
                 initial={reducedMotion ? false : { opacity: 0, y: 8 }}
@@ -88,7 +88,7 @@ function PerfDashboard() {
         <PersistentWaterfall />
       </ControlPanel>
 
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={`widget-${activeStep}`}
           initial={{ opacity: 0 }}

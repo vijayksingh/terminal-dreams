@@ -143,7 +143,13 @@
   font-size: 0.56rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+.deviceBtn:active {
+  transform: scale(0.96);
 }
 
 .deviceBtn[data-active="true"] {
@@ -254,6 +260,7 @@
   font-size: 0.56rem;
   font-weight: 700;
   color: var(--color-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .filmFrameDesc {
@@ -331,6 +338,7 @@
   font-family: var(--font-mono);
   font-size: 0.78rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .vitalValue[data-rating="poor"] { color: var(--color-error); }
@@ -344,7 +352,107 @@
   border-top: 1px solid var(--color-border);
 }
 
-/* ── Step 3: Optimization map ───────────────────────────────────── */
+.vitalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vitalThreshold {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.vitalBaseline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+.vitalBaseline strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-error);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Step 3: Optimization map (new) ─────────────────────────────── */
+
+.optMapGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.optMapRow {
+  display: grid;
+  grid-template-columns: 100px 1fr auto;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-1);
+  align-items: center;
+  transition-property: background-color;
+  transition-duration: 100ms;
+  transition-timing-function: ease;
+}
+
+.optMapRow[data-hovered="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, transparent);
+}
+
+.optMapLabel {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.optMapDesc {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+}
+
+.optMapTargets {
+  display: flex;
+  gap: 4px;
+}
+
+.optMapTarget {
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-1);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
+  color: var(--diagram-layer-9);
+}
+
+.optMapTarget[data-metric="LCP"] {
+  background: color-mix(in srgb, var(--diagram-layer-4) 12%, transparent);
+  color: var(--diagram-layer-4);
+}
+
+.optMapTarget[data-metric="CLS"] {
+  background: color-mix(in srgb, var(--diagram-layer-5) 12%, transparent);
+  color: var(--diagram-layer-5);
+}
+
+.optMapTarget[data-metric="INP"],
+.optMapTarget[data-metric="TBT"] {
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  color: var(--color-error);
+}
+
+.optMapTarget[data-metric="FCP"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 12%, transparent);
+  color: var(--diagram-layer-3);
+}
+
+/* ── Step 3: Optimization map (legacy matrix) ─────────────────── */
 
 .optMatrix {
   display: flex;
@@ -431,10 +539,13 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .waterfallContainer {
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-bg);
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .waterfallHeader {
@@ -484,8 +595,14 @@
   font-size: 0.56rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   white-space: nowrap;
+}
+
+.networkButton:active {
+  transform: scale(0.96);
 }
 
 .networkButton:hover:not([data-active="true"]) {
@@ -520,8 +637,14 @@
   font-size: 0.56rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   white-space: nowrap;
+}
+
+.visitToggleButton:active {
+  transform: scale(0.96);
 }
 
 .visitToggleButton[data-active="true"] {
@@ -720,7 +843,9 @@
   border: 2px solid var(--color-border);
   background: var(--color-bg);
   position: relative;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   flex-shrink: 0;
   display: inline-block;
 }
@@ -738,7 +863,9 @@
   height: 12px;
   border-radius: 999px;
   background: var(--color-muted);
-  transition: all 200ms ease;
+  transition-property: left, background-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .toggleButton[data-on="true"] .toggleKnob {
@@ -806,12 +933,15 @@
 
 .widgetPanel {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent),
+    0 2px 8px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .widgetTitle {
@@ -820,6 +950,7 @@
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  text-wrap: balance;
 }
 
 .widgetNote {
@@ -888,11 +1019,17 @@
   font-size: 0.6rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.predictionChoice:active {
+  transform: scale(0.96);
 }
 
 .predictionChoice:hover {
@@ -1057,6 +1194,7 @@
   border-radius: var(--radius-1);
   font-size: 0.52rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   padding: 0 var(--space-1);
   white-space: nowrap;
   overflow: hidden;
@@ -1106,6 +1244,7 @@
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   text-align: center;
   padding: var(--space-2);
   border-radius: var(--radius-1);
@@ -1141,7 +1280,14 @@
   background: var(--color-surface);
   color: var(--color-muted);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition-property: border-color, background-color, color, font-weight;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+  min-height: 24px;
+}
+
+.yieldPresetBtn:active {
+  transform: scale(0.96);
 }
 
 .yieldPresetBtn[data-active="true"] {
@@ -1177,10 +1323,16 @@
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   white-space: nowrap;
   min-width: 160px;
   text-align: center;
+}
+
+.clickSimButton:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .clickSimButton:hover:not(:disabled) {
@@ -1388,11 +1540,18 @@
   font-size: 0.5rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   min-width: 44px;
+  min-height: 28px;
   text-align: center;
+}
+
+.imageClassifyBtn:active {
+  transform: scale(0.96);
 }
 
 .imageClassifyBtn:hover {
@@ -1532,7 +1691,9 @@
   font-weight: 700;
   overflow: hidden;
   white-space: nowrap;
-  transition: all 300ms ease;
+  transition-property: opacity, background-color, color, border-color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
 }
 
 .lifecycleBlock[data-phase="parse"] {
@@ -1602,7 +1763,9 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  transition: all 200ms ease;
+  transition-property: border-color, border-left-width;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .thirdPartyCard[data-state="deferred"] {
@@ -1689,7 +1852,9 @@
   border-radius: var(--radius-1);
   font-size: 0.5rem;
   font-weight: 700;
-  transition: all 200ms ease;
+  transition-property: opacity, background-color, color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   overflow: hidden;
 }
 
@@ -1862,7 +2027,9 @@
   background: var(--color-bg);
   font-size: 0.62rem;
   align-items: center;
-  transition: all 200ms ease;
+  transition-property: opacity, border-left;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .cacheRow[data-state="active"] {
@@ -1919,7 +2086,13 @@
   border-radius: var(--radius-1);
   background: var(--color-surface);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+.cacheMatchCell:active {
+  transform: scale(0.96);
 }
 
 .cacheMatchCell:hover {
@@ -1942,9 +2115,15 @@
   font-size: 0.62rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.cacheSubmitButton:active {
+  transform: scale(0.96);
 }
 
 .cacheSubmitButton:hover {
@@ -2002,7 +2181,9 @@
   font-weight: 700;
   overflow: hidden;
   white-space: nowrap;
-  transition: all 300ms ease;
+  transition-property: opacity, background-color, color, border-color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
   background: color-mix(in srgb, var(--diagram-layer-7) 20%, var(--color-bg));
   color: var(--diagram-layer-7);
   border: 1px solid color-mix(in srgb, var(--diagram-layer-7) 30%, var(--color-border));
@@ -2058,9 +2239,15 @@
   border-radius: var(--radius-1);
   background: var(--color-bg);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-align: left;
   font-family: var(--font-mono);
+}
+
+.prefetchLinkBtn:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .prefetchLinkBtn:hover {
@@ -2098,7 +2285,9 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg);
-  transition: all 200ms ease;
+  transition-property: opacity, border-color, background-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .prefetchStep[data-state="active"] {
@@ -2257,6 +2446,7 @@
   font-size: 0.6rem;
   color: var(--color-error);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   text-decoration: line-through;
   opacity: 0.6;
 }
@@ -2318,7 +2508,9 @@
   height: 12px;
   border-radius: 2px;
   opacity: 0.85;
-  transition: all 400ms ease;
+  transition-property: left, width, opacity;
+  transition-duration: 400ms;
+  transition-timing-function: ease;
 }
 
 .waterfallOverlayBar[data-ghost="true"] {
@@ -2708,7 +2900,9 @@
   padding: 0 var(--space-1);
   min-width: 50px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: color, border-color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .codeFillSelect:focus {
@@ -2790,11 +2984,17 @@
   border-radius: var(--radius-1);
   background: var(--color-bg);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-align: left;
   font-family: var(--font-mono);
   position: relative;
   overflow: hidden;
+}
+
+.prefetchSimBtn:active:not([data-navigating="true"]) {
+  transform: scale(0.96);
 }
 
 .prefetchSimBtn:hover {
@@ -2914,9 +3114,38 @@
   color: var(--color-error);
   min-width: 48px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .prefetchAttemptTime[data-fast="true"] {
   color: var(--color-success);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Reduced motion: disable scale-on-press and animations
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .deviceBtn:active,
+  .networkButton:active,
+  .visitToggleButton:active,
+  .predictionChoice:active,
+  .yieldPresetBtn:active,
+  .clickSimButton:active,
+  .imageClassifyBtn:active,
+  .cacheMatchCell:active,
+  .cacheSubmitButton:active,
+  .prefetchLinkBtn:active,
+  .prefetchSimBtn:active {
+    transform: none;
+  }
+
+  .filmFrame[data-visible="true"] {
+    animation: none;
+  }
+
+  .metricsSummaryValue[data-flash="true"] {
+    animation: none;
+  }
 }
 

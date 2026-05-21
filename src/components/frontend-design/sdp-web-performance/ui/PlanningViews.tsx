@@ -51,7 +51,7 @@ export function AppProfileView() {
       <div className={styles.deviceToggle}>
         <button
           type="button"
-          className={styles.deviceButton}
+          className={styles.deviceBtn}
           data-active={device === "3g" ? "true" : undefined}
           onClick={() => setDevice("3g")}
         >
@@ -59,7 +59,7 @@ export function AppProfileView() {
         </button>
         <button
           type="button"
-          className={styles.deviceButton}
+          className={styles.deviceBtn}
           data-active={device === "wifi" ? "true" : undefined}
           onClick={() => setDevice("wifi")}
         >
