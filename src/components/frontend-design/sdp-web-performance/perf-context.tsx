@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   type ReactNode,
@@ -50,6 +51,13 @@ export type TypeDef = {
 };
 
 // ── Constants ───────────────────────────────────────────────────────
+
+const SLIDER_PRESET_MAP: Record<NetworkCondition, number> = {
+  "slow-3g": 0,
+  "3g": 33,
+  "4g": 66,
+  wifi: 100,
+};
 
 export const TOTAL_STEPS = 15;
 
@@ -153,6 +161,7 @@ type PerfContextValue = {
   toggleScope: (id: string) => void;
   enabledOptimizations: Set<OptimizationId>;
   toggleOptimization: (id: OptimizationId) => void;
+  setOptimizationEnabled: (id: OptimizationId, enabled: boolean) => void;
   optParams: OptimizationParams;
   updateOptParam: <K extends keyof OptimizationParams>(key: K, value: OptimizationParams[K]) => void;
   resources: WaterfallResource[];
@@ -199,24 +208,17 @@ export function PerfProvider({
     setOptParams((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const SLIDER_PRESETS: Record<NetworkCondition, number> = useMemo(() => ({
-    "slow-3g": 0,
-    "3g": 33,
-    "4g": 66,
-    wifi: 100,
-  }), []);
-
   const setBandwidthSlider = useCallback((v: number) => {
     setBandwidthSliderRaw(v);
-    const closest = (Object.entries(SLIDER_PRESETS) as [NetworkCondition, number][])
+    const closest = (Object.entries(SLIDER_PRESET_MAP) as [NetworkCondition, number][])
       .reduce((best, [nc, pos]) => Math.abs(v - pos) < Math.abs(v - best[1]) ? [nc, pos] : best);
     setNetworkCondition(closest[0] as NetworkCondition);
-  }, [SLIDER_PRESETS]);
+  }, []);
 
   const handleSetNetworkCondition = useCallback((n: NetworkCondition) => {
     setNetworkCondition(n);
-    setBandwidthSliderRaw(SLIDER_PRESETS[n]);
-  }, [SLIDER_PRESETS]);
+    setBandwidthSliderRaw(SLIDER_PRESET_MAP[n]);
+  }, []);
 
   const activeProfile = useMemo(() => interpolateNetwork(bandwidthSlider), [bandwidthSlider]);
   const toggleScope = useCallback((id: string) => {
@@ -237,6 +239,17 @@ export function PerfProvider({
     });
   }, []);
 
+  const setOptimizationEnabled = useCallback((id: OptimizationId, enabled: boolean) => {
+    setEnabledOptimizations((prev) => {
+      const has = prev.has(id);
+      if (has === enabled) return prev;
+      const next = new Set(prev);
+      if (enabled) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
   const { resources, metrics, timelineEndMs } = useMemo(
     () => computePerformance(enabledOptimizations, activeProfile, visitType, optParams),
     [enabledOptimizations, activeProfile, visitType, optParams],
@@ -248,7 +261,7 @@ export function PerfProvider({
     const prev = prevMetricsRef.current;
     const displayInp = simulatedInp != null ? simulatedInp : metrics.inp;
     const lcpDelta = metrics.lcp - prev.lcp;
-    const inpDelta = metrics.inp - prev.inp;
+    const inpDelta = simulatedInp != null ? 0 : metrics.inp - prev.inp;
     const clsDelta = Math.round((metrics.cls - prev.cls) * 100) / 100;
     const sizeDelta = metrics.totalSizeKB - prev.totalSizeKB;
     const lcpDisplay = metrics.lcp >= 1000 ? `${(metrics.lcp / 1000).toFixed(1)}s` : `${metrics.lcp}ms`;
@@ -286,11 +299,9 @@ export function PerfProvider({
     ];
   }, [enabledOptimizations, activeProfile, visitType, metrics, simulatedInp]);
 
-  const prevMetricsRefUpdate = metrics;
-  const prevMetricsRefCurrent = prevMetricsRef.current;
-  if (prevMetricsRefCurrent !== prevMetricsRefUpdate) {
-    prevMetricsRef.current = prevMetricsRefUpdate;
-  }
+  useEffect(() => {
+    prevMetricsRef.current = metrics;
+  }, [metrics]);
 
   const value = useMemo<PerfContextValue>(
     () => ({
@@ -299,6 +310,7 @@ export function PerfProvider({
       toggleScope,
       enabledOptimizations,
       toggleOptimization,
+      setOptimizationEnabled,
       optParams,
       updateOptParam,
       resources,
@@ -321,6 +333,7 @@ export function PerfProvider({
       toggleScope,
       enabledOptimizations,
       toggleOptimization,
+      setOptimizationEnabled,
       optParams,
       updateOptParam,
       resources,

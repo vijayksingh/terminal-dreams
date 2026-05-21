@@ -39,28 +39,30 @@ export function CriticalCSSWidget() {
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Rendering Pipeline</div>
 
-      <div className={styles.criticalSliderWrap}>
-        <label className={styles.criticalSliderLabel}>
-          Inline CSS: <strong>{inlineKB} KB</strong> / {totalCSS} KB
-          {fouc && <span className={styles.criticalFouc}> FOUC risk</span>}
-          {inlineKB > 14 && <span className={styles.criticalBloat}> HTML bloat</span>}
-        </label>
-        <input
-          type="range"
-          min={0}
-          max={20}
-          step={1}
-          value={inlineKB}
-          onChange={(e) => setInlineKB(Number(e.target.value))}
-          className={styles.criticalSlider}
-          aria-label={`Inline CSS size: ${inlineKB} KB`}
-        />
-        <div className={styles.criticalSliderTicks}>
-          <span>0 KB</span>
-          <span className={styles.criticalSliderSweet}>~4 KB sweet spot</span>
-          <span>20 KB</span>
+      {on && (
+        <div className={styles.criticalSliderWrap}>
+          <label className={styles.criticalSliderLabel}>
+            Inline CSS: <strong>{inlineKB} KB</strong> / {totalCSS} KB
+            {fouc && <span className={styles.criticalFouc}> FOUC risk</span>}
+            {inlineKB > 14 && <span className={styles.criticalBloat}> HTML bloat</span>}
+          </label>
+          <input
+            type="range"
+            min={0}
+            max={20}
+            step={1}
+            value={inlineKB}
+            onChange={(e) => setInlineKB(Number(e.target.value))}
+            className={styles.criticalSlider}
+            aria-label={`Inline CSS size: ${inlineKB} KB`}
+          />
+          <div className={styles.criticalSliderTicks}>
+            <span>0 KB</span>
+            <span className={styles.criticalSliderSweet}>~4 KB sweet spot</span>
+            <span>20 KB</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={styles.pipelineTimelines}>
         <div className={styles.pipelineRow}>
@@ -87,7 +89,7 @@ export function CriticalCSSWidget() {
           <span className={styles.pipelineRowLabel}>After</span>
           <div className={styles.pipelineTrack}>
             {afterSteps.map((s, i) => s.type === "marker" ? (
-              <div key={i} className={styles.pipelineMarker} data-type="early" data-state="active">
+              <div key={i} className={styles.pipelineMarker} data-type="early" data-state={on ? "active" : "inactive"}>
                 <span>FCP @ {fcpAfter}ms{fouc ? " ⚠" : ""}</span>
               </div>
             ) : (
@@ -95,7 +97,7 @@ export function CriticalCSSWidget() {
                 key={i}
                 className={styles.pipelineBlock}
                 data-type={s.type}
-                data-state="active"
+                data-state={on ? "active" : "inactive"}
                 style={{ flex: s.ms }}
               >
                 <span>{s.label}</span>
@@ -104,7 +106,7 @@ export function CriticalCSSWidget() {
           </div>
         </div>
       </div>
-      <div className={styles.pipelineSaving} data-state="active">
+      <div className={styles.pipelineSaving} data-state={on ? "active" : "inactive"}>
         FCP: {fcpBefore}ms → {fcpAfter}ms (saved {fcpBefore - fcpAfter}ms)
       </div>
       <p className={styles.widgetNote}>

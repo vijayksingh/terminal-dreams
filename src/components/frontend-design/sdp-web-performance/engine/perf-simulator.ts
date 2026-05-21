@@ -49,12 +49,15 @@ export type CLSSource = {
   fixed: boolean;
 };
 
+export type FontDisplayStrategy = "block" | "swap" | "fallback" | "optional";
+
 export type OptimizationParams = {
   codeSplitPct: number;
   criticalCssKB: number;
   imageFormat: "jpeg" | "webp" | "avif";
   imageQuality: number;
   yieldMs: number;
+  fontStrategy: FontDisplayStrategy;
   thirdPartyStrategies: Record<string, "eager" | "defer" | "idle" | "interaction">;
 };
 
@@ -64,6 +67,7 @@ export const DEFAULT_OPT_PARAMS: OptimizationParams = {
   imageFormat: "avif",
   imageQuality: 75,
   yieldMs: 50,
+  fontStrategy: "optional",
   thirdPartyStrategies: {
     "analytics": "idle",
     "ads": "defer",
@@ -252,7 +256,7 @@ function applyImageOptimization(
   });
 }
 
-function applyFontLoading(resources: ResourceTemplate[]): ResourceTemplate[] {
+function applyFontLoading(resources: ResourceTemplate[], params: OptimizationParams): ResourceTemplate[] {
   return resources.map((r) => {
     if (r.id === "font") {
       return { ...r, label: "Inter-sub.woff2", sizeKB: 28, waitFor: "html", deferBy: 0 };
@@ -304,7 +308,7 @@ const WATERFALL_TRANSFORMS: Partial<
   codeSplitting: applyCodeSplitting,
   criticalCSS: applyCriticalCSS,
   imageOptimization: applyImageOptimization,
-  fontLoading: (r) => applyFontLoading(r),
+  fontLoading: applyFontLoading,
   thirdPartyDefer: applyThirdPartyDefer,
   caching: (r) => applyCachingFirst(r),
   prefetching: (r) => applyPrefetching(r),
@@ -435,7 +439,12 @@ function deriveMetrics(
   const fontHasOverrides = enabled.has("fontLoading") || enabled.has("layoutStability");
   const fontViewportFrac = fontRes ? Math.min(fontRes.sizeKB / 100, 0.40) : 0;
   const fontDistFrac = 0.27;
-  const fontShift = fontHasOverrides ? 0 : Math.round(fontViewportFrac * fontDistFrac * 100) / 100;
+  const fontStrategyClsFactor = fontHasOverrides
+    ? ({ block: 0.3, swap: 1.0, fallback: 0.15, optional: 0 })[params.fontStrategy] ?? 0
+    : 1;
+  const fontShift = fontHasOverrides
+    ? Math.round(fontViewportFrac * fontDistFrac * fontStrategyClsFactor * 100) / 100
+    : Math.round(fontViewportFrac * fontDistFrac * 100) / 100;
 
   const adViewportFrac = 0.25;
   const adDistFrac = 0.32;

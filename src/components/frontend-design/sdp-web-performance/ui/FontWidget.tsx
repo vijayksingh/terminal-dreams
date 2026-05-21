@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { usePerfContext } from "../perf-context";
+import type { FontDisplayStrategy } from "../engine/perf-simulator";
 import styles from "../WebPerformanceLab.module.css";
 
-type FontStrategy = "block" | "swap" | "fallback" | "optional";
-const STRATEGY_LABELS: Record<FontStrategy, string> = {
+const STRATEGY_LABELS: Record<FontDisplayStrategy, string> = {
   block: "block",
   swap: "swap",
   fallback: "fallback",
   optional: "optional",
 };
 
-const STRATEGY_INFO: Record<FontStrategy, { foit: string; cls: string; description: string }> = {
+const STRATEGY_INFO: Record<FontDisplayStrategy, { foit: string; cls: string; description: string }> = {
   block: { foit: "3s max", cls: "High if late", description: "Invisible text for up to 3s, then fallback. Swap causes CLS." },
   swap: { foit: "None", cls: "Always shifts", description: "Fallback immediately visible, swaps when font loads. Always causes CLS." },
   fallback: { foit: "~100ms", cls: "Low", description: "Brief invisible period, then fallback. Only swaps if font loads within ~100ms." },
@@ -20,11 +19,12 @@ const STRATEGY_INFO: Record<FontStrategy, { foit: string; cls: string; descripti
 };
 
 export function FontWidget() {
-  const { enabledOptimizations, activeProfile: nw } = usePerfContext();
+  const { enabledOptimizations, activeProfile: nw, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("fontLoading");
   const rtt = nw.rtt;
   const multiplier = nw.multiplier;
-  const [strategy, setStrategy] = useState<FontStrategy>("swap");
+  const strategy = optParams.fontStrategy;
+  const setStrategy = (v: FontDisplayStrategy) => updateOptParam("fontStrategy", v);
 
   const cssDownload = Math.round(48 * multiplier + rtt);
   const cssParse = 8;
@@ -97,7 +97,7 @@ export function FontWidget() {
         <div className={styles.fontStrategyWrap}>
           <label className={styles.criticalSliderLabel}>font-display strategy:</label>
           <div className={styles.yieldPresets} role="radiogroup" aria-label="font-display strategy">
-            {(["block", "swap", "fallback", "optional"] as FontStrategy[]).map((s) => (
+            {(["block", "swap", "fallback", "optional"] as FontDisplayStrategy[]).map((s) => (
               <button
                 key={s}
                 type="button"

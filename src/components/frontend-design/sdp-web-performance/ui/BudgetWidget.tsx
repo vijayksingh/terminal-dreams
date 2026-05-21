@@ -13,7 +13,7 @@ const BUDGET_PRESETS: Record<BudgetStrictness, { lcp: number; inp: number; cls: 
 };
 
 export function BudgetWidget() {
-  const { metrics, enabledOptimizations, toggleOptimization } = usePerfContext();
+  const { metrics, enabledOptimizations, setOptimizationEnabled } = usePerfContext();
   const [strictness, setStrictness] = useState<BudgetStrictness>("standard");
   const [regressionActive, setRegressionActive] = useState(false);
   const [regressionOpt, setRegressionOpt] = useState<OptimizationId | null>(null);
@@ -29,11 +29,11 @@ export function BudgetWidget() {
     if (active.length === 0) return;
     const target = active[Math.floor(Math.random() * active.length)];
     setRegressionOpt(target.id);
-    toggleOptimization(target.id);
+    setOptimizationEnabled(target.id, false);
     setRegressionActive(true);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      toggleOptimization(target.id);
+      setOptimizationEnabled(target.id, true);
       setRegressionActive(false);
       setRegressionOpt(null);
     }, 3000);

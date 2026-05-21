@@ -265,7 +265,7 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
 
                 {/* Size label */}
                 <text
-                  x={barX + barW + 4}
+                  x={Math.min(barX + barW + 4, totalWidth - 32)}
                   y={y + ROW_HEIGHT / 2 + 1}
                   className={styles.waterfallSizeLabel}
                 >
@@ -334,7 +334,7 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
           )}
           {tooltip.resource.dependsOn && (
             <div className={styles.tooltipDep}>
-              waits for <strong>{tooltip.resource.dependsOn}</strong>
+              waits for <strong>{sortedResources.find((r) => r.id === tooltip.resource.dependsOn)?.label ?? tooltip.resource.dependsOn}</strong>
             </div>
           )}
         </div>
