@@ -79,10 +79,8 @@ function PerfDashboard() {
 
   return (
     <div className={styles.dashboardLayout}>
-      <div className={styles.instrumentBar}>
-        <MetricsSummaryBar />
-        <OptimizationChips />
-      </div>
+      <MetricsSummaryBar />
+      <OptimizationChips />
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

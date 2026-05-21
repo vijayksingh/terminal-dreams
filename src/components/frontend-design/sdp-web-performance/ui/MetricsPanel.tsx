@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { TRANSITION, SPRING } from "@/lib/motion";
+import { SPRING } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { getCWVRating, type PerfMetrics } from "../engine/perf-simulator";
 import styles from "../WebPerformanceLab.module.css";
@@ -9,6 +9,7 @@ import styles from "../WebPerformanceLab.module.css";
 type MetricsPanelProps = {
   metrics: PerfMetrics;
   showAll?: boolean;
+  simulatedInp?: number | null;
 };
 
 type GaugeConfig = {
@@ -30,14 +31,15 @@ const EXTRA_GAUGES: GaugeConfig[] = [
   { key: "totalSizeKB", label: "Size", unit: "KB", format: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)} MB` : `${v} KB` },
 ];
 
-export function MetricsPanel({ metrics, showAll = false }: MetricsPanelProps) {
+export function MetricsPanel({ metrics, showAll = false, simulatedInp }: MetricsPanelProps) {
   const rm = usePrefersReducedMotion();
   const gauges = showAll ? [...CWV_GAUGES, ...EXTRA_GAUGES] : CWV_GAUGES;
 
   return (
     <div className={styles.metricsGrid} data-count={gauges.length}>
       {gauges.map((g) => {
-        const value = metrics[g.key] as number;
+        const isInpOverride = g.key === "inp" && simulatedInp != null;
+        const value = isInpOverride ? simulatedInp : (metrics[g.key] as number);
         const rating = getCWVRating(g.key, value);
 
         return (

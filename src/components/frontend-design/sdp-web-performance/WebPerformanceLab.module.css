@@ -1,11 +1,11 @@
 /* ── WebPerformanceLab ────────────────────────────────────────────── */
 
 .labRoot {
-  --perf-xs: 0.6875rem;
-  --perf-sm: 0.75rem;
-  --perf-base: 0.8125rem;
-  --perf-md: 0.9375rem;
-  --perf-lg: 1.0625rem;
+  --perf-xs: 0.5625rem;
+  --perf-sm: 0.625rem;
+  --perf-base: 0.6875rem;
+  --perf-md: 0.8125rem;
+  --perf-lg: 0.9375rem;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -324,8 +324,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  flex: 1;
-  min-width: 0;
 }
 
 .toggleChip {
@@ -380,9 +378,7 @@
 /* ── Waterfall drawer (collapsible) ────────────────────────────── */
 
 .waterfallDrawer {
-  border-radius: var(--radius-2);
   overflow: hidden;
-  border: 1px solid var(--color-border);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -396,7 +392,7 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: none;
-  background: var(--color-surface);
+  background: transparent;
   color: var(--color-muted);
   cursor: pointer;
   font-family: var(--font-mono);
@@ -406,7 +402,7 @@
   letter-spacing: 0.06em;
   transition-property: color;
   transition-duration: 150ms;
-  min-height: 40px;
+  min-height: 36px;
 }
 
 .drawerToggle:hover {
@@ -448,8 +444,7 @@
 }
 
 .drawerInner {
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -623,8 +618,6 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  padding-right: var(--space-2);
-  border-right: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .metricsSummaryItem {

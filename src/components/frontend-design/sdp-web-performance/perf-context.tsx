@@ -160,6 +160,8 @@ type PerfContextValue = {
   setBandwidthSlider: (v: number) => void;
   activeProfile: NetworkProfile;
   stateEntries: StateEntry[];
+  simulatedInp: number | null;
+  setSimulatedInp: (v: number | null) => void;
 };
 
 const PerfContext = createContext<PerfContextValue | null>(null);
@@ -184,6 +186,7 @@ export function PerfProvider({
   const [visitType, setVisitType] = useState<"first" | "repeat">("first");
   const [networkCondition, setNetworkCondition] = useState<NetworkCondition>("3g");
   const [bandwidthSlider, setBandwidthSliderRaw] = useState(33);
+  const [simulatedInp, setSimulatedInp] = useState<number | null>(null);
 
   const SLIDER_PRESETS: Record<NetworkCondition, number> = useMemo(() => ({
     "slow-3g": 0,
@@ -258,6 +261,8 @@ export function PerfProvider({
       setBandwidthSlider,
       activeProfile,
       stateEntries,
+      simulatedInp,
+      setSimulatedInp,
     }),
     [
       activeStep,
@@ -276,6 +281,8 @@ export function PerfProvider({
       setBandwidthSlider,
       activeProfile,
       stateEntries,
+      simulatedInp,
+      setSimulatedInp,
     ],
   );
 
