@@ -1,0 +1,102 @@
+"use client";
+
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
+import { SPRING, TRANSITION } from "@/lib/motion";
+import styles from "./PredictionChallenge.module.css";
+
+type WrongHints = Record<string | number, string>;
+
+export interface PredictionChallengeProps {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+  /**
+   * Per-distractor diagnosis shown when the user picks a wrong answer.
+   * Keys are option indices (number or string-coerced number from MDX).
+   */
+  wrongHints?: WrongHints;
+  /** Optional callback invoked once the user picks the correct answer. */
+  onCorrect?: () => void;
+}
+
+export function PredictionChallenge({
+  question,
+  options,
+  correctIndex,
+  explanation,
+  wrongHints,
+  onCorrect,
+}: PredictionChallengeProps) {
+  const [selected, setSelected] = useState<number | null>(null);
+
+  if (!options || !question) return null;
+  const noMotion = usePrefersReducedMotion();
+  const revealed = selected !== null;
+  const isCorrect = selected === correctIndex;
+  const feedback = isCorrect
+    ? explanation
+    : selected !== null && wrongHints && (wrongHints[selected] ?? wrongHints[String(selected)])
+      ? wrongHints[selected] ?? wrongHints[String(selected)]
+      : explanation;
+
+  const handlePick = (i: number) => {
+    if (isCorrect) return;
+    setSelected(i);
+    if (i === correctIndex) onCorrect?.();
+  };
+
+  return (
+    <aside className={styles.root} aria-label="Prediction challenge">
+      <p className={styles.label}>Predict first</p>
+      <p className={styles.question}>{question}</p>
+      <div className={styles.options} role="radiogroup" aria-label={question}>
+        {options.map((opt, i) => (
+          <button
+            key={i}
+            type="button"
+            className={styles.option}
+            data-correct={revealed && i === correctIndex ? "true" : undefined}
+            data-wrong={revealed && selected === i && i !== correctIndex ? "true" : undefined}
+            disabled={isCorrect}
+            onClick={() => handlePick(i)}
+            role="radio"
+            aria-checked={selected === i}
+          >
+            <span className={styles.optionIndex}>{String.fromCharCode(65 + i)}</span>
+            <span>{opt}</span>
+          </button>
+        ))}
+      </div>
+      <AnimatePresence initial={false}>
+        {revealed && (
+          <motion.div
+            key={selected}
+            className={styles.result}
+            data-correct={isCorrect ? "true" : undefined}
+            initial={noMotion ? false : { opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={noMotion ? undefined : { opacity: 0, y: -4 }}
+            transition={noMotion ? { duration: 0 } : (isCorrect ? SPRING.quick : TRANSITION.enterCard)}
+          >
+            <span className={styles.resultIcon}>{isCorrect ? "✓" : "✗"}</span>
+            <span className={styles.resultText}>{feedback}</span>
+            {!isCorrect && (
+              <button
+                type="button"
+                className={styles.retry}
+                onClick={() => setSelected(null)}
+              >
+                Try again →
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </aside>
+  );
+}
+
+export default PredictionChallenge;

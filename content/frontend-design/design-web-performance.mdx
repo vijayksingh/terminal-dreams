@@ -1,0 +1,678 @@
+---
+title: "Design Web Application Performance"
+slug: design-web-performance
+section: system-design-problems
+stopId: sdp-web-performance
+order: 6
+kind: system-design-problem
+summary: "Optimize a web app from failing Core Web Vitals to passing — bundle splitting, critical CSS, image pipelines, caching, and performance budgets"
+tags:
+  - system-design
+  - performance
+  - core-web-vitals
+  - bundle-optimization
+  - caching
+  - resource-loading
+intersections:
+  - perf-js
+  - virt-windowing
+  - net-caching
+prerequisites: []
+demo: design-web-performance
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The Slow Page
+
+Performance optimization starts with a patient, not a problem statement. The panel shows a web application's diagnostic profile — four characteristics that determine which optimizations have impact and which are wasted effort.
+
+**Single-page application** — the entire UI is rendered by JavaScript. Until `main.js` downloads, parses, and executes, the browser has nothing to paint. The HTML is an empty `<div id="root">`. Every kilobyte of JS directly increases time-to-first-paint. An MPA with server-rendered HTML has the opposite profile: content arrives ready to display, but this app is an SPA with a 385 KB monolithic bundle.
+
+**Image-heavy content** — four images totaling 538 KB. If the LCP element is a hero image (and it is), no amount of JS optimization fixes LCP — the image itself is the bottleneck. Knowing which element is LCP changes the entire optimization order.
+
+**Third-party scripts** — analytics, chat widget, and ad SDK. Combined 215 KB of JavaScript you don't control. These compete for the main thread and bandwidth, increasing TBT and potentially blocking user interactions. You can't optimize their internals, only control *when* they execute.
+
+**Mobile-first target** — the 75th percentile user is on a mid-range phone with 3G connectivity. A 4× CPU slowdown and 10× bandwidth reduction compared to your development machine. The 385 KB bundle that loads in 200ms on Wi-Fi takes 1.7s on 3G.
+
+<PredictionChallenge
+  question="Given this profile — SPA, image-heavy, third-party scripts, mobile-first — which Core Web Vitals do you think are failing?"
+  options={[
+    "Only LCP — loading is the main issue",
+    "LCP and INP — loading and interactivity",
+    "LCP and CLS — loading and visual stability",
+    "All three — LCP, INP, and CLS",
+  ]}
+  correctIndex={3}
+  explanation="All three are failing. The SPA bundle blocks rendering (LCP), third-party scripts compete for the main thread (INP), and images without dimensions plus font swaps cause layout shifts (CLS). Each characteristic of this app creates a different category of performance failure."
+  wrongHints={{
+    0: "LCP is definitely failing, but 215 KB of third-party JS competing for the main thread also hurts INP, and images without reserved dimensions cause CLS. This app has problems across all three metrics.",
+    1: "Loading and interactivity are both failing, but you're missing CLS. Images loading without width/height attributes and font swaps cause significant layout shifts — the visual stability dimension is also broken.",
+    2: "Loading and stability are both failing, but you're missing INP. Three third-party scripts (215 KB) plus a 280ms hydration task create long tasks that block user input. Interactivity is also broken.",
+  }}
+/>
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Core Web Vitals
+
+Google's three Core Web Vitals each capture a distinct dimension of how a page *feels* to use. Understanding what they measure — not just their thresholds — is the foundation for every optimization that follows.
+
+**LCP (Largest Contentful Paint)** measures loading: how long until the biggest visible element renders. That element might be a hero image, a heading, or a text block — the browser determines which element is "largest" automatically. The threshold is **2.5 seconds**. LCP is NOT first paint — a page can show a spinner at 400ms but have an LCP of 3.2s when the real content finally arrives. For our app, the hero image is the LCP element: it can't render until JS executes (SPA), which can't execute until it downloads (385 KB on 3G).
+
+**INP (Interaction to Next Paint)** measures responsiveness: the delay between a user action (click, tap, keypress) and the browser's visual response. It's the *worst* interaction latency during the page's lifetime, or p98 for pages with 50+ interactions. The threshold is **200ms**. Scroll doesn't count — only discrete events. When the main thread is busy parsing JS or running long tasks, user input sits in a queue. That queuing delay is the dominant contributor to poor INP.
+
+**CLS (Cumulative Layout Shift)** measures visual stability: how much visible content moves without user interaction. Every unexpected shift is scored by the fraction of viewport affected × the distance moved. CLS sums the largest burst of shifts (session window with 1s gap, max 5s duration). The threshold is **0.1**. Late-loading images without reserved dimensions, web font swaps, and injected ads are the usual culprits.
+
+<PredictionChallenge
+  question="A user reports: 'I clicked Add to Cart but the page jumped and I accidentally clicked the ad banner instead.' Which CWV metric captures this problem?"
+  options={[
+    "LCP — the page loaded too slowly",
+    "INP — the click was delayed",
+    "CLS — content shifted under the user's finger",
+  ]}
+  correctIndex={2}
+  explanation="This is a CLS problem. Content moved (the ad banner expanded) just as the user was about to click, causing them to tap the wrong element. The shift score depends on how much of the viewport moved and how far. This is exactly the kind of frustration CLS was designed to catch."
+  wrongHints={{
+    0: "LCP measures how long until the main content renders — it wouldn't capture content moving after the page has loaded. The issue here is elements shifting position, which is CLS.",
+    1: "INP measures the delay between a click and the browser's visual response. The user's click WAS processed — it just hit the wrong target because content shifted. That's a layout stability issue (CLS), not a responsiveness issue.",
+  }}
+/>
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — The Optimization Map
+
+Before diving into individual techniques, build a mental map of what moves which metric. The 11 optimizations in this walkthrough form a directed strategy — each targets specific metrics, and the order matters.
+
+**Loading optimizations (LCP):** Bundle splitting reduces blocking JS from 385 KB to 115 KB. Critical CSS inlines above-the-fold styles so the browser paints without waiting for the full stylesheet. Image optimization (format, responsive sizing, lazy loading) targets the LCP element directly. Together, these attack the critical path — the chain of resources between navigation and first meaningful paint.
+
+**Responsiveness optimizations (INP):** Third-party script deferral removes 215 KB of JS from the main thread's execution queue. Long task chunking breaks 400ms of blocking hydration into 50ms pieces with yield points between them. These keep the main thread available for user input during and after load.
+
+**Stability optimizations (CLS):** Font loading strategy eliminates the +0.11 CLS from font swap reflow. Layout reservation (width/height on images, min-height on ad containers) prevents the browser from reallocating space when late resources arrive. These are cheap fixes with outsized impact — CLS failures are usually 2-3 specific elements, not systemic issues.
+
+**Cross-cutting:** Caching makes repeat visits near-instant regardless of optimization state. Prefetching makes *next* navigation instant. Performance budgets enforce limits in CI. RUM monitoring catches regressions in production. These are force-multipliers — they protect and extend the gains from targeted optimizations.
+
+Explore the matrix on the right — hover each technique to see which metrics it targets.
+
+<PredictionChallenge
+  question="Looking at the three failing metrics (LCP 2.9s, INP 340ms, CLS 0.34), which single optimization from the map will have the biggest impact on LCP?"
+  options={[
+    "Code Splitting — reduces blocking JS from 385 KB to 115 KB",
+    "Image Optimization — shrinks the LCP element from 245 KB to 65 KB",
+    "Critical CSS — inlines above-fold styles, unblocking FCP",
+    "Third-Party Defer — removes 215 KB from the main thread",
+  ]}
+  correctIndex={0}
+  explanation="Code Splitting has the biggest LCP impact. The 385→115 KB reduction shifts the entire waterfall: everything downstream (images, fonts, third-party) starts ~1.1s earlier on 3G. Image optimization targets the LCP element directly but can't start until JS finishes — the bottleneck is the blocking JS, not the image size."
+  wrongHints={{
+    1: "Image optimization shrinks the hero from 245→65 KB, which helps LCP. But the hero can't start downloading until main.js finishes (SPA dependency). Cutting main.js from 385→115 KB shifts the hero's start time by ~1.1s — a bigger LCP improvement than shrinking the hero itself.",
+    2: "Critical CSS improves FCP (First Contentful Paint) by inlining above-fold styles. But LCP is driven by the hero image, which depends on JS execution, not CSS. Code Splitting attacks the JS bottleneck directly.",
+    3: "Third-Party Defer helps INP (main thread freedom) more than LCP. Analytics/ads/chatbot load after the critical path — deferring them doesn't change when the hero image starts downloading.",
+  }}
+/>
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Baseline Audit
+
+Eleven resources compete for bandwidth with no optimization applied. The waterfall tells the story — and every Core Web Vital is failing.
+
+```
+index.html     ██  (12 KB)
+styles.css     ████████  (48 KB, BLOCKING)
+main.js        ████████████████████████████████  (385 KB, BLOCKING)
+analytics.js   ██████  (38 KB)
+Inter.woff2         ██████████████  (82 KB)
+hero.jpg                                    ████████████████████  (245 KB)
+card-1.jpg                                  ████████  (95 KB)
+card-2.jpg                                  ██████████  (110 KB)
+banner.jpg                                  ████████  (88 KB)
+chatbot.js                                  ██████████████  (125 KB)
+ads.js                                      ████████  (52 KB)
+```
+
+The critical path is clear: `main.js` (385 KB) blocks rendering for ~1.7s on a 3G connection. Nothing downstream — images, fonts, third-party widgets — can start until JS finishes because the SPA needs JavaScript to render any DOM. The total initial payload is 1,280 KB across 11 requests.
+
+<PredictionChallenge
+  question="Before looking at the waterfall — which resource is the biggest performance bottleneck?"
+  options={[
+    "styles.css (48 KB, render-blocking)",
+    "main.js (385 KB, render-blocking)",
+    "hero.jpg (245 KB, LCP element)",
+    "chatbot.js (125 KB, third-party)",
+  ]}
+  correctIndex={1}
+  explanation="main.js (385 KB) is the true bottleneck. It's render-blocking AND the largest resource on the critical path. The hero image is heavy but loads in parallel after JS. CSS is blocking but small. The chatbot is large but not on the critical path."
+  wrongHints={{
+    0: "CSS IS render-blocking, but at 48 KB it downloads relatively fast. main.js at 385 KB is 8× larger AND also render-blocking — it dominates the critical path.",
+    2: "hero.jpg is the LCP element and very heavy, but it loads in parallel once JS finishes. The bottleneck is main.js — until it downloads and executes, the SPA can't render any DOM, including the <img> tag that triggers the hero download.",
+    3: "chatbot.js is large (125 KB) but it's not render-blocking — it loads after the page renders. main.js blocks EVERYTHING because the SPA needs it to render any content.",
+  }}
+/>
+
+This is the baseline every optimization measures against. The goal: LCP from ~2.9s to under 2.5s, INP from ~340ms to under 200ms, CLS from ~0.34 to under 0.1. Try switching the network condition above the waterfall — on Wi-Fi everything looks fine. Switch to 3G and the real bottlenecks emerge.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Bundle Splitting
+
+When the browser encounters a `<script>` without `defer` or `async`, it stops everything — parsing, layout, paint — and waits for the script to download, parse, and execute. That's "render-blocking." A 385 KB monolithic bundle on 3G means ~1.7s where the user sees nothing. The question isn't "is 385 KB too big" — it's "does the user need all 385 KB to see the first screen?"
+
+<PredictionChallenge
+  question="The 385 KB bundle contains React, the router, a shell layout, and all page components. If we split by route, which parts still MUST block rendering?"
+  options={[
+    "Only React — the router and shell can load lazily",
+    "React + router + shell — the minimum to render the initial frame",
+    "React + router + shell + the current page component",
+    "Everything except images — JS splitting only helps images",
+  ]}
+  correctIndex={1}
+  explanation="The browser needs React (runtime), the router (to determine which page to show), and the shell layout (to render the navbar/sidebar) before it can paint anything meaningful. Page components load lazily AFTER the shell renders via Suspense. This cuts the blocking JS from 385 KB to ~115 KB."
+  wrongHints={{
+    0: "The router must block because the browser needs to know which page to render. Without it, the shell can't even show the correct layout. React + router + shell are all required for the first paint.",
+    2: "The current page component doesn't need to block — that's the whole point of code splitting. The shell renders immediately with a Suspense fallback, and the page component loads lazily. Only the framework + shell must be blocking.",
+    3: "JS splitting has nothing to do with images. It's about splitting the JavaScript bundle so only the minimum code needed for the first frame blocks rendering. Page-specific components load on demand.",
+  }}
+/>
+
+The answer is almost never yes. A typical SPA bundle contains the framework runtime, router, shell layout, *and* every page component. But the user is visiting one page. Route-based code splitting exploits this: ship the framework + shell (the "core" chunk) immediately, and lazy-load each page's code only when navigated to. The *blocking* portion drops from 385 KB to 115 KB — everything downstream in the waterfall shifts left by hundreds of milliseconds.
+
+```tsx
+const ProductPage = lazy(() => import('./pages/ProductPage'));
+
+function App() {
+  return (
+    <Suspense fallback={<ShellSkeleton />}>
+      <Routes>
+        <Route path="/products" element={<ProductPage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+The `Suspense` fallback is doing critical work here. `ShellSkeleton` renders from the core bundle instantly — navbar, sidebar, loading states — giving the user spatial orientation while the route chunk loads. Without it, you've traded one long blank wait for two shorter blank waits, which actually *feels* worse because the user gets a flash of content from the HTML, then blank, then content again.
+
+**Common mistake**: splitting too granularly. Every chunk adds a network round-trip. If you split a 385 KB bundle into twenty 19 KB chunks, you've replaced one slow download with twenty slow handshakes. The sweet spot is route-level splitting with shared vendor chunks — typically 3-8 chunks, not 50.
+
+**Where to split beyond routes?** Heavy libraries that only some pages need: a charting library only used on the analytics dashboard, a rich text editor only loaded in the compose view, a PDF renderer only triggered on download. The heuristic: if a dependency is >30 KB and used by &lt;50% of page views, it's a split candidate.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Critical Rendering Path
+
+CSS is render-blocking by default — the browser won't paint a single pixel until *all* CSS in `<link>` tags is downloaded and parsed. This is by design, not a bug: rendering HTML without CSS would produce an unstyled flash that's worse than waiting. But it creates a bottleneck. A 48 KB stylesheet on 3G takes ~260ms to download, and during that time the user stares at a white screen.
+
+The critical rendering path is the chain of resources the browser must process before the first pixel appears: HTML → CSS → paint. JavaScript extends this chain if it's render-blocking. Every byte on the critical path directly delays First Contentful Paint.
+
+<PredictionChallenge
+  question="Our 48 KB stylesheet blocks rendering. If we inline the critical 4 KB and async-load the rest, how does the browser's rendering sequence change?"
+  options={[
+    "No change — the browser still waits for all 48 KB before painting",
+    "FCP moves earlier — the browser paints with inline CSS while loading the rest",
+    "The page renders unstyled first, then restyled when full CSS loads",
+    "The async CSS is ignored until the user scrolls",
+  ]}
+  correctIndex={1}
+  explanation="The browser paints as soon as it has the HTML + inline CSS (~4 KB). The remaining 44 KB loads asynchronously without blocking paint. FCP moves from 'after CSS download' to 'after HTML parse' — hundreds of milliseconds earlier on slow connections."
+  wrongHints={{
+    0: "Only CSS in <link> tags blocks rendering. Inline <style> in the HTML is available immediately — no extra network request needed. The async-loaded stylesheet doesn't block paint.",
+    2: "That would happen with NO CSS at all. We're inlining the critical 4 KB, so the above-the-fold content renders correctly. Below-fold content gets styled when the async sheet loads, but users haven't scrolled there yet.",
+    3: "The async CSS applies to the whole page once loaded, not just scrolled content. The media='print' trick delays render-blocking but the onload handler switches to media='all', applying styles globally.",
+  }}
+/>
+
+The optimization is surgical: inline the ~4 KB of CSS needed for above-the-fold content directly in the HTML's `<style>` tag, and load the remaining 44 KB asynchronously. The browser can now paint after parsing just the HTML — no network round-trip for above-the-fold rendering.
+
+```html
+<!-- Inline critical styles -->
+<style>
+  .hero { display: grid; grid-template-columns: 1fr 1fr; }
+  .nav { position: sticky; top: 0; background: white; }
+</style>
+
+<!-- Async load full stylesheet -->
+<link rel="stylesheet" href="/styles.css"
+      media="print" onload="this.media='all'" />
+```
+
+The `media="print"` trick works because the browser still downloads print stylesheets (they might be needed for Ctrl+P), but doesn't block screen rendering for them. The `onload` handler flips it to `media="all"` once loaded, applying the styles retroactively.
+
+**The hard part isn't the technique — it's extracting the critical CSS correctly.** Tools like `critters` or `critical` render the page headlessly and identify which CSS rules apply to the initial viewport. But this is a build-time approximation: if the page content varies (logged-in vs logged-out, A/B test variants), the critical extraction might miss rules. The consequence is a Flash of Unstyled Content (FOUC) — the page renders with incomplete styles, then snaps to the full design when the async CSS loads. This is why critical CSS extraction needs visual regression testing, not just automated extraction.
+
+**When not to use it:** If your CSS is already small (&lt;15 KB), critical extraction adds build complexity for marginal gain. If you're using CSS-in-JS with automatic critical extraction (like styled-components' server-side rendering), the framework handles this for you. The technique is highest-impact for large legacy stylesheets where only a fraction applies to any given page.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Image Optimization
+
+Images are usually the heaviest resources on a page, and on image-heavy sites the hero image *is* the LCP element. No amount of JavaScript optimization matters if a 245 KB JPEG is what the user is waiting for. The optimization has three layers: format, responsiveness, and loading strategy.
+
+<PredictionChallenge
+  question="The hero image is a 245 KB JPEG. If we convert it to WebP at the same perceptual quality, how much smaller will it be?"
+  options={["~10% smaller (220 KB)", "~30% smaller (170 KB)", "~55% smaller (110 KB)", "~73% smaller (65 KB)"]}
+  correctIndex={3}
+  explanation="WebP produces files ~73% smaller than JPEG at equivalent perceptual quality for photographic content. The hero drops from 245 KB to 65 KB — saving 180 KB from the LCP element."
+  wrongHints={{
+    0: "10% would barely justify the format change. WebP's compression for photographic content is dramatically better — the actual saving is ~73%, bringing 245 KB down to 65 KB.",
+    1: "30% is closer to what you'd get from re-compressing the JPEG at lower quality. WebP's format-level advantage is much larger — ~73% for photographic content.",
+    2: "55% is in the right ballpark for some content types, but photographic content (like hero images) benefits most from WebP's lossy compression. The actual saving is ~73% (245→65 KB).",
+  }}
+/>
+
+**Format: JPEG → WebP → AVIF.** WebP produces files ~30% smaller than JPEG at equivalent perceptual quality. AVIF pushes to ~50% smaller but with slower encode times and less universal support (Safari added AVIF in 16.4). The `<picture>` element with format fallbacks lets you serve AVIF to browsers that support it, WebP to the rest, and JPEG as the final fallback. The hero image drops from 245 KB to 65 KB — same visual quality, 73% fewer bytes.
+
+**Responsiveness: don't send desktop images to phones.** A 1200px-wide hero on a 400px-wide phone wastes 2/3 of the bytes. `srcset` with width descriptors lets the browser select the right size: the phone downloads a 400px version (45 KB), the desktop gets the full 1200px version (65 KB). The `sizes` attribute tells the browser how much viewport width the image will occupy, so it can make the right choice before layout.
+
+```html
+<img src="/hero.webp"
+     srcset="/hero-400.webp 400w,
+             /hero-800.webp 800w,
+             /hero-1200.webp 1200w"
+     sizes="(max-width: 600px) 100vw, 50vw"
+     width="1200" height="675"
+     fetchpriority="high" alt="Product hero" />
+```
+
+**Loading strategy: lazy-load what's invisible.** The three below-fold images in our waterfall don't need to load at all during the initial page load. `loading="lazy"` defers their fetch until the user scrolls within ~1250px of them (the browser's built-in heuristic). This removes ~290 KB from the initial payload entirely.
+
+But the hero image should *not* be lazy — it's the LCP element. `fetchpriority="high"` tells the browser to prioritize it above other resources in the queue. Without this hint, the browser might download a less important stylesheet or script first because it encountered them earlier in the HTML.
+
+**The `width` and `height` attributes aren't optional.** Without them, the browser allocates 0px of height for the image, then shifts everything below when the image renders. That's a CLS penalty of 0.12 for a full-width hero. `aspect-ratio` in CSS achieves the same thing and is more flexible for responsive layouts.
+
+**Common mistake:** optimizing image file size but serving from a slow CDN. A 65 KB image from a CDN with 400ms TTFB is worse than a 200 KB image from a CDN with 50ms TTFB. Image optimization means the full pipeline: format, size, compression, CDN, and cache headers.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Font Loading Strategy
+
+Fonts have a hidden dependency chain that makes them uniquely problematic. The browser doesn't know a font exists until it parses the CSS `@font-face` rule. So the chain is: download HTML → discover CSS link → download CSS → parse CSS → discover font URL → download font → render text. That's three sequential network round-trips before any text appears. On 3G, each round-trip adds 60-150ms.
+
+<PredictionChallenge
+  question="The fallback font and web font have different metrics (line height, letter spacing). Can a single font swap across the full page bust the entire CLS budget (0.1) by itself?"
+  options={[
+    "No — font swaps cause tiny shifts, only images matter for CLS",
+    "Yes — a full-page text reflow displaces enough viewport area to exceed 0.1",
+    "It depends — only if the page has more than 1000 words of text",
+    "No — font swaps don't count as layout shifts because they're expected",
+  ]}
+  correctIndex={1}
+  explanation="Yes — a single font swap causes +0.11 CLS, enough to bust the 0.1 threshold on its own. Every line of text shifts when the metrics change, and CLS scores the total viewport area displaced × distance moved. Even though each line moves a small distance, the cumulative effect across a full page exceeds the budget."
+  wrongHints={{
+    0: "Font swaps are NOT tiny — they reflow every line of text on the page simultaneously. A full-page font swap causes +0.11 CLS, exceeding the 0.1 threshold by itself. This is why font metric overrides (size-adjust, ascent-override) exist.",
+    2: "Word count doesn't determine CLS impact — viewport coverage does. Even a single screen of text shifts enough to exceed 0.1 if the font metrics differ significantly. The shift score depends on viewport fraction displaced, not total text length.",
+    3: "The browser counts ALL unexpected shifts, including font swaps. There is no exemption for 'expected' behavior. If content moves without a user interaction within 500ms, it scores as a layout shift. font-display: swap is the developer's choice, not the user's.",
+  }}
+/>
+
+This creates two visible problems. **FOIT (Flash of Invisible Text)**: the browser hides text while the font downloads. The user sees a blank space where text should be, typically for 300-800ms. **FOUT (Flash of Unstyled Text)**: `font-display: swap` shows the fallback font immediately, then swaps to the web font when it loads. Better than invisible text, but the swap causes layout shift if the fallback and web font have different metrics.
+
+Three techniques stack to solve both problems:
+
+**Subsetting** cuts the font from 82 KB to 28 KB. A typical web font includes Latin, Cyrillic, Greek, and sometimes CJK glyphs. If 99% of your users read English, the 54 KB of unused glyphs are waste. `pyftsubset` or Google Fonts' `&subset=latin` parameter handles this at build time.
+
+**Preloading** (`<link rel="preload" href="/Inter-sub.woff2" as="font" crossorigin>`) starts the download in parallel with CSS, bypassing the cascading discovery chain. The `crossorigin` attribute is *required* even for same-origin fonts — without it, the browser fetches the font twice (a long-standing spec quirk).
+
+**Metric overrides** eliminate the layout shift during the swap:
+
+```css
+@font-face {
+  font-family: 'Inter';
+  src: url('/Inter-sub.woff2') format('woff2');
+  font-display: swap;
+  size-adjust: 107%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+```
+
+These `@font-face` descriptors adjust the fallback font's metrics to match the web font's line height, ascender, and descender. The text occupies the same space in both fonts, so the swap doesn't cause content to shift. The text *appearance* changes (different letterforms), but nothing *moves*. That's the difference between a CLS penalty and zero CLS.
+
+**When to skip web fonts entirely:** system font stacks (`font-family: system-ui, -apple-system, sans-serif`) load instantly with zero CLS, zero FOIT, and zero extra bytes. If your brand doesn't require a specific typeface, the system stack is the highest-performance choice. Many high-performance sites (GitHub, Stripe's dashboard) use system fonts for body text and only load web fonts for marketing headings.
+
+</section>
+
+<section id="step-9" className="recipe-step">
+
+## 09 — Third-Party Script Management
+
+Third-party scripts are the performance problem you can't fix by writing better code. You didn't write analytics.js, ads.js, or chatbot.js — you can't tree-shake them, can't optimize their algorithms, can't audit their dependencies. They're black boxes that consume bandwidth and CPU. The only lever you control is *when* they execute.
+
+The core insight: third-party scripts compete with your application for two finite resources — **network bandwidth** during download and **main thread time** during execution. On a 3G connection, 215 KB of third-party JS takes ~900ms to download. During execution, each script runs event listeners, mutates the DOM, and makes network requests — all on the same main thread your click handlers need.
+
+<PredictionChallenge
+  question="These three scripts total 215 KB and compete for the main thread during load. How much TBT (Total Blocking Time) does deferring them save?"
+  options={["~30ms", "~90ms", "~190ms", "~300ms"]}
+  correctIndex={1}
+  explanation="Deferring 215 KB of third-party JS saves ~90ms TBT. TBT depends on execution complexity, not download size — a 38 KB analytics script with 50 event listeners blocks more than a 125 KB script that runs once."
+  wrongHints={{
+    0: "30ms underestimates the impact. Three scripts parsing and executing during page load — with event listeners, DOM queries, and network calls — block more than that. Actual savings: ~90ms.",
+    2: "190ms would mean nearly a full second of blocking per MB of JS. The actual savings are ~90ms — remember TBT measures only the portion of each task exceeding 50ms, not total execution time.",
+    3: "300ms would mean each script individually creates a long task. The actual TBT savings are ~90ms — significant but not as extreme as the raw byte count suggests.",
+  }}
+/>
+
+Three deferral strategies, ordered by aggressiveness:
+
+```tsx
+// 1. requestIdleCallback — runs during browser idle periods
+requestIdleCallback(() => loadScript('/analytics.js'));
+
+// 2. After load event — all critical resources loaded
+window.addEventListener('load', () => loadScript('/ads.js'));
+
+// 3. On interaction — only when user signals intent
+chatIcon.addEventListener('click', () => loadScript('/chatbot.js'),
+  { once: true });
+```
+
+**Analytics** (38 KB) uses `requestIdleCallback` — it fires during browser idle periods, typically 50-100ms after the page becomes interactive. Page view tracking still captures the visit; it's just timestamped 100ms later. No analytics dashboard is affected by that latency.
+
+**Ads** (52 KB) load after the `load` event. The ad container shows a skeleton placeholder at the correct dimensions (preventing CLS). Once the script loads, it fills the slot. Users already reading content don't notice the delay, and the ad impression still counts.
+
+**Chatbot** (125 KB) uses the most aggressive strategy: load on first interaction. 95% of users never open the chat widget. Loading 125 KB for every user so 5% can chat 3 seconds sooner is a poor trade. The chat icon renders from a lightweight inline SVG; the full widget loads when someone clicks it.
+
+**The danger of `async` and `defer`:** Many developers think adding `async` or `defer` to a third-party `<script>` tag solves the problem. It doesn't. `async` prevents download-blocking but still executes on the main thread as soon as the download finishes — potentially during a critical interaction. `defer` waits until HTML parsing completes but still runs before the `DOMContentLoaded` event. Neither strategy actually moves execution to idle time. You need programmatic loading to truly control *when* a script runs.
+
+</section>
+
+<section id="step-10" className="recipe-step">
+
+## 10 — Long Task Breaking
+
+The browser's main thread is single-threaded — it runs JavaScript, processes user input, paints pixels, and garbage-collects memory on the same thread. When JavaScript executes, *everything else stops*. A 280ms hydration function means 280ms where clicks, keystrokes, and scroll events queue. The user taps a button and nothing happens. That frozen feeling is what INP measures: the delay between user input and the browser's visual response.
+
+The browser defines a "long task" as any execution block exceeding 50ms. At 50ms, the delay starts becoming perceptible. At 100ms, it feels sluggish. At 300ms, users think the app is broken. Our baseline has two long tasks: a 280ms hydration and a 120ms parse — together, 400ms of blocking time.
+
+<PredictionChallenge
+  question="The browser is executing a 400ms Long Task (hydration). A user clicks a button at the 100ms mark. What happens to their click?"
+  options={[
+    "Processed immediately — the browser handles input during JS",
+    "Delayed ~50ms — queued until the current yield point",
+    "Delayed ~300ms — queued until the long task finishes",
+    "Dropped — the browser ignores input during long tasks",
+  ]}
+  correctIndex={2}
+  explanation="The main thread is single-threaded. The click sits in the event queue for the remaining 300ms until the task completes. This queuing delay is exactly what INP measures — and why long tasks destroy responsiveness."
+  wrongHints={{
+    0: "The main thread is single-threaded. While JavaScript executes, the browser CANNOT process input events — they queue until the current task finishes. That's why long tasks directly cause poor INP.",
+    1: "There are no yield points in a single long task. Without explicit yielding (scheduler.yield()), the entire 400ms runs uninterrupted. The click waits the full remaining 300ms.",
+    3: "The browser never drops input events — it queues them. The click WILL be processed, but only after the 400ms task finishes, making it feel delayed by ~300ms.",
+  }}
+/>
+
+The fix isn't to make the code faster (though that helps). The fix is to *yield*: break the work into chunks and let the browser process pending events between chunks. Each chunk should stay under 50ms — the Long Tasks threshold.
+
+```tsx
+async function hydrateChunked(components: Component[]) {
+  for (const component of components) {
+    component.hydrate();
+    await scheduler.yield();
+  }
+}
+```
+
+`scheduler.yield()` (Chrome 129+) returns a promise that resolves after the browser processes pending events. The 400ms of blocking work (280ms hydration + 120ms parse) becomes 8 chunks of ~50ms each, with the browser free to handle clicks between every chunk. If the user taps a button during chunk 3, the browser processes it before starting chunk 4 — worst-case input delay drops from 280ms to ~50ms.
+
+**Why not `setTimeout(0)`?** It works for yielding, but `setTimeout` callbacks go to the end of the task queue. If other tasks are queued (third-party scripts, microtasks), your remaining work gets delayed. `scheduler.yield()` uses a continuation-priority model: your remaining chunks run before lower-priority work, but after user-input events. This gives the optimal ordering: input > your code > background work.
+
+**The total time tradeoff:** Breaking 400ms into 8 chunks with yielding overhead takes ~420ms total — about 5% more wall-clock time. But wall-clock time isn't what users perceive. They perceive responsiveness: can they interact while the work runs? That 5% overhead buys a dramatic INP improvement. Performance isn't about total compute — it's about how that compute is distributed relative to user interactions.
+
+**Where to yield:** Between components during hydration. Between rows during a large table render. Between items during a search index build. Between frames during a heavy animation calculation. The heuristic: any loop that processes more than ~10 items and takes more than 50ms total should yield between iterations.
+
+</section>
+
+<section id="step-11" className="recipe-step">
+
+## 11 — Layout Stability
+
+Something jumps on the page after load — text shifts down, a button moves from under your finger. CLS quantifies this frustration. Our page has four distinct shift sources totaling 0.34 — more than 3× over the 0.1 threshold. Every layout shift has the same root cause: the browser allocated space based on incomplete information, then re-laid out when the real dimensions arrived.
+
+<PredictionChallenge
+  question="Four elements cause layout shifts: hero image (no dimensions), font swap, ad injection, and a late widget. Which single source contributes the most CLS?"
+  options={[
+    "Font swap — text reflows across every line on the page",
+    "Hero image — it's the largest element and pushes everything down",
+    "Ad injection — third-party content is unpredictable",
+    "Late widget — dynamic components always cause the worst shifts",
+  ]}
+  correctIndex={1}
+  explanation="The hero image causes +0.12 CLS — the largest single shift. It occupies a large fraction of the viewport, and when it loads without reserved dimensions, everything below moves. The font swap is close at +0.11, but the image shift covers more viewport area."
+  wrongHints={{
+    0: "Font swap causes +0.11 CLS, which is significant but not the largest. The hero image at +0.12 displaces more viewport area because it's a large block element pushing all content below it.",
+    2: "Ad injection causes +0.08 CLS. It's noticeable but the ad container is narrower than the hero. The hero image's full-width shift at +0.12 is the worst offender.",
+    3: "The late widget causes only +0.03 CLS — the smallest shift. CSS contain: layout limits its impact. The hero image at +0.12 is 4× worse.",
+  }}
+/>
+
+**Hero image shift (0.12)**: The image loads without `width`/`height` attributes. The browser reserves 0px height, then shifts everything below when the image renders. Fix: `aspect-ratio: 16/9` in CSS, or explicit `width`/`height` on the `<img>` tag. The shift score = impacted fraction × distance fraction. A full-width image that pushes content down by 30% of the viewport scores ~0.3 × 0.3 = 0.09 minimum.
+
+**Font swap shift (0.11)**: The fallback font has different metrics than the web font. When the web font loads, text reflows. Fix: `size-adjust` and metric overrides on the `@font-face` rule (covered in step 8).
+
+**Ad injection shift (0.08)**: The ad script measures the available space, creates an iframe, and inserts it into the DOM. Everything below shifts down. Fix: a `min-height` on the ad container, sized to the most common ad unit. If ad sizes vary, use the tallest expected unit — a few pixels of empty space is invisible, but a shift is not.
+
+**Late widget shift (0.03)**: A dynamically-rendered component (recommendations, social proof) mounts after the initial render. Fix: `CSS contain: layout` on the widget's parent, which creates a new formatting context and prevents layout from propagating outward.
+
+**Debugging CLS in DevTools:** The Performance panel flags layout shifts with pink markers. Click one to see exactly which elements moved, how far, and what caused the shift (DOM insertion, style recalculation, or image decode). The Layout Instability API (`PerformanceObserver` with `type: "layout-shift"`) programmatically captures shifts with their source elements — essential for catching shifts that only happen on slow devices where resources arrive in a different order than your development machine.
+
+CLS is cumulative over the page's lifetime, so even small shifts compound. A 0.03 + 0.02 + 0.01 pattern across 10 dynamic elements adds up to 0.06 — still passing, but close. The CLS session window (max 5s, 1s gap) means shifts that happen close together score as a single burst, while isolated shifts each start a new window. Front-loading all shifts in the first second is actually better for your CLS score than spreading them across 10 seconds.
+
+**Checkpoint — the targeted optimizations are done.** Check the lab's milestone panel: if you've toggled every optimization from steps 5-11, all three Core Web Vitals should be in the green zone. The page that started at LCP 2900ms / INP 340ms / CLS 0.34 is now under every threshold. But this is a lab environment — same device, same network, same user journey. Steps 12-15 stress-test this result against the real world: caching for repeat visitors, prefetching for navigations, budgets to prevent regressions, and field data to validate.
+
+</section>
+
+<section id="step-12" className="recipe-step">
+
+## 12 — Caching Strategy
+
+A first-time visitor downloads everything from scratch. A returning visitor shouldn't have to. Caching is the single largest performance win for repeat visitors — a well-cached site loads in under 200ms on the second visit regardless of connection speed, because nothing crosses the network.
+
+The challenge isn't *whether* to cache — it's choosing the right strategy for each resource type. Too aggressive, and users get stale content. Too conservative, and you've wasted the cache entirely. Try assigning strategies to the five resource types before revealing the answers — the correct assignment depends on understanding how each resource changes over time.
+
+<PredictionChallenge
+  question="A user visits your site. First load takes 2.9s. They close the tab and return an hour later. With correct cache headers on JS/CSS/images, how fast is the second load?"
+  options={[
+    "~2.5s — caching only helps if the user doesn't close the tab",
+    "~1.5s — cached resources still need revalidation round-trips",
+    "~200ms — everything serves from disk cache, only HTML revalidates",
+    "0ms — the service worker intercepts before any network request",
+  ]}
+  correctIndex={2}
+  explanation="With content-hashed JS/CSS (immutable, 1-year max-age) and cached images (stale-while-revalidate), the browser serves everything from disk cache. Only the HTML needs a revalidation round-trip (~100-200ms for a 304 Not Modified). Total time: ~200ms regardless of connection speed."
+  wrongHints={{
+    0: "Browser caches persist across tab closes — the disk cache stores responses for the duration of their max-age header. Closing and reopening doesn't invalidate the cache.",
+    1: "1.5s would mean every resource needs a network round-trip. Content-hashed JS/CSS files (core.a1b2c3.js) are cached as immutable — the browser doesn't even check the server. Only HTML needs revalidation.",
+    3: "A service worker CAN intercept before the network, but even with a service worker, the browser needs to boot the service worker thread and check the cache API. The practical floor is ~100-200ms, not 0ms.",
+  }}
+/>
+
+Three cache strategies cover 90% of use cases:
+
+**`no-cache`** (revalidate every time): For resources that change on every deploy but must always be fresh. The browser stores the response but checks with the server before using it (`If-None-Match` / `304 Not Modified`). This costs one round-trip per visit but guarantees freshness. HTML is the canonical example — it references content-hashed JS/CSS filenames, so serving stale HTML means referencing deleted files.
+
+**`immutable`** (cache forever): For resources with content hashes in their filename (`core.a1b2c3.js`). The server sets `Cache-Control: public, max-age=31536000, immutable`. The browser caches for a year and never revalidates. When the content changes, the filename changes — the old cached version is never requested again. This is why bundlers add content hashes: it enables the most aggressive caching possible with zero invalidation bugs.
+
+**`stale-while-revalidate`**: The pragmatic middle ground. The browser serves the cached version immediately (fast), then checks for updates in the background (fresh). If the content changed, the *next* request gets the new version.
+
+```tsx
+self.addEventListener('fetch', (event) => {
+  if (event.request.destination === 'image') {
+    event.respondWith(
+      caches.open('images').then(async (cache) => {
+        const cached = await cache.match(event.request);
+        const fetched = fetch(event.request).then((resp) => {
+          cache.put(event.request, resp.clone());
+          return resp;
+        });
+        return cached || fetched;
+      })
+    );
+  }
+});
+```
+
+**The `no-cache` vs `no-store` distinction matters.** `no-cache` allows caching but requires revalidation — the 304 response is tiny, so the round-trip is cheap. `no-store` prevents caching entirely — the browser downloads the full response every time. Use `no-store` only for sensitive data (banking, health records). For everything else, `no-cache` is strictly better.
+
+**The service worker amplifies caching** by giving you programmatic control over the cache. HTTP cache headers are instructions to the browser; service workers are code you write. You can implement custom strategies: cache with network fallback, network with cache fallback, or stale-while-revalidate with a maximum staleness threshold. The service worker cache persists across browser restarts, making it the foundation of offline-capable apps.
+
+After assigning strategies, toggle Caching on above, then switch to "Repeat visit" to see the waterfall collapse — most resources serve from cache with near-zero latency.
+
+</section>
+
+<section id="step-13" className="recipe-step">
+
+## 13 — Prefetching & Prerendering
+
+Every client-side navigation follows the same sequence: DNS lookup → TCP → TLS → download route chunk → download data → render. On 3G, that's 500-900ms of waiting *after* the user clicks. But what if the browser started before the click?
+
+Prefetching doesn't speed up the current page — it makes the *next* navigation instant. The navigation comparison on the right shows the difference: a cold navigation to `/products` requires the full connection + download + render sequence, while a prefetched navigation skips straight to rendering from cache.
+
+<PredictionChallenge
+  question="A cold navigation to /products on 3G takes ~600ms (DNS + TCP + TLS + download + data fetch + render). With prefetching, how much of that sequence can be eliminated?"
+  options={[
+    "~30% — we skip DNS lookup but still need the rest",
+    "~60% — we skip connection setup and download, but data fetch remains",
+    "~90% — nearly everything is pre-cached, only render remains",
+    "100% — prerendering means zero navigation latency",
+  ]}
+  correctIndex={2}
+  explanation="Prefetching pre-downloads the route chunk and (with speculation rules) can pre-fetch data too. The only remaining work is the ~50ms render step. On 3G, this eliminates ~550ms of the 600ms sequence — roughly 90% of the wait."
+  wrongHints={{
+    0: "DNS is just one small part of the cold navigation. Prefetching caches the entire route chunk, eliminating DNS + TCP + TLS + download. Only the render step (~50ms) remains.",
+    1: "Prefetching goes beyond skipping connection setup. The route chunk AND data can be pre-fetched, leaving only the final render pass (~50ms out of ~600ms).",
+    3: "Even with full prerendering, there's a small swap cost (~5-15ms) when the browser activates the prerendered page. It's near-instant but not truly zero.",
+  }}
+/>
+
+Three stages of increasingly aggressive prefetching:
+
+**Stage 1: Viewport links.** An IntersectionObserver watches all `<a>` tags on the page. When a link scrolls into view, its route chunk is prefetched at idle priority. By the time the user finishes reading the content and decides to click, the chunk is already in the browser cache. This is low-risk: you're prefetching resources the user *might* click, using bandwidth the browser isn't using for anything else.
+
+**Stage 2: Hover/focus prefetch.** When the user hovers over a link, there's typically 200-400ms before they click. That's enough time to prefetch the route chunk at high priority. Even if they move the mouse away without clicking, the prefetched resource stays in cache for the next attempt. This is medium-risk: you're betting that hover implies intent, which is true ~70% of the time on desktop.
+
+**Stage 3: Speculation Rules (Chrome 121+).** The most aggressive strategy — full prerendering of the target page in a hidden tab:
+
+```html
+<script type="speculationrules">
+{
+  "prerender": [{
+    "source": "document",
+    "where": { "href_matches": "/products/*" },
+    "eagerness": "moderate"
+  }]
+}
+</script>
+```
+
+When the user clicks, the browser swaps in the already-rendered page. There's no JS download, no data fetch, no rendering — it's all done. The navigation feels like switching browser tabs: effectively zero latency.
+
+**The tradeoffs are real.** Prerendering uses memory (each prerendered page is a full browser context) and CPU. On a low-memory device, prerendering three pages might force the OS to evict other apps from memory. Speculation Rules are Chromium-only — Safari and Firefox users fall back to Stages 1-2, which are universally supported. The `where` clause is critical: only prerender pages the user is highly likely to visit. Prerendering your entire sitemap would burn memory for a ~2% hit rate. Prerendering the top 3 navigation targets from a product listing page hits 60-80% of actual navigations.
+
+**`<link rel="prefetch">` vs programmatic prefetch:** The HTML hint is simpler but less flexible — it fires immediately when the browser parses the `<head>`. Programmatic prefetch (via `fetch()` or dynamic `<link>` injection) lets you control timing: prefetch after the current page is fully interactive, not during the initial load when bandwidth is contested.
+
+</section>
+
+<section id="step-14" className="recipe-step">
+
+## 14 — Performance Budgets
+
+All the optimizations above are meaningless without a mechanism to *keep* them. Without enforcement, performance degrades steadily — one PR adds a new chart library (+45 KB), another adds an eager-loaded banner image (+80 KB), a third adds a synchronous analytics call (+40ms TBT). Each passes code review because no single change is egregious. After three months, the LCP is 800ms worse and nobody can point to a single cause. This is **performance entropy**, and budgets are the only defense.
+
+<PredictionChallenge
+  question="With no optimizations enabled, four metrics are over budget: LCP (2500ms), INP (200ms), CLS (0.1), JS size (250 KB). Which metric is farthest over its budget?"
+  options={[
+    "LCP — loading is the biggest problem",
+    "INP — interactivity is worst",
+    "CLS — layout shifts are extreme",
+    "JS size — the bundle is massive",
+  ]}
+  correctIndex={2}
+  explanation="CLS is ~3.4× over budget (0.34 vs 0.1 threshold). INP is ~1.7× over (340ms vs 200ms). JS size is ~1.5× over (385 KB vs 250 KB). LCP is ~1.2× over (2900ms vs 2500ms). The ratio matters more than the absolute number — CLS is the worst offender."
+  wrongHints={{
+    0: "LCP at ~2900ms is over the 2500ms budget, but only by 1.2×. CLS at 0.34 is 3.4× over its 0.1 budget — a much worse ratio. The metric furthest from passing is CLS.",
+    1: "INP at ~340ms is 1.7× over the 200ms budget — bad, but CLS at 0.34 is 3.4× over its 0.1 threshold. Layout shifts are the worst offender by ratio.",
+    3: "JS size at 385 KB is 1.5× over the 250 KB budget. But CLS at 0.34 is 3.4× over its 0.1 threshold — the worst ratio of any metric.",
+  }}
+/>
+
+A performance budget is a hard limit on specific metrics, enforced in CI. Four metrics against four thresholds: LCP ≤ 2500ms, INP ≤ 200ms, CLS ≤ 0.1, JS size ≤ 250 KB. Green means the PR can merge; red blocks it. No human judgment required.
+
+```json
+{
+  "assertions": {
+    "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+    "total-blocking-time": ["error", { "maxNumericValue": 300 }],
+    "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+    "resource-summary:script:size": ["error", { "maxNumericValue": 256000 }]
+  }
+}
+```
+
+A budget that works has three properties:
+
+**Specific.** "The homepage LCP must be under 2500ms on a simulated 4G connection with a Moto G4 CPU profile." Not "the site should be fast." Ambiguity creates arguments; thresholds create facts. Budget per page, not globally — the checkout flow has different performance characteristics than the blog.
+
+**Automated.** Lighthouse CI, `bundlesize`, or SpeedCurve run on every pull request. The check appears as a required status on the PR, alongside tests and linting. A budget that requires a human to remember to run it doesn't exist in practice.
+
+**Enforced.** A failing budget blocks the merge. Not a warning, not a Slack notification — a red check that prevents the "Merge" button from working. The moment you make budgets advisory, they become suggestions. Suggestions get ignored when the deadline is Thursday and the feature needs to ship. Within 6 months, the budget is meaningless noise.
+
+**The ratchet pattern:** Set your initial budget 10% above current values, then lower it by 5% each quarter. This prevents regressions without demanding immediate perfection. If current LCP is 2800ms, set the budget at 3080ms. Next quarter, 2900ms. This creates steady, sustainable improvement.
+
+Toggle optimizations on and off to see which budget breaks first — that's the regression a careless PR would introduce. Try disabling just one optimization: that single toggle represents the impact of "just this one time" in a real codebase.
+
+</section>
+
+<section id="step-15" className="recipe-step">
+
+## 15 — Production Monitoring (RUM)
+
+Lab metrics and production metrics measure different things. Lighthouse runs on a controlled device with a controlled network — it's reproducible, comparable, and optimistic. It represents your best-case scenario. Real User Monitoring (RUM) captures what actual users experience: the person on a 2015 Android phone in rural Indonesia on a 2G connection, the laptop with 47 browser tabs open, the phone losing signal in a subway tunnel.
+
+The gap between lab and field is often 2-3×. A site with 1200ms lab LCP commonly shows 2800ms p75 field LCP. That's not a measurement error — it's the reality of diverse hardware, networks, and user behavior that lab tests can't capture.
+
+<PredictionChallenge
+  question="Your Lighthouse LCP is 1200ms (good) but CrUX field p75 LCP is 2800ms (failing). Which is the most likely explanation?"
+  options={[
+    "Lighthouse is broken — the field data is more accurate",
+    "Users have slower hardware + networks than your test environment",
+    "The CDN is slow in some regions, adding latency for distant users",
+    "CrUX data is stale — it uses a 28-day rolling window",
+  ]}
+  correctIndex={1}
+  explanation="The p75 field user is on a mid-range phone with a 3G/4G connection — much slower than the MacBook + Wi-Fi that Lighthouse simulates. The 2.3× gap is typical: lab tests the best case, field captures the distribution of real devices and networks."
+  wrongHints={{
+    0: "Lighthouse isn't broken — it correctly measures LCP on a controlled device. The 1200ms is real for that environment. The gap exists because real users have much worse hardware and networks than the test profile.",
+    2: "CDN latency can contribute, but it rarely explains a 2.3× gap alone. The dominant factor is device CPU speed and network bandwidth — a mid-range Android phone parses JS 4× slower than the desktop CPU in the Lighthouse profile.",
+    3: "CrUX's 28-day window smooths daily variance, but it doesn't inflate values. If anything, the window LOWERS the p75 by including good-performing days. The gap is from device/network diversity, not measurement lag.",
+  }}
+/>
+
+Google's Core Web Vitals assessment uses the **75th percentile of field data** from the Chrome User Experience Report (CrUX). If your p75 LCP is 2600ms, you fail the assessment — even if your median (p50) is 900ms and your lab score is perfect. This means you're optimizing for the bottom quartile of your user base, not the median. Concretely: if 25% of your users have a bad experience, you fail.
+
+The practical RUM stack has three layers:
+
+**Collection:** The `web-vitals` library (1.5 KB) calls `onLCP()`, `onINP()`, `onCLS()` with the finalized metric value. You send this as a `navigator.sendBeacon()` to your analytics endpoint — `sendBeacon` because it survives page unloads, unlike `fetch`. CLS is finalized when the page is hidden (tab switch or navigation); LCP is finalized when the user interacts; INP is finalized on page unload.
+
+**Aggregation:** A dashboard (Grafana, Datadog, or the free CrUX Dashboard) shows p50/p75/p95 over time, sliced by page URL, device type, and geography. The time-series view catches *gradual* regressions that CI budget checks miss: a third-party script that gets 5 KB heavier per month, a CDN edge node that degrades in a specific region, an A/B test variant that's 200ms slower.
+
+**Alerting:** An alert fires when the 7-day rolling p75 crosses a CWV threshold. The alert must be actionable: page URL, metric name, current value, threshold, and a link to the deploy diff from when the regression started. Without that context, the oncall engineer stares at a number and has no idea what changed. An alert that says "LCP is 2700ms" is useless. An alert that says "Homepage LCP p75 crossed 2500ms after deploy abc123, which added third-party script X" gets fixed in an hour.
+
+The RUM distribution on the right shows your current p50/p75/p95 across all three metrics. The p95 tail represents users on the worst 5% of devices and networks — you don't *need* to pass CWV at p95, but monitoring it tells you how bad the worst experience is. That tail is the frontier you keep pushing.
+
+</section>

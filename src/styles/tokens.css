@@ -127,11 +127,11 @@
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
 
-  /* Inline code — cyan-teal, complement of the purple accent so
-     code reads as a distinct token taxonomy, not emphasized prose. */
-  --color-code-fg: oklch(74% 0.09 195);
-  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 8%, var(--color-surface-2));
-  --color-code-border: color-mix(in srgb, var(--color-code-fg) 22%, transparent);
+  /* Inline code — uses the base hue so pills feel native to the page
+     while standing out via a visible background tint. */
+  --color-code-fg: oklch(82% 0.04 var(--base-hue));
+  --color-code-bg: oklch(22% 0.02 var(--base-hue));
+  --color-code-border: oklch(27% 0.022 var(--base-hue));
 }
 
 /* ── Dark theme (explicit) ─────────────────────────────────────── */
@@ -196,9 +196,9 @@
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
-  --color-code-fg: oklch(74% 0.09 195);
-  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 8%, var(--color-surface-2));
-  --color-code-border: color-mix(in srgb, var(--color-code-fg) 22%, transparent);
+  --color-code-fg: oklch(82% 0.04 var(--base-hue));
+  --color-code-bg: oklch(22% 0.02 var(--base-hue));
+  --color-code-border: oklch(27% 0.022 var(--base-hue));
 }
 
 /* ── Light theme ─────────────────────────────────────────────── */
@@ -273,9 +273,9 @@
   --color-success-muted: oklch(92% 0.04 140 / 0.6);
   --color-warning: oklch(68% 0.18 80);
   --color-warning-muted: oklch(92% 0.04 80 / 0.6);
-  --color-code-fg: oklch(46% 0.14 195);
-  --color-code-bg: color-mix(in srgb, var(--color-code-fg) 7%, var(--color-surface-2));
-  --color-code-border: color-mix(in srgb, var(--color-code-fg) 20%, transparent);
+  --color-code-fg: oklch(32% 0.06 var(--base-hue));
+  --color-code-bg: oklch(93% 0.018 var(--base-hue));
+  --color-code-border: oklch(89% 0.012 var(--base-hue));
 }
 
 /* ── System preference fallback ──────────────────────────────── */
@@ -351,8 +351,8 @@
     --color-success-muted: oklch(92% 0.04 140 / 0.6);
     --color-warning: oklch(68% 0.18 80);
     --color-warning-muted: oklch(92% 0.04 80 / 0.6);
-    --color-code-fg: oklch(46% 0.14 195);
-    --color-code-bg: color-mix(in srgb, var(--color-code-fg) 7%, var(--color-surface-2));
-    --color-code-border: color-mix(in srgb, var(--color-code-fg) 20%, transparent);
+    --color-code-fg: oklch(32% 0.06 var(--base-hue));
+    --color-code-bg: oklch(93% 0.018 var(--base-hue));
+    --color-code-border: oklch(89% 0.012 var(--base-hue));
   }
 }

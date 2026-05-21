@@ -1,0 +1,2609 @@
+/* ── WebPerformanceLab ────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Step indicator bar ──────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 var(--space-1);
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-9);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+}
+
+/* ── Scroll area ─────────────────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Section headings ────────────────────────────────────────────── */
+
+.sectionHeading {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: var(--space-3) 0 var(--space-2);
+  letter-spacing: -0.01em;
+}
+
+.sectionHeading:first-child { margin-top: 0; }
+
+/* ── Planning panel ──────────────────────────────────────────────── */
+
+.planningPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── Step 1: App diagnostic profile ─────────────────────────────── */
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.profileCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.profileCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profileCardLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.severityBadge {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+}
+
+.severityBadge[data-severity="high"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
+  color: var(--color-error);
+}
+
+.severityBadge[data-severity="medium"] {
+  background: color-mix(in srgb, var(--color-warning) 15%, var(--color-surface));
+  color: var(--color-warning);
+}
+
+.profileCardDetail {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--diagram-layer-9);
+}
+
+.profileCardRisk {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+}
+
+.profileSummary {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.profileSummaryLabel {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.profileSummaryValue {
+  font-size: 0.68rem;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* ── Step 1: Page load filmstrip ───────────────────────────────── */
+
+.deviceToggle {
+  display: flex;
+  gap: 2px;
+}
+
+.deviceBtn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.deviceBtn[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+}
+
+.filmstrip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding: var(--space-2) 0;
+}
+
+.filmFrame {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.filmFrameScreen {
+  width: 100%;
+  aspect-ratio: 9 / 14;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 3px;
+  overflow: hidden;
+  transition: border-color 200ms ease;
+}
+
+.filmFrame[data-state="interactive"] .filmFrameScreen {
+  border-color: var(--color-success);
+}
+
+.filmFrame:not([data-visible="true"]) {
+  opacity: 0.25;
+}
+
+.filmFrame[data-visible="true"] {
+  animation: filmReveal 300ms ease-out;
+}
+
+@keyframes filmReveal {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.filmBlank[data-waiting="true"] {
+  background: var(--color-border);
+  opacity: 0.3;
+  flex: 1;
+}
+
+.filmBlank {
+  flex: 1;
+}
+
+.filmNavbar {
+  height: 6px;
+  border-radius: 2px;
+  background: var(--diagram-layer-4);
+  opacity: 0.6;
+}
+
+.filmSkeleton {
+  height: 10px;
+  border-radius: 2px;
+  background: var(--color-border);
+  animation: skeletonPulse 1.2s ease-in-out infinite;
+}
+
+.filmSkeleton[data-short="true"] {
+  width: 60%;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.filmHero {
+  height: 24px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--diagram-layer-5) 30%, var(--color-bg));
+}
+
+.filmText {
+  height: 4px;
+  border-radius: 1px;
+  background: var(--color-muted);
+  opacity: 0.4;
+}
+
+.filmText[data-short="true"] {
+  width: 55%;
+}
+
+.filmFrameTime {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.filmFrameDesc {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ── Step 2: Core Web Vitals overview ───────────────────────────── */
+
+.vitalsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.vitalCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-error);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vitalCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vitalName {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.vitalMeasures {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.vitalFull {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+}
+
+.vitalValues {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-1);
+}
+
+.vitalValueRow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vitalValueLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+}
+
+.vitalValue {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.vitalValue[data-rating="poor"] { color: var(--color-error); }
+.vitalValue[data-rating="good"] { color: var(--color-success); }
+
+.vitalCause {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ── Step 3: Optimization map ───────────────────────────────────── */
+
+.optMatrix {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+
+.optMatrixHeader {
+  display: grid;
+  grid-template-columns: 1fr 50px 50px 50px;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+}
+
+.optMatrixHeader span:not(:first-child) { text-align: center; }
+
+.optMatrixRow {
+  display: grid;
+  grid-template-columns: 1fr 50px 50px 50px;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.65rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  transition: background 100ms ease;
+}
+
+.optMatrixRow:last-child { border-bottom: none; }
+
+.optMatrixRow[data-hovered="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, transparent);
+}
+
+.optMatrixName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.optMatrixStep {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: 0 var(--space-1);
+  min-width: 1.2rem;
+  text-align: center;
+}
+
+.optMatrixCell {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+}
+
+.optMatrixCell[data-impact="3"] { color: var(--diagram-layer-9); }
+.optMatrixCell[data-impact="2"] { color: var(--diagram-layer-4); opacity: 0.8; }
+.optMatrixCell[data-impact="1"] { color: var(--color-muted); }
+.optMatrixCell[data-impact="0"] { color: transparent; }
+
+/* ── Evolution layout ────────────────────────────────────────────── */
+
+.evolutionLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Waterfall container
+   ═══════════════════════════════════════════════════════════════════ */
+
+.waterfallContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.waterfallHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.waterfallTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.waterfallStats {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.waterfallControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.networkSelector {
+  display: flex;
+  gap: 2px;
+}
+
+.networkButton {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.networkButton:hover:not([data-active="true"]) {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.networkButton[data-active="true"] {
+  border-color: var(--diagram-layer-4);
+  color: var(--diagram-layer-4);
+  background: color-mix(in srgb, var(--diagram-layer-4) 8%, var(--color-bg));
+}
+
+.networkButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-4);
+  outline-offset: 1px;
+}
+
+.visitToggle {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.visitToggleButton {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+
+.visitToggleButton[data-active="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+}
+
+.visitToggleButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
+.waterfallWrapper {
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+}
+
+.waterfallSvg {
+  display: block;
+  font-family: var(--font-mono);
+}
+
+.waterfallTickLabel {
+  font-size: 6px;
+  fill: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.waterfallLabel {
+  font-size: 6.5px;
+  font-family: var(--font-mono);
+}
+
+.waterfallSizeLabel {
+  font-size: 5.5px;
+  fill: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.waterfallLegend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.56rem;
+  color: var(--color-muted);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legendDotBlocking {
+  width: 3px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--color-error);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Metrics summary bar (in control panel)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.metricsSummaryBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+}
+
+.metricsSummaryItem {
+  text-align: center;
+}
+
+.metricsSummaryLabel {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.metricsSummaryValue {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricsSummaryValue[data-rating="good"] { color: var(--color-success); }
+.metricsSummaryValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.metricsSummaryValue[data-rating="poor"] { color: var(--color-error); }
+
+.metricsDelta {
+  display: block;
+  font-size: 0.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-top: 1px;
+}
+
+.metricsDelta[data-direction="improved"] { color: var(--color-success); }
+.metricsDelta[data-direction="regressed"] { color: var(--color-error); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Optimization toggles (in control panel)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.optimizationToggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.optimizationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-1) 0;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  text-align: left;
+  border-radius: var(--radius-1);
+  transition: background 150ms ease;
+}
+
+.optimizationRow:hover {
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, transparent);
+}
+
+.optimizationRow:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: -1px;
+}
+
+.optimizationInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.optimizationLabel {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.optimizationDesc {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.optimizationEmpty {
+  font-size: 0.65rem;
+  color: var(--color-muted);
+  text-align: center;
+  padding: var(--space-2);
+}
+
+.toggleButton {
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  position: relative;
+  transition: all 200ms ease;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.toggleButton[data-on="true"] {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  transition: all 200ms ease;
+}
+
+.toggleButton[data-on="true"] .toggleKnob {
+  left: 18px;
+  background: var(--color-bg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Metrics panel (full CWV gauges)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.metricsGrid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.metricsGrid[data-count="3"] { grid-template-columns: repeat(3, 1fr); }
+.metricsGrid[data-count="6"] { grid-template-columns: repeat(3, 1fr); }
+
+.metricGauge {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.metricGaugeLabel {
+  display: block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
+}
+
+.metricGaugeValue {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricGaugeValue[data-rating="good"] { color: var(--color-success); }
+.metricGaugeValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.metricGaugeValue[data-rating="poor"] { color: var(--color-error); }
+
+.metricGaugeRating {
+  display: block;
+  font-size: 0.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.metricGaugeRating[data-rating="good"] { color: var(--color-success); }
+.metricGaugeRating[data-rating="needs-improvement"] { color: var(--color-warning); }
+.metricGaugeRating[data-rating="poor"] { color: var(--color-error); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Widget panels
+   ═══════════════════════════════════════════════════════════════════ */
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Step 4: Baseline verdict ────────────────────────────────────── */
+
+.baselineVerdict {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+}
+
+.verdictIcon {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-error);
+  color: var(--color-bg);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.verdictLabel {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-error);
+}
+
+.verdictDesc {
+  display: block;
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ── Step 4: Prediction interaction ─────────────────────────────── */
+
+.predictionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.predictionChoice {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.predictionChoice:hover {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+}
+
+.predictionChoice:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 2px;
+}
+
+.predictionResult {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: 0.6rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+}
+
+.predictionResult[data-correct="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+}
+
+.predictionResultIcon {
+  font-weight: 800;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.predictionResult[data-correct="true"] .predictionResultIcon { color: var(--color-success); }
+.predictionResult:not([data-correct="true"]) .predictionResultIcon { color: var(--color-error); }
+
+/* ── Step 5: Bundle compare ──────────────────────────────────────── */
+
+.bundleCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.bundleCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bundleColLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.bundleBlock {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.6rem;
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: opacity 200ms ease;
+}
+
+.bundleBlock[data-state="inactive"] { opacity: 0.35; }
+
+.bundleBar {
+  height: 6px;
+  border-radius: var(--radius-1);
+  transition: width 500ms ease;
+}
+
+/* ── Step 6: Rendering pipeline ─────────────────────────────────── */
+
+.pipelineTimelines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.pipelineRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pipelineRowLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 40px;
+}
+
+.pipelineTrack {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+}
+
+.pipelineBlock {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-1);
+  font-size: 0.52rem;
+  font-weight: 600;
+  padding: 0 var(--space-1);
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 200ms ease;
+  min-width: 0;
+}
+
+.pipelineBlock[data-state="inactive"] { opacity: 0.2; }
+
+.pipelineBlock[data-type="html"] {
+  background: color-mix(in srgb, var(--diagram-layer-4) 25%, var(--color-bg));
+  color: var(--diagram-layer-4);
+}
+
+.pipelineBlock[data-type="blocking"] {
+  background: color-mix(in srgb, var(--color-error) 20%, var(--color-bg));
+  color: var(--color-error);
+}
+
+.pipelineBlock[data-type="async"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 15%, var(--color-bg));
+  color: var(--diagram-layer-3);
+  border: 1px dashed var(--diagram-layer-3);
+}
+
+.pipelineMarker {
+  display: flex;
+  align-items: center;
+  font-size: 0.52rem;
+  font-weight: 800;
+  color: var(--color-error);
+  white-space: nowrap;
+  padding: 0 var(--space-1);
+  border-left: 2px solid var(--color-error);
+  height: 100%;
+  transition: opacity 200ms ease;
+}
+
+.pipelineMarker[data-state="inactive"] { opacity: 0.2; }
+
+.pipelineMarker[data-type="early"] {
+  color: var(--color-success);
+  border-left-color: var(--color-success);
+}
+
+.pipelineSaving {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  transition: opacity 200ms ease;
+}
+
+.pipelineSaving[data-state="active"] {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+}
+
+.pipelineSaving[data-state="inactive"] { opacity: 0.3; }
+
+/* ── Step 10: Click simulation ─────────────────────────────────── */
+
+.clickSimulation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  margin-top: var(--space-2);
+}
+
+.clickSimButton {
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--diagram-layer-9);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+  color: var(--diagram-layer-9);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 200ms ease;
+  white-space: nowrap;
+  min-width: 160px;
+  text-align: center;
+}
+
+.clickSimButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--diagram-layer-9) 15%, var(--color-surface));
+}
+
+.clickSimButton[data-state="queued"] {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  animation: queuePulse 600ms ease-in-out infinite;
+}
+
+.clickSimButton[data-state="processed"] {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+}
+
+@keyframes queuePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.clickSimLabel {
+  font-size: 0.6rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ── Step 11: Shift ranking ────────────────────────────────────── */
+
+.shiftRankGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.shiftRankRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  user-select: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.shiftRankRow[data-dragging="true"] {
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
+  transform: scale(1.02);
+  z-index: 2;
+}
+
+.shiftRankPosition {
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--diagram-layer-9);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.shiftRankName {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.shiftRankHandle {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 150ms ease;
+}
+
+.shiftRankRow:hover .shiftRankHandle {
+  opacity: 1;
+}
+
+/* ── Step 7: Image optimization ──────────────────────────────────── */
+
+.imageGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.imageRow {
+  display: grid;
+  grid-template-columns: 60px 1fr 70px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+}
+
+.imageName {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.imageBarWrap {
+  height: 8px;
+  border-radius: var(--radius-1);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.imageBar {
+  height: 100%;
+  border-radius: var(--radius-1);
+  transition: width 500ms ease, background 300ms ease;
+}
+
+.imageBar[data-state="original"] { background: var(--diagram-layer-5); }
+.imageBar[data-state="optimized"] { background: var(--color-success); }
+
+.imageSize {
+  text-align: right;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lazyBadge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 4px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-2) 15%, transparent);
+  color: var(--diagram-layer-2);
+  font-size: 0.5rem;
+  font-weight: 700;
+}
+
+.imageSavings {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.imageSavings strong[data-status="good"] { color: var(--color-success); }
+.imageSavings strong[data-status="bad"] { color: var(--color-error); }
+
+/* ── Step 7: Image classification ───────────────────────────────── */
+
+.imageClassifyGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.imageClassifyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.imageClassifyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.imageClassifyHint {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.imageClassifyButtons {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.imageClassifyBtn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  min-width: 44px;
+  text-align: center;
+}
+
+.imageClassifyBtn:hover {
+  border-color: var(--diagram-layer-9);
+  color: var(--color-text);
+}
+
+.imageClassifyBtn[data-selected="true"] {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+  color: var(--color-bg);
+}
+
+/* ── Step 8: Font compare ────────────────────────────────────────── */
+
+.fontCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.fontCompareCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fontCompareLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fontCompareBlock {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.6rem;
+  transition: opacity 200ms ease;
+}
+
+.fontCompareBlock[data-state="inactive"] { opacity: 0.3; }
+
+.fontCompareRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--color-text);
+}
+
+.fontBad { color: var(--color-error); }
+.fontGood { color: var(--color-success); }
+
+/* ── Step 8: Font metrics summary ──────────────────────────────── */
+
+.fontMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.fontMetricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.fontMetricLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.fontMetricValue {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.fontMetricValue[data-state="good"] { color: var(--color-success); }
+.fontMetricValue[data-state="bad"] { color: var(--color-error); }
+
+/* ── Step 9: Third-party lifecycle ─────────────────────────────── */
+
+.lifecycleTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lifecycleRow {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.lifecycleLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: right;
+}
+
+.lifecycleSize {
+  font-size: 0.48rem;
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.lifecycleTrack {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  height: 24px;
+}
+
+.lifecycleBlock {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 0.44rem;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: all 300ms ease;
+}
+
+.lifecycleBlock[data-phase="parse"] {
+  background: color-mix(in srgb, var(--diagram-layer-4) 20%, var(--color-bg));
+  color: var(--diagram-layer-4);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-4) 30%, transparent);
+}
+
+.lifecycleBlock[data-phase="execute"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-bg));
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+}
+
+.lifecycleBlock[data-phase="idle"] {
+  background: color-mix(in srgb, var(--color-success) 15%, var(--color-bg));
+  color: var(--color-success);
+  border: 1px dashed color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.lifecycleBlock[data-state="inactive"] { opacity: 0.2; }
+
+.lifecycleDivider {
+  height: 100%;
+  border-left: 2px dashed var(--color-border);
+  position: relative;
+}
+
+.lifecycleDividerLabel {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.4rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.lifecycleAxisRow {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: var(--space-2);
+}
+
+.lifecycleAxis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.44rem;
+  color: var(--color-muted);
+  padding: 0 2px;
+}
+
+/* ── Step 9: Third-party cards (legacy) ──────────────────────────── */
+
+.thirdPartyGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.thirdPartyCard {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: all 200ms ease;
+}
+
+.thirdPartyCard[data-state="deferred"] {
+  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+}
+
+.thirdPartyCard[data-state="eager"] {
+  border-left: 3px solid var(--color-error);
+}
+
+.thirdPartyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.thirdPartyName {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.thirdPartySize {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--diagram-layer-7);
+}
+
+.thirdPartyImpact {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+}
+
+.thirdPartyStrategy {
+  font-size: 0.56rem;
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+.thirdPartySavings {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+/* ── Step 10: Task timeline ──────────────────────────────────────── */
+
+.taskTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.taskTimelineRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.taskTimelineLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  min-width: 40px;
+  padding-top: 4px;
+}
+
+.taskTimelineTrack {
+  flex: 1;
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.taskBlock {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-1);
+  font-size: 0.5rem;
+  font-weight: 700;
+  transition: all 200ms ease;
+  overflow: hidden;
+}
+
+.taskBlock[data-state="active"] {
+  background: color-mix(in srgb, var(--color-success) 20%, var(--color-bg));
+  color: var(--color-success);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+}
+
+.taskBlock[data-state="inactive"] {
+  background: var(--color-bg);
+  color: var(--color-muted);
+  border: 1px solid var(--color-border);
+  opacity: 0.3;
+}
+
+.taskBlock[data-long="true"][data-state="active"] {
+  background: color-mix(in srgb, var(--color-error) 15%, var(--color-bg));
+  color: var(--color-error);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, var(--color-border));
+}
+
+/* ── Step 11: Layout shift bars ──────────────────────────────────── */
+
+.shiftGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.shiftRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 35px auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+}
+
+.shiftSource {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.shiftBarWrap {
+  height: 6px;
+  border-radius: var(--radius-1);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.shiftBar {
+  height: 100%;
+  border-radius: var(--radius-1);
+  transition: width 500ms ease, background 300ms ease;
+}
+
+.shiftBar[data-state="shifting"] { background: var(--color-error); }
+.shiftBar[data-state="fixed"] { background: var(--color-success); }
+
+.shiftValue {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.shiftValue[data-state="shifting"] { color: var(--color-error); }
+.shiftValue[data-state="fixed"] { color: var(--color-success); }
+
+.shiftFix {
+  font-size: 0.5rem;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.shiftRow[data-fixed-earlier="true"] .shiftFix {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+.shiftRow[data-fixed-earlier="true"] {
+  opacity: 0.6;
+}
+
+.clsTotal {
+  font-size: 0.65rem;
+  color: var(--color-text);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.clsTotal strong[data-status="good"] { color: var(--color-success); }
+.clsTotal strong[data-status="bad"] { color: var(--color-error); }
+
+.clsTarget {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  margin-left: var(--space-2);
+}
+
+/* ── Step 12: Cache strategy grid ────────────────────────────────── */
+
+.cacheGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cacheHeaderRow {
+  display: grid;
+  grid-template-columns: 70px 1fr 60px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.cacheRow {
+  display: grid;
+  grid-template-columns: 70px 1fr 60px;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+  align-items: center;
+  transition: all 200ms ease;
+}
+
+.cacheRow[data-state="active"] {
+  border-left: 2px solid var(--color-success);
+}
+
+.cacheRow[data-state="inactive"] {
+  opacity: 0.5;
+}
+
+.cacheResource { font-weight: 600; color: var(--color-text); }
+.cacheStrategy { color: var(--diagram-layer-5); }
+.cacheTTL { color: var(--color-muted); text-align: right; }
+
+/* ── Step 12: Cache matching grid ───────────────────────────────── */
+
+.cacheMatchGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cacheMatchHeader {
+  display: grid;
+  grid-template-columns: 70px repeat(3, 1fr);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cacheMatchStrategyLabel {
+  text-align: center;
+  font-size: 0.44rem;
+}
+
+.cacheMatchRow {
+  display: grid;
+  grid-template-columns: 70px repeat(3, 1fr);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  align-items: center;
+}
+
+.cacheMatchCell {
+  width: 100%;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.cacheMatchCell:hover {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+}
+
+.cacheMatchCell[data-selected="true"] {
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
+}
+
+.cacheSubmitButton {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--diagram-layer-9);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
+  color: var(--diagram-layer-9);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cacheSubmitButton:hover {
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, var(--color-bg));
+}
+
+.cacheWrong {
+  text-decoration: line-through;
+  color: var(--color-error);
+  opacity: 0.6;
+  margin-right: 4px;
+}
+
+/* ── Step 13: Prefetch pipeline ──────────────────────────────────── */
+
+/* ── Step 13: Navigation comparison ─────────────────────────────── */
+
+.navComparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.navComparisonRow {
+  display: grid;
+  grid-template-columns: 64px 1fr 50px;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.navComparisonLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.navComparisonTrack {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+}
+
+.navComparisonBlock {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  font-size: 0.44rem;
+  font-weight: 700;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: all 300ms ease;
+  background: color-mix(in srgb, var(--diagram-layer-7) 20%, var(--color-bg));
+  color: var(--diagram-layer-7);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-7) 30%, var(--color-border));
+}
+
+.navComparisonBlock[data-state="inactive"] {
+  opacity: 0.25;
+}
+
+.navComparisonBlock[data-type="prefetched"] {
+  background: color-mix(in srgb, var(--color-success) 20%, var(--color-bg));
+  color: var(--color-success);
+  border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border));
+}
+
+.navComparisonSaved {
+  font-size: 0.44rem;
+  font-weight: 700;
+  color: var(--color-success);
+  padding: 0 var(--space-1);
+  white-space: nowrap;
+  transition: opacity 300ms ease;
+}
+
+.navComparisonSaved[data-state="inactive"] {
+  opacity: 0;
+}
+
+.navComparisonTime {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.navComparisonTime[data-fast="true"] {
+  color: var(--color-success);
+}
+
+.prefetchLinkGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.prefetchLinkBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+  font-family: var(--font-mono);
+}
+
+.prefetchLinkBtn:hover {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-bg));
+}
+
+.prefetchLinkBtn[data-selected="true"] {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, var(--color-bg));
+}
+
+.prefetchLinkPath {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.prefetchLinkClicks {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.prefetchPipeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.prefetchStep {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  transition: all 200ms ease;
+}
+
+.prefetchStep[data-state="active"] {
+  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
+}
+
+.prefetchStep[data-state="inactive"] { opacity: 0.4; }
+
+.prefetchBadge {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--diagram-layer-5);
+  color: var(--color-bg);
+  font-size: 0.56rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prefetchStepTitle {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.prefetchStepDesc {
+  display: block;
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+/* ── Step 14: Budget bars ────────────────────────────────────────── */
+
+.budgetGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.budgetRow {
+  display: grid;
+  grid-template-columns: 55px 1fr 100px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+}
+
+.budgetMetric {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.budgetBarWrap {
+  height: 8px;
+  border-radius: var(--radius-1);
+  background: var(--color-border);
+  overflow: hidden;
+  position: relative;
+}
+
+.budgetBar {
+  height: 100%;
+  border-radius: var(--radius-1);
+  transition: width 500ms ease;
+  background: var(--color-error);
+}
+
+.budgetBar[data-passed="true"] { background: var(--color-success); }
+
+.budgetThreshold {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  width: 2px;
+  height: 12px;
+  background: var(--color-text);
+  border-radius: 1px;
+}
+
+.budgetValues {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+  text-align: right;
+}
+
+.budgetValues span[data-status="good"] { color: var(--color-success); font-weight: 700; }
+.budgetValues span[data-status="bad"] { color: var(--color-error); font-weight: 700; }
+
+.budgetVerdict {
+  font-size: 0.65rem;
+  color: var(--color-text);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.verdictPass {
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.verdictFail {
+  font-weight: 800;
+  color: var(--color-error);
+}
+
+.budgetVerdict[data-all-pass="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent);
+}
+
+/* ── Step 15: Journey summary ────────────────────────────────────── */
+
+.journeySummary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  margin-bottom: var(--space-2);
+}
+
+.journeyItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.journeyLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.journeyBefore {
+  font-size: 0.6rem;
+  color: var(--color-error);
+  font-weight: 600;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.journeyArrow {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.journeyAfter {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.journeyAfter[data-passing="true"] { color: var(--color-success); }
+.journeyAfter[data-improved="true"]:not([data-passing="true"]) { color: var(--color-warning); }
+
+/* ── Step 15: Waterfall overlay ──────────────────────────────────── */
+
+.waterfallOverlay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  margin-bottom: var(--space-2);
+}
+
+.waterfallOverlayRow {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.waterfallOverlayLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  text-align: right;
+}
+
+.waterfallOverlayTrack {
+  position: relative;
+  height: 16px;
+  background: color-mix(in srgb, var(--color-border) 30%, transparent);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.waterfallOverlayBar {
+  position: absolute;
+  top: 2px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.85;
+  transition: all 400ms ease;
+}
+
+.waterfallOverlayBar[data-ghost="true"] {
+  opacity: 0.25;
+}
+
+/* ── Step 15: RUM grid ───────────────────────────────────────────── */
+
+.rumGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+}
+
+.rumCell {
+  text-align: center;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.rumCellLabel {
+  display: block;
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+.rumCellValue {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.rumCellValue[data-rating="good"] { color: var(--color-success); }
+.rumCellValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.rumCellValue[data-rating="poor"] { color: var(--color-error); }
+
+/* ── Step 15: Alert panel ───────────────────────────────────────── */
+
+.alertPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.alertHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alertHeaderLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.alertHeaderStatus {
+  font-size: 0.5rem;
+  font-weight: 700;
+}
+
+.alertHeaderStatus[data-status="firing"] { color: var(--color-error); }
+.alertHeaderStatus[data-status="clear"] { color: var(--color-success); }
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.56rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alertRow:last-child { border-bottom: none; }
+
+.alertRow[data-status="firing"] {
+  background: color-mix(in srgb, var(--color-error) 6%, var(--color-bg));
+}
+
+.alertRow[data-status="resolved"] {
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-bg));
+}
+
+.alertIcon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.alertRow[data-status="firing"] .alertIcon {
+  background: var(--color-error);
+  color: var(--color-bg);
+}
+
+.alertRow[data-status="resolved"] .alertIcon {
+  background: var(--color-success);
+  color: var(--color-bg);
+}
+
+.alertText {
+  color: var(--color-text);
+  font-family: var(--font-mono);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Waterfall tooltip (custom positioned)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.waterfallTooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text) 12%, transparent);
+  font-family: var(--font-mono);
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.tooltipHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 4px;
+}
+
+.tooltipHeader strong {
+  font-size: 0.68rem;
+  color: var(--color-text);
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tooltipType {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipDivider {
+  width: 1px;
+  height: 10px;
+  background: var(--color-border);
+}
+
+.tooltipTimeline {
+  font-size: 0.52rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.tooltipBlocking {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-error);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.tooltipDep {
+  font-size: 0.52rem;
+  color: var(--color-muted);
+  margin-top: 2px;
+}
+
+.tooltipDep strong {
+  color: var(--diagram-layer-9);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Network bandwidth slider
+   ═══════════════════════════════════════════════════════════════════ */
+
+.networkSliderWrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+}
+
+.networkSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--color-error),
+    var(--color-warning),
+    var(--color-success)
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.networkSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-text);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-text) 25%, transparent);
+  cursor: grab;
+  transition: transform 100ms ease;
+}
+
+.networkSlider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.2);
+}
+
+.networkSlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-text);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-text) 25%, transparent);
+  cursor: grab;
+}
+
+.networkSliderLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 60px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.networkSliderSpeed {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  min-width: 70px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Step 11: Milestone summary
+   ═══════════════════════════════════════════════════════════════════ */
+
+.milestoneSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--color-warning);
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-surface));
+  transition: border-color 300ms ease, background 300ms ease;
+}
+
+.milestoneSummary[data-passing="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+}
+
+.milestoneTitle {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-warning);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 300ms ease;
+}
+
+.milestoneSummary[data-passing="true"] .milestoneTitle {
+  color: var(--color-success);
+}
+
+.milestoneGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.milestoneMetric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.milestoneMetricLabel {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.milestoneMetricBefore {
+  font-size: 0.56rem;
+  color: var(--color-error);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.milestoneMetricAfter {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.milestoneMetricAfter[data-rating="good"] { color: var(--color-success); }
+.milestoneMetricAfter[data-rating="needs-improvement"] { color: var(--color-warning); }
+.milestoneMetricAfter[data-rating="poor"] { color: var(--color-error); }
+
+.milestonePercent {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+}

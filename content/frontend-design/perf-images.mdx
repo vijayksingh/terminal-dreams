@@ -1,0 +1,375 @@
+---
+title: "Image Performance"
+slug: perf-images
+section: performance
+stopId: perf-images
+order: 3
+kind: system-design-problem
+summary: "Format selection, compression, responsive images, lazy loading, and priority hints for optimal image delivery"
+tags:
+  - images
+  - performance
+  - webp
+  - avif
+  - lazy-loading
+  - responsive
+intersections:
+  - sdp-image-gallery
+prerequisites: []
+demo: perf-images
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Formats: pick before you compress
+
+The whole lesson runs one scenario: a page with **20 images and a 1.0 MB initial-load budget**. Format, quality, `srcset`, lazy — every choice has to add up under that ceiling.
+
+Four formats matter in 2026:
+
+- **AVIF** — AV1-derived, roughly **half the bytes of JPEG** at matched perceptual quality. ~95% Baseline 2024 support (Safari shipped 16.4 in March 2023). Slow to encode, so most teams use a CDN or build step.
+- **WebP** — ~25–30% smaller than JPEG. Effectively 100% support since 2020 — use it as the AVIF fallback, not the headline format.
+- **JPEG** — universal since 1992. Keep it as the last branch in your `<picture>`.
+- **PNG** — lossless, alpha. Excellent for UI, terrible for photographs (5–10× the JPEG).
+
+<PredictionChallenge
+  question="A 1600×1000 photograph at quality 80. JPEG comes in at 115 KB. How much smaller is AVIF at the same perceived quality?"
+  options={[
+    "About 10% smaller (~104 KB)",
+    "About 25% smaller (~86 KB)",
+    "About 50% smaller (~58 KB)",
+    "About 70% smaller (~35 KB)",
+  ]}
+  correctIndex={2}
+  explanation="AVIF lands at ~68 KB — about 41% smaller than JPEG at q=80, and that gap widens at higher quality settings. The non-obvious second-order win: you can raise quality on every image and still come in under budget."
+  wrongHints={{
+    0: "10% would barely justify the cost. AVIF was designed to be transformational, not marginal — modern formats earn their browser plumbing.",
+    1: "About 25% is WebP's headline number vs JPEG. AVIF goes further because it inherits AV1's intra-frame prediction and CDEF deblocking.",
+    3: "70% is encoder-marketing optimism. Real-world AVIF lands at ~40–50% of JPEG bytes on photographic content at matched quality.",
+  }}
+/>
+
+The shipping pattern is `<picture>` with sources from best to worst, then a JPEG fallback:
+
+```html
+<picture>
+  <source type="image/avif" srcset="hero.avif" />
+  <source type="image/webp" srcset="hero.webp" />
+  <img src="hero.jpg" alt="..." width="1600" height="1000" />
+</picture>
+```
+
+The browser walks `<source>` top to bottom and uses the first match. The `<img>` at the end is both the rendering target and the universal safety net.
+
+Two attributes on the `<img>` that you should never skip: **`width` and `height`**. Even when the image is responsive, those numbers (or a CSS `aspect-ratio`) let the browser reserve the layout box before bytes arrive — your insurance policy against Cumulative Layout Shift.
+
+Look at the lab on the right: the format comparison bars show the gap visually.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Quality: the steep early curve
+
+Quality vs file size is non-linear. Most of the savings live in the first 10 quality points; the diminishing-returns curve gets brutal below q=70.
+
+<PredictionChallenge
+  question="A 320 KB JPEG at q=100. You drop quality to q=90. How much smaller does the file get?"
+  options={[
+    "~5% smaller (~304 KB) — barely worth it",
+    "~25% smaller (~240 KB)",
+    "~44% smaller (~180 KB)",
+    "~75% smaller (~80 KB) — but visibly degraded",
+  ]}
+  correctIndex={2}
+  explanation="The first 10 quality points are nearly free — q=100 → q=90 saves ~44% with no perceptible change. The encoder strips redundancy at high quality settings before it starts touching real visual detail."
+  wrongHints={{
+    0: "If q=100 → q=90 only saved 5%, nobody would bother. Encoders aggressively de-duplicate near q=100 — that first 10-point drop is the biggest single win in the whole curve.",
+    1: "Closer, but the curve is steeper at the top end. q=100 → q=90 saves about 44% (320 KB → 180 KB) — modern encoders pack quality-100 with redundant data they happily throw out.",
+    3: "75% loss would mean q=90 is visibly degraded — it isn't. That kind of compression starts below q=60.",
+  }}
+/>
+
+The sweet spots by content type:
+
+- **Photographs** (sunsets, faces, scenery): q=80 to q=85.
+- **Screenshots, UI, text-heavy images**: q=90 or higher — text artefacts read as broken software.
+- **Hero/marketing imagery**: don't lower quality, **switch format** — q=85 AVIF beats q=70 JPEG on both bytes and clarity.
+
+One non-obvious thing AVIF buys you that the bars in the lab don't show: you can raise the quality setting on every image and still come in under budget, because AVIF's per-pixel cost is half of JPEG's. Treat the format upgrade as bandwidth you can spend on visual quality.
+
+Drag the quality dial on the right to watch the JPEG/WebP/AVIF bars collapse and stretch together. The relative gap is constant across the curve — that's the AVIF dividend.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — srcset: build the markup
+
+A 1600px-wide hero is ~148 KB. A 400px phone at `dpr=3` only needs 1200 real pixels. Everything above that is bandwidth the browser will throw away — it downscales at render time and discards the extra data.
+
+`srcset` and `sizes` together let the browser pick the smallest source that still covers the displayed pixels. The mental model the browser uses:
+
+1. Read **`sizes`** to figure out how wide the image will render in CSS pixels at this viewport.
+2. Multiply by **`devicePixelRatio`** to get the effective width in device pixels.
+3. Pick the **smallest** `srcset` candidate that is **≥ effective width**.
+
+<PredictionChallenge
+  question="A half-width layout at viewport 1024px on a DPR=2 retina laptop. Available widths: 480w, 800w, 1024w, 1200w, 1600w. Which candidate does the browser pick?"
+  options={[
+    "480w — phones get smaller files",
+    "1024w — match the viewport width",
+    "1200w — the smallest candidate ≥ 1024 device pixels",
+    "1600w — always go biggest on retina",
+  ]}
+  correctIndex={2}
+  explanation="Slot width = 50vw of 1024px = 512 CSS px. Multiplied by DPR=2, the effective need is 1024 device pixels. The browser picks 1200w — the smallest candidate ≥ 1024. Any larger candidate downloads bytes the browser will downscale and discard."
+  wrongHints={{
+    0: "Browsers don't look at form factor — they only look at effective pixels. A half-slot at 1024px CSS on DPR=2 needs 1024 device pixels, not 480.",
+    1: "1024w wouldn't quite cover the 1024-pixel need (the browser wants ≥, not the candidate that matches the viewport). Note also that the half-slot is 512 CSS px, not 1024 — DPR=2 multiplies it back up to 1024.",
+    3: "1600w covers it, but the browser picks the *smallest* candidate that's large enough. The extra 400 device pixels of 1600w get downscaled and thrown away — wasted bytes.",
+  }}
+/>
+
+```html
+<img
+    srcset="hero-480.webp 480w,
+            hero-800.webp 800w,
+            hero-1200.webp 1200w,
+            hero-1600.webp 1600w"
+    sizes="(min-width: 768px) 50vw, 100vw"
+    src="hero-800.webp"
+    width="1600" height="1000" alt="..." />
+```
+
+For **fixed-size** images like avatars or icons, skip `w` descriptors and use `x` descriptors — the math is obvious:
+
+```html
+<img src="avatar.webp"
+    srcset="avatar.webp 1x, avatar@2x.webp 2x, avatar@3x.webp 3x"
+    width="40" height="40" alt="Ada" />
+```
+
+Real device pixel ratios in 2026: phones are `dpr=3` (most flagships since 2018), retina laptops are `dpr=2`, standard desktops are `dpr=1`. The builder on the right lets you toggle DPR — the picker re-runs and you can see which candidate the browser would pick. The emitted HTML is yours to copy.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Art direction: different crops, not different sizes
+
+`srcset` resizes the same image. **Art direction** ships a different crop entirely — a wide landscape on desktop, a portrait crop on phones, so the subject is never reduced to a thin strip.
+
+This is the `<picture>` element doing real work — each `<source>` has a `media` query, and the browser walks them top to bottom:
+
+```html
+<picture>
+  <source media="(max-width: 480px)"  srcset="hero-portrait.avif"  type="image/avif" />
+  <source media="(max-width: 480px)"  srcset="hero-portrait.webp"  type="image/webp" />
+  <source media="(max-width: 1024px)" srcset="hero-square.avif"    type="image/avif" />
+  <source media="(max-width: 1024px)" srcset="hero-square.webp"    type="image/webp" />
+  <source srcset="hero-landscape.avif" type="image/avif" />
+  <source srcset="hero-landscape.webp" type="image/webp" />
+  <img src="hero-landscape.jpg" alt="..." width="1600" height="900" />
+</picture>
+```
+
+The order matters: breakpoint first, then format within breakpoint. The browser uses the **first** `<source>` whose `media` and `type` both match — anything after that is ignored.
+
+This is design work first, optimisation second. The art director picks which crop tells the story at each breakpoint; `srcset` then picks the right size within that crop. Drag the viewport on the right to see which `<source>` wins at each width.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Lazy loading is a budget decision
+
+A page with 20 images doesn't have to ship 20 image requests on the first paint. Mark each image **eager** or **lazy** and the total has to fit under 1.0 MB.
+
+<PredictionChallenge
+  question="Twenty images: a 95 KB hero plus 19 × 45 KB cards. Which loading strategy stays under the 1.0 MB initial-load budget *and* keeps LCP fast?"
+  options={[
+    "All 20 eager — bandwidth is cheap",
+    "All 20 lazy — never load what you don't see",
+    "Hero + 2 above-fold eager, rest lazy",
+    "First 10 eager, last 10 lazy",
+  ]}
+  correctIndex={2}
+  explanation="Eager-load only what paints in the first viewport — hero (95 KB) plus 2 above-fold cards (90 KB) = 185 KB. Everything below the fold defers. The bandwidth you save is yours to spend on the LCP image."
+  wrongHints={{
+    0: "20 × 45 KB plus a 95 KB hero is ~1 MB before any other resource on the page. You also compete with the hero on the same connection — the LCP image is the one that loses.",
+    1: "All lazy means the hero waits for IntersectionObserver to fire, which means it waits for layout. Lazy on above-fold (especially the LCP element) is a self-inflicted LCP hit, usually 400–800ms in field data.",
+    3: "10 thumbs is roughly 450 KB on top of the hero — a wasted half-megabyte for images the user might never reach.",
+  }}
+/>
+
+The minimum-viable markup:
+
+```html
+<img src="hero.avif"
+    width="1600" height="1000"
+    fetchpriority="high"
+    decoding="async"
+    alt="hero" />
+
+<img src="card.webp"
+    width="320" height="240"
+    loading="lazy"
+    decoding="async"
+    alt="card" />
+```
+
+Two attributes do most of the work:
+
+- **`loading="lazy"`** defers the network request until the image approaches the viewport. Native. No JS. No callback.
+- **`width` and `height`** (or a CSS `aspect-ratio`) reserve the layout box before bytes arrive — that's your CLS insurance policy.
+
+<PredictionChallenge
+  question={'You mark the hero image `loading="lazy"` to save bytes. What does it cost?'}
+  options={[
+    "Nothing — the browser still treats LCP images as priority",
+    "~50ms — a small priority hint delay",
+    "~400–800ms LCP regression in field data",
+    "The hero never loads — lazy=true means never",
+  ]}
+  correctIndex={2}
+  explanation="Lazy means the browser waits for IntersectionObserver to fire, which means it waits for layout. The hero stops being requested in the preload-scanner pass and starts being requested after layout completes — a 400–800ms LCP penalty in real field data. The lab on the right shows you the exact warning when you toggle it."
+  wrongHints={{
+    0: 'The browser does not have an exception for LCP images — `loading="lazy"` defers the fetch unconditionally until layout. The browser has no way to know the image is the LCP element until *after* the regression has occurred.',
+    1: "50ms is way too optimistic. Lazy gates the fetch behind layout completion, which on a real page can be 400–800ms after the preload scanner would have started the request.",
+    3: 'The image still loads — it just loads late. `loading="lazy"` defers until the element approaches the viewport; for an above-fold hero that\'s immediately after layout.',
+  }}
+/>
+
+### When to reach for IntersectionObserver instead
+
+Native `loading="lazy"` is the default. Use a hand-rolled IntersectionObserver only when you need something the native API doesn't give you:
+
+```js
+const io = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+      img.src = img.dataset.src;
+      io.unobserve(img);
+    }
+  }
+}, { rootMargin: "200px 0px" });
+
+document.querySelectorAll("img[data-src]").forEach((img) => io.observe(img));
+```
+
+Reach for IO when you need: a placeholder fade-in, a per-image counter, a tighter or looser `rootMargin`, or analytics callbacks. For everything else, `loading="lazy"` is free.
+
+### The background-image gotcha
+
+`loading="lazy"` only works on `<img>` and `<iframe>`. **A CSS `background-image` is not subject to native lazy loading** — the browser fetches it the moment the element matches any selector with that rule. If you need to defer a hero background, either move to an `<img>` with positioning or hand-roll IntersectionObserver and toggle the class.
+
+Toggle eager/lazy on the gallery in the lab. Watch the meter — red means you blew the budget. The hero ribbon flips a different warning when image #1 is lazy.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Priority hints: the modern hero incantation
+
+The browser sorts every network request by priority. Out of the box, it gives `<img>` requests "low" priority until layout determines they're in the viewport — then bumps them to "high". The bump happens **after layout**, which is too late if the LCP image is the largest above-the-fold element.
+
+`fetchpriority="high"` tells the browser this resource is LCP-critical **before** layout runs. Pair it with `decoding="async"` — free since Chrome 65 — and you have the 2024+ hero incantation:
+
+```html
+<img src="hero.avif"
+    fetchpriority="high"
+    decoding="async"
+    width="1600" height="1000"
+    alt="hero" />
+```
+
+<PredictionChallenge
+  question="In 2026, what's the right way to start the hero image fetch as early as possible?"
+  options={[
+    '<link rel="preload" as="image"> in the <head>',
+    'fetchpriority="high" on the <img> itself',
+    "Both — preload tag AND fetchpriority on the img",
+    'loading="eager" — explicitly disable lazy',
+  ]}
+  correctIndex={1}
+  explanation={'fetchpriority="high" SUPERSEDES <link rel="preload" as="image"> for known LCP images. web.dev\'s 2023 guidance: skip the preload tag and put the hint on the <img> itself. Same effect, less plumbing, no risk of fetching twice.'}
+  wrongHints={{
+    0: "Preload still works but it's now legacy plumbing — easy to typo, easy to mismatch the <img>'s srcset (causing a double-fetch), easy to forget when the markup changes. Modern: put the hint on the <img>.",
+    2: "Don't use both. If the preload and the <img> srcset diverge by a single character, the browser fetches twice — once for the preload, once for the <img>. fetchpriority on the <img> alone is the safe path.",
+    3: 'loading="eager" is the default; it doesn\'t tell the browser this image is *more* important than other eager images. fetchpriority="high" is the lever that actually moves the queue.',
+  }}
+/>
+
+### fetchpriority supersedes `<link rel="preload">` for hero images
+
+Before `fetchpriority` shipped (Chrome 101 in 2022, Safari 17.2 in 2023), the only way to start the LCP image early was a preload tag:
+
+```html
+<link rel="preload" as="image"
+      imagesrcset="hero-800.avif 800w, hero-1600.avif 1600w"
+      imagesizes="100vw" />
+```
+
+That still works, but it has problems: easy to typo, easy to mismatch the `<img>`'s `srcset` (causing a double-fetch), easy to forget when the markup changes. Use `<link rel="preload" as="image">` only when the image is loaded by JavaScript after parse (e.g., a user-triggered carousel) and the browser can't see it during the preload-scanner pass.
+
+### And `fetchpriority="low"` for the decorative stuff
+
+The mirror move: tell the browser which images **don't** matter, so they stop competing with the LCP image for bandwidth:
+
+```html
+<img src="avatar.webp" fetchpriority="low" loading="lazy" alt="commenter" />
+<img src="bg-pattern.svg" fetchpriority="low" alt="" role="presentation" />
+```
+
+Background patterns, below-fold avatars, decoration that's nice-to-have but isn't holding up the experience. The waterfall on the right shows what changes when you toggle priority hints on.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Image CDN: one URL, many bytes
+
+The story so far has been *what to ship*. An image CDN handles *how to derive it*. You keep one master image at the origin; the CDN generates every variant — resized, recompressed, re-encoded — at the edge.
+
+<PredictionChallenge
+  question="Three browsers fetch the same URL: /cdn/hero.jpg?w=1600&q=80&fmt=auto. Why do they get different bytes back?"
+  options={[
+    "The CDN is buggy and inconsistent across edges",
+    "The CDN reads the Accept header and content-negotiates the format",
+    "The browser sends a User-Agent string the CDN parses",
+    "DNS routes each browser to a different origin",
+  ]}
+  correctIndex={1}
+  explanation="The same URL returns different bytes per client because the CDN reads the Accept header — `image/avif, image/webp, image/*` from Chrome, `image/webp, image/*` from Safari 16, just `image/*` from IE 11 — and picks the best supported format. The URL stays clean; the content varies."
+  wrongHints={{
+    0: "Image CDNs are intentionally consistent: same URL + same Accept header = same response from every edge node. The variance comes from content negotiation, not flakiness.",
+    2: "User-Agent works but is brittle — too many UA strings to parse. The Accept header is the standardised mechanism, and every modern image CDN uses it.",
+    3: "Origin is one machine; the CDN's edges are the variants. DNS routes to the nearest edge, but every edge serves content negotiation off the same logic.",
+  }}
+/>
+
+The flow:
+
+1. The browser sends `Accept: image/avif, image/webp, image/*`.
+2. The CDN reads that header plus URL parameters (`?w=1600&q=80&fmt=auto`) and looks up the cache key `(URL, Accept, dimensions)`.
+3. On a cache hit, the edge node responds immediately. On a miss, it fetches the master from origin, applies the transforms, caches the result, and responds.
+
+The same URL — `/cdn/hero.jpg?w=1600&q=80&fmt=auto` — returns different bytes to different clients:
+
+- Chrome → `Content-Type: image/avif`, ~68 KB
+- Safari 16 → `Content-Type: image/webp`, ~84 KB
+- IE 11 (still alive on kiosks) → `Content-Type: image/jpeg`, ~115 KB
+
+Click through the pipeline in the lab to see each stage.
+
+The vendors you'll meet:
+
+- **Image CDNs**: Cloudinary, imgix, Cloudflare Images, Fastly Image Optimizer, AWS CloudFront with Lambda@Edge.
+- **Framework wrappers**: Next.js `<Image>`, Astro `<Image>`, Nuxt `<NuxtImg>` — they wrap an underlying CDN and emit `srcset`/`sizes`/`width`/`height` automatically.
+- **Self-hosted**: thumbor or imageproxy when you cannot send images off your network.
+
+One operational detail: most CDNs sign their transform URLs or restrict allowed values, because every unique URL becomes a cache entry. An attacker who can request arbitrary `?w=` values can churn your cache and rack up transform costs. Always lock down the allowed widths and qualities at the edge.
+
+</section>

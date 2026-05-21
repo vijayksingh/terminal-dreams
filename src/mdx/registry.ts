@@ -23,6 +23,7 @@ import { InteractiveCounter } from "@/mdx/shared/InteractiveCounter";
 import { CodeBlock } from "@/mdx/shared/CodeBlock";
 import { MotionBadge } from "@/mdx/shared/MotionBadge";
 import { Playground } from "@/mdx/shared/Playground";
+import { PredictionChallenge } from "@/mdx/shared/PredictionChallenge";
 import type { ComponentType } from "react";
 import { cache } from "react";
 
@@ -40,6 +41,7 @@ export const sharedComponents: MdxComponentMap = {
   CodeBlock,
   MotionBadge,
   Playground,
+  PredictionChallenge: PredictionChallenge as unknown as MdxComponent,
   RichText: RichText as unknown as MdxComponent,
   p: RichParagraph as unknown as MdxComponent,
   pre: CodeBlock,

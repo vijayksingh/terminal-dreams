@@ -16,6 +16,7 @@ import { MultiTabLab } from "./sdp-multi-tab/MultiTabLab";
 import { VideoStreamingLab } from "./sdp-video-streaming/VideoStreamingLab";
 import { NotificationLab } from "./sdp-notification-system/NotificationLab";
 import { MicrofrontendLab } from "./sdp-microfrontend/MicrofrontendLab";
+import { WebPerformanceLab } from "./sdp-web-performance/WebPerformanceLab";
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -205,6 +206,15 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <MicrofrontendLab activeStep={activeStep} />
+    ),
+  },
+  "design-web-performance": {
+    steps: Array.from({ length: 15 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <WebPerformanceLab activeStep={activeStep} />
     ),
   },
 };
