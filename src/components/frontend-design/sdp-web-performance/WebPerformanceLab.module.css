@@ -1096,31 +1096,23 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .widgetPanel {
-  padding: var(--space-4);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent),
-    0 2px 8px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .widgetTitle {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-text);
+  font-size: 0.56rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  text-wrap: balance;
 }
 
 .widgetNote {
-  font-size: 0.62rem;
-  color: var(--color-muted);
-  line-height: 1.6;
+  font-size: 0.58rem;
+  color: color-mix(in srgb, var(--color-muted) 80%, transparent);
+  line-height: 1.5;
   margin: 0;
   text-wrap: pretty;
 }
@@ -1289,7 +1281,7 @@
 .bundleBlock[data-state="lazy"] { opacity: 0.55; box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent), inset 0 0 0 1px color-mix(in srgb, var(--diagram-layer-2) 20%, transparent); }
 
 .bundleBar {
-  height: 8px;
+  height: 10px;
   border-radius: var(--radius-1);
   transition: width 500ms ease;
 }
@@ -1364,7 +1356,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 32px;
+  height: 36px;
 }
 
 .pipelineBlock {
@@ -1629,9 +1621,6 @@
   grid-template-columns: 60px 1fr 70px;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
   font-size: 0.62rem;
 }
 
@@ -1641,16 +1630,16 @@
 }
 
 .imageBarWrap {
-  height: 8px;
+  height: 12px;
   border-radius: var(--radius-1);
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
   overflow: hidden;
 }
 
 .imageBar {
   height: 100%;
   border-radius: var(--radius-1);
-  transition: width 500ms ease, background 300ms ease;
+  transition: width 500ms ease, background-color 300ms ease;
 }
 
 .imageBar[data-state="original"] { background: var(--diagram-layer-5); }
@@ -1674,12 +1663,8 @@
 }
 
 .imageSavings {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--color-muted);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
   line-height: 1.5;
 }
 
@@ -1818,10 +1803,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .fontMetricLabel {
@@ -1873,7 +1854,7 @@
   display: flex;
   align-items: center;
   gap: 1px;
-  height: 24px;
+  height: 28px;
 }
 
 .lifecycleBlock {
@@ -2005,12 +1986,8 @@
 }
 
 .thirdPartySavings {
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   color: var(--color-muted);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
   line-height: 1.5;
 }
 
@@ -2090,9 +2067,6 @@
   grid-template-columns: 80px 1fr 35px auto;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
   font-size: 0.62rem;
 }
 
@@ -2102,9 +2076,9 @@
 }
 
 .shiftBarWrap {
-  height: 6px;
+  height: 10px;
   border-radius: var(--radius-1);
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
   overflow: hidden;
 }
 
@@ -2149,12 +2123,9 @@
 }
 
 .clsTotal {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--color-text);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  font-variant-numeric: tabular-nums;
 }
 
 .clsTotal strong[data-status="good"] { color: var(--color-success); }
@@ -2222,19 +2193,19 @@
   display: grid;
   grid-template-columns: 70px 1fr 60px;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
+  padding: var(--space-1) 0;
   font-size: 0.62rem;
   align-items: center;
-  transition-property: opacity, background-color, box-shadow;
+  transition-property: opacity;
   transition-duration: 200ms;
   transition-timing-function: ease;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 30%, transparent);
 }
 
+.cacheRow:last-child { border-bottom: none; }
+
 .cacheRow[data-state="active"] {
-  background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
 }
 
 .cacheRow[data-state="inactive"] {
@@ -2554,9 +2525,6 @@
   grid-template-columns: 55px 1fr 100px;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
   font-size: 0.62rem;
 }
 
@@ -2566,9 +2534,9 @@
 }
 
 .budgetBarWrap {
-  height: 8px;
+  height: 12px;
   border-radius: var(--radius-1);
-  background: var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 40%, transparent);
   overflow: hidden;
   position: relative;
 }
@@ -2602,15 +2570,11 @@
 .budgetValues span[data-status="bad"] { color: var(--color-error); font-weight: 700; }
 
 .budgetVerdict {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--color-text);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .verdictPass {
@@ -2624,9 +2588,7 @@
 }
 
 .budgetVerdict[data-all-pass="true"] {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 8%, var(--color-bg));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent);
+  color: var(--color-success);
 }
 
 /* ── Step 15: Journey summary ────────────────────────────────────── */
@@ -2635,13 +2597,6 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  margin-bottom: var(--space-2);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .journeyItem {
@@ -2745,10 +2700,7 @@
 
 .rumCell {
   text-align: center;
-  padding: var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  padding: var(--space-1);
 }
 
 .rumCellLabel {
@@ -3023,15 +2975,15 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 2px solid var(--color-warning);
   border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-surface));
-  transition: border-color 300ms ease, background 300ms ease;
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-bg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-warning) 25%, transparent);
+  transition: background-color 300ms ease, box-shadow 300ms ease;
 }
 
 .milestoneSummary[data-passing="true"] {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-bg));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 25%, transparent);
 }
 
 .milestoneTitle {
