@@ -31,9 +31,9 @@ export function PredictionChallenge({
   onCorrect,
 }: PredictionChallengeProps) {
   const [selected, setSelected] = useState<number | null>(null);
+  const noMotion = usePrefersReducedMotion();
 
   if (!options || !question) return null;
-  const noMotion = usePrefersReducedMotion();
   const revealed = selected !== null;
   const isCorrect = selected === correctIndex;
   const feedback = isCorrect

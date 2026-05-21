@@ -126,7 +126,7 @@ export function highlight(text: string, query: string): Segment[] {
 
 String surgery: find the match position with `indexOf`, slice the string into before/match/after, tag each piece. In the component, matched segments get a `<mark>` tag — semantically correct here, since `<mark>` means "text highlighted for reference."
 
-Now try typing **"a"** and look at "Banana" — only the first "a" lights up, even though there are three. `indexOf` returns the first match and stops. Highlighting every occurrence would need a different approach: `String.split` with a regex capture group, or a loop that finds all indices. That's a worthwhile extension — a single `text.split(new RegExp(`(${escaped})`, 'gi'))` gives you all occurrences, but you'd need to escape regex metacharacters in the query first (characters like `(`, `.`, `*` are special in regex). The `indexOf` approach sidesteps that entire class of bugs.
+Now try typing **"a"** and look at "Banana" — only the first "a" lights up, even though there are three. `indexOf` returns the first match and stops. Highlighting every occurrence would need a different approach: `String.split` with a regex capture group, or a loop that finds all indices. That's a worthwhile extension — a single `text.split(new RegExp("(" + escaped + ")", "gi"))` gives you all occurrences, but you'd need to escape regex metacharacters in the query first (characters like `(`, `.`, `*` are special in regex). The `indexOf` approach sidesteps that entire class of bugs.
 
 </section>
 

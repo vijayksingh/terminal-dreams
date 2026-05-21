@@ -45,6 +45,7 @@ export default async function RecipeArticlePage({
           mdxOptions: {
             remarkPlugins: [remarkGfm],
           },
+          blockJS: false,
         }}
       />
     );

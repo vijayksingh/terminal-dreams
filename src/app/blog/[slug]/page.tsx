@@ -52,6 +52,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                     remarkPlugins: [remarkGfm],
                     rehypePlugins: [],
                   },
+                  blockJS: false,
                 }}
               />
             </div>

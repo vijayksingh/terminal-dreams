@@ -43,6 +43,7 @@ export default async function FdArticlePage({
           remarkPlugins: [remarkGfm],
           rehypePlugins: [],
         },
+        blockJS: false,
       }}
     />
   );

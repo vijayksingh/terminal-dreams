@@ -74,6 +74,7 @@ export default async function PrinciplePage({
                     remarkPlugins: [remarkGfm],
                     rehypePlugins: [],
                   },
+                  blockJS: false,
                 }}
               />
             </div>

@@ -68,7 +68,7 @@ export default async function CodePrimitiveSeriesPage() {
               <MDXRemote
                 source={content}
                 components={recipeComponents}
-                options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+                options={{ mdxOptions: { remarkPlugins: [remarkGfm] }, blockJS: false }}
               />
             </div>
           ))}
