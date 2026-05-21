@@ -1173,6 +1173,11 @@
   transform: scale(0.96);
 }
 
+.yieldPresetBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
 .yieldPresetBtn[data-active="true"] {
   border-color: var(--diagram-layer-4);
   color: var(--diagram-layer-4);

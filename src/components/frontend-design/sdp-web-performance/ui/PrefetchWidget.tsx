@@ -144,6 +144,7 @@ export function PrefetchWidget() {
               onBlur={() => stopPrefetch(l.path)}
               onClick={() => navigate(l.path)}
               disabled={navigating}
+              aria-label={`${l.path} (${l.clicks}% of clicks) — ${navigating ? "loading" : navTime != null ? `navigated in ${navTime}ms` : "hover to prefetch, click to navigate"}`}
             >
               <span className={styles.prefetchLinkPath}>{l.path}</span>
               <span className={styles.prefetchLinkClicks}>{l.clicks}% of clicks</span>
