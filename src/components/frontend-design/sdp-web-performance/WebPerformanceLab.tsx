@@ -175,6 +175,9 @@ const NETWORK_OPTIONS: NetworkCondition[] = ["slow-3g", "3g", "4g", "wifi"];
 const MIN_INSPECTOR_W = 100;
 const MAX_INSPECTOR_W = 300;
 const DEFAULT_INSPECTOR_W = 160;
+const MIN_PANEL_H = 120;
+const MAX_PANEL_H = 700;
+const DEFAULT_PANEL_H = 340;
 
 function WaterfallPanel() {
   const {
@@ -187,22 +190,36 @@ function WaterfallPanel() {
   const showVisitToggle = activeStep >= 12 && enabledOptimizations.has("caching");
 
   const [inspectorW, setInspectorW] = useState(DEFAULT_INSPECTOR_W);
-  const dragging = useRef(false);
+  const [panelH, setPanelH] = useState(DEFAULT_PANEL_H);
+  const dragging = useRef<"col" | "row" | false>(false);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  const onPointerDown = useCallback((e: React.PointerEvent) => {
+  const onColResizeDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
-    dragging.current = true;
+    dragging.current = "col";
     document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  const onRowResizeDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = "row";
+    document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
   }, []);
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      if (!dragging.current || !bodyRef.current) return;
-      const rect = bodyRef.current.getBoundingClientRect();
-      const newW = Math.round(rect.right - e.clientX);
-      setInspectorW(Math.max(MIN_INSPECTOR_W, Math.min(MAX_INSPECTOR_W, newW)));
+      if (dragging.current === "col" && bodyRef.current) {
+        const rect = bodyRef.current.getBoundingClientRect();
+        const newW = Math.round(rect.right - e.clientX);
+        setInspectorW(Math.max(MIN_INSPECTOR_W, Math.min(MAX_INSPECTOR_W, newW)));
+      } else if (dragging.current === "row" && panelRef.current) {
+        const parentRect = panelRef.current.parentElement!.getBoundingClientRect();
+        const newH = Math.round(parentRect.bottom - e.clientY);
+        setPanelH(Math.max(MIN_PANEL_H, Math.min(MAX_PANEL_H, newH)));
+      }
     };
     const onUp = () => {
       if (!dragging.current) return;
@@ -219,7 +236,8 @@ function WaterfallPanel() {
   }, []);
 
   return (
-    <div className={styles.waterfallPanel}>
+    <div className={styles.waterfallPanel} ref={panelRef} style={{ height: panelH }}>
+      <div className={styles.vResizeHandle} onPointerDown={onRowResizeDown} aria-hidden="true" />
       <div className={styles.waterfallHeader}>
         <span className={styles.waterfallHeaderLabel}>Waterfall</span>
         <span className={styles.waterfallHeaderStats} aria-live="polite">
@@ -260,7 +278,7 @@ function WaterfallPanel() {
           <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
         </div>
         <div className={styles.inspectorArea}>
-          <div className={styles.resizeHandle} onPointerDown={onPointerDown} aria-hidden="true" />
+          <div className={styles.resizeHandle} onPointerDown={onColResizeDown} aria-hidden="true" />
           <StateInspector entries={stateEntries} title="Perf State" />
         </div>
       </div>
