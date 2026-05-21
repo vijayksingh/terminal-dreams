@@ -334,14 +334,14 @@
 .toggleChips {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .toggleChip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: transparent;
@@ -384,6 +384,18 @@
 
 .chipDot[data-on="true"] {
   background: var(--diagram-layer-9);
+}
+
+/* ── Focus-visible (all interactive elements) ────────────────── */
+
+.toggleChip:focus-visible,
+.deviceBtn:focus-visible,
+.clickSimButton:focus-visible,
+.yieldPresetBtn:focus-visible,
+.prefetchSimBtn:focus-visible,
+.prefetchResetBtn:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 /* ── Waterfall panel (always visible, stuck to bottom) ────────── */
@@ -618,7 +630,8 @@
 .metricsSummaryBar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -734,7 +747,7 @@
 }
 
 .widgetTitle {
-  font-size: var(--perf-md);
+  font-size: var(--perf-lg);
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
@@ -742,7 +755,8 @@
 }
 
 .widgetNote {
-  font-size: var(--perf-sm);
+  font-family: var(--font-sans, system-ui);
+  font-size: var(--perf-base);
   color: var(--color-muted);
   line-height: 1.55;
   margin: 0;
