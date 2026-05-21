@@ -742,7 +742,7 @@ function CriticalCSSWidget() {
           <span className={styles.pipelineRowLabel}>After</span>
           <div className={styles.pipelineTrack}>
             {afterSteps.map((s, i) => s.type === "marker" ? (
-              <div key={i} className={styles.pipelineMarker} data-type="early" data-state={on ? "active" : "inactive"}>
+              <div key={i} className={styles.pipelineMarker} data-type="early" data-state="active">
                 <span>FCP @ {fcpAfter}ms{fouc ? " ⚠" : ""}</span>
               </div>
             ) : (
@@ -750,7 +750,7 @@ function CriticalCSSWidget() {
                 key={i}
                 className={styles.pipelineBlock}
                 data-type={s.type}
-                data-state={on ? "active" : "inactive"}
+                data-state="active"
                 style={{ flex: s.ms }}
               >
                 <span>{s.label}</span>
@@ -759,7 +759,7 @@ function CriticalCSSWidget() {
           </div>
         </div>
       </div>
-      <div className={styles.pipelineSaving} data-state={on ? "active" : "inactive"}>
+      <div className={styles.pipelineSaving} data-state="active">
         FCP: {fcpBefore}ms → {fcpAfter}ms (saved {fcpBefore - fcpAfter}ms)
       </div>
       <p className={styles.widgetNote}>
@@ -951,6 +951,69 @@ function ImageOptWidget() {
 
 // ── Step 8: Font loading ────────────────────────────────────────────
 
+const FONT_DESCRIPTORS = [
+  { property: "size-adjust", correct: "107%", hint: "Scales the fallback to match web font's overall glyph size" },
+  { property: "ascent-override", correct: "90%", hint: "Matches the height above the baseline" },
+  { property: "descent-override", correct: "22%", hint: "Matches the depth below the baseline" },
+];
+const FONT_VALUES = ["107%", "90%", "22%"];
+
+function FontMetricExercise() {
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  const [checked, setChecked] = useState(false);
+
+  const allPicked = FONT_DESCRIPTORS.every((d) => picks[d.property]);
+  const allCorrect = FONT_DESCRIPTORS.every((d) => picks[d.property] === d.correct);
+
+  return (
+    <div style={{ marginTop: "var(--space-2)" }}>
+      <p className={styles.widgetNote}>Match each @font-face descriptor to its value:</p>
+      <div className={styles.codeFillPre}>
+        <code>{"@font-face {\n"}</code>
+        {FONT_DESCRIPTORS.map((d) => (
+          <div key={d.property} style={{ paddingLeft: "1.5em" }}>
+            <code>{d.property}: </code>
+            {checked ? (
+              <span
+                className={styles.codeFillSelect}
+                data-status={picks[d.property] === d.correct ? "correct" : "wrong"}
+              >
+                {picks[d.property] || "—"}{picks[d.property] !== d.correct ? ` → ${d.correct}` : ""}
+              </span>
+            ) : (
+              <select
+                className={styles.codeFillSelect}
+                value={picks[d.property] || ""}
+                onChange={(e) => setPicks((p) => ({ ...p, [d.property]: e.target.value }))}
+              >
+                <option value="">—</option>
+                {FONT_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            )}
+            <code>;</code>
+          </div>
+        ))}
+        <code>{"}"}</code>
+      </div>
+      {!checked && allPicked && (
+        <button type="button" className={styles.cacheSubmitButton} onClick={() => setChecked(true)}>
+          Check values
+        </button>
+      )}
+      {checked && (
+        <div className={styles.predictionResult} data-correct={allCorrect ? "true" : undefined}>
+          <span className={styles.predictionResultIcon}>{allCorrect ? "✓" : "✗"}</span>
+          <span>
+            {allCorrect
+              ? "All correct — these overrides make the fallback font occupy identical space as the web font, eliminating CLS during the swap."
+              : "See corrections above. size-adjust scales the overall glyph box, ascent-override sets the height above baseline, descent-override sets depth below."}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FontWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("fontLoading");
@@ -1041,6 +1104,7 @@ function FontWidget() {
           </span>
         </div>
       </div>
+      <FontMetricExercise />
     </div>
   );
 }
@@ -1237,16 +1301,21 @@ function LongTaskWidget() {
   const overheadPct = Math.round(((chunkCount - 1) * 0.5 / TOTAL_WORK_MS) * 100);
 
   const networkScale = Math.min(nw.multiplier / 4.2, 1.8);
-  const queueDelay = on ? Math.round(longestChunk * networkScale) : Math.round(300 * networkScale);
+  const [lastDelay, setLastDelay] = useState(0);
 
   const handleSimClick = () => {
     if (clickState !== "idle") return;
+    const taskDuration = on ? longestChunk : 280;
+    const arrivalPct = Math.random();
+    const arrivalMs = Math.round(arrivalPct * taskDuration);
+    const waitMs = Math.round((taskDuration - arrivalMs) * networkScale);
+    setLastDelay(waitMs);
     setClickState("queued");
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setClickState("processed");
       timerRef.current = setTimeout(() => setClickState("idle"), 1200);
-    }, queueDelay);
+    }, waitMs);
   };
 
   return (
@@ -1326,13 +1395,13 @@ function LongTaskWidget() {
           disabled={clickState !== "idle"}
         >
           {clickState === "idle" && "Click during long task"}
-          {clickState === "queued" && `Queued ~${queueDelay}ms...`}
+          {clickState === "queued" && `Queued ~${lastDelay}ms...`}
           {clickState === "processed" && "Processed!"}
         </button>
         <span className={styles.clickSimLabel}>
-          {clickState === "idle" && `Simulates a user click arriving mid-task (${nw.label})`}
+          {clickState === "idle" && `Simulates a user click at a random point during the task (${nw.label})`}
           {clickState === "queued" && (on ? "Yielded — browser processes input between chunks" : "Main thread blocked — click sits in queue")}
-          {clickState === "processed" && `Input delay: ~${queueDelay}ms — ${queueDelay <= 200 ? "passes" : "fails"} INP threshold`}
+          {clickState === "processed" && `Input delay: ${lastDelay}ms — ${lastDelay <= 200 ? "passes" : "fails"} INP threshold (try again — timing varies)`}
         </span>
       </div>
 
