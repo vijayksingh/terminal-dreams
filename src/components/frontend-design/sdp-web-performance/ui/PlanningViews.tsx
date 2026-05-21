@@ -12,38 +12,49 @@ import styles from "../WebPerformanceLab.module.css";
 
 export function AppProfileView() {
   const [device, setDevice] = useState<"wifi" | "3g">("3g");
-  const [visibleFrame, setVisibleFrame] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playbackMs, setPlaybackMs] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
+  const reducedMotion = usePrefersReducedMotion();
+  const rafRef = useRef<number | null>(null);
 
   const timings = device === "wifi"
     ? { blank: 200, partial: 350, loaded: 500, interactive: 650 }
     : { blank: 1700, partial: 2400, loaded: 2900, interactive: 3500 };
 
   const frames = [
-    { at: 0, label: "Navigation", state: "blank", desc: "User clicks link" },
-    { at: timings.blank, label: `${timings.blank}ms`, state: "blank", desc: "Blank — waiting for JS" },
-    { at: timings.partial, label: `${timings.partial}ms`, state: "partial", desc: "Shell renders (FCP)" },
-    { at: timings.loaded, label: `${timings.loaded}ms`, state: "loaded", desc: "Hero image loads (LCP)" },
-    { at: timings.interactive, label: `${timings.interactive}ms`, state: "interactive", desc: "Interactive (long tasks clear)" },
+    { at: 0, label: "0ms", checkpoint: null, state: "blank", desc: "User clicks link" },
+    { at: timings.blank, label: `${timings.blank}ms`, checkpoint: "Blank", state: "blank", desc: "Blank — waiting for JS" },
+    { at: timings.partial, label: `${timings.partial}ms`, checkpoint: "FCP", state: "partial", desc: "Shell renders (FCP)" },
+    { at: timings.loaded, label: `${timings.loaded}ms`, checkpoint: "LCP", state: "loaded", desc: "Hero image loads (LCP)" },
+    { at: timings.interactive, label: `${timings.interactive}ms`, checkpoint: "TTI", state: "interactive", desc: "Interactive (long tasks clear)" },
   ];
 
+  const totalMs = timings.interactive;
+  // Wall-clock playback: 3G compressed to ~1.6s, Wi-Fi to ~520ms.
+  const playbackDurationMs = device === "3g" ? totalMs * 0.46 : totalMs * 0.8;
+
   React.useEffect(() => {
-    setVisibleFrame(0);
-    let current = 0;
-    const advance = () => {
-      if (current >= frames.length - 1) return;
-      current++;
-      const delay = device === "3g"
-        ? (frames[current].at - frames[current - 1].at) * 0.4
-        : (frames[current].at - frames[current - 1].at) * 0.8;
-      timerRef.current = setTimeout(() => {
-        setVisibleFrame(current);
-        advance();
-      }, delay);
+    if (reducedMotion) {
+      setPlaybackMs(totalMs);
+      return;
+    }
+    setPlaybackMs(0);
+    const start = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - start;
+      const simMs = Math.min((elapsed / playbackDurationMs) * totalMs, totalMs);
+      setPlaybackMs(simMs);
+      if (simMs < totalMs) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
     };
-    advance();
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [device]);
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [device, replayKey, reducedMotion, totalMs, playbackDurationMs]);
+
+  const visibleFrame = frames.reduce((acc, f, i) => (f.at <= playbackMs ? i : acc), 0);
+  const progressPct = Math.min((playbackMs / totalMs) * 100, 100);
+  const isComplete = playbackMs >= totalMs;
 
   return (
     <div className={styles.widgetPanel}>
@@ -65,6 +76,39 @@ export function AppProfileView() {
         >
           Wi-Fi (fast)
         </button>
+        <button
+          type="button"
+          className={styles.replayBtn}
+          onClick={() => setReplayKey((k) => k + 1)}
+          aria-label="Replay page load"
+        >
+          {isComplete ? "↻ Replay" : "↻ Restart"}
+        </button>
+      </div>
+      <div className={styles.timeProgressor} aria-label={`Page load progress: ${Math.round(playbackMs)}ms of ${totalMs}ms`}>
+        <div className={styles.timeProgressorTrack}>
+          <div className={styles.timeProgressorFill} style={{ width: `${progressPct}%` }} />
+          {frames.filter((f) => f.checkpoint).map((f) => {
+            const pct = (f.at / totalMs) * 100;
+            const reached = playbackMs >= f.at;
+            return (
+              <div
+                key={f.checkpoint}
+                className={styles.timeCheckpoint}
+                style={{ left: `${pct}%` }}
+                data-reached={reached ? "true" : undefined}
+                data-state={f.state}
+              >
+                <span className={styles.timeCheckpointDot} />
+                <span className={styles.timeCheckpointLabel}>{f.checkpoint}</span>
+                <span className={styles.timeCheckpointTime}>{f.label}</span>
+              </div>
+            );
+          })}
+        </div>
+        <span className={styles.timeProgressorClock}>
+          {Math.round(playbackMs)}ms / {totalMs}ms
+        </span>
       </div>
       <div className={styles.filmstrip}>
         {frames.map((f, i) => (
@@ -74,7 +118,6 @@ export function AppProfileView() {
             data-state={f.state}
             data-visible={i <= visibleFrame ? "true" : undefined}
           >
-            <span className={styles.filmFrameTime}>{f.label}</span>
             <div className={styles.filmFrameScreen} data-state={f.state}>
               {f.state !== "blank" && <div className={styles.filmNavbar} />}
               {f.state === "partial" && (
@@ -98,7 +141,7 @@ export function AppProfileView() {
       </div>
       <p className={styles.widgetNote}>
         On 3G, the user stares at a blank screen for {timings.blank}ms. The page isn't interactive until {timings.interactive}ms.
-        On Wi-Fi, total load drops to {timings.interactive}ms. Each frame is a moment the user is waiting.
+        On Wi-Fi, total load drops to {timings.interactive}ms. Each checkpoint above marks a moment the user is waiting for.
       </p>
     </div>
   );

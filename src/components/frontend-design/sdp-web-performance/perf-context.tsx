@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -13,6 +14,7 @@ import {
   interpolateNetwork,
   OPTIMIZATIONS,
   NETWORK_PROFILES,
+  getCWVRating,
   type OptimizationId,
   type NetworkCondition,
   type NetworkProfile,
@@ -231,17 +233,53 @@ export function PerfProvider({
     [enabledOptimizations, activeProfile, visitType],
   );
 
+  const prevMetricsRef = useRef<PerfMetrics>(metrics);
   const stateEntries = useMemo<StateEntry[]>(() => {
     const optList = [...enabledOptimizations].sort();
+    const prev = prevMetricsRef.current;
+    const displayInp = simulatedInp != null ? simulatedInp : metrics.inp;
+    const lcpDelta = metrics.lcp - prev.lcp;
+    const inpDelta = metrics.inp - prev.inp;
+    const clsDelta = Math.round((metrics.cls - prev.cls) * 100) / 100;
+    const sizeDelta = metrics.totalSizeKB - prev.totalSizeKB;
+    const lcpDisplay = metrics.lcp >= 1000 ? `${(metrics.lcp / 1000).toFixed(1)}s` : `${metrics.lcp}ms`;
     return [
       { label: "Network", value: `${activeProfile.label} (×${activeProfile.multiplier}, ${activeProfile.rtt}ms RTT)` },
       { label: "Visit", value: visitType },
       { label: "Optimizations", value: optList.length > 0 ? optList.join(", ") : "none" },
-      { label: "LCP", value: `${metrics.lcp}ms`, highlight: metrics.lcp > 2500 },
-      { label: "INP", value: `${metrics.inp}ms`, highlight: metrics.inp > 200 },
-      { label: "CLS", value: metrics.cls.toFixed(2), highlight: metrics.cls > 0.1 },
+      {
+        label: "LCP",
+        value: lcpDisplay,
+        rating: getCWVRating("lcp", metrics.lcp),
+        delta: lcpDelta !== 0 ? `${lcpDelta > 0 ? "+" : ""}${lcpDelta}ms` : undefined,
+        deltaDirection: lcpDelta < 0 ? "improved" : lcpDelta > 0 ? "regressed" : undefined,
+      },
+      {
+        label: "INP",
+        value: `${displayInp}ms`,
+        rating: getCWVRating("inp", displayInp),
+        delta: inpDelta !== 0 ? `${inpDelta > 0 ? "+" : ""}${inpDelta}ms` : undefined,
+        deltaDirection: inpDelta < 0 ? "improved" : inpDelta > 0 ? "regressed" : undefined,
+      },
+      {
+        label: "CLS",
+        value: metrics.cls.toFixed(2),
+        rating: getCWVRating("cls", metrics.cls),
+        delta: clsDelta !== 0 ? `${clsDelta > 0 ? "+" : ""}${clsDelta.toFixed(2)}` : undefined,
+        deltaDirection: clsDelta < 0 ? "improved" : clsDelta > 0 ? "regressed" : undefined,
+      },
+      {
+        label: "Size",
+        value: `${metrics.totalSizeKB} KB`,
+        delta: sizeDelta !== 0 ? `${sizeDelta > 0 ? "+" : ""}${sizeDelta} KB` : undefined,
+        deltaDirection: sizeDelta < 0 ? "improved" : sizeDelta > 0 ? "regressed" : undefined,
+      },
     ];
-  }, [enabledOptimizations, activeProfile, visitType, metrics]);
+  }, [enabledOptimizations, activeProfile, visitType, metrics, simulatedInp]);
+
+  if (prevMetricsRef.current !== metrics) {
+    prevMetricsRef.current = metrics;
+  }
 
   const value = useMemo<PerfContextValue>(
     () => ({

@@ -159,4 +159,84 @@
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 
+/* ── Draggable two-column grid ───────────────────────────── */
+
+.labGrid {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+@media (min-width: 1024px) {
+  .labGrid {
+    display: grid;
+    grid-template-rows: 1fr;
+  }
+}
+
+.proseColumn {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+@media (min-width: 1024px) {
+  .proseColumn {
+    height: 100vh;
+  }
+}
+
+.colDivider {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .colDivider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    margin: 0 -6px;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+    user-select: none;
+    touch-action: none;
+  }
+}
+
+.colDivider::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--color-border);
+  transform: translateX(-50%);
+}
+
+.colDivider:hover::before,
+.colDivider:active::before {
+  background: var(--color-accent);
+}
+
+.colDividerGrip {
+  position: relative;
+  z-index: 1;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: var(--color-muted);
+  opacity: 0.4;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+
+.colDivider:hover .colDividerGrip {
+  opacity: 0.8;
+  color: var(--color-text);
+}
+
+.colDivider:active .colDividerGrip {
+  opacity: 1;
+  color: var(--color-accent);
+}
+
 /* Mobile: demo hidden for now — desktop-first experience */

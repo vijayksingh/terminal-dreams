@@ -7,7 +7,7 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StepBar } from "../_shared/StepBar";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import { PerfProvider, usePerfContext } from "./perf-context";
-import { OPTIMIZATIONS, NETWORK_PROFILES, getCWVRating, type NetworkCondition } from "./engine/perf-simulator";
+import { OPTIMIZATIONS, NETWORK_PROFILES, type NetworkCondition } from "./engine/perf-simulator";
 import { WaterfallChart } from "./ui/WaterfallChart";
 import { AppProfileView, VitalsOverview, OptMapView } from "./ui/PlanningViews";
 import { BaselineWidget } from "./ui/BaselineWidget";
@@ -80,7 +80,6 @@ function PerfDashboard() {
   return (
     <div className={styles.dashboardLayout}>
       <div className={styles.dashboardTop}>
-        <MetricsSummaryBar />
         <OptimizationChips />
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -95,46 +94,6 @@ function PerfDashboard() {
         </AnimatePresence>
       </div>
       <WaterfallPanel />
-    </div>
-  );
-}
-
-// ── Metrics summary bar ─────────────────────────────────────────────
-
-function MetricsSummaryBar() {
-  const { metrics, simulatedInp } = usePerfContext();
-  const prevMetricsRef = useRef(metrics);
-  const prevMetrics = prevMetricsRef.current;
-
-  const displayInp = simulatedInp != null ? simulatedInp : metrics.inp;
-  const items: { label: string; value: string; key: string; delta: number; flash?: boolean }[] = [
-    { label: "LCP", value: metrics.lcp >= 1000 ? `${(metrics.lcp / 1000).toFixed(1)}s` : `${metrics.lcp}ms`, key: "lcp", delta: metrics.lcp - prevMetrics.lcp },
-    { label: simulatedInp != null ? "INP" : "INP", value: `${displayInp}ms`, key: "inp", delta: metrics.inp - prevMetrics.inp, flash: simulatedInp != null },
-    { label: "CLS", value: metrics.cls.toFixed(2), key: "cls", delta: Math.round((metrics.cls - prevMetrics.cls) * 100) / 100 },
-    { label: "Size", value: `${metrics.totalSizeKB} KB`, key: "totalSizeKB", delta: metrics.totalSizeKB - prevMetrics.totalSizeKB },
-  ];
-
-  if (prevMetrics !== metrics) {
-    prevMetricsRef.current = metrics;
-  }
-
-  return (
-    <div className={styles.metricsSummaryBar} aria-live="polite" aria-label="Performance metrics">
-      {items.map(({ label, value, key, delta, flash }) => {
-        const ratingValue = key === "inp" ? displayInp : (metrics[key as keyof typeof metrics] as number);
-        const rating = getCWVRating(key, ratingValue);
-        return (
-          <div key={key} className={styles.metricsSummaryItem}>
-            <span className={styles.metricsSummaryLabel}>{label}</span>
-            <span className={styles.metricsSummaryValue} data-rating={rating} data-flash={flash ? "true" : undefined}>{value}</span>
-            {delta !== 0 && (
-              <span className={styles.metricsDelta} data-direction={delta < 0 ? "improved" : "regressed"}>
-                {delta > 0 ? "+" : ""}{key === "cls" ? delta.toFixed(2) : delta}{key === "totalSizeKB" ? " KB" : key === "cls" ? "" : "ms"}
-              </span>
-            )}
-          </div>
-        );
-      })}
     </div>
   );
 }

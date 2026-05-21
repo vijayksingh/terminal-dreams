@@ -7,6 +7,9 @@ export type StateEntry = {
   label: string;
   value: unknown;
   highlight?: boolean;
+  rating?: "good" | "needs-improvement" | "poor";
+  delta?: string;
+  deltaDirection?: "improved" | "regressed";
 };
 
 type StateInspectorProps = {
@@ -14,6 +17,13 @@ type StateInspectorProps = {
   title?: string;
   renderCount?: number;
 };
+
+function ratingColor(rating?: "good" | "needs-improvement" | "poor"): string | undefined {
+  if (rating === "good") return "var(--color-success)";
+  if (rating === "needs-improvement") return "var(--color-warning)";
+  if (rating === "poor") return "var(--color-error)";
+  return undefined;
+}
 
 function formatValue(value: unknown): string {
   if (typeof value === "string") return `"${value}"`;
@@ -74,14 +84,34 @@ export function StateInspector({ entries, title = "State", renderCount }: StateI
                 animate={{ opacity: 1 }}
                 transition={TRANSITION.crossfade}
                 style={{
-                  color: entry.highlight
-                    ? "var(--color-accent)"
-                    : "var(--color-text)",
+                  color: ratingColor(entry.rating) ?? (entry.highlight ? "var(--color-accent)" : "var(--color-text)"),
                   wordBreak: "break-all",
+                  fontVariantNumeric: entry.rating ? "tabular-nums" : undefined,
+                  fontWeight: entry.rating ? 700 : undefined,
                 }}
               >
                 {formatValue(entry.value)}
               </motion.span>
+              {entry.delta && (
+                <motion.span
+                  key={`${entry.label}-${entry.delta}`}
+                  initial={{ opacity: 0, y: -2 }}
+                  animate={{ opacity: 0.85, y: 0 }}
+                  transition={TRANSITION.enterItem}
+                  style={{
+                    fontSize: "0.85em",
+                    fontVariantNumeric: "tabular-nums",
+                    color:
+                      entry.deltaDirection === "improved"
+                        ? "var(--color-success)"
+                        : entry.deltaDirection === "regressed"
+                          ? "var(--color-error)"
+                          : "var(--color-muted)",
+                  }}
+                >
+                  {entry.delta}
+                </motion.span>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
