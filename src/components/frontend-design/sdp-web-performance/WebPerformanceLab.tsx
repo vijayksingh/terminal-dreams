@@ -1,10 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSITION } from "@/lib/motion";
+import { TRANSITION, SPRING } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import { ControlPanel } from "../_shared/ControlPanel";
 import { StepBar } from "../_shared/StepBar";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import { PerfProvider, usePerfContext } from "./perf-context";
@@ -79,14 +78,11 @@ function PerfDashboard() {
   const { activeStep, stateEntries } = usePerfContext();
 
   return (
-    <div className={styles.evolutionLayout}>
-      <ControlPanel
-        activeStep={activeStep}
-        metrics={<MetricsSummaryBar />}
-        controls={<OptimizationToggles />}
-      >
-        <PersistentWaterfall />
-      </ControlPanel>
+    <div className={styles.dashboardLayout}>
+      <div className={styles.instrumentBar}>
+        <MetricsSummaryBar />
+        <OptimizationChips />
+      </div>
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
@@ -100,88 +96,8 @@ function PerfDashboard() {
         </motion.div>
       </AnimatePresence>
 
+      <WaterfallDrawer />
       <StateInspector entries={stateEntries} title="Perf State" />
-    </div>
-  );
-}
-
-// ── Persistent waterfall ────────────────────────────────────────────
-
-const NETWORK_OPTIONS: NetworkCondition[] = ["slow-3g", "3g", "4g", "wifi"];
-
-function PersistentWaterfall() {
-  const { resources, timelineEndMs, metrics, activeStep, visitType, setVisitType, enabledOptimizations, networkCondition, setNetworkCondition, bandwidthSlider, setBandwidthSlider, activeProfile } = usePerfContext();
-  const showVisitToggle = activeStep >= 12 && enabledOptimizations.has("caching");
-
-  return (
-    <div className={styles.waterfallContainer}>
-      <div className={styles.waterfallHeader}>
-        <span className={styles.waterfallTitle}>Resource Waterfall</span>
-        <span className={styles.waterfallStats} aria-live="polite">
-          {metrics.requestCount} requests · {metrics.totalSizeKB} KB
-        </span>
-      </div>
-
-      <div className={styles.waterfallControls}>
-        <div className={styles.networkSelector} role="radiogroup" aria-label="Network preset">
-          {NETWORK_OPTIONS.map((nc) => (
-            <button
-              key={nc}
-              type="button"
-              className={styles.networkButton}
-              data-active={networkCondition === nc ? "true" : undefined}
-              onClick={() => setNetworkCondition(nc)}
-              role="radio"
-              aria-checked={networkCondition === nc}
-              aria-label={NETWORK_PROFILES[nc].label}
-            >
-              {NETWORK_PROFILES[nc].label}
-            </button>
-          ))}
-        </div>
-
-        {showVisitToggle && (
-          <div className={styles.visitToggle}>
-            <button
-              type="button"
-              className={styles.visitToggleButton}
-              data-active={visitType === "first" ? "true" : undefined}
-              onClick={() => setVisitType("first")}
-            >
-              First visit
-            </button>
-            <button
-              type="button"
-              className={styles.visitToggleButton}
-              data-active={visitType === "repeat" ? "true" : undefined}
-              onClick={() => setVisitType("repeat")}
-            >
-              Repeat visit
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className={styles.waterfallControls}>
-        <div className={styles.networkSliderWrap}>
-          <span className={styles.networkSliderLabel}>{activeProfile.label}</span>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={bandwidthSlider}
-            onChange={(e) => setBandwidthSlider(Number(e.target.value))}
-            className={styles.networkSlider}
-            aria-label="Network bandwidth"
-          />
-          <span className={styles.networkSliderSpeed}>
-            ×{activeProfile.multiplier} · {activeProfile.rtt}ms RTT
-          </span>
-        </div>
-      </div>
-
-      <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
     </div>
   );
 }
@@ -196,7 +112,7 @@ function MetricsSummaryBar() {
   const displayInp = simulatedInp != null ? simulatedInp : metrics.inp;
   const items: { label: string; value: string; key: string; delta: number; flash?: boolean }[] = [
     { label: "LCP", value: metrics.lcp >= 1000 ? `${(metrics.lcp / 1000).toFixed(1)}s` : `${metrics.lcp}ms`, key: "lcp", delta: metrics.lcp - prevMetrics.lcp },
-    { label: simulatedInp != null ? "INP ⚡" : "INP", value: `${displayInp}ms`, key: "inp", delta: metrics.inp - prevMetrics.inp, flash: simulatedInp != null },
+    { label: simulatedInp != null ? "INP" : "INP", value: `${displayInp}ms`, key: "inp", delta: metrics.inp - prevMetrics.inp, flash: simulatedInp != null },
     { label: "CLS", value: metrics.cls.toFixed(2), key: "cls", delta: Math.round((metrics.cls - prevMetrics.cls) * 100) / 100 },
     { label: "Size", value: `${metrics.totalSizeKB} KB`, key: "totalSizeKB", delta: metrics.totalSizeKB - prevMetrics.totalSizeKB },
   ];
@@ -226,45 +142,112 @@ function MetricsSummaryBar() {
   );
 }
 
-// ── Optimization toggles ────────────────────────────────────────────
+// ── Optimization chips ──────────────────────────────────────────────
 
-function OptimizationToggles() {
+function OptimizationChips() {
   const { activeStep, enabledOptimizations, toggleOptimization } = usePerfContext();
-
   const available = OPTIMIZATIONS.filter((o) => o.step <= activeStep);
 
+  if (available.length === 0) return null;
+
   return (
-    <div className={styles.optimizationToggles}>
+    <div className={styles.toggleChips}>
       {available.map((opt) => {
         const on = enabledOptimizations.has(opt.id);
         return (
           <button
             key={opt.id}
             type="button"
-            className={styles.optimizationRow}
+            className={styles.toggleChip}
             onClick={() => toggleOptimization(opt.id)}
             aria-pressed={on}
-            aria-label={`${opt.label}: ${opt.description}`}
+            title={opt.description}
           >
-            <div className={styles.optimizationInfo}>
-              <span className={styles.optimizationLabel}>{opt.label}</span>
-              <span className={styles.optimizationDesc}>{opt.description}</span>
-            </div>
-            <span
-              className={styles.toggleButton}
-              data-on={on ? "true" : undefined}
-              aria-hidden="true"
-            >
-              <span className={styles.toggleKnob} />
-            </span>
+            <span className={styles.chipDot} data-on={on ? "true" : undefined} aria-hidden="true" />
+            {opt.label}
           </button>
         );
       })}
-      {available.length === 0 && (
-        <div className={styles.optimizationEmpty}>
-          Optimizations unlock at step 5
-        </div>
-      )}
+    </div>
+  );
+}
+
+// ── Waterfall drawer ────────────────────────────────────────────────
+
+const NETWORK_OPTIONS: NetworkCondition[] = ["slow-3g", "3g", "4g", "wifi"];
+
+function WaterfallDrawer() {
+  const {
+    resources, timelineEndMs, metrics, activeStep,
+    visitType, setVisitType, enabledOptimizations,
+    networkCondition, setNetworkCondition,
+    bandwidthSlider, setBandwidthSlider, activeProfile,
+  } = usePerfContext();
+  const [open, setOpen] = useState(false);
+  const rm = usePrefersReducedMotion();
+  const showVisitToggle = activeStep >= 12 && enabledOptimizations.has("caching");
+
+  const expandMotion = rm
+    ? { initial: false as const, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0 } }
+    : { initial: { height: 0, opacity: 0 }, animate: { height: "auto", opacity: 1 }, exit: { height: 0, opacity: 0 }, transition: SPRING.gentle };
+
+  return (
+    <div className={styles.waterfallDrawer}>
+      <button
+        className={styles.drawerToggle}
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="Toggle resource waterfall"
+      >
+        <span className={styles.drawerToggleLabel}>Waterfall</span>
+        <span className={styles.drawerToggleStats} aria-live="polite">
+          {metrics.requestCount} req · {metrics.totalSizeKB} KB
+        </span>
+        <svg className={styles.drawerChevron} data-open={open ? "true" : undefined} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div className={styles.drawerContent} {...expandMotion}>
+            <div className={styles.drawerInner}>
+              <div className={styles.waterfallControls}>
+                <div className={styles.networkSelector} role="radiogroup" aria-label="Network preset">
+                  {NETWORK_OPTIONS.map((nc) => (
+                    <button
+                      key={nc}
+                      type="button"
+                      className={styles.networkButton}
+                      data-active={networkCondition === nc ? "true" : undefined}
+                      onClick={() => setNetworkCondition(nc)}
+                      role="radio"
+                      aria-checked={networkCondition === nc}
+                      aria-label={NETWORK_PROFILES[nc].label}
+                    >
+                      {NETWORK_PROFILES[nc].label}
+                    </button>
+                  ))}
+                </div>
+                {showVisitToggle && (
+                  <div className={styles.visitToggle}>
+                    <button type="button" className={styles.visitToggleButton} data-active={visitType === "first" ? "true" : undefined} onClick={() => setVisitType("first")}>First</button>
+                    <button type="button" className={styles.visitToggleButton} data-active={visitType === "repeat" ? "true" : undefined} onClick={() => setVisitType("repeat")}>Repeat</button>
+                  </div>
+                )}
+              </div>
+              <div className={styles.waterfallControls}>
+                <div className={styles.networkSliderWrap}>
+                  <span className={styles.networkSliderLabel}>{activeProfile.label}</span>
+                  <input type="range" min={0} max={100} step={1} value={bandwidthSlider} onChange={(e) => setBandwidthSlider(Number(e.target.value))} className={styles.networkSlider} aria-label="Network bandwidth" />
+                  <span className={styles.networkSliderSpeed}>×{activeProfile.multiplier} · {activeProfile.rtt}ms RTT</span>
+                </div>
+              </div>
+              <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

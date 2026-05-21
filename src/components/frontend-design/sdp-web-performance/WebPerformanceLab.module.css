@@ -535,6 +535,163 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   Dashboard layout (steps 4-15)
+   Widget-first hierarchy: instrument bar → hero widget → waterfall drawer
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashboardLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Instrument bar (metrics + toggle chips) ───────────────────── */
+
+.instrumentBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+/* ── Toggle chips ──────────────────────────────────────────────── */
+
+.toggleChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: var(--space-1);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.toggleChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.toggleChip:hover:not([aria-pressed="true"]) {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-text) 30%, transparent);
+}
+
+.toggleChip[aria-pressed="true"] {
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
+}
+
+.toggleChip:active {
+  transform: scale(0.96);
+}
+
+.chipDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  transition-property: background-color;
+  transition-duration: 150ms;
+}
+
+.chipDot[data-on="true"] {
+  background: var(--diagram-layer-9);
+}
+
+/* ── Waterfall drawer (collapsible) ────────────────────────────── */
+
+.waterfallDrawer {
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+.drawerToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition-property: color;
+  transition-duration: 150ms;
+  min-height: 40px;
+}
+
+.drawerToggle:hover {
+  color: var(--color-text);
+}
+
+.drawerToggle:active {
+  transform: scale(0.99);
+}
+
+.drawerToggleLabel {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.drawerToggleStats {
+  flex: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.drawerChevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition-property: transform;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+  transform: rotate(-90deg);
+}
+
+.drawerChevron[data-open="true"] {
+  transform: rotate(0deg);
+}
+
+.drawerContent {
+  overflow: hidden;
+}
+
+.drawerInner {
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    Waterfall container
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -932,12 +1089,12 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .widgetPanel {
-  padding: var(--space-3);
+  padding: var(--space-4);
   border-radius: var(--radius-2);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
     0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent),
@@ -945,7 +1102,7 @@
 }
 
 .widgetTitle {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
   color: var(--color-text);
   text-transform: uppercase;
@@ -956,8 +1113,9 @@
 .widgetNote {
   font-size: 0.62rem;
   color: var(--color-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  text-wrap: pretty;
 }
 
 /* ── Step 4: Baseline verdict ────────────────────────────────────── */
@@ -3136,7 +3294,9 @@
   .cacheMatchCell:active,
   .cacheSubmitButton:active,
   .prefetchLinkBtn:active,
-  .prefetchSimBtn:active {
+  .prefetchSimBtn:active,
+  .toggleChip:active,
+  .drawerToggle:active {
     transform: none;
   }
 
