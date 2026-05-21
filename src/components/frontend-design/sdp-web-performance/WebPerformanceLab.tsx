@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSITION, SPRING } from "@/lib/motion";
+import { TRANSITION } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StepBar } from "../_shared/StepBar";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
@@ -42,8 +42,8 @@ export function WebPerformanceLab({ activeStep }: { activeStep: number }) {
     <PerfProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
         <StepBar activeStep={activeStep} labels={STEP_LABELS} />
-        <div className={styles.scrollArea}>
-          {isPlanning ? (
+        {isPlanning ? (
+          <div className={styles.scrollArea}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`planning-${activeStep}`}
@@ -55,10 +55,10 @@ export function WebPerformanceLab({ activeStep }: { activeStep: number }) {
                 <PlanningView activeStep={activeStep} />
               </motion.div>
             </AnimatePresence>
-          ) : (
-            <PerfDashboard />
-          )}
-        </div>
+          </div>
+        ) : (
+          <PerfDashboard />
+        )}
       </div>
     </PerfProvider>
   );
@@ -79,22 +79,22 @@ function PerfDashboard() {
 
   return (
     <div className={styles.dashboardLayout}>
-      <MetricsSummaryBar />
-      <OptimizationChips />
-
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={`widget-${activeStep}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={TRANSITION.crossfade}
-        >
-          <StepWidget />
-        </motion.div>
-      </AnimatePresence>
-
-      <WaterfallDrawer />
+      <div className={styles.dashboardTop}>
+        <MetricsSummaryBar />
+        <OptimizationChips />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`widget-${activeStep}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={TRANSITION.crossfade}
+          >
+            <StepWidget />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <WaterfallPanel />
     </div>
   );
 }
@@ -169,11 +169,14 @@ function OptimizationChips() {
   );
 }
 
-// ── Waterfall drawer ────────────────────────────────────────────────
+// ── Waterfall panel (always visible, stuck to bottom) ──────────────
 
 const NETWORK_OPTIONS: NetworkCondition[] = ["slow-3g", "3g", "4g", "wifi"];
+const MIN_INSPECTOR_W = 100;
+const MAX_INSPECTOR_W = 300;
+const DEFAULT_INSPECTOR_W = 160;
 
-function WaterfallDrawer() {
+function WaterfallPanel() {
   const {
     resources, timelineEndMs, metrics, activeStep,
     visitType, setVisitType, enabledOptimizations,
@@ -181,74 +184,86 @@ function WaterfallDrawer() {
     bandwidthSlider, setBandwidthSlider, activeProfile,
     stateEntries,
   } = usePerfContext();
-  const [open, setOpen] = useState(false);
-  const rm = usePrefersReducedMotion();
   const showVisitToggle = activeStep >= 12 && enabledOptimizations.has("caching");
 
-  const expandMotion = rm
-    ? { initial: false as const, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0 } }
-    : { initial: { height: 0, opacity: 0 }, animate: { height: "auto", opacity: 1 }, exit: { height: 0, opacity: 0 }, transition: SPRING.gentle };
+  const [inspectorW, setInspectorW] = useState(DEFAULT_INSPECTOR_W);
+  const dragging = useRef(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragging.current || !bodyRef.current) return;
+      const rect = bodyRef.current.getBoundingClientRect();
+      const newW = Math.round(rect.right - e.clientX);
+      setInspectorW(Math.max(MIN_INSPECTOR_W, Math.min(MAX_INSPECTOR_W, newW)));
+    };
+    const onUp = () => {
+      if (!dragging.current) return;
+      dragging.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+    return () => {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+    };
+  }, []);
 
   return (
-    <div className={styles.waterfallDrawer}>
-      <button
-        className={styles.drawerToggle}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-label="Toggle resource waterfall"
-      >
-        <span className={styles.drawerToggleLabel}>Waterfall</span>
-        <span className={styles.drawerToggleStats} aria-live="polite">
+    <div className={styles.waterfallPanel}>
+      <div className={styles.waterfallHeader}>
+        <span className={styles.waterfallHeaderLabel}>Waterfall</span>
+        <span className={styles.waterfallHeaderStats} aria-live="polite">
           {metrics.requestCount} req · {metrics.totalSizeKB} KB
         </span>
-        <svg className={styles.drawerChevron} data-open={open ? "true" : undefined} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div className={styles.drawerContent} {...expandMotion}>
-            <div className={styles.drawerInner}>
-              <div className={styles.waterfallControls}>
-                <div className={styles.networkSelector} role="radiogroup" aria-label="Network preset">
-                  {NETWORK_OPTIONS.map((nc) => (
-                    <button
-                      key={nc}
-                      type="button"
-                      className={styles.networkButton}
-                      data-active={networkCondition === nc ? "true" : undefined}
-                      onClick={() => setNetworkCondition(nc)}
-                      role="radio"
-                      aria-checked={networkCondition === nc}
-                      aria-label={NETWORK_PROFILES[nc].label}
-                    >
-                      {NETWORK_PROFILES[nc].label}
-                    </button>
-                  ))}
-                </div>
-                {showVisitToggle && (
-                  <div className={styles.visitToggle}>
-                    <button type="button" className={styles.visitToggleButton} data-active={visitType === "first" ? "true" : undefined} onClick={() => setVisitType("first")}>First</button>
-                    <button type="button" className={styles.visitToggleButton} data-active={visitType === "repeat" ? "true" : undefined} onClick={() => setVisitType("repeat")}>Repeat</button>
-                  </div>
-                )}
-              </div>
-              <div className={styles.waterfallControls}>
-                <div className={styles.networkSliderWrap}>
-                  <span className={styles.networkSliderLabel}>{activeProfile.label}</span>
-                  <input type="range" min={0} max={100} step={1} value={bandwidthSlider} onChange={(e) => setBandwidthSlider(Number(e.target.value))} className={styles.networkSlider} aria-label="Network bandwidth" />
-                  <span className={styles.networkSliderSpeed}>×{activeProfile.multiplier} · {activeProfile.rtt}ms RTT</span>
-                </div>
-              </div>
-              <div className={styles.waterfallBody}>
-                <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
-                <StateInspector entries={stateEntries} title="Perf State" />
-              </div>
-            </div>
-          </motion.div>
+      </div>
+      <div className={styles.waterfallControls}>
+        <div className={styles.networkSelector} role="radiogroup" aria-label="Network preset">
+          {NETWORK_OPTIONS.map((nc) => (
+            <button
+              key={nc}
+              type="button"
+              className={styles.networkButton}
+              data-active={networkCondition === nc ? "true" : undefined}
+              onClick={() => setNetworkCondition(nc)}
+              role="radio"
+              aria-checked={networkCondition === nc}
+              aria-label={NETWORK_PROFILES[nc].label}
+            >
+              {NETWORK_PROFILES[nc].label}
+            </button>
+          ))}
+        </div>
+        {showVisitToggle && (
+          <div className={styles.visitToggle}>
+            <button type="button" className={styles.visitToggleButton} data-active={visitType === "first" ? "true" : undefined} onClick={() => setVisitType("first")}>First</button>
+            <button type="button" className={styles.visitToggleButton} data-active={visitType === "repeat" ? "true" : undefined} onClick={() => setVisitType("repeat")}>Repeat</button>
+          </div>
         )}
-      </AnimatePresence>
+        <div className={styles.networkSliderWrap}>
+          <span className={styles.networkSliderLabel}>{activeProfile.label}</span>
+          <input type="range" min={0} max={100} step={1} value={bandwidthSlider} onChange={(e) => setBandwidthSlider(Number(e.target.value))} className={styles.networkSlider} aria-label="Network bandwidth" />
+          <span className={styles.networkSliderSpeed}>×{activeProfile.multiplier} · {activeProfile.rtt}ms RTT</span>
+        </div>
+      </div>
+      <div className={styles.waterfallBody} ref={bodyRef} style={{ gridTemplateColumns: `1fr ${inspectorW}px` }}>
+        <div className={styles.waterfallChartArea}>
+          <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
+        </div>
+        <div className={styles.inspectorArea}>
+          <div className={styles.resizeHandle} onPointerDown={onPointerDown} aria-hidden="true" />
+          <StateInspector entries={stateEntries} title="Perf State" />
+        </div>
+      </div>
     </div>
   );
 }

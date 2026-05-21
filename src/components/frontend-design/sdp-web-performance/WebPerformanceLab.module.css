@@ -18,6 +18,7 @@
 
 .scrollArea {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-4);
@@ -303,8 +304,18 @@
 .dashboardLayout {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.dashboardTop {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
 }
 
 /* ── Instrument bar (metrics + toggle chips) ───────────────────── */
@@ -375,76 +386,60 @@
   background: var(--diagram-layer-9);
 }
 
-/* ── Waterfall drawer (collapsible) ────────────────────────────── */
+/* ── Waterfall panel (always visible, stuck to bottom) ────────── */
 
-.waterfallDrawer {
-  overflow: hidden;
-  flex: 1;
+.waterfallPanel {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  height: 340px;
+  min-height: 200px;
+  border-top: 1px solid var(--color-border);
+  overflow: hidden;
 }
 
-.drawerToggle {
+.waterfallHeader {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  background: transparent;
-  color: var(--color-muted);
-  cursor: pointer;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+.waterfallHeaderLabel {
   font-family: var(--font-mono);
   font-size: var(--perf-sm);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  transition-property: color;
-  transition-duration: 150ms;
-  min-height: 36px;
-}
-
-.drawerToggle:hover {
   color: var(--color-text);
 }
 
-.drawerToggle:active {
-  transform: scale(0.96);
-}
-
-.drawerToggleLabel {
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.drawerToggleStats {
+.waterfallHeaderStats {
   flex: 1;
   text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--perf-sm);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
+  color: var(--color-muted);
 }
 
-.drawerChevron {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  transition-property: transform;
-  transition-duration: 200ms;
-  transition-timing-function: ease-out;
-  transform: rotate(-90deg);
+.resizeHandle {
+  position: absolute;
+  left: -3px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 2;
+  background: transparent;
+  transition-property: background-color;
+  transition-duration: 150ms;
 }
 
-.drawerChevron[data-open="true"] {
-  transform: rotate(0deg);
-}
-
-.drawerContent {
-  overflow: hidden;
-}
-
-.drawerInner {
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+.resizeHandle:hover,
+.resizeHandle:active {
+  background: color-mix(in srgb, var(--diagram-layer-4) 40%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -540,13 +535,20 @@
 
 .waterfallBody {
   display: grid;
-  grid-template-columns: 1fr 160px;
-  align-items: start;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.waterfallBody > :last-child {
+.waterfallChartArea {
+  overflow: auto;
+  min-width: 0;
+}
+
+.inspectorArea {
+  position: relative;
   border-left: 1px solid var(--color-border);
-  padding: var(--space-2) var(--space-3);
+  overflow-y: auto;
   font-size: var(--perf-xs);
 }
 
