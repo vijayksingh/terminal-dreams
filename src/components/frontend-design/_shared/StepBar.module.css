@@ -1,0 +1,57 @@
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepList {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 var(--space-1);
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-9);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+}
