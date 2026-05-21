@@ -26,7 +26,8 @@ export function FontWidget() {
   const strategy = optParams.fontStrategy;
   const setStrategy = (v: FontDisplayStrategy) => updateOptParam("fontStrategy", v);
 
-  const cssDownload = Math.round(48 * multiplier + rtt);
+  const cssKB = enabledOptimizations.has("criticalCSS") ? optParams.criticalCssKB : 48;
+  const cssDownload = Math.round(cssKB * multiplier + rtt);
   const cssParse = 8;
   const fontDiscover = cssDownload + cssParse;
   const fontDownloadBefore = Math.round(82 * multiplier + rtt);

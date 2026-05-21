@@ -16,12 +16,12 @@ export function CachingWidget() {
   const on = enabledOptimizations.has("caching");
 
   const uncachedResources = [
-    { name: "HTML", size: 12, ms: Math.round(12 * nw.multiplier + nw.rtt) },
+    { name: "index.html", size: 12, ms: Math.round(12 * nw.multiplier + nw.rtt) },
     { name: "styles.css", size: 48, ms: Math.round(48 * nw.multiplier + nw.rtt) },
-    { name: "app.js", size: 180, ms: Math.round(180 * nw.multiplier + nw.rtt) },
+    { name: "main.js", size: 385, ms: Math.round(385 * nw.multiplier + nw.rtt) },
     { name: "hero.jpg", size: 245, ms: Math.round(245 * nw.multiplier + nw.rtt) },
-    { name: "font.woff2", size: 32, ms: Math.round(32 * nw.multiplier + nw.rtt) },
-    { name: "api/data", size: 8, ms: Math.round(8 * nw.multiplier + nw.rtt * 2) },
+    { name: "Inter.woff2", size: 82, ms: Math.round(82 * nw.multiplier + nw.rtt) },
+    { name: "analytics.js", size: 38, ms: Math.round(38 * nw.multiplier + nw.rtt) },
   ];
   const uncachedTotal = uncachedResources.reduce((s, r) => s + r.ms, 0);
   const cachedTotal = Math.round(12 * nw.multiplier + nw.rtt + 25);
