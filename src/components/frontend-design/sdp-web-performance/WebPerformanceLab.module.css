@@ -466,9 +466,9 @@
 .optMatrix {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   overflow: hidden;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .optMatrixHeader {
@@ -662,7 +662,7 @@
 }
 
 .drawerToggle:active {
-  transform: scale(0.99);
+  transform: scale(0.96);
 }
 
 .drawerToggleLabel {
@@ -1133,8 +1133,8 @@
   gap: var(--space-2);
   padding: var(--space-3);
   border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface));
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 /* ── Step 4: Baseline verdict ────────────────────────────────────── */
@@ -2865,10 +2865,11 @@
   z-index: 10;
   pointer-events: none;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text) 12%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent),
+    0 4px 16px color-mix(in srgb, var(--color-text) 12%, transparent);
   font-family: var(--font-mono);
   min-width: 160px;
   max-width: 240px;
