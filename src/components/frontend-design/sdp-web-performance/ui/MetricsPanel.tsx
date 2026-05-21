@@ -35,7 +35,7 @@ export function MetricsPanel({ metrics, showAll = false }: MetricsPanelProps) {
   const gauges = showAll ? [...CWV_GAUGES, ...EXTRA_GAUGES] : CWV_GAUGES;
 
   return (
-    <div className={styles.metricsGrid} data-count={gauges.length}>
+    <div className={styles.metricsGrid} data-count={gauges.length} aria-live="polite" aria-atomic="false">
       {gauges.map((g) => {
         const value = metrics[g.key] as number;
         const rating = getCWVRating(g.key, value);

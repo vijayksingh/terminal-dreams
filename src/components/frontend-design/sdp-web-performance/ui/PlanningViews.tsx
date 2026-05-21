@@ -224,16 +224,21 @@ export function OptMapView() {
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Optimization → Metric Map</div>
       <p className={styles.widgetNote}>
-        Hover each optimization to see which Core Web Vitals it improves:
+        Focus each optimization to see which Core Web Vitals it improves:
       </p>
-      <div className={styles.optMapGrid}>
+      <div className={styles.optMapGrid} role="list">
         {OPTIMIZATIONS.map((opt) => (
           <div
             key={opt.id}
             className={styles.optMapRow}
+            role="listitem"
+            tabIndex={0}
             onMouseEnter={() => setHoveredOpt(opt.id)}
             onMouseLeave={() => setHoveredOpt(null)}
+            onFocus={() => setHoveredOpt(opt.id)}
+            onBlur={() => setHoveredOpt(null)}
             data-hovered={hoveredOpt === opt.id ? "true" : undefined}
+            aria-label={`${opt.label}: targets ${(OPT_TARGETS[opt.id] ?? []).join(", ")}`}
           >
             <span className={styles.optMapLabel}>{opt.label}</span>
             <span className={styles.optMapDesc}>{opt.description}</span>

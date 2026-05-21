@@ -33,7 +33,7 @@ export function LayoutStabilityWidget() {
           </div>
         ))}
       </div>
-      <div className={styles.clsTotal}>
+      <div className={styles.clsTotal} aria-live="polite">
         Total CLS: <strong data-status={metrics.cls <= 0.1 ? "good" : "bad"}>
           {metrics.cls.toFixed(2)}
         </strong>

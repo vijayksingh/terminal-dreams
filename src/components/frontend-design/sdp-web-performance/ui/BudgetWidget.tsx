@@ -18,6 +18,8 @@ export function BudgetWidget() {
   const [regressionActive, setRegressionActive] = useState(false);
   const [regressionOpt, setRegressionOpt] = useState<OptimizationId | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const enabledRef = useRef(enabledOptimizations);
+  enabledRef.current = enabledOptimizations;
 
   useEffect(() => {
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
@@ -33,7 +35,9 @@ export function BudgetWidget() {
     setRegressionActive(true);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      setOptimizationEnabled(target.id, true);
+      if (!enabledRef.current.has(target.id)) {
+        setOptimizationEnabled(target.id, true);
+      }
       setRegressionActive(false);
       setRegressionOpt(null);
     }, 3000);

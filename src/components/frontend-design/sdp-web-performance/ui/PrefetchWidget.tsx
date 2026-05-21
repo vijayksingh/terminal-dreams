@@ -23,6 +23,7 @@ type PrefetchLinkState = {
 export function PrefetchWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("prefetching");
+  const hasCodeSplitting = enabledOptimizations.has("codeSplitting");
   const rm = usePrefersReducedMotion();
 
   const prefetchDurationMs = Math.round(75 * nw.multiplier + nw.rtt * 2);
@@ -40,6 +41,13 @@ export function PrefetchWidget() {
       Object.values(navTimerRefs.current).forEach(clearTimeout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!on) {
+      Object.values(intervalRefs.current).forEach(clearInterval);
+      intervalRefs.current = {};
+    }
+  }, [on]);
 
   const startPrefetch = (path: string) => {
     if (!on || linkStates[path]?.navigating) return;
@@ -109,7 +117,9 @@ export function PrefetchWidget() {
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Hover-to-Prefetch Simulation</div>
       <p className={styles.widgetNote}>
-        {on
+        {on && !hasCodeSplitting
+          ? "Prefetching needs route chunks to prefetch — enable Code Splitting first so the bundle has separate chunks to load ahead of time."
+          : on
           ? "Hover a link to start prefetching its route chunk. Click to navigate — timing depends on how much loaded before you clicked."
           : "Toggle Prefetching above to enable hover-triggered prefetch. Then try clicking links below."}
       </p>
