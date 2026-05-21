@@ -134,7 +134,7 @@
 .filmText {
   height: 3px;
   border-radius: 1px;
-  background: color-mix(in srgb, var(--color-text) 15%, transparent);
+  background: color-mix(in srgb, var(--color-text) 30%, transparent);
 }
 
 @keyframes skeletonPulse {
@@ -399,10 +399,10 @@
   color: var(--color-muted);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: var(--perf-base);
+  font-size: var(--perf-sm);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   transition-property: color;
   transition-duration: 150ms;
   min-height: 40px;
@@ -564,7 +564,7 @@
 }
 
 .waterfallSizeLabel {
-  font-size: 8.5px;
+  font-size: 9px;
   fill: var(--color-muted);
   font-family: var(--font-mono);
 }
