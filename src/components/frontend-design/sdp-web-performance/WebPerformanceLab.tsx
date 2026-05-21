@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TRANSITION } from "@/lib/motion";
+import { TRANSITION, SPRING } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { ControlPanel } from "../_shared/ControlPanel";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
@@ -554,10 +554,43 @@ function BaselineWidget() {
 function CodeSplittingWidget() {
   const { enabledOptimizations } = usePerfContext();
   const on = enabledOptimizations.has("codeSplitting");
+  const [splitPrediction, setSplitPrediction] = useState<number | null>(null);
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Bundle Analysis</div>
+
+      {!on && splitPrediction === null && (
+        <div style={{ marginBottom: "var(--space-2)" }}>
+          <p className={styles.widgetNote}>Before toggling: how much will blocking JS drop?</p>
+          <div className={styles.prefetchLinkGrid}>
+            {[
+              { label: "385→280 KB", desc: "~27% reduction", idx: 0 },
+              { label: "385→115 KB", desc: "~70% reduction", idx: 1 },
+              { label: "385→40 KB", desc: "~90% reduction", idx: 2 },
+            ].map((opt) => (
+              <button key={opt.idx} type="button" className={styles.prefetchLinkBtn} onClick={() => setSplitPrediction(opt.idx)}>
+                <span className={styles.prefetchLinkPath}>{opt.label}</span>
+                <span className={styles.prefetchLinkClicks}>{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {splitPrediction !== null && !on && (
+        <div className={styles.predictionResult} data-correct={splitPrediction === 1 ? "true" : undefined} style={{ marginBottom: "var(--space-2)" }}>
+          <span className={styles.predictionResultIcon}>{splitPrediction === 1 ? "✓" : "✗"}</span>
+          <span>
+            {splitPrediction === 1
+              ? "Correct — route-based splitting extracts a 115 KB core and 75 KB lazy chunk. Only the 115 KB core blocks rendering. Toggle it on to see the waterfall shift."
+              : splitPrediction === 0
+              ? "Higher reduction than that. Code splitting doesn't just trim — it extracts only what's needed for the first render. The route chunk loads lazily after."
+              : "Not quite that aggressive — you still need framework code, shared utilities, and the initial route. 115 KB core + 75 KB lazy chunk is the realistic split."}
+          </span>
+        </div>
+      )}
+
       <div className={styles.bundleCompare}>
         <div className={styles.bundleCol}>
           <div className={styles.bundleColLabel}>Before</div>
@@ -682,11 +715,23 @@ const IMAGE_ITEMS = [
   { name: "banner", before: 88, after: 31, correctLazy: true, hint: "Promo banner near page bottom" },
 ];
 
+const HERO_ATTR_BLANKS = [
+  { attr: "fetchpriority", correct: "high", options: ["auto", "high", "low"] },
+  { attr: "loading", correct: "eager", options: ["eager", "lazy", "auto"] },
+  { attr: "width", correct: "1200", options: ["1200", "auto", "100%"] },
+  { attr: "height", correct: "675", options: ["675", "auto", "100%"] },
+];
+
 function ImageOptWidget() {
   const { enabledOptimizations } = usePerfContext();
   const on = enabledOptimizations.has("imageOptimization");
   const [lazyAssignments, setLazyAssignments] = useState<Record<string, boolean>>({});
   const [classified, setClassified] = useState(false);
+  const [attrFills, setAttrFills] = useState<Record<string, string>>({});
+  const [attrSubmitted, setAttrSubmitted] = useState(false);
+  const attrAllFilled = HERO_ATTR_BLANKS.every((b) => attrFills[b.attr]);
+  const attrCorrectCount = HERO_ATTR_BLANKS.filter((b) => attrFills[b.attr] === b.correct).length;
+  const attrAllCorrect = attrCorrectCount === HERO_ATTR_BLANKS.length;
 
   const allAssigned = IMAGE_ITEMS.every((img) => lazyAssignments[img.name] !== undefined);
   const correctCount = IMAGE_ITEMS.filter((img) => lazyAssignments[img.name] === img.correctLazy).length;
@@ -751,11 +796,58 @@ function ImageOptWidget() {
               <span className={styles.predictionResultIcon}>{allCorrect ? "✓" : "✗"}</span>
               <span>
                 {allCorrect
-                  ? "Perfect — hero stays eager (it's the LCP element), everything below the fold is lazy. Toggle Image Optimization on to see the format + size improvements."
-                  : `${correctCount}/${IMAGE_ITEMS.length} correct. The hero must be eager (LCP), below-fold images should be lazy. Toggle Image Optimization on to see the full pipeline.`}
+                  ? "Perfect — hero stays eager (it's the LCP element), everything below the fold is lazy. Now fill in the hero <img> attributes below."
+                  : `${correctCount}/${IMAGE_ITEMS.length} correct. The hero must be eager (LCP), below-fold images should be lazy. Now fill in the hero <img> attributes below.`}
               </span>
             </div>
           )}
+
+          {classified && !on && (
+            <div className={styles.widgetPanel} style={{ padding: "var(--space-2)", gap: "var(--space-1)" }}>
+              <div className={styles.widgetTitle}>Fill the hero &lt;img&gt; attributes</div>
+              <pre className={styles.codeFillPre}>
+                {'<img\n  src="hero.webp"\n  alt="Hero banner"'}
+                {HERO_ATTR_BLANKS.map((b) => {
+                  const val = attrFills[b.attr];
+                  const isCorrect = attrSubmitted && val === b.correct;
+                  const isWrong = attrSubmitted && val && val !== b.correct;
+                  return (
+                    <span key={b.attr}>
+                      {`\n  ${b.attr}="`}
+                      <select
+                        className={styles.codeFillSelect}
+                        data-status={isCorrect ? "correct" : isWrong ? "wrong" : undefined}
+                        value={val || ""}
+                        onChange={(e) => setAttrFills((p) => ({ ...p, [b.attr]: e.target.value }))}
+                        disabled={attrSubmitted}
+                      >
+                        <option value="">___</option>
+                        {b.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                      {'"'}
+                    </span>
+                  );
+                })}
+                {'\n/>'}
+              </pre>
+              {!attrSubmitted && attrAllFilled && (
+                <button type="button" className={styles.cacheSubmitButton} onClick={() => setAttrSubmitted(true)}>
+                  Check attributes
+                </button>
+              )}
+              {attrSubmitted && (
+                <div className={styles.predictionResult} data-correct={attrAllCorrect ? "true" : undefined}>
+                  <span className={styles.predictionResultIcon}>{attrAllCorrect ? "✓" : "✗"}</span>
+                  <span>
+                    {attrAllCorrect
+                      ? "Every attribute is correct. fetchpriority=\"high\" tells the browser this image is the LCP element. Explicit width/height prevent layout shift."
+                      : `${attrCorrectCount}/4 correct. The hero needs fetchpriority="high" (LCP hint), loading="eager" (never lazy-load LCP), and explicit width="1200" height="675" (CLS prevention).`}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className={styles.imageGrid}>
             {IMAGE_ITEMS.map((img) => (
               <div key={img.name} className={styles.imageRow}>
@@ -1215,8 +1307,10 @@ function LayoutStabilityWidget() {
             onPointerUp={handleDragEnd}
           >
             {order.map((source, i) => (
-              <div
+              <motion.div
                 key={source}
+                layout
+                transition={SPRING.snappy}
                 className={styles.shiftRankRow}
                 data-dragging={dragging === source ? "true" : undefined}
                 onPointerDown={(e) => handleDragStart(source, e)}
@@ -1225,7 +1319,7 @@ function LayoutStabilityWidget() {
                 <span className={styles.shiftRankPosition}>{i + 1}</span>
                 <span className={styles.shiftRankName}>{source}</span>
                 <span className={styles.shiftRankHandle}>⠿</span>
-              </div>
+              </motion.div>
             ))}
           </div>
           <button type="button" className={styles.cacheSubmitButton} onClick={() => setRevealed(true)}>
@@ -1694,10 +1788,10 @@ function BudgetWidget() {
 const BASELINE_METRICS = { lcp: 2900, inp: 340, cls: 0.34, totalSizeKB: 1280 };
 
 const REGRESSION_SCENARIOS: { revertedOpt: OptimizationId; alertMetric: string; clue: string }[] = [
-  { revertedOpt: "codeSplitting", alertMetric: "LCP", clue: "LCP p75 jumped 800ms after Friday's deploy. JS bundle size doubled." },
-  { revertedOpt: "thirdPartyDefer", alertMetric: "INP", clue: "INP p75 regressed to 280ms. Third-party scripts loading eagerly again." },
-  { revertedOpt: "imageOptimization", alertMetric: "LCP", clue: "LCP p75 spiked 600ms. Hero image reverted to unoptimized JPEG." },
-  { revertedOpt: "layoutStability", alertMetric: "CLS", clue: "CLS p75 jumped from 0.04 to 0.19. Layout reservations missing." },
+  { revertedOpt: "codeSplitting", alertMetric: "LCP", clue: "LCP +800ms · TBT +60ms · JS size 115→385 KB · INP +40ms · CLS unchanged" },
+  { revertedOpt: "thirdPartyDefer", alertMetric: "INP", clue: "INP +90ms · TBT +100ms · LCP unchanged · CLS unchanged · 3P scripts now block parse" },
+  { revertedOpt: "imageOptimization", alertMetric: "LCP", clue: "LCP +600ms · hero image 65→245 KB · CLS +0.08 · INP unchanged · JS size unchanged" },
+  { revertedOpt: "layoutStability", alertMetric: "CLS", clue: "CLS +0.11 · LCP unchanged · INP unchanged · ad container has no min-height · total size unchanged" },
 ];
 
 function RUMWidget() {

@@ -2602,6 +2602,55 @@
   color: var(--color-success);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   Code-fill exercise
+   ═══════════════════════════════════════════════════════════════════ */
+
+.codeFillPre {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  line-height: 1.8;
+  color: var(--color-muted);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  white-space: pre;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.codeFillSelect {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+  border: 1px solid var(--diagram-layer-9);
+  border-radius: var(--radius-1);
+  padding: 0 var(--space-1);
+  min-width: 50px;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.codeFillSelect:focus {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
+.codeFillSelect[data-status="correct"] {
+  color: var(--color-success);
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-bg));
+}
+
+.codeFillSelect[data-status="wrong"] {
+  color: var(--color-error);
+  border-color: var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 10%, var(--color-bg));
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
