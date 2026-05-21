@@ -558,14 +558,11 @@
 
 .instrumentBar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-text) 3%, transparent);
+  padding: 4px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  min-height: 0;
 }
 
 /* ── Toggle chips ──────────────────────────────────────────────── */
@@ -573,9 +570,9 @@
 .toggleChips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding-top: var(--space-1);
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
 }
 
 .toggleChip {
@@ -888,28 +885,31 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .metricsSummaryBar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding-right: var(--space-2);
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .metricsSummaryItem {
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
 }
 
 .metricsSummaryLabel {
-  display: block;
-  font-size: 0.56rem;
+  font-size: 0.5rem;
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 2px;
+  letter-spacing: 0.05em;
 }
 
 .metricsSummaryValue {
-  display: block;
-  font-size: 0.85rem;
+  font-size: 0.6rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -923,16 +923,14 @@
 }
 
 @keyframes inpFlash {
-  0% { transform: scale(1.3); filter: brightness(1.5); }
+  0% { transform: scale(1.15); filter: brightness(1.3); }
   100% { transform: scale(1); filter: brightness(1); }
 }
 
 .metricsDelta {
-  display: block;
-  font-size: 0.5rem;
+  font-size: 0.45rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  margin-top: 1px;
 }
 
 .metricsDelta[data-direction="improved"] { color: var(--color-success); }
