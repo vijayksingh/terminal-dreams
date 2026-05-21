@@ -1,66 +1,19 @@
 /* ── ChatLab ──────────────────────────────────────────────────────── */
 
 .labRoot {
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   font-family: var(--font-mono);
-}
-
-/* ── Step indicator bar ──────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  flex-shrink: 0;
-}
-
-.stepList {
-  display: contents;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.stepDot {
-  min-width: 1.4rem;
-  height: 1.4rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  padding: 0 3px;
-  transition: all 150ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--diagram-layer-5);
-  border-color: color-mix(in srgb, var(--diagram-layer-5) 40%, transparent);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-5);
-  border-color: var(--diagram-layer-5);
-  font-weight: 700;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-5) 25%, transparent);
-  animation: stepPulse 2s ease-in-out infinite;
-}
-
-@keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-5) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-5) 12%, transparent); }
+  line-height: 1.4;
+  container-type: inline-size;
+  container-name: chat-lab;
 }
 
 /* ── Scroll area ─────────────────────────────────────────────────── */
@@ -120,12 +73,12 @@
 }
 
 .checkItem:hover {
-  border-color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
 }
 
 .checkItem[data-checked="true"] {
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 6%, var(--color-surface));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
 }
 
 .checkToggle {
@@ -138,13 +91,15 @@
   align-items: center;
   justify-content: center;
   margin-top: 1px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   color: transparent;
 }
 
 .checkItem[data-checked="true"] .checkToggle {
-  border-color: var(--diagram-layer-5);
-  background: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -191,7 +146,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
 }
 
 .complexityRow {
@@ -240,7 +195,9 @@
   font-weight: 700;
   text-align: center;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   display: flex;
@@ -249,7 +206,7 @@
 }
 
 .panelTab:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -259,9 +216,9 @@
 }
 
 .panelTab[data-active="true"] {
-  border-color: var(--diagram-layer-5);
-  color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-surface));
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
 }
 
 /* ── Endpoint cards ──────────────────────────────────────────────── */
@@ -286,7 +243,7 @@
 
 .endpointCard:has(.endpointHeader:hover),
 .endpointCard[data-expanded="true"] {
-  border-color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
 }
 
 .endpointHeader {
@@ -305,7 +262,7 @@
 }
 
 .endpointHeader:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -326,8 +283,8 @@
 }
 
 .methodBadge[data-method="POST"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 15%, var(--color-surface));
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 15%, var(--color-surface));
+  color: var(--diagram-layer-9);
 }
 
 .methodBadge[data-method="DELETE"] {
@@ -356,7 +313,7 @@
 
 .endpointUsedBy {
   font-size: 0.625rem;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   opacity: 0.7;
 }
 
@@ -401,7 +358,7 @@
 
 .paramType {
   font-family: var(--font-mono);
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .paramNote {
@@ -412,9 +369,9 @@
   font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--diagram-layer-5);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
   display: inline-block;
 }
@@ -468,7 +425,7 @@
 }
 
 .typeCardExtends span {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 600;
 }
 
@@ -492,7 +449,7 @@
 }
 
 .typeFieldType {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .typeFieldNote {
@@ -575,38 +532,39 @@
 }
 
 .toggleButton {
-  width: 36px;
-  height: 20px;
-  border-radius: 999px;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
   border: 2px solid var(--color-border);
-  background: var(--color-bg);
+  background: var(--color-surface-2);
   cursor: pointer;
   position: relative;
-  transition: all 200ms ease;
+  transition-property: background-color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
   flex-shrink: 0;
-  padding: 12px 4px;
-  box-sizing: content-box;
-  min-width: 44px;
 }
 
 .toggleButton[data-on="true"] {
-  border-color: var(--diagram-layer-5);
-  background: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
 }
 
 .toggleKnob {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--color-muted);
-  transition: all 200ms ease;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text);
+  transition-property: transform, background-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .toggleButton[data-on="true"] .toggleKnob {
-  left: 18px;
+  transform: translateX(20px);
   background: var(--color-bg);
 }
 
@@ -701,7 +659,7 @@
   display: block;
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .streamStatLabel {
@@ -770,11 +728,13 @@
   border-radius: var(--radius-1);
   background: none;
   cursor: pointer;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .deliveryStage:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -815,24 +775,26 @@
 .deliverySimButton {
   min-height: 44px;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--diagram-layer-5);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   flex: 1;
 }
 
 .deliverySimButton:hover {
-  background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent);
 }
 
 .deliverySimButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -848,10 +810,12 @@
 }
 
 .deliveryStage[data-active="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 20%, transparent);
-  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
+  border-color: var(--diagram-layer-9);
   transform: scale(1.05);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 /* ── Step 8: Typing info ──────────────────────────────────────────── */
@@ -880,7 +844,9 @@
   font-size: 0.625rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .connectionButton[data-active="true"][data-variant="good"] {
@@ -922,12 +888,14 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .backoffStep[data-active="true"] {
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 6%, var(--color-bg));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-bg));
 }
 
 .backoffStep[data-final="true"] {
@@ -938,7 +906,7 @@
 .backoffAttempt {
   font-size: 0.625rem;
   font-weight: 800;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .backoffDelay {
@@ -971,9 +939,9 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 30%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 30%, var(--color-border));
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-5) 3%, var(--color-bg));
+  background: color-mix(in srgb, var(--diagram-layer-9) 3%, var(--color-bg));
   font-size: 0.625rem;
   color: var(--color-text);
 }
@@ -1056,12 +1024,12 @@
 .scaleSliderValue {
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .scaleSliderInput {
   width: 100%;
-  accent-color: var(--diagram-layer-5);
+  accent-color: var(--diagram-layer-9);
   min-height: 44px;
 }
 
@@ -1196,14 +1164,16 @@
   font-size: 0.625rem;
   position: relative;
   opacity: 0.4;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .lifecycleStep[data-active="true"] { opacity: 1; }
 
 .lifecycleStep[data-current="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 30%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 }
 
 .lifecycleIcon {
@@ -1216,7 +1186,7 @@
 }
 
 .lifecycleStep[data-active="true"] .lifecycleIcon {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .lifecycleLabel {
@@ -1274,8 +1244,8 @@
 
 .e2eInput:focus-visible {
   outline: 2px solid transparent;
-  border-color: var(--diagram-layer-5);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-5) 20%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
 }
 
 .e2eWire {
@@ -1313,11 +1283,13 @@
   cursor: pointer;
   text-align: left;
   min-height: 44px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
-.e2eDecryptBtn:hover { border-color: var(--diagram-layer-5); }
-.e2eDecryptBtn:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+.e2eDecryptBtn:hover { border-color: var(--diagram-layer-9); }
+.e2eDecryptBtn:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .e2eNote {
   font-size: 0.625rem;
@@ -1411,13 +1383,15 @@
   padding: 2px var(--space-2);
   border-radius: 999px;
   border: 1px solid var(--color-border);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .debounceIndicator[data-typing="true"] {
-  color: var(--diagram-layer-5);
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
+  color: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
 }
 
 .debounceStats {
@@ -1458,7 +1432,9 @@
   border-radius: 3px;
   font-size: 0.625rem;
   font-family: var(--font-mono);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .flushItem[data-status="queued"] {
@@ -1519,11 +1495,13 @@
   min-height: 8px;
   border-radius: 2px;
   background: var(--color-border);
-  transition: all 300ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
 }
 
 .backoffBarItem[data-active="true"] .backoffBar {
-  background: var(--diagram-layer-5);
+  background: var(--diagram-layer-9);
 }
 
 .backoffBarItem[data-current="true"] .backoffBar {
@@ -1572,13 +1550,15 @@
   font-size: 0.625rem;
   background: var(--color-bg);
   opacity: 0.35;
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .sendPhase[data-active="true"] { opacity: 1; }
 .sendPhase[data-current="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--diagram-layer-5) 25%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
 }
 
 .sendPhase[data-failed="true"] {
@@ -1613,16 +1593,18 @@
   background: var(--color-bg);
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
 }
 
-.reactionBtn:hover { border-color: var(--diagram-layer-5); }
-.reactionBtn:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+.reactionBtn:hover { border-color: var(--diagram-layer-9); }
+.reactionBtn:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .reactionBtn[data-active="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 12%, transparent);
-  border-color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, transparent);
+  border-color: var(--diagram-layer-9);
 }
 
 .reactionBtn[data-rollback="true"] {
@@ -1665,13 +1647,15 @@
   border-radius: 3px;
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   background: var(--color-bg);
   font-family: var(--font-mono);
   min-height: 44px;
 }
 
-.receiptMsg:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+.receiptMsg:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 
 .receiptMsg[data-read="true"] {
   background: color-mix(in srgb, var(--color-success) 6%, transparent);
@@ -1706,19 +1690,21 @@
 .simButton {
   min-height: 44px;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--diagram-layer-5);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
-.simButton:hover { background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent); }
-.simButton:focus-visible { outline: 2px solid var(--diagram-layer-5); outline-offset: 2px; }
+.simButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent); }
+.simButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
 .simButton:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .simButtonSecondary {
@@ -1731,7 +1717,9 @@
   font-family: var(--font-mono);
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .simButtonSecondary:hover { background: var(--color-bg); }
@@ -1743,7 +1731,7 @@
 .slider {
   flex: 1;
   height: 4px;
-  accent-color: var(--diagram-layer-5);
+  accent-color: var(--diagram-layer-9);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1866,8 +1854,8 @@
 }
 
 .msgBubble[data-own="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 12%, var(--color-surface));
-  border-color: color-mix(in srgb, var(--diagram-layer-5) 25%, var(--color-border));
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 25%, var(--color-border));
   border-radius: 12px 12px 4px 12px;
 }
 
@@ -1905,7 +1893,7 @@
 }
 
 .msgReactTrigger:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -1953,20 +1941,22 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   display: inline-flex;
   align-items: center;
   gap: 2px;
 }
 
 .msgReactionBadge:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .msgReactionBadge:hover {
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-surface));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
 }
 
 /* ── Typing indicator ──────────────────────────────────────────────── */
@@ -2039,8 +2029,8 @@
 }
 
 .composeInput:focus-visible {
-  border-color: var(--diagram-layer-5);
-  outline: 2px solid var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -2054,19 +2044,21 @@
   border-radius: var(--radius-1);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   flex-shrink: 0;
 }
 
 .sendButton:hover:not(:disabled) {
-  background: var(--diagram-layer-5);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
 }
 
 .sendButton:disabled {
@@ -2096,7 +2088,9 @@
   font-size: 0.625rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .scrollAnchorButton[data-active="true"][data-variant="good"] {
@@ -2133,7 +2127,7 @@
 .debounceSliderValue {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .debounceSliderValue[data-spammy="true"] {
@@ -2142,7 +2136,7 @@
 
 .debounceSliderInput {
   width: 100%;
-  accent-color: var(--diagram-layer-5);
+  accent-color: var(--diagram-layer-9);
   min-height: 44px;
 }
 
@@ -2183,7 +2177,7 @@
 }
 
 .typingMetricValue[data-active="true"] {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .typingMetricLabel {
@@ -2224,13 +2218,15 @@
   border-radius: var(--radius-1);
   font-size: 0.625rem;
   color: var(--color-muted);
-  transition: all 200ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .offlineDemoStep[data-active="true"] {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
   font-weight: 700;
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-bg));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
 }
 
 .offlineDemoNumber {
@@ -2247,8 +2243,8 @@
 }
 
 .offlineDemoStep[data-active="true"] .offlineDemoNumber {
-  border-color: var(--diagram-layer-5);
-  background: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -2358,23 +2354,25 @@
 .groupingSimButton {
   min-height: 44px;
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--diagram-layer-5);
+  border: 1px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, transparent);
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent);
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .groupingSimButton:hover {
-  background: color-mix(in srgb, var(--diagram-layer-5) 16%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 16%, transparent);
 }
 
 .groupingSimButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -2406,7 +2404,7 @@
 }
 
 .groupingSimMsg[data-grouped="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-5) 6%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, transparent);
 }
 
 .groupingSimAvatar {
@@ -2516,20 +2514,22 @@
   border-radius: var(--radius-1);
   background: var(--color-bg);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .emojiPickerButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .emojiPickerButton[data-active="true"] {
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, var(--color-bg));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
   transform: scale(1.15);
 }
 
@@ -2605,24 +2605,26 @@
 .advanceReadButton {
   min-height: 44px;
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--diagram-layer-5);
+  border: 2px solid var(--diagram-layer-9);
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-5) 8%, var(--color-bg));
-  color: var(--diagram-layer-5);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+  color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .advanceReadButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
 .advanceReadButton:hover:not(:disabled) {
-  background: var(--diagram-layer-5);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -2674,21 +2676,23 @@
   font-weight: 600;
   color: var(--color-muted);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .transportButton[data-active="true"] {
-  border-color: var(--diagram-layer-5);
-  background: color-mix(in srgb, var(--diagram-layer-5) 10%, transparent);
-  color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, transparent);
+  color: var(--diagram-layer-9);
 }
 
 .transportButton:hover {
-  border-color: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-9);
 }
 
 .transportButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -2702,7 +2706,7 @@
 .checkItem:focus-visible,
 .backoffStep:focus-visible,
 .msgBubble:focus-visible {
-  outline: 2px solid var(--diagram-layer-5);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -2743,7 +2747,7 @@
 }
 
 .ownTypingIndicator[data-typing="true"] {
-  color: var(--diagram-layer-5);
+  color: var(--diagram-layer-9);
 }
 
 .ownTypingStats {
@@ -2816,7 +2820,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .typingDot { animation: none; opacity: 0.6; }
-  .stepDot[data-current="true"] { animation: none; }
   .backoffBarItem[data-current="true"] .backoffBar { animation: none; }
   .reactionBtn[data-rollback="true"] { animation: none; }
   .lifecycleStep { transition: none; }

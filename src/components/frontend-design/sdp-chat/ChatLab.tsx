@@ -23,6 +23,7 @@ import styles from "./ChatLab.module.css";
 
 import { avatarColor } from "./engine/chat-helpers";
 import { PersistentChat } from "./ui/ChatComponents";
+import { StepBar } from "../_shared/StepBar";
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ export function ChatLab({ activeStep }: { activeStep: number }) {
   return (
     <ChatProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             <AnimatePresence mode="wait">
@@ -67,34 +68,6 @@ const STEP_LABELS = [
   "🔒", "∞²",
 ];
 
-const CHAT_STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Baseline", "Message List", "Send Message", "Delivery Status",
-  "Typing Indicator", "Reconnection", "Offline Queue",
-  "Message Grouping", "Reactions", "Read Receipts",
-  "Encryption", "Scale",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <nav className={styles.stepBar} aria-label="Build steps">
-      <ol className={styles.stepList} role="list">
-        {STEP_LABELS.map((label, i) => (
-          <li
-            key={i}
-            className={styles.stepDot}
-            data-active={i + 1 <= activeStep ? "true" : undefined}
-            data-current={i + 1 === activeStep ? "true" : undefined}
-            aria-current={i + 1 === activeStep ? "step" : undefined}
-            aria-label={`Step ${i + 1}: ${CHAT_STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
-          >
-            {label}
-          </li>
-        ))}
-      </ol>
-    </nav>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // Planning views (steps 1-3)
