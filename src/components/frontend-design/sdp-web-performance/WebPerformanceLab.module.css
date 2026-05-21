@@ -686,11 +686,11 @@
 
 .metricGaugeLabel {
   display: block;
-  font-size: var(--perf-base);
+  font-size: var(--perf-sm);
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   margin-bottom: 2px;
 }
 
@@ -761,7 +761,7 @@
 }
 
 .bundleColLabel {
-  font-size: var(--perf-base);
+  font-size: var(--perf-sm);
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
@@ -848,7 +848,7 @@
 }
 
 .pipelineRowLabel {
-  font-size: var(--perf-base);
+  font-size: var(--perf-sm);
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
@@ -1235,7 +1235,7 @@
 }
 
 .taskTimelineLabel {
-  font-size: var(--perf-base);
+  font-size: var(--perf-sm);
   font-weight: 700;
   color: var(--color-muted);
   text-transform: uppercase;
@@ -1956,10 +1956,9 @@
 
 .milestoneTitle {
   font-size: var(--perf-md);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-warning);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.01em;
   transition: color 300ms ease;
 }
 
