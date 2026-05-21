@@ -95,7 +95,7 @@ export function PrefetchWidget() {
     navTimerRefs.current[path] = setTimeout(() => {
       setLinkStates((prev) => ({
         ...prev,
-        [path]: { ...prev[path], navigating: false, navTime },
+        [path]: { prefetchProgress: 0, navigating: false, navTime },
       }));
       setAttempts((prev) => [...prev, { path, hovered: on, prefetchPct: Math.round(progress), navTime }]);
     }, displayDelay);

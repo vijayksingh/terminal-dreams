@@ -174,8 +174,8 @@ function WaterfallPanel() {
         const rect = bodyRef.current.getBoundingClientRect();
         const newW = Math.round(rect.right - e.clientX);
         setInspectorW(Math.max(MIN_INSPECTOR_W, Math.min(MAX_INSPECTOR_W, newW)));
-      } else if (dragging.current === "row" && panelRef.current) {
-        const parentRect = panelRef.current.parentElement!.getBoundingClientRect();
+      } else if (dragging.current === "row" && panelRef.current?.parentElement) {
+        const parentRect = panelRef.current.parentElement.getBoundingClientRect();
         const newH = Math.round(parentRect.bottom - e.clientY);
         setPanelH(Math.max(MIN_PANEL_H, Math.min(MAX_PANEL_H, newH)));
       }

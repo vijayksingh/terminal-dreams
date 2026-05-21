@@ -13,10 +13,10 @@ export function LongTaskWidget() {
   const yieldMs = optParams.yieldMs;
   const setYieldMs = (v: number) => updateOptParam("yieldMs", v);
   const [clickState, setClickState] = useState<"idle" | "queued" | "processed">("idle");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => { timersRef.current.forEach(clearTimeout); };
   }, []);
 
   const chunkCount = Math.ceil(TOTAL_WORK_MS / yieldMs);
@@ -39,14 +39,17 @@ export function LongTaskWidget() {
     setLastDelay(waitMs);
     setSimulatedInp(waitMs);
     setClickState("queued");
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    const outerTimer = setTimeout(() => {
       setClickState("processed");
-      timerRef.current = setTimeout(() => {
+      const innerTimer = setTimeout(() => {
         setClickState("idle");
         setSimulatedInp(null);
       }, 1200);
+      timersRef.current.push(innerTimer);
     }, waitMs);
+    timersRef.current.push(outerTimer);
   };
 
   return (
