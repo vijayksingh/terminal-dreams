@@ -1,75 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
-
-// ── Font metric exercise ───────────────────────────────────────────
-
-const FONT_DESCRIPTORS = [
-  { property: "size-adjust", correct: "107%", hint: "Scales the fallback to match web font's overall glyph size" },
-  { property: "ascent-override", correct: "90%", hint: "Matches the height above the baseline" },
-  { property: "descent-override", correct: "22%", hint: "Matches the depth below the baseline" },
-];
-const FONT_VALUES = ["107%", "90%", "22%"];
-
-function FontMetricExercise() {
-  const [picks, setPicks] = useState<Record<string, string>>({});
-  const [checked, setChecked] = useState(false);
-
-  const allPicked = FONT_DESCRIPTORS.every((d) => picks[d.property]);
-  const allCorrect = FONT_DESCRIPTORS.every((d) => picks[d.property] === d.correct);
-
-  return (
-    <div className={styles.widgetExercise}>
-      <p className={styles.widgetNote}>Match each @font-face descriptor to its value:</p>
-      <div className={styles.codeFillPre}>
-        <code>{"@font-face {\n"}</code>
-        {FONT_DESCRIPTORS.map((d) => (
-          <div key={d.property} style={{ paddingLeft: "1.5em" }}>
-            <code>{d.property}: </code>
-            {checked ? (
-              <span
-                className={styles.codeFillSelect}
-                data-status={picks[d.property] === d.correct ? "correct" : "wrong"}
-              >
-                {picks[d.property] || "—"}{picks[d.property] !== d.correct ? ` → ${d.correct}` : ""}
-              </span>
-            ) : (
-              <select
-                className={styles.codeFillSelect}
-                value={picks[d.property] || ""}
-                onChange={(e) => setPicks((p) => ({ ...p, [d.property]: e.target.value }))}
-              >
-                <option value="">—</option>
-                {FONT_VALUES.map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            )}
-            <code>;</code>
-          </div>
-        ))}
-        <code>{"}"}</code>
-      </div>
-      {!checked && allPicked && (
-        <button type="button" className={styles.cacheSubmitButton} onClick={() => setChecked(true)}>
-          Check values
-        </button>
-      )}
-      {checked && (
-        <div className={styles.predictionResult} data-correct={allCorrect ? "true" : undefined}>
-          <span className={styles.predictionResultIcon}>{allCorrect ? "✓" : "✗"}</span>
-          <span>
-            {allCorrect
-              ? "All correct — these overrides make the fallback font occupy identical space as the web font, eliminating CLS during the swap."
-              : "See corrections above. size-adjust scales the overall glyph box, ascent-override sets the height above baseline, descent-override sets depth below."}
-          </span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Font widget ────────────────────────────────────────────────────
 
 export function FontWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
@@ -161,7 +93,6 @@ export function FontWidget() {
           </span>
         </div>
       </div>
-      <FontMetricExercise />
     </div>
   );
 }
