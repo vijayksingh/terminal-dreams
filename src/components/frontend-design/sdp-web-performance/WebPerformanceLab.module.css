@@ -1,16 +1,17 @@
 /* ── WebPerformanceLab ────────────────────────────────────────────── */
 
 .labRoot {
-  --perf-xs: 0.625rem;
-  --perf-sm: 0.6875rem;
-  --perf-base: 0.75rem;
-  --perf-md: 0.875rem;
-  --perf-lg: 1rem;
+  --perf-xs: 0.6875rem;
+  --perf-sm: 0.75rem;
+  --perf-base: 0.8125rem;
+  --perf-md: 0.9375rem;
+  --perf-lg: 1.0625rem;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   font-family: var(--font-mono);
+  line-height: 1.4;
 }
 
 /* ── Scroll area ─────────────────────────────────────────────────── */
@@ -63,7 +64,7 @@
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
-  padding: var(--space-2) 0;
+  padding: var(--space-2);
 }
 
 .filmFrame {
@@ -85,18 +86,15 @@
   padding: 4px;
   gap: 3px;
   overflow: hidden;
-  transition-property: box-shadow;
+  transition-property: border-color, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease;
-  box-shadow:
-    0 0 0 1.5px var(--color-border),
-    0 2px 6px color-mix(in srgb, var(--color-text) 5%, transparent);
+  border: 2px solid var(--color-border);
 }
 
 .filmFrame[data-state="interactive"] .filmFrameScreen {
-  box-shadow:
-    0 0 0 1.5px var(--color-success),
-    0 2px 8px color-mix(in srgb, var(--color-success) 15%, transparent);
+  border-color: var(--color-success);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-success) 25%, transparent);
 }
 
 .filmFrame:not([data-visible="true"]) {
@@ -116,7 +114,6 @@
   height: 6px;
   border-radius: 2px;
   background: var(--diagram-layer-4);
-  opacity: 0.5;
   flex-shrink: 0;
 }
 
@@ -130,7 +127,7 @@
 .filmHero {
   flex: 1;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--diagram-layer-5) 30%, var(--color-bg));
+  background: color-mix(in srgb, var(--diagram-layer-5) 50%, var(--color-bg));
   min-height: 0;
 }
 
@@ -556,18 +553,18 @@
 }
 
 .waterfallTickLabel {
-  font-size: 7.5px;
+  font-size: 9px;
   fill: var(--color-muted);
   font-family: var(--font-mono);
 }
 
 .waterfallLabel {
-  font-size: 8px;
+  font-size: 9.5px;
   font-family: var(--font-mono);
 }
 
 .waterfallSizeLabel {
-  font-size: 7px;
+  font-size: 8.5px;
   fill: var(--color-muted);
   font-family: var(--font-mono);
 }
@@ -699,6 +696,7 @@
   font-size: var(--perf-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 .metricGaugeValue[data-rating="good"] { color: var(--color-success); }
@@ -733,6 +731,7 @@
   font-weight: 700;
   color: var(--color-text);
   letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .widgetNote {
@@ -1602,6 +1601,7 @@
   font-weight: 800;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 .journeyAfter[data-passing="true"] { color: var(--color-success); }
@@ -1686,6 +1686,7 @@
   font-size: var(--perf-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 .rumCellValue[data-rating="good"] { color: var(--color-success); }
@@ -1999,6 +2000,7 @@
   font-size: var(--perf-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
 .milestoneMetricAfter[data-rating="good"] { color: var(--color-success); }
