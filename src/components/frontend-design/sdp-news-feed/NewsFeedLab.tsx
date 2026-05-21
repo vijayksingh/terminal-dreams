@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION } from "@/lib/motion";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { StateInspector } from "@/components/recipe-lab/StateInspector";
 import {
   FeedProvider,
@@ -35,6 +36,7 @@ const STEP_LABELS = [
 
 export function NewsFeedLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
+  const noMotion = usePrefersReducedMotion();
 
   return (
     <FeedProvider activeStep={activeStep}>
@@ -42,17 +44,21 @@ export function NewsFeedLab({ activeStep }: { activeStep: number }) {
         <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
-              >
-                <PlanningView activeStep={activeStep} />
-              </motion.div>
-            </AnimatePresence>
+            noMotion ? (
+              <PlanningView activeStep={activeStep} />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`planning-${activeStep}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={TRANSITION.enterCard}
+                >
+                  <PlanningView activeStep={activeStep} />
+                </motion.div>
+              </AnimatePresence>
+            )
           ) : (
             <FeedEvolution />
           )}
@@ -197,7 +203,7 @@ function ComponentTreeView() {
 // ── TypeCards ───────────────────────────────────────────────────────
 
 const TYPE_CATEGORY_COLORS: Record<string, string> = {
-  api: "var(--diagram-layer-5)",
+  api: "var(--diagram-layer-9)",
   state: "var(--diagram-layer-4)",
   props: "var(--diagram-layer-1)",
 };
@@ -246,36 +252,45 @@ function TypeCard({ typeDef }: { typeDef: TypeDef }) {
 
 function FeedEvolution() {
   const { activeStep, stateEntries, metrics } = useFeed();
+  const noMotion = usePrefersReducedMotion();
 
   return (
     <div className={styles.evolutionLayout}>
       <MetricsBar activeStep={activeStep} metrics={metrics} />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeStep}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={TRANSITION.enterItem}
-        >
-          <StepControls />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepControls />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeStep}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={TRANSITION.enterItem}
+          >
+            <StepControls />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       <PersistentFeed />
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`widget-${activeStep}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={TRANSITION.crossfade}
-        >
-          <StepWidget />
-        </motion.div>
-      </AnimatePresence>
+      {noMotion ? (
+        <StepWidget />
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`widget-${activeStep}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={TRANSITION.crossfade}
+          >
+            <StepWidget />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       <StateInspector entries={stateEntries} title="Feed State" />
     </div>
@@ -344,7 +359,7 @@ function BaselineControls() {
 const POST_TYPE_CONFIG: { type: PostType; icon: string; color: string }[] = [
   { type: "text", icon: "T", color: "var(--color-text)" },
   { type: "image", icon: "◻", color: "var(--diagram-layer-2)" },
-  { type: "link", icon: "↗", color: "var(--diagram-layer-5)" },
+  { type: "link", icon: "↗", color: "var(--diagram-layer-9)" },
   { type: "poll", icon: "▮", color: "var(--diagram-layer-4)" },
 ];
 
@@ -792,6 +807,7 @@ function PersistentFeed() {
     failedPosts, retryPost,
     feedMode,
   } = useFeed();
+  const noMotion = usePrefersReducedMotion();
 
   const showTypes = isActive("postTypes");
   const showLikes = isActive("optimisticLikes");
@@ -804,16 +820,26 @@ function PersistentFeed() {
     <div className={styles.feedContainer}>
       {/* New post banner */}
       {newPostQueue.length > 0 && (
-        <motion.button
-          type="button"
-          className={styles.newPostBanner}
-          onClick={insertNewPosts}
-          initial={{ y: -40, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        >
-          {newPostQueue.length} new {newPostQueue.length === 1 ? "post" : "posts"}
-        </motion.button>
+        noMotion ? (
+          <button
+            type="button"
+            className={styles.newPostBanner}
+            onClick={insertNewPosts}
+          >
+            {newPostQueue.length} new {newPostQueue.length === 1 ? "post" : "posts"}
+          </button>
+        ) : (
+          <motion.button
+            type="button"
+            className={styles.newPostBanner}
+            onClick={insertNewPosts}
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          >
+            {newPostQueue.length} new {newPostQueue.length === 1 ? "post" : "posts"}
+          </motion.button>
+        )
       )}
 
       <div className={styles.feedScroll}>
@@ -826,11 +852,11 @@ function PersistentFeed() {
             return (
               <motion.div
                 key={post.id}
-                layout
-                initial={{ opacity: 0, y: 12 }}
+                layout={!noMotion}
+                initial={noMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ ...TRANSITION.enterCard, delay: idx < 3 ? idx * 0.05 : 0 }}
+                exit={noMotion ? undefined : { opacity: 0, y: -12 }}
+                transition={noMotion ? { duration: 0 } : { ...TRANSITION.enterCard, delay: idx < 3 ? idx * 0.05 : 0 }}
               >
                 {hasError ? (
                   <div className={styles.postCardError}>

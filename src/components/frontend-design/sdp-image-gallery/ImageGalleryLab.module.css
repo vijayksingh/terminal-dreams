@@ -76,8 +76,8 @@
 }
 
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .checkItem[data-checked="true"] {
@@ -175,8 +175,8 @@
 }
 
 .panelTab:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .panelTab[data-active="true"] {
@@ -526,6 +526,7 @@
   font-size: 0.85rem;
   font-weight: 800;
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   transition: color 300ms ease;
 }
 
@@ -768,7 +769,7 @@
   height: 24px;
   min-height: 44px;
   min-width: 44px;
-  border-radius: var(--radius-3);
+  border-radius: 12px;
   border: 2px solid var(--color-border);
   background: var(--color-surface-2);
   cursor: pointer;
@@ -782,8 +783,8 @@
 }
 
 .toggleButton:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .toggleButton[data-on="true"] {
@@ -855,8 +856,8 @@
 }
 
 .layoutModeButton:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .layoutModeButton[data-active="true"] {
@@ -912,8 +913,8 @@
 }
 
 .responsiveOption:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .responsiveOption[data-active="true"] {
@@ -991,21 +992,20 @@
 /* ── Widget panels (below gallery) ─────────────────────────────── */
 
 .widgetPanel {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
+  padding: var(--space-2) var(--space-3);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
 .widgetTitle {
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--diagram-layer-9);
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .widgetNote {
@@ -1348,8 +1348,8 @@
 }
 
 .lightboxButton:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 /* ── Focus trap + a11y ─────────────────────────────────────────── */
@@ -1446,10 +1446,6 @@
     opacity: 0.5;
   }
 
-  .stepDot[data-current="true"] {
-    animation: none;
-  }
-
   .metricValue[data-status="bad"],
   .metricValue[data-status="good"] {
     animation: none;
@@ -1468,6 +1464,10 @@
   }
 
   .imageCardError:active {
+    transform: none;
+  }
+
+  .toggleButton:active {
     transform: none;
   }
 }
@@ -1536,7 +1536,7 @@
 
 .imageCard:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* ── Prediction challenge ───────────────────────────────────── */
@@ -1583,8 +1583,8 @@
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .predictionOption[data-correct="true"] {

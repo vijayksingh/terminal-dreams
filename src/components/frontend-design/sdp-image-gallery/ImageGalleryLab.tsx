@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, useId } from "react";
+import React, { useCallback, useMemo, useState, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION } from "@/lib/motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";

@@ -94,6 +94,7 @@ function dotColor(name: string): string {
 
 export function WindowingLab({ activeStep }: { activeStep: number }) {
   const phase = getPhase(activeStep);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
     <WindowingProvider activeStep={activeStep}>
@@ -103,10 +104,10 @@ export function WindowingLab({ activeStep }: { activeStep: number }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={phase}
-              initial={{ opacity: 0, y: 8 }}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={TRANSITION.enterCard}
+              exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={prefersReducedMotion ? INSTANT : TRANSITION.enterCard}
             >
               {phase === "problem" && <ProblemView />}
               {phase === "insight" && <InsightView />}

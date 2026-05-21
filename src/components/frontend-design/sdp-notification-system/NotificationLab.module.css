@@ -9,46 +9,18 @@
   overflow: hidden;
   font-family: var(--font-mono);
   color: var(--color-text);
+  container-type: inline-size;
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
 }
 
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
-}
-
-/* ── Step bar ───────────────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
-}
-
-.stepDot {
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius-1);
-  color: var(--color-muted);
-  background: transparent;
-  transition: background 200ms ease, color 200ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--color-text);
-  background: var(--color-surface-2);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-9);
-}
-
-.stepDot[data-completed="true"] {
-  color: var(--color-success);
+  padding: var(--space-4);
 }
 
 /* ── Planning panel ─────────────────────────────────────────────── */
@@ -95,7 +67,7 @@
 .checkItem:hover { background: var(--color-surface-2); }
 .checkItem:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .checkItem[data-checked="true"] {
@@ -186,7 +158,7 @@
 }
 .panelTab:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: -2px;
+  outline-offset: 1px;
 }
 
 /* ── Endpoint cards ─────────────────────────────────────────────── */
@@ -298,7 +270,7 @@
 .methodOption[data-picked="true"][data-method="PUT"] { background: color-mix(in srgb, var(--diagram-layer-4) 20%, transparent); color: var(--diagram-layer-4); }
 .methodOption[data-picked="true"][data-method="DELETE"] { background: color-mix(in srgb, var(--diagram-layer-8) 20%, transparent); color: var(--diagram-layer-8); }
 
-.methodOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.methodOption:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 
 .methodHint {
   font-size: 0.6rem;
@@ -388,7 +360,7 @@
 }
 
 .typeChoice:hover { background: var(--diagram-layer-9); color: var(--color-bg); }
-.typeChoice:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.typeChoice:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 
 .schemaFieldHeader {
   display: flex;
@@ -420,19 +392,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
-  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
-  border-radius: var(--radius-2);
+  padding: var(--space-2);
 }
-
-.widgetPanel[data-category="toast"] { background: color-mix(in srgb, var(--diagram-layer-2) 10%, var(--color-surface)); }
-.widgetPanel[data-category="push"] { background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface)); }
-.widgetPanel[data-category="queue"] { background: color-mix(in srgb, var(--diagram-layer-1) 10%, var(--color-surface)); }
-.widgetPanel[data-category="settings"] { background: color-mix(in srgb, var(--diagram-layer-4) 10%, var(--color-surface)); }
 
 .widgetTitle {
   font-size: 0.75rem;
   font-weight: 800;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .widgetSubtitle {
@@ -585,7 +552,7 @@
 }
 
 .toastDismiss:hover { background: color-mix(in srgb, var(--color-error) 10%, transparent); color: var(--color-error); }
-.toastDismiss:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.toastDismiss:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 
 .toastTimer {
   width: 100%;
@@ -748,7 +715,7 @@
 }
 
 .notificationItem:hover { background: var(--color-surface-2); }
-.notificationItem:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.notificationItem:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 
 .notificationItem[data-unread="true"] {
   background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
@@ -865,8 +832,7 @@
 .toggleButton {
   position: relative;
   width: 44px;
-  min-height: 44px;
-  padding: 10px 0;
+  height: 24px;
   border-radius: 12px;
   border: 2px solid var(--color-border);
   background: var(--color-surface-2);
@@ -881,7 +847,7 @@
 
 .toggleButton:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .toggleKnob {
@@ -930,7 +896,7 @@
 }
 .strategyOption:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .actionButton {
@@ -951,7 +917,7 @@
 }
 
 .actionButton:hover { background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent); }
-.actionButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.actionButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 .actionButton:disabled { opacity: 0.65; cursor: not-allowed; }
 
 .toolButton {
@@ -972,7 +938,7 @@
 }
 
 .toolButton:hover { background: var(--color-surface-2); color: var(--color-text); }
-.toolButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.toolButton:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 .toolButton:disabled { opacity: 0.65; cursor: not-allowed; }
 
 .toolButton[data-active="true"] {
@@ -1027,7 +993,7 @@
 
 .predictionOption:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .predictionOption[data-correct="true"] {
@@ -1063,7 +1029,7 @@
 
 .rangeInput:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .widgetSliderLabel {
@@ -1120,7 +1086,7 @@
 
 .preferenceToggle:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .blockedIndicator {
@@ -1242,7 +1208,7 @@
 }
 
 .groupHeader:hover { background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface-2)); }
-.groupHeader:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 2px; }
+.groupHeader:focus-visible { outline: 2px solid var(--diagram-layer-9); outline-offset: 1px; }
 
 .groupCount {
   font-size: 0.6rem;
@@ -1324,7 +1290,7 @@
 
 .kbTestInput:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* ── Stress test dashboard ─────────────────────────────────────── */
@@ -1571,7 +1537,7 @@
 
 .orderOption:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .orderOption:disabled {
@@ -1655,7 +1621,6 @@
 /* ── Reduced motion ─────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot,
   .checkItem,
   .checkToggle,
   .panelTab,

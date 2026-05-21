@@ -1,12 +1,19 @@
 /* ── Lab shell ──────────────────────────────────────────────── */
 
 .labRoot {
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
   display: flex;
   flex-direction: column;
   gap: 0;
   font-family: var(--font-mono);
   min-height: 0;
   height: 100%;
+  overflow: hidden;
+  container-type: inline-size;
 }
 
 .scrollArea {
@@ -14,51 +21,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;
-  padding: var(--space-3);
-}
-
-/* ── Step bar ──────────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  flex-wrap: wrap;
-  background: var(--color-surface);
-  border-bottom: 2px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.stepDot {
-  font-size: 0.625rem;
-  font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--color-muted);
-  border: 1px solid var(--color-border);
-  transition-property: border-color, background-color, color;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-}
-
-.stepDot[data-active="true"] {
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  border-color: var(--color-text);
-}
-
-.stepDot[data-current="true"] {
-  background: var(--diagram-layer-9);
-  color: var(--color-bg);
-  border-color: var(--diagram-layer-9);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
-  animation: stepPulse 2s ease-in-out infinite;
-}
-
-@keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+  padding: var(--space-4);
 }
 
 /* ── Planning panels ───────────────────────────────────────── */
@@ -107,8 +70,8 @@
 }
 
 .checkItem:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .checkItem[data-checked="true"] {
@@ -206,8 +169,8 @@
 }
 
 .panelTab:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .panelTab + .panelTab {
@@ -469,6 +432,7 @@
   font-weight: 800;
   color: var(--color-text);
   margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .metricValue[data-status="bad"] { color: var(--color-error); animation: metricFlash 400ms ease-out; }
@@ -542,7 +506,7 @@
 }
 
 .searchInput:focus-visible {
-  outline: 2px solid var(--color-app-accent);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: -2px;
 }
 
@@ -602,8 +566,8 @@
 }
 
 .guestBtn:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .guestBtn:hover {
@@ -617,6 +581,7 @@
   color: var(--color-text);
   min-width: 16px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── Filter chips ──────────────────────────────────────────── */
@@ -650,7 +615,7 @@
 
 .filterChip:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .filterChip[data-active="true"] {
@@ -715,8 +680,8 @@
 }
 
 .calendarArrow:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .calendarArrow:hover {
@@ -1074,7 +1039,7 @@
 
 .backButton:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .detailImage {
@@ -1241,7 +1206,7 @@
 
 .bookButton:focus-visible {
   outline: 2px solid var(--color-text);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .bookButton:hover {
@@ -1393,7 +1358,7 @@
 
 .bookingBackBtn:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .bookingNextBtn {
@@ -1419,7 +1384,7 @@
 
 .bookingNextBtn:focus-visible {
   outline: 2px solid var(--color-text);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .bookingNextBtn:active {
@@ -1531,10 +1496,7 @@
 /* ── Widgets ───────────────────────────────────────────────── */
 
 .widgetPanel {
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-1);
   padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -1546,6 +1508,8 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--color-muted);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .widgetBody {
@@ -1943,7 +1907,7 @@
 
 .listingCard:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 /* ── Prediction challenge ───────────────────────────────────── */
@@ -1990,8 +1954,8 @@
 }
 
 .predictionOption:focus-visible {
-  outline: 2px solid var(--color-app-accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .predictionOption[data-correct="true"] {

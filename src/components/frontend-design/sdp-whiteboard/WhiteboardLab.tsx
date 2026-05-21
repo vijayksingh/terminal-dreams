@@ -30,6 +30,7 @@ const CANVAS_H = 260;
 export function WhiteboardLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const noMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, 0);
@@ -48,10 +49,10 @@ export function WhiteboardLab({ activeStep }: { activeStep: number }) {
             <AnimatePresence mode="wait">
               <motion.div
                 key={`planning-${activeStep}`}
-                initial={{ opacity: 0, y: 8 }}
+                initial={noMotion ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TRANSITION.enterCard}
+                exit={noMotion ? undefined : { opacity: 0, y: -8 }}
+                transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
               >
                 <PlanningView activeStep={activeStep} />
               </motion.div>
@@ -317,7 +318,7 @@ function TypeCards() {
 }
 
 function TypeCard({ typeDef, revealed, onReveal }: { typeDef: TypeDef; revealed: Set<string>; onReveal: (key: string) => void }) {
-  const color = TYPE_CATEGORY_COLORS[typeDef.category] ?? "var(--color-accent)";
+  const color = TYPE_CATEGORY_COLORS[typeDef.category] ?? "var(--diagram-layer-9)";
   return (
     <div className={styles.typeCard} style={{ borderTopColor: color }}>
       <div className={styles.typeCardHeader}>
@@ -370,6 +371,7 @@ function ArchitectureView() {
 
 function WhiteboardEvolution() {
   const { activeStep, stateEntries } = useWhiteboard();
+  const noMotion = usePrefersReducedMotion();
 
   return (
     <div className={styles.evolutionStack}>
@@ -378,10 +380,10 @@ function WhiteboardEvolution() {
       <AnimatePresence mode="wait">
         <motion.div
           key={activeStep}
-          initial={{ opacity: 0, y: 8 }}
+          initial={noMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={TRANSITION.enterCard}
+          exit={noMotion ? undefined : { opacity: 0, y: -8 }}
+          transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
         >
           <StepContent step={activeStep} />
         </motion.div>
@@ -719,7 +721,7 @@ function drawCanvasShape(ctx: CanvasRenderingContext2D, shape: Shape, cs: CSSSty
 
   if (opts?.highlight && shape.selected) {
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = cs?.getPropertyValue("--color-accent").trim() || CANVAS_FALLBACK;
+    ctx.strokeStyle = cs?.getPropertyValue("--diagram-layer-9").trim() || CANVAS_FALLBACK;
     ctx.lineWidth = 1.5;
     ctx.strokeRect(shape.x - 2, shape.y - 2, shape.w + 4, shape.h + 4);
     ctx.setLineDash([]);
@@ -753,7 +755,7 @@ function PointerCaptureStep() {
       ctx.beginPath();
       ctx.moveTo(currentPath[0]!.x, currentPath[0]!.y);
       for (let i = 1; i < currentPath.length; i++) ctx.lineTo(currentPath[i]!.x, currentPath[i]!.y);
-      ctx.strokeStyle = resolveColor("var(--color-accent)", cs);
+      ctx.strokeStyle = resolveColor("var(--diagram-layer-9)", cs);
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -805,7 +807,7 @@ function PointerCaptureStep() {
         h: Math.max(...currentPath.map((p) => p.y)) - Math.min(...currentPath.map((p) => p.y)),
         rotation: 0,
         fill: "transparent",
-        stroke: "var(--color-accent)",
+        stroke: "var(--diagram-layer-9)",
         strokeWidth: 3,
         selected: false,
         locked: false,
@@ -1013,7 +1015,7 @@ function HitTestingStep() {
         ctx.globalAlpha = isTraced && !isHit ? 0.35 : 0.5;
         ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
+        ctx.strokeStyle = isSelected ? resolveColor("var(--diagram-layer-9)", cs) : strokeColor;
         ctx.lineWidth = isSelected ? 3 : shape.strokeWidth;
         ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
       } else if (shape.kind === "ellipse") {
@@ -1023,14 +1025,14 @@ function HitTestingStep() {
         ctx.globalAlpha = isTraced && !isHit ? 0.35 : 0.5;
         ctx.fill();
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
+        ctx.strokeStyle = isSelected ? resolveColor("var(--diagram-layer-9)", cs) : strokeColor;
         ctx.lineWidth = isSelected ? 3 : shape.strokeWidth;
         ctx.stroke();
       } else if (shape.kind === "freehand" && shape.points.length > 1) {
         ctx.beginPath();
         ctx.moveTo(shape.points[0]!.x, shape.points[0]!.y);
         for (let i = 1; i < shape.points.length; i++) ctx.lineTo(shape.points[i]!.x, shape.points[i]!.y);
-        ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
+        ctx.strokeStyle = isSelected ? resolveColor("var(--diagram-layer-9)", cs) : strokeColor;
         ctx.lineWidth = isSelected ? 4 : shape.strokeWidth;
         ctx.lineCap = "round";
         ctx.stroke();
@@ -1040,7 +1042,7 @@ function HitTestingStep() {
         ctx.beginPath();
         ctx.moveTo(p0.x, p0.y);
         ctx.lineTo(p1.x, p1.y);
-        ctx.strokeStyle = isSelected ? resolveColor("var(--color-accent)", cs) : strokeColor;
+        ctx.strokeStyle = isSelected ? resolveColor("var(--diagram-layer-9)", cs) : strokeColor;
         ctx.lineWidth = isSelected ? 3 : shape.strokeWidth;
         ctx.stroke();
       }
@@ -1242,7 +1244,7 @@ function SelectionHandlesStep() {
               <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill={selected.fill} fillOpacity={0.5} stroke={selected.stroke} strokeWidth={2} />
             )}
             {/* Selection outline */}
-            <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill="none" stroke="var(--color-accent)" strokeWidth="1.5" strokeDasharray="4 4" />
+            <rect x={selected.x} y={selected.y} width={selected.w} height={selected.h} fill="none" stroke="var(--diagram-layer-9)" strokeWidth="1.5" strokeDasharray="4 4" />
             {/* Handles */}
             {HANDLE_DEFS.map(h => {
               const [hx, hy] = h.getPos(selected.x, selected.y, selected.w, selected.h);
@@ -1250,8 +1252,8 @@ function SelectionHandlesStep() {
                 <circle
                   key={h.id}
                   cx={hx} cy={hy} r={6}
-                  fill={activeHandle === h.id ? "var(--color-accent)" : "var(--color-bg)"}
-                  stroke="var(--color-accent)"
+                  fill={activeHandle === h.id ? "var(--diagram-layer-9)" : "var(--color-bg)"}
+                  stroke="var(--diagram-layer-9)"
                   strokeWidth={2}
                   style={{ cursor: h.cursor }}
                   onPointerDown={(e) => handlePointerDown(e, h.id)}
@@ -1262,10 +1264,10 @@ function SelectionHandlesStep() {
               );
             })}
             {/* Rotation handle */}
-            <line x1={selected.x + selected.w / 2} y1={selected.y} x2={selected.x + selected.w / 2} y2={selected.y - 20} stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="3 3" />
-            <circle cx={selected.x + selected.w / 2} cy={selected.y - 24} r="4" fill="none" stroke="var(--color-accent)" strokeWidth="1.5" />
+            <line x1={selected.x + selected.w / 2} y1={selected.y} x2={selected.x + selected.w / 2} y2={selected.y - 20} stroke="var(--diagram-layer-9)" strokeWidth="1" strokeDasharray="3 3" />
+            <circle cx={selected.x + selected.w / 2} cy={selected.y - 24} r="4" fill="none" stroke="var(--diagram-layer-9)" strokeWidth="1.5" />
             {/* Dimension labels */}
-            <text x={selected.x + selected.w / 2} y={selected.y + selected.h + 18} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fontWeight="700" fill="var(--color-accent)">
+            <text x={selected.x + selected.w / 2} y={selected.y + selected.h + 18} textAnchor="middle" fontSize="10" fontFamily="var(--font-mono)" fontWeight="700" fill="var(--diagram-layer-9)">
               {Math.round(selected.w)} × {Math.round(selected.h)}
             </text>
           </svg>
@@ -1527,8 +1529,8 @@ function CoalescedEventsStep() {
           <div className={styles.coalescedHalf}>
             <span className={styles.coalescedLabel}>+ getCoalescedEvents()</span>
             <svg className={styles.coalescedSvg} viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet">
-              {coalescedPts.length >= 2 && <path d={toPath(coalescedPts)} fill="none" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />}
-              {coalescedPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="var(--color-accent)" />)}
+              {coalescedPts.length >= 2 && <path d={toPath(coalescedPts)} fill="none" stroke="var(--diagram-layer-9)" strokeWidth="2" strokeLinecap="round" />}
+              {coalescedPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="var(--diagram-layer-9)" />)}
             </svg>
             <span className={styles.coalescedCount}>{coalescedPts.length} pts</span>
           </div>
@@ -1639,7 +1641,7 @@ function UndoRedoStep() {
           <AnimatePresence>
           {shapes.map((s) => {
             const isFlash = s.id === flashId;
-            const stroke = isFlash ? "var(--color-accent)" : s.stroke;
+            const stroke = isFlash ? "var(--diagram-layer-9)" : s.stroke;
             const sw = isFlash ? 3 : s.strokeWidth;
             return (
               <motion.g key={s.id}
@@ -1656,7 +1658,7 @@ function UndoRedoStep() {
                   <ellipse cx={s.x + s.w / 2} cy={s.y + s.h / 2} rx={s.w / 2} ry={s.h / 2} fill={s.fill} fillOpacity={0.6} stroke={stroke} strokeWidth={sw} />
                 )}
                 {isFlash && (
-                  <rect x={s.x - 4} y={s.y - 4} width={s.w + 8} height={s.h + 8} fill="none" stroke="var(--color-accent)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />
+                  <rect x={s.x - 4} y={s.y - 4} width={s.w + 8} height={s.h + 8} fill="none" stroke="var(--diagram-layer-9)" strokeWidth={2} strokeDasharray="4 3" opacity={0.8} />
                 )}
               </motion.g>
             );
@@ -1852,7 +1854,7 @@ const SIM_USERS = [
   { id: "grace", name: "Grace", color: "var(--diagram-layer-6)" },
   { id: "heidi", name: "Heidi", color: "var(--diagram-layer-7)" },
   { id: "ivan", name: "Ivan", color: "var(--color-error)" },
-  { id: "judy", name: "Judy", color: "var(--color-accent)" },
+  { id: "judy", name: "Judy", color: "var(--diagram-layer-9)" },
 ];
 
 function CursorPresenceStep() {
@@ -2080,7 +2082,7 @@ function SpatialIndexStep() {
 }
 
 function RtreeVisualization({ shapeCount, depth, queryPath }: { shapeCount: number; depth: number; queryPath: number[] }) {
-  const colors = ["var(--diagram-layer-1)", "var(--diagram-layer-2)", "var(--diagram-layer-4)", "var(--color-accent)"];
+  const colors = ["var(--diagram-layer-1)", "var(--diagram-layer-2)", "var(--diagram-layer-4)", "var(--diagram-layer-9)"];
   const l1Count = Math.min(depth >= 1 ? 3 : 0, 3);
   const l2Count = depth >= 2 ? 9 : 0;
   const l3Count = depth >= 3 ? Math.min(27, 9) : 0;

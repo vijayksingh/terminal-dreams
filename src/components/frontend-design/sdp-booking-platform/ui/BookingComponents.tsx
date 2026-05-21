@@ -111,10 +111,10 @@ export function MiniMap() {
                 cx={listing.mapX}
                 cy={listing.mapY}
                 r={isHovered ? 8 : 5}
-                fill={isHovered ? "var(--color-accent)" : "var(--diagram-layer-5)"}
+                fill={isHovered ? "var(--diagram-layer-9)" : "var(--diagram-layer-5)"}
                 stroke="var(--color-bg)"
                 strokeWidth="2"
-                style={{ transition: "all 150ms ease" }}
+                style={{ transition: "fill 150ms ease, r 150ms ease" }}
               />
               {isHovered && (
                 <g>

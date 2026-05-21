@@ -264,7 +264,7 @@ function EndpointChallenge() {
 }
 
 const TYPE_CATEGORY_COLORS: Record<string, string> = {
-  api: "var(--diagram-layer-5)",
+  api: "var(--diagram-layer-9)",
   state: "var(--diagram-layer-4)",
   props: "var(--diagram-layer-1)",
 };

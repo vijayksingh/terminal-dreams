@@ -9,46 +9,18 @@
   overflow: hidden;
   font-family: var(--font-mono);
   color: var(--color-text);
+  container-type: inline-size;
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
 }
 
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
-}
-
-/* ── Step bar ───────────────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
-}
-
-.stepDot {
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius-1);
-  color: var(--color-muted);
-  background: transparent;
-  transition: background 200ms ease, color 200ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--color-text);
-  background: var(--color-surface-2);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-9);
-}
-
-.stepDot[data-completed="true"] {
-  color: var(--color-success);
+  padding: var(--space-4);
 }
 
 /* ── Planning panel ─────────────────────────────────────────────── */
@@ -94,7 +66,7 @@
 .checkItem:hover { background: var(--color-surface-2); }
 .checkItem:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .checkItem[data-checked="true"] {
@@ -1579,7 +1551,6 @@ button.scopeBadge[data-in-scope="false"]:hover {
 /* ── Reduced motion ─────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot,
   .checkItem,
   .checkToggle,
   .panelTab,

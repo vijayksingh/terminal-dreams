@@ -9,50 +9,18 @@
   overflow: hidden;
   font-family: var(--font-mono);
   color: var(--color-text);
+  container-type: inline-size;
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
 }
 
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
-}
-
-/* ── Step bar ───────────────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  flex-wrap: wrap;
-}
-
-.stepBarList { display: contents; }
-
-.stepDot {
-  font-size: 0.625rem;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: var(--radius-1);
-  color: var(--color-muted);
-  background: transparent;
-  transition: background 200ms ease, color 200ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--color-text);
-  background: var(--color-surface-2);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-9);
-  animation: stepPulse 2s ease-in-out infinite;
-}
-
-@keyframes stepPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.15); }
+  padding: var(--space-4);
 }
 
 /* ── Planning panel ──────────────────────────────────────────── */
@@ -192,6 +160,7 @@
   font-weight: 800;
   color: var(--color-text);
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .complexityValue[data-grade="low"] { color: var(--color-success); }
@@ -417,7 +386,7 @@ button.typeFieldRow:not([data-revealed="true"]) .typeFieldType { color: var(--co
 
 .metricCard { flex: 1; text-align: center; }
 .metricLabel { font-size: 0.625rem; font-weight: 600; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.metricValue { font-size: 0.85rem; font-weight: 800; color: var(--color-text); }
+.metricValue { font-size: 0.85rem; font-weight: 800; color: var(--color-text); font-variant-numeric: tabular-nums; }
 .metricValue[data-status="good"] { color: var(--color-success); }
 .metricValue[data-status="bad"] { color: var(--color-error); }
 
@@ -1199,18 +1168,14 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .toggleButton {
   position: relative;
-  width: 40px;
-  height: 22px;
+  width: 44px;
+  height: 24px;
   border: 2px solid var(--color-border);
   border-radius: 12px;
   background: var(--color-surface-2);
   cursor: pointer;
   padding: 0;
   transition: background 200ms ease, border-color 200ms ease;
-  min-width: 44px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
 }
 
 .toggleButton:focus-visible {
@@ -1225,18 +1190,17 @@ button.scopeBadge[data-in-scope="false"]:hover {
 
 .toggleKnob {
   position: absolute;
-  top: 50%;
-  left: 4px;
-  width: 14px;
-  height: 14px;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--color-text);
   transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform: translateY(-50%);
 }
 
 .toggleButton[data-on="true"] .toggleKnob {
-  transform: translate(16px, -50%);
+  transform: translateX(20px);
   background: var(--color-bg);
 }
 

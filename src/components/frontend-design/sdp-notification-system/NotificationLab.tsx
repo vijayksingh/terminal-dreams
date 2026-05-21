@@ -310,7 +310,7 @@ function EndpointChallenge() {
 }
 
 const TYPE_CATEGORY_COLORS: Record<string, string> = {
-  api: "var(--diagram-layer-5)",
+  api: "var(--diagram-layer-9)",
   state: "var(--diagram-layer-4)",
   props: "var(--diagram-layer-1)",
 };
@@ -2480,7 +2480,7 @@ function IntegrationWidget() {
             <div className={styles.dashboardCardTitle}>Queue depth over time</div>
             <div className={styles.sparklineContainer}>
               <svg className={styles.sparklineSvg} viewBox="0 0 200 40" preserveAspectRatio="none">
-                <path d={sparklinePath} fill="none" stroke="var(--color-accent)" strokeWidth="2" />
+                <path d={sparklinePath} fill="none" stroke="var(--diagram-layer-9)" strokeWidth="2" />
               </svg>
             </div>
           </div>

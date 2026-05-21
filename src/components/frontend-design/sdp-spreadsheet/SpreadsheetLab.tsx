@@ -42,6 +42,7 @@ function SpreadsheetLabContent({ activeStep }: { activeStep: number }) {
   const { stepCompleted } = useSpreadsheet();
   const isPlanning = activeStep <= 3;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const noMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, 0);
@@ -59,10 +60,10 @@ function SpreadsheetLabContent({ activeStep }: { activeStep: number }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={`planning-${activeStep}`}
-              initial={{ opacity: 0, y: 8 }}
+              initial={noMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={TRANSITION.enterCard}
+              exit={noMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={noMotion ? { duration: 0 } : TRANSITION.enterCard}
             >
               <PlanningView activeStep={activeStep} />
             </motion.div>

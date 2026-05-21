@@ -1002,6 +1002,8 @@ function SegmentFetcherWidget() {
   const [fetchCount, setFetchCount] = useState(0);
   const [failCount, setFailCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const retryTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const completedRef = useRef(false);
   const networkQualityRef = useRef(75);
 
@@ -1034,16 +1036,16 @@ function SegmentFetcherWidget() {
         setFetches(prev => prev.map(f => f.id === id ? { ...f, progress: Math.min(progress, 100), status: "failed" } : f));
         setFailCount(c => c + 1);
         // Auto-retry after delay
-        setTimeout(() => {
+        retryTimeoutRef.current = setTimeout(() => {
           setFetches(prev => prev.map(f => f.id === id ? { ...f, status: "retrying", progress: 40 } : f));
           let retryProgress = 40;
-          const retryTimer = setInterval(() => {
+          retryTimerRef.current = setInterval(() => {
             retryProgress += (15 + Math.random() * 10) * (networkQualityRef.current / 100 + 0.1);
             if (retryProgress >= 100) {
               setFetches(prev => prev.map(f => f.id === id ? { ...f, progress: 100, status: "done" } : f));
               setFetchCount(c => c + 1);
               incrementSegments();
-              clearInterval(retryTimer);
+              clearInterval(retryTimerRef.current);
             } else {
               setFetches(prev => prev.map(f => f.id === id ? { ...f, progress: retryProgress } : f));
             }
@@ -1064,7 +1066,11 @@ function SegmentFetcherWidget() {
   }, [incrementSegments]);
 
   useEffect(() => {
-    return () => clearInterval(timerRef.current);
+    return () => {
+      clearInterval(timerRef.current);
+      clearInterval(retryTimerRef.current);
+      clearTimeout(retryTimeoutRef.current);
+    };
   }, []);
 
   return (

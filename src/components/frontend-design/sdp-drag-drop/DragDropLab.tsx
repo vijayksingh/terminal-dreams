@@ -11,7 +11,6 @@ import {
   SCOPE_ITEMS,
   API_ENDPOINTS,
   DATA_MODELS,
-  TOTAL_STEPS,
   type DragItem,
   type DropZone,
   type TypeDef,
@@ -679,21 +678,21 @@ function HitTestVisualizerWidget() {
 
           {hitTestStrategy === "center" && (
             <>
-              <circle cx="95" cy="40" r="4" fill="var(--color-accent)" />
-              <line x1="95" y1="40" x2="40" y2="40" stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
-              <line x1="95" y1="40" x2="160" y2="40" stroke="var(--color-accent)" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
+              <circle cx="95" cy="40" r="4" fill="var(--diagram-layer-9)" />
+              <line x1="95" y1="40" x2="40" y2="40" stroke="var(--diagram-layer-9)" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
+              <line x1="95" y1="40" x2="160" y2="40" stroke="var(--diagram-layer-9)" strokeWidth="1" strokeDasharray="3 2" opacity="0.5" />
               <text x="95" y="75" textAnchor="middle" fill="var(--color-text)" fontSize="7" fontFamily="var(--font-mono)">cursor center → nearest zone</text>
             </>
           )}
           {hitTestStrategy === "overlap" && (
             <>
-              <rect x="55" y="20" width="40" height="40" rx="3" fill="var(--color-accent)" opacity="0.2" stroke="var(--color-accent)" strokeWidth="1" />
+              <rect x="55" y="20" width="40" height="40" rx="3" fill="var(--diagram-layer-9)" opacity="0.2" stroke="var(--diagram-layer-9)" strokeWidth="1" />
               <text x="95" y="75" textAnchor="middle" fill="var(--color-text)" fontSize="7" fontFamily="var(--font-mono)">overlap area → zone with most coverage</text>
             </>
           )}
           {hitTestStrategy === "closest" && (
             <>
-              <circle cx="98" cy="40" r="3" fill="var(--color-accent)" />
+              <circle cx="98" cy="40" r="3" fill="var(--diagram-layer-9)" />
               <line x1="98" y1="40" x2="70" y2="40" stroke="var(--color-success)" strokeWidth="1.5" />
               <line x1="98" y1="40" x2="130" y2="40" stroke="var(--color-error)" strokeWidth="1" strokeDasharray="3 2" />
               <text x="82" y="35" fill="var(--color-success)" fontSize="6" fontFamily="var(--font-mono)">28px</text>

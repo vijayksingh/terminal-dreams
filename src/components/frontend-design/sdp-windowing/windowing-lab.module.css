@@ -29,57 +29,20 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  font-family: var(--font-mono);
+  container-type: inline-size;
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
 }
 
 /* ── Keyframes ────────────────────────────────── */
 
-@keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--win-accent-glow); }
-  50% { box-shadow: 0 0 8px 2px var(--win-accent-glow); }
-}
-
 @keyframes badgeGlow {
   0%, 100% { box-shadow: 0 0 0 0 transparent; }
   50% { box-shadow: 0 0 6px 2px var(--win-good-glow); }
-}
-
-/* ── Step bar ─────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.stepDot {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  color: var(--color-muted);
-  cursor: default;
-  transition-property: border-color, background-color, color;
-  transition-duration: 200ms;
-  transition-timing-function: ease;
-}
-
-.stepDot[data-active] {
-  color: var(--win-accent);
-  border-color: var(--win-accent-border);
-  background: var(--win-accent-bg);
-}
-
-.stepDot[data-current] {
-  color: var(--color-bg);
-  background: var(--win-accent);
-  border-color: var(--win-accent);
-  animation: stepPulse 2s ease-in-out infinite;
 }
 
 /* ── Scroll area ──────────────────────────────── */
@@ -87,7 +50,7 @@
 .scrollArea {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-3);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -128,7 +91,7 @@
   background: transparent;
   color: var(--color-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
 .toggleBtn:hover {
@@ -160,7 +123,7 @@
   border-radius: 50%;
   background: var(--color-muted);
   opacity: 0.4;
-  transition: all 0.2s;
+  transition: background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
 .toggleDot[data-on] {
@@ -214,7 +177,7 @@
   padding: 2px 10px;
   border-radius: var(--radius-1);
   font-variant-numeric: tabular-nums;
-  transition: all 0.2s;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
 .domBadgeRed {
@@ -735,6 +698,11 @@
   color: var(--color-text);
 }
 
+.inspectorToggle:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 .inspectorChevron {
   font-size: 9px;
   transition: transform 0.15s;
@@ -852,10 +820,6 @@
   .rowBase,
   .ctrl input[type="range"]::-webkit-slider-thumb {
     transition: none;
-  }
-
-  .stepDot[data-current] {
-    animation: none;
   }
 
   .domBadgeGreen {

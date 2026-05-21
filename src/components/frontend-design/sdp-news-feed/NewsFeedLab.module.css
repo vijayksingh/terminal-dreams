@@ -74,6 +74,11 @@
   border-color: var(--diagram-layer-9);
 }
 
+.checkItem:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 .checkItem[data-checked="true"] {
   border-color: var(--diagram-layer-9);
   background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
@@ -198,6 +203,11 @@
 .endpointCard:hover,
 .endpointCard[data-expanded="true"] {
   border-color: var(--diagram-layer-9);
+}
+
+.endpointCard:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
 }
 
 .endpointHeader {
@@ -427,6 +437,7 @@
   font-size: 0.85rem;
   font-weight: 800;
   color: var(--color-text);
+  font-variant-numeric: tabular-nums;
 }
 
 .metricValue[data-status="bad"] {
@@ -592,6 +603,11 @@
   background: color-mix(in srgb, var(--chip-color) 8%, var(--color-bg));
 }
 
+.postTypeChip:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 .postTypeChipIcon {
   font-size: 0.72rem;
 }
@@ -599,6 +615,7 @@
 .postTypeChipCount {
   font-size: 0.5rem;
   opacity: 0.6;
+  font-variant-numeric: tabular-nums;
 }
 
 .typeFilteredTag {
@@ -927,6 +944,11 @@
   background: color-mix(in srgb, var(--color-error) 8%, var(--color-bg));
 }
 
+.insertModeButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 /* ── Step 9: Weight sliders ─────────────────────────────────────── */
 
 .weightSliders {
@@ -1252,6 +1274,11 @@
   background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
 }
 
+.layoutModeButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 /* ── Scale controls ──────────────────────────────────────────────── */
 
 .scaleControls {
@@ -1570,6 +1597,11 @@
   animation: heartShake 400ms ease;
 }
 
+.reactionButton:focus-visible {
+  outline: 2px solid var(--diagram-layer-9);
+  outline-offset: 1px;
+}
+
 @keyframes heartPop {
   0% { transform: scale(1); }
   50% { transform: scale(1.4); }
@@ -1704,9 +1736,9 @@
 
 .widgetPanel {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-2);
-  background: var(--color-surface);
+  background: none;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -1718,6 +1750,8 @@
   color: var(--color-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  padding-bottom: var(--space-1);
 }
 
 .widgetNote {
