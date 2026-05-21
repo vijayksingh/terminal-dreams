@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { usePerfContext } from "../perf-context";
+import type { OptimizationParams } from "../engine/perf-simulator";
 import styles from "../WebPerformanceLab.module.css";
 
-type ImageFormat = "jpeg" | "webp" | "avif";
+type ImageFormat = OptimizationParams["imageFormat"];
 const FORMAT_RATIO: Record<ImageFormat, number> = { jpeg: 1, webp: 0.65, avif: 0.5 };
 const FORMAT_LABELS: Record<ImageFormat, string> = { jpeg: "JPEG", webp: "WebP", avif: "AVIF" };
 
@@ -16,10 +16,12 @@ const IMAGE_ITEMS = [
 ];
 
 export function ImageOptWidget() {
-  const { enabledOptimizations } = usePerfContext();
+  const { enabledOptimizations, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("imageOptimization");
-  const [format, setFormat] = useState<ImageFormat>("avif");
-  const [quality, setQuality] = useState(75);
+  const format = optParams.imageFormat;
+  const quality = optParams.imageQuality;
+  const setFormat = (v: ImageFormat) => updateOptParam("imageFormat", v);
+  const setQuality = (v: number) => updateOptParam("imageQuality", v);
 
   const qualityFactor = 0.5 + (quality / 100) * 0.8;
   const maxOriginal = Math.max(...IMAGE_ITEMS.map((i) => i.originalKB));

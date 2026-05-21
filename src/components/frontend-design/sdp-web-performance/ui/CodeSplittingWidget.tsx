@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION, SPRING } from "@/lib/motion";
 import { usePerfContext } from "../perf-context";
@@ -9,9 +8,10 @@ import styles from "../WebPerformanceLab.module.css";
 const TOTAL_JS = 385;
 
 export function CodeSplittingWidget() {
-  const { enabledOptimizations } = usePerfContext();
+  const { enabledOptimizations, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("codeSplitting");
-  const [corePct, setCorePct] = useState(30);
+  const corePct = optParams.codeSplitPct;
+  const setCorePct = (v: number) => updateOptParam("codeSplitPct", v);
 
   const coreKB = Math.round(TOTAL_JS * (corePct / 100));
   const lazyKB = TOTAL_JS - coreKB;

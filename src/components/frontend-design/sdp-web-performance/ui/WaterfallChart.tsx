@@ -46,12 +46,12 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
         changed.add(r.id);
       }
     }
+    prevResourcesRef.current = new Map(sortedResources.map((r) => [r.id, r.endMs]));
     if (changed.size > 0) {
       setChangedIds(changed);
       const timer = setTimeout(() => setChangedIds(new Set()), 800);
       return () => clearTimeout(timer);
     }
-    prevResourcesRef.current = new Map(sortedResources.map((r) => [r.id, r.endMs]));
   }, [sortedResources]);
 
   const depChain = useMemo(() => {
@@ -150,7 +150,8 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
         width="100%"
         height={totalHeight}
         className={styles.waterfallSvg}
-        role="img"
+        role="group"
+        aria-roledescription="interactive chart"
         aria-label={`Resource waterfall: ${sortedResources.length} resources loading over ${maxMs >= 1000 ? `${(maxMs / 1000).toFixed(1)}s` : `${maxMs}ms`}. Use arrow keys to navigate resources, Enter to select, Escape to deselect.`}
         tabIndex={0}
         onKeyDown={handleKeyDown}

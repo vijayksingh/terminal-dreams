@@ -49,6 +49,28 @@ export type CLSSource = {
   fixed: boolean;
 };
 
+export type OptimizationParams = {
+  codeSplitPct: number;
+  criticalCssKB: number;
+  imageFormat: "jpeg" | "webp" | "avif";
+  imageQuality: number;
+  yieldMs: number;
+  thirdPartyStrategies: Record<string, "eager" | "defer" | "idle" | "interaction">;
+};
+
+export const DEFAULT_OPT_PARAMS: OptimizationParams = {
+  codeSplitPct: 30,
+  criticalCssKB: 4,
+  imageFormat: "avif",
+  imageQuality: 75,
+  yieldMs: 50,
+  thirdPartyStrategies: {
+    "analytics": "idle",
+    "ads": "defer",
+    "chatbot": "interaction",
+  },
+};
+
 export type PerfMetrics = {
   fcp: number;
   lcp: number;
@@ -157,16 +179,19 @@ const BASELINE: ResourceTemplate[] = [
 
 // ── Optimization transforms ─────────────────────────────────────
 
-function applyCodeSplitting(resources: ResourceTemplate[]): ResourceTemplate[] {
+function applyCodeSplitting(resources: ResourceTemplate[], params: OptimizationParams): ResourceTemplate[] {
+  const totalJS = 385;
+  const coreKB = Math.round(totalJS * (params.codeSplitPct / 100));
+  const lazyKB = totalJS - coreKB;
   return resources.flatMap((r) => {
     if (r.id === "main-js") {
       return [
-        { ...r, id: "core-js", label: "core.js", sizeKB: 115 },
+        { ...r, id: "core-js", label: "core.js", sizeKB: coreKB },
         {
           id: "route-chunk",
           label: "routes.js",
           type: "js" as ResourceType,
-          sizeKB: 75,
+          sizeKB: lazyKB,
           blocking: false,
           waitFor: "core-js",
           deferBy: 10,
@@ -178,16 +203,18 @@ function applyCodeSplitting(resources: ResourceTemplate[]): ResourceTemplate[] {
   });
 }
 
-function applyCriticalCSS(resources: ResourceTemplate[]): ResourceTemplate[] {
+function applyCriticalCSS(resources: ResourceTemplate[], params: OptimizationParams): ResourceTemplate[] {
+  const inlineKB = params.criticalCssKB;
+  const asyncKB = 48 - inlineKB;
   return resources.flatMap((r) => {
     if (r.id === "css-bundle") {
       return [
-        { ...r, id: "critical-css", label: "critical.css", sizeKB: 4 },
+        { ...r, id: "critical-css", label: "critical.css", sizeKB: inlineKB, blocking: inlineKB > 0 },
         {
           id: "async-css",
           label: "styles.css",
           type: "css" as ResourceType,
-          sizeKB: 44,
+          sizeKB: asyncKB,
           blocking: false,
           waitFor: "html",
           deferBy: 0,
@@ -203,16 +230,21 @@ function applyCriticalCSS(resources: ResourceTemplate[]): ResourceTemplate[] {
 
 function applyImageOptimization(
   resources: ResourceTemplate[],
+  params: OptimizationParams,
 ): ResourceTemplate[] {
+  const formatRatio: Record<string, number> = { jpeg: 1, webp: 0.65, avif: 0.5 };
+  const ratio = formatRatio[params.imageFormat] ?? 0.5;
+  const qualityFactor = 0.5 + (params.imageQuality / 100) * 0.8;
+  const ext = params.imageFormat === "jpeg" ? ".jpg" : `.${params.imageFormat}`;
   return resources.map((r) => {
     if (r.id === "hero-img") {
-      return { ...r, label: "hero.webp", sizeKB: 65, deferBy: 0 };
+      return { ...r, label: `hero${ext}`, sizeKB: Math.round(r.sizeKB * ratio * qualityFactor), deferBy: 0 };
     }
     if (r.id === "img-2" || r.id === "img-3" || r.id === "img-4") {
       return {
         ...r,
-        label: r.label.replace(".jpg", ".webp"),
-        sizeKB: Math.round(r.sizeKB * 0.35),
+        label: r.label.replace(".jpg", ext),
+        sizeKB: Math.round(r.sizeKB * ratio * qualityFactor),
         deferBy: 1200,
       };
     }
@@ -229,13 +261,17 @@ function applyFontLoading(resources: ResourceTemplate[]): ResourceTemplate[] {
   });
 }
 
+const DEFER_DELAYS: Record<string, number> = { eager: 0, defer: 1500, idle: 2500, interaction: 4000 };
+
 function applyThirdPartyDefer(
   resources: ResourceTemplate[],
+  params: OptimizationParams,
 ): ResourceTemplate[] {
   return resources.map((r) => {
-    if (r.id === "analytics") return { ...r, deferBy: 2000 };
-    if (r.id === "chatbot") return { ...r, deferBy: 4000 };
-    if (r.id === "ads") return { ...r, deferBy: 3000 };
+    const strategy = params.thirdPartyStrategies[r.id];
+    if (strategy && strategy !== "eager") {
+      return { ...r, deferBy: DEFER_DELAYS[strategy] ?? 2000 };
+    }
     return r;
   });
 }
@@ -263,15 +299,15 @@ function applyPrefetching(resources: ResourceTemplate[]): ResourceTemplate[] {
 }
 
 const WATERFALL_TRANSFORMS: Partial<
-  Record<OptimizationId, (r: ResourceTemplate[]) => ResourceTemplate[]>
+  Record<OptimizationId, (r: ResourceTemplate[], p: OptimizationParams) => ResourceTemplate[]>
 > = {
   codeSplitting: applyCodeSplitting,
   criticalCSS: applyCriticalCSS,
   imageOptimization: applyImageOptimization,
-  fontLoading: applyFontLoading,
+  fontLoading: (r) => applyFontLoading(r),
   thirdPartyDefer: applyThirdPartyDefer,
-  caching: applyCachingFirst,
-  prefetching: applyPrefetching,
+  caching: (r) => applyCachingFirst(r),
+  prefetching: (r) => applyPrefetching(r),
 };
 
 const TRANSFORM_ORDER: OptimizationId[] = [
@@ -354,6 +390,7 @@ function computeTimings(templates: ResourceTemplate[], profile: NetworkProfile):
 function deriveMetrics(
   resources: WaterfallResource[],
   enabled: Set<OptimizationId>,
+  params: OptimizationParams,
 ): PerfMetrics {
   const blockingResources = resources.filter((r) => r.blocking);
   const blockingEnd =
@@ -383,7 +420,9 @@ function deriveMetrics(
   const totalBlocking = longTaskTime + thirdPartyExec;
   let inp = Math.round(50 + totalBlocking * 0.65);
   if (enabled.has("longTaskBreaking")) {
-    inp = Math.round(50 + (totalBlocking * 0.65) * 0.15);
+    const yieldMs = params.yieldMs;
+    const reductionFactor = Math.max(0.05, yieldMs / 400);
+    inp = Math.round(50 + (totalBlocking * 0.65) * reductionFactor);
   }
   inp = Math.max(inp, 45);
 
@@ -427,7 +466,8 @@ function deriveMetrics(
     .filter((d) => d > 50)
     .reduce((sum, d) => sum + (d - 50), 0);
   if (enabled.has("longTaskBreaking")) {
-    tbt = Math.round(tbt * 0.12);
+    const yieldFactor = Math.max(0.02, params.yieldMs / 400);
+    tbt = Math.round(tbt * yieldFactor);
   }
   tbt = Math.max(tbt, 0);
 
@@ -479,6 +519,7 @@ export function computePerformance(
   enabled: Set<OptimizationId>,
   network: NetworkCondition | NetworkProfile = "3g",
   visitType: "first" | "repeat" = "first",
+  params: OptimizationParams = DEFAULT_OPT_PARAMS,
 ): {
   resources: WaterfallResource[];
   metrics: PerfMetrics;
@@ -490,7 +531,7 @@ export function computePerformance(
   for (const opt of TRANSFORM_ORDER) {
     const fn = WATERFALL_TRANSFORMS[opt];
     if (enabled.has(opt) && fn) {
-      templates = fn(templates);
+      templates = fn(templates, params);
     }
   }
 
@@ -513,7 +554,7 @@ export function computePerformance(
     }
   }
 
-  const metrics = deriveMetrics(resources, enabled);
+  const metrics = deriveMetrics(resources, enabled, params);
   const timelineEndMs = Math.max(...resources.map((r) => r.endMs), 500);
 
   return { resources, metrics, timelineEndMs };

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
 
 export function CriticalCSSWidget() {
-  const { enabledOptimizations, activeProfile: nw } = usePerfContext();
+  const { enabledOptimizations, activeProfile: nw, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("criticalCSS");
   const rtt = nw.rtt;
   const multiplier = nw.multiplier;
-  const [inlineKB, setInlineKB] = useState(4);
+  const inlineKB = optParams.criticalCssKB;
+  const setInlineKB = (v: number) => updateOptParam("criticalCssKB", v);
 
   const totalCSS = 48;
   const htmlParse = 15;

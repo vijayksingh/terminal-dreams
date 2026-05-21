@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
 
@@ -19,24 +18,22 @@ const STRATEGY_FLEX_OFFSET: Record<DeferStrategy, number> = {
 };
 
 const THIRD_PARTY_SCRIPTS = [
-  { name: "analytics.js", size: 38, parseFlex: 2, execFlex: 3, defaultStrategy: "idle" as DeferStrategy },
-  { name: "ads.js", size: 52, parseFlex: 3, execFlex: 4, defaultStrategy: "defer" as DeferStrategy },
-  { name: "chatbot.js", size: 125, parseFlex: 5, execFlex: 8, defaultStrategy: "interaction" as DeferStrategy },
+  { name: "analytics.js", size: 38, parseFlex: 2, execFlex: 3, id: "analytics" },
+  { name: "ads.js", size: 52, parseFlex: 3, execFlex: 4, id: "ads" },
+  { name: "chatbot.js", size: 125, parseFlex: 5, execFlex: 8, id: "chatbot" },
 ];
 
 export function ThirdPartyWidget() {
-  const { enabledOptimizations } = usePerfContext();
+  const { enabledOptimizations, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("thirdPartyDefer");
-  const [strategies, setStrategies] = useState<Record<string, DeferStrategy>>(
-    Object.fromEntries(THIRD_PARTY_SCRIPTS.map((s) => [s.name, s.defaultStrategy]))
-  );
+  const strategies = optParams.thirdPartyStrategies;
 
-  const setStrategy = (name: string, strategy: DeferStrategy) => {
-    setStrategies((prev) => ({ ...prev, [name]: strategy }));
+  const setStrategy = (id: string, strategy: DeferStrategy) => {
+    updateOptParam("thirdPartyStrategies", { ...strategies, [id]: strategy });
   };
 
-  const totalDeferred = THIRD_PARTY_SCRIPTS.filter((s) => strategies[s.name] !== "eager").reduce((sum, s) => sum + s.size, 0);
-  const eagerCount = THIRD_PARTY_SCRIPTS.filter((s) => strategies[s.name] === "eager").length;
+  const totalDeferred = THIRD_PARTY_SCRIPTS.filter((s) => (strategies[s.id] ?? "eager") !== "eager").reduce((sum, s) => sum + s.size, 0);
+  const eagerCount = THIRD_PARTY_SCRIPTS.filter((s) => (strategies[s.id] ?? "eager") === "eager").length;
 
   return (
     <div className={styles.widgetPanel}>
@@ -52,7 +49,7 @@ export function ThirdPartyWidget() {
         </div>
 
         {THIRD_PARTY_SCRIPTS.map((s) => {
-          const strat = on ? strategies[s.name] : "eager";
+          const strat = on ? strategies[s.id] : "eager";
           const offset = STRATEGY_FLEX_OFFSET[strat];
           return (
             <div key={s.name} className={styles.lifecycleRow}>
@@ -104,10 +101,10 @@ export function ThirdPartyWidget() {
                     key={strat}
                     type="button"
                     className={styles.yieldPresetBtn}
-                    data-active={strategies[s.name] === strat ? "true" : undefined}
-                    onClick={() => setStrategy(s.name, strat)}
+                    data-active={strategies[s.id] === strat ? "true" : undefined}
+                    onClick={() => setStrategy(s.id, strat)}
                     role="radio"
-                    aria-checked={strategies[s.name] === strat}
+                    aria-checked={strategies[s.id] === strat}
                   >
                     {STRATEGY_LABELS[strat]}
                   </button>

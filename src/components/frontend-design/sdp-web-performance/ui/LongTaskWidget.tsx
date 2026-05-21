@@ -8,9 +8,10 @@ const YIELD_PRESETS = [10, 25, 50, 100, 200];
 const TOTAL_WORK_MS = 400;
 
 export function LongTaskWidget() {
-  const { enabledOptimizations, setSimulatedInp } = usePerfContext();
+  const { enabledOptimizations, setSimulatedInp, optParams, updateOptParam } = usePerfContext();
   const on = enabledOptimizations.has("longTaskBreaking");
-  const [yieldMs, setYieldMs] = useState(50);
+  const yieldMs = optParams.yieldMs;
+  const setYieldMs = (v: number) => updateOptParam("yieldMs", v);
   const [clickState, setClickState] = useState<"idle" | "queued" | "processed">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

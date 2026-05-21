@@ -15,7 +15,9 @@ import {
   OPTIMIZATIONS,
   NETWORK_PROFILES,
   getCWVRating,
+  DEFAULT_OPT_PARAMS,
   type OptimizationId,
+  type OptimizationParams,
   type NetworkCondition,
   type NetworkProfile,
   type WaterfallResource,
@@ -151,6 +153,8 @@ type PerfContextValue = {
   toggleScope: (id: string) => void;
   enabledOptimizations: Set<OptimizationId>;
   toggleOptimization: (id: OptimizationId) => void;
+  optParams: OptimizationParams;
+  updateOptParam: <K extends keyof OptimizationParams>(key: K, value: OptimizationParams[K]) => void;
   resources: WaterfallResource[];
   metrics: PerfMetrics;
   timelineEndMs: number;
@@ -189,6 +193,11 @@ export function PerfProvider({
   const [networkCondition, setNetworkCondition] = useState<NetworkCondition>("3g");
   const [bandwidthSlider, setBandwidthSliderRaw] = useState(33);
   const [simulatedInp, setSimulatedInp] = useState<number | null>(null);
+  const [optParams, setOptParams] = useState<OptimizationParams>(DEFAULT_OPT_PARAMS);
+
+  const updateOptParam = useCallback(<K extends keyof OptimizationParams>(key: K, value: OptimizationParams[K]) => {
+    setOptParams((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   const SLIDER_PRESETS: Record<NetworkCondition, number> = useMemo(() => ({
     "slow-3g": 0,
@@ -229,8 +238,8 @@ export function PerfProvider({
   }, []);
 
   const { resources, metrics, timelineEndMs } = useMemo(
-    () => computePerformance(enabledOptimizations, activeProfile, visitType),
-    [enabledOptimizations, activeProfile, visitType],
+    () => computePerformance(enabledOptimizations, activeProfile, visitType, optParams),
+    [enabledOptimizations, activeProfile, visitType, optParams],
   );
 
   const prevMetricsRef = useRef<PerfMetrics>(metrics);
@@ -277,8 +286,10 @@ export function PerfProvider({
     ];
   }, [enabledOptimizations, activeProfile, visitType, metrics, simulatedInp]);
 
-  if (prevMetricsRef.current !== metrics) {
-    prevMetricsRef.current = metrics;
+  const prevMetricsRefUpdate = metrics;
+  const prevMetricsRefCurrent = prevMetricsRef.current;
+  if (prevMetricsRefCurrent !== prevMetricsRefUpdate) {
+    prevMetricsRef.current = prevMetricsRefUpdate;
   }
 
   const value = useMemo<PerfContextValue>(
@@ -288,6 +299,8 @@ export function PerfProvider({
       toggleScope,
       enabledOptimizations,
       toggleOptimization,
+      optParams,
+      updateOptParam,
       resources,
       metrics,
       timelineEndMs,
@@ -308,6 +321,8 @@ export function PerfProvider({
       toggleScope,
       enabledOptimizations,
       toggleOptimization,
+      optParams,
+      updateOptParam,
       resources,
       metrics,
       timelineEndMs,
