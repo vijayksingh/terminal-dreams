@@ -389,11 +389,21 @@ function deriveMetrics(
   cls = Math.max(cls, 0.01);
   cls = Math.round(cls * 100) / 100;
 
-  let tbt = 300;
-  if (enabled.has("codeSplitting")) tbt -= 60;
-  if (enabled.has("thirdPartyDefer")) tbt -= 100;
-  if (enabled.has("longTaskBreaking")) tbt -= 140;
-  if (enabled.has("prefetching")) tbt -= 30;
+  const blockingTasks = resources
+    .filter((r) => r.blocking && (r.type === "js" || r.type === "css"))
+    .map((r) => r.endMs - r.startMs);
+  const thirdPartyTasks = resources
+    .filter((r) => r.type === "third-party")
+    .map((r) => Math.round((r.endMs - r.startMs) * 0.4));
+  const allTasks = enabled.has("thirdPartyDefer")
+    ? blockingTasks
+    : [...blockingTasks, ...thirdPartyTasks];
+  let tbt = allTasks
+    .filter((d) => d > 50)
+    .reduce((sum, d) => sum + (d - 50), 0);
+  if (enabled.has("longTaskBreaking")) {
+    tbt = Math.round(tbt * 0.12);
+  }
   tbt = Math.max(tbt, 0);
 
   const cutoff = blockingEnd + 1500;

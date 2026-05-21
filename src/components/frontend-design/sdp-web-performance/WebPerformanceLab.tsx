@@ -527,13 +527,51 @@ function StepWidget() {
 
 // ── Step 4: Baseline audit ──────────────────────────────────────────
 
+const BOTTLENECK_CHOICES = [
+  { id: "css-bundle", label: "styles.css (48 KB)" },
+  { id: "main-js", label: "main.js (385 KB)" },
+  { id: "hero-img", label: "hero.jpg (245 KB)" },
+  { id: "chatbot", label: "chatbot.js (125 KB)" },
+];
+
 function BaselineWidget() {
   const { metrics } = usePerfContext();
+  const [bottleneckPick, setBottleneckPick] = useState<string | null>(null);
+  const correct = bottleneckPick === "main-js";
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Baseline Audit</div>
       <MetricsPanel metrics={metrics} showAll />
+
+      {bottleneckPick === null && (
+        <div style={{ marginTop: "var(--space-2)" }}>
+          <p className={styles.widgetNote}>Which resource is the biggest bottleneck? Click to identify it.</p>
+          <div className={styles.prefetchLinkGrid}>
+            {BOTTLENECK_CHOICES.map((c) => (
+              <button key={c.id} type="button" className={styles.prefetchLinkBtn} onClick={() => setBottleneckPick(c.id)}>
+                <span className={styles.prefetchLinkPath}>{c.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {bottleneckPick !== null && (
+        <div className={styles.predictionResult} data-correct={correct ? "true" : undefined} style={{ marginTop: "var(--space-2)" }}>
+          <span className={styles.predictionResultIcon}>{correct ? "✓" : "✗"}</span>
+          <span>
+            {correct
+              ? "Correct — main.js (385 KB) is render-blocking AND the largest resource on the critical path. Everything downstream waits for it."
+              : bottleneckPick === "hero-img"
+              ? "hero.jpg is heavy but loads AFTER JS finishes. The bottleneck is main.js — it blocks the entire render."
+              : bottleneckPick === "css-bundle"
+              ? "CSS blocks rendering, but at 48 KB it's 8× smaller than main.js (385 KB). The JS bundle is the true bottleneck."
+              : "chatbot.js is large but not render-blocking — it loads after the page renders. main.js blocks EVERYTHING."}
+          </span>
+        </div>
+      )}
+
       <div className={styles.baselineVerdict}>
         <span className={styles.verdictIcon}>!</span>
         <div>

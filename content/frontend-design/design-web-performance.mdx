@@ -140,6 +140,8 @@ ads.js                                      ████████  (52 KB)
 
 The critical path is clear: `main.js` (385 KB) blocks rendering for ~1.7s on a 3G connection. Nothing downstream — images, fonts, third-party widgets — can start until JS finishes because the SPA needs JavaScript to render any DOM. The total initial payload is 1,280 KB across 11 requests.
 
+**Why doesn't HTTP/2 solve this?** HTTP/2 multiplexes multiple requests over a single TCP connection, so same-origin resources download in parallel without the HTTP/1.1 limit of 6 concurrent connections. The waterfall already models this — notice that same-origin resources overlap. But multiplexing helps *parallel* downloads, not *sequential dependencies*. The hero image can't start until JS finishes because the SPA hasn't rendered the `<img>` tag yet. That dependency is architectural, not a network bottleneck. Third-party scripts are different — they come from separate origins and still face connection limits (modeled as 2 concurrent slots in the waterfall).
+
 <PredictionChallenge
   question="Before looking at the waterfall — which resource is the biggest performance bottleneck?"
   options={[
@@ -259,7 +261,9 @@ The `media="print"` trick works because the browser still downloads print styles
 
 ## 07 — Image Optimization
 
-Images are usually the heaviest resources on a page, and on image-heavy sites the hero image *is* the LCP element. No amount of JavaScript optimization matters if a 245 KB JPEG is what the user is waiting for. The optimization has three layers: format, responsiveness, and loading strategy.
+After code splitting (step 5) and critical CSS (step 6), JavaScript is no longer the LCP bottleneck — the hero image is. LCP can't improve until the LCP element renders, and the LCP element is a 245 KB JPEG. The optimization strategy must shift from "reduce blocking JS" to "shrink the LCP element itself."
+
+Images are usually the heaviest resources on a page, and on image-heavy sites the hero image *is* the LCP element. The optimization has three layers: format, responsiveness, and loading strategy.
 
 <PredictionChallenge
   question="The hero image is a 245 KB JPEG. If we convert it to WebP at the same perceptual quality, how much smaller will it be?"
@@ -539,6 +543,8 @@ After assigning strategies, toggle Caching on above, then switch to "Repeat visi
 
 ## 13 — Prefetching & Prerendering
 
+Caching (step 12) made repeat visits near-instant — the browser serves everything from disk. But the *first* navigation to a new page is still cold: no cache, full network round-trip. Prefetching closes that gap.
+
 Every client-side navigation follows the same sequence: DNS lookup → TCP → TLS → download route chunk → download data → render. On 3G, that's 500-900ms of waiting *after* the user clicks. But what if the browser started before the click?
 
 Prefetching doesn't speed up the current page — it makes the *next* navigation instant. The navigation comparison on the right shows the difference: a cold navigation to `/products` requires the full connection + download + render sequence, while a prefetched navigation skips straight to rendering from cache.
@@ -592,7 +598,7 @@ When the user clicks, the browser swaps in the already-rendered page. There's no
 
 ## 14 — Performance Budgets
 
-All the optimizations above are meaningless without a mechanism to *keep* them. Without enforcement, performance degrades steadily — one PR adds a new chart library (+45 KB), another adds an eager-loaded banner image (+80 KB), a third adds a synchronous analytics call (+40ms TBT). Each passes code review because no single change is egregious. After three months, the LCP is 800ms worse and nobody can point to a single cause. This is **performance entropy**, and budgets are the only defense.
+Caching protects repeat visits (step 12), prefetching protects navigations (step 13) — but who protects *the optimizations themselves*? All the gains from steps 5-13 are meaningless without a mechanism to *keep* them. Without enforcement, performance degrades steadily — one PR adds a new chart library (+45 KB), another adds an eager-loaded banner image (+80 KB), a third adds a synchronous analytics call (+40ms TBT). Each passes code review because no single change is egregious. After three months, the LCP is 800ms worse and nobody can point to a single cause. This is **performance entropy**, and budgets are the only defense.
 
 <PredictionChallenge
   question="With no optimizations enabled, four metrics are over budget: LCP (2500ms), INP (200ms), CLS (0.1), JS size (250 KB). Which metric is farthest over its budget?"
@@ -641,6 +647,8 @@ Toggle optimizations on and off to see which budget breaks first — that's the 
 <section id="step-15" className="recipe-step">
 
 ## 15 — Production Monitoring (RUM)
+
+Budgets (step 14) catch regressions in CI before they ship. But not everything shows up in CI — a third-party script update, a CDN configuration change, or a device/network mix shift in your user base can degrade performance without any code change. RUM is the final layer: it validates that lab-tested optimizations actually work for real users.
 
 Lab metrics and production metrics measure different things. Lighthouse runs on a controlled device with a controlled network — it's reproducible, comparable, and optimistic. It represents your best-case scenario. Real User Monitoring (RUM) captures what actual users experience: the person on a 2015 Android phone in rural Indonesia on a 2G connection, the laptop with 47 browser tabs open, the phone losing signal in a subway tunnel.
 
