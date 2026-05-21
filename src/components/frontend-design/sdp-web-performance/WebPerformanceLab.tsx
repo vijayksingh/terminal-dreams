@@ -243,8 +243,10 @@ function WaterfallDrawer() {
                   <span className={styles.networkSliderSpeed}>×{activeProfile.multiplier} · {activeProfile.rtt}ms RTT</span>
                 </div>
               </div>
-              <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
-              <StateInspector entries={stateEntries} title="Perf State" />
+              <div className={styles.waterfallBody}>
+                <WaterfallChart resources={resources} timelineEndMs={timelineEndMs} />
+                <StateInspector entries={stateEntries} title="Perf State" />
+              </div>
             </div>
           </motion.div>
         )}
