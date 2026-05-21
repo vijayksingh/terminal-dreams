@@ -54,9 +54,11 @@
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .profileCardHeader {
@@ -104,12 +106,12 @@
 
 .profileSummary {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .profileSummaryLabel {
@@ -177,19 +179,25 @@
 .filmFrameScreen {
   width: 100%;
   aspect-ratio: 9 / 14;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
   padding: 4px;
   gap: 3px;
   overflow: hidden;
-  transition: border-color 200ms ease;
+  transition-property: box-shadow;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
+  box-shadow:
+    0 0 0 1.5px var(--color-border),
+    0 2px 6px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .filmFrame[data-state="interactive"] .filmFrameScreen {
-  border-color: var(--color-success);
+  box-shadow:
+    0 0 0 1.5px var(--color-success),
+    0 2px 8px color-mix(in srgb, var(--color-success) 15%, transparent);
 }
 
 .filmFrame:not([data-visible="true"]) {
@@ -280,13 +288,14 @@
 
 .vitalCard {
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-left: 3px solid var(--color-error);
   border-radius: var(--radius-2);
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-surface));
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-error) 15%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .vitalCardHeader {
@@ -1124,10 +1133,10 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-error);
-  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
   background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent);
 }
 
 .verdictIcon {
@@ -1169,21 +1178,22 @@
 
 .predictionChoice {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-mono);
   font-size: 0.6rem;
   font-weight: 600;
   cursor: pointer;
-  transition-property: border-color, background-color, color;
+  transition-property: background-color, color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
+  border: none;
 }
 
 .predictionChoice:active {
@@ -1191,8 +1201,8 @@
 }
 
 .predictionChoice:hover {
-  border-color: var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
+  box-shadow: 0 0 0 1px var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-bg));
 }
 
 .predictionChoice:focus-visible {
@@ -1209,13 +1219,17 @@
   font-size: 0.6rem;
   line-height: 1.6;
   color: var(--color-text);
-  border: 1px solid var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-error) 5%, var(--color-surface));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .predictionResult[data-correct="true"] {
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-success) 5%, var(--color-surface));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .predictionResultIcon {
@@ -1250,16 +1264,17 @@
 }
 
 .bundleBlock {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   font-size: 0.6rem;
   color: var(--color-text);
   display: flex;
   flex-direction: column;
   gap: 4px;
-  transition: opacity 200ms ease;
+  transition-property: opacity;
+  transition-duration: 200ms;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .bundleBlock[data-state="inactive"] { opacity: 0.35; }
@@ -1466,26 +1481,30 @@
   padding: var(--space-3);
   border-radius: var(--radius-2);
   background: var(--color-bg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
-  margin-top: var(--space-2);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    inset 0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .clickSimButton {
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--diagram-layer-9);
+  border: none;
   border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface));
   color: var(--diagram-layer-9);
   font-family: var(--font-mono);
   font-size: 0.65rem;
   font-weight: 700;
   cursor: pointer;
-  transition-property: border-color, background-color, color;
+  transition-property: background-color, color, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease;
   white-space: nowrap;
   min-width: 160px;
   text-align: center;
+  box-shadow:
+    0 0 0 1.5px var(--diagram-layer-9),
+    0 1px 4px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
 }
 
 .clickSimButton:active:not(:disabled) {
@@ -1497,16 +1516,20 @@
 }
 
 .clickSimButton[data-state="queued"] {
-  border-color: var(--color-warning);
   color: var(--color-warning);
   background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  box-shadow:
+    0 0 0 1.5px var(--color-warning),
+    0 1px 4px color-mix(in srgb, var(--color-warning) 20%, transparent);
   animation: queuePulse 600ms ease-in-out infinite;
 }
 
 .clickSimButton[data-state="processed"] {
-  border-color: var(--color-success);
   color: var(--color-success);
   background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  box-shadow:
+    0 0 0 1.5px var(--color-success),
+    0 1px 4px color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 
 @keyframes queuePulse {
@@ -1533,16 +1556,19 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
   background: var(--color-surface);
   user-select: none;
-  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  transition-property: transform, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .shiftRankRow[data-dragging="true"] {
-  border-color: var(--diagram-layer-9);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
+  box-shadow:
+    0 0 0 1px var(--diagram-layer-9),
+    0 4px 12px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
   transform: scale(1.02);
   z-index: 2;
 }
@@ -1641,10 +1667,11 @@
 .imageSavings {
   font-size: 0.62rem;
   color: var(--color-muted);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  line-height: 1.5;
 }
 
 .imageSavings strong[data-status="good"] { color: var(--color-success); }
@@ -1663,10 +1690,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .imageClassifyInfo {
@@ -1689,7 +1716,7 @@
 
 .imageClassifyBtn {
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -1697,7 +1724,7 @@
   font-size: 0.5rem;
   font-weight: 700;
   cursor: pointer;
-  transition-property: border-color, background-color, color;
+  transition-property: background-color, color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
   text-transform: uppercase;
@@ -1705,6 +1732,7 @@
   min-width: 44px;
   min-height: 28px;
   text-align: center;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .imageClassifyBtn:active {
@@ -1712,14 +1740,14 @@
 }
 
 .imageClassifyBtn:hover {
-  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 1px var(--diagram-layer-9);
   color: var(--color-text);
 }
 
 .imageClassifyBtn[data-selected="true"] {
-  border-color: var(--diagram-layer-9);
   background: var(--diagram-layer-9);
   color: var(--color-bg);
+  box-shadow: 0 0 0 1px var(--diagram-layer-9);
 }
 
 /* ── Step 8: Font compare ────────────────────────────────────────── */
@@ -1745,15 +1773,16 @@
 }
 
 .fontCompareBlock {
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   font-size: 0.6rem;
-  transition: opacity 200ms ease;
+  transition-property: opacity;
+  transition-duration: 200ms;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .fontCompareBlock[data-state="inactive"] { opacity: 0.3; }
@@ -1914,23 +1943,27 @@
 
 .thirdPartyCard {
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
   gap: 2px;
-  transition-property: border-color, border-left-width;
+  transition-property: background-color, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .thirdPartyCard[data-state="deferred"] {
-  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success) 3%, var(--color-bg));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 
 .thirdPartyCard[data-state="eager"] {
-  border-left: 3px solid var(--color-error);
+  background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .thirdPartyHeader {
@@ -1965,10 +1998,11 @@
 .thirdPartySavings {
   font-size: 0.62rem;
   color: var(--color-muted);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  line-height: 1.5;
 }
 
 /* ── Step 10: Task timeline ──────────────────────────────────────── */
@@ -2108,10 +2142,10 @@
 .clsTotal {
   font-size: 0.65rem;
   color: var(--color-text);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .clsTotal strong[data-status="good"] { color: var(--color-success); }
@@ -2135,13 +2169,13 @@
 .cacheDecisionCard {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--space-1);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  gap: 4px;
+  padding: var(--space-2);
+  border-radius: var(--radius-2);
   background: var(--color-surface);
   font-size: 0.55rem;
   color: var(--color-text);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .cacheDecisionQ {
@@ -2184,13 +2218,14 @@
   background: var(--color-bg);
   font-size: 0.62rem;
   align-items: center;
-  transition-property: opacity, border-left;
+  transition-property: opacity, background-color, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease;
 }
 
 .cacheRow[data-state="active"] {
-  border-left: 2px solid var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 15%, transparent);
 }
 
 .cacheRow[data-state="inactive"] {
@@ -2239,13 +2274,14 @@
 .cacheMatchCell {
   width: 100%;
   height: 24px;
-  border: 2px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-1);
   background: var(--color-surface);
   cursor: pointer;
-  transition-property: border-color, background-color;
+  transition-property: background-color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .cacheMatchCell:active {
@@ -2253,30 +2289,32 @@
 }
 
 .cacheMatchCell:hover {
-  border-color: var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-surface));
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
 }
 
 .cacheMatchCell[data-selected="true"] {
-  border-color: var(--diagram-layer-9);
   background: var(--diagram-layer-9);
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
 }
 
 .cacheSubmitButton {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--diagram-layer-9);
-  border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
-  color: var(--diagram-layer-9);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-2);
+  background: var(--diagram-layer-9);
+  color: var(--color-bg);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 700;
   cursor: pointer;
-  transition-property: background-color;
+  transition-property: background-color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
+  min-height: 36px;
 }
 
 .cacheSubmitButton:active {
@@ -2284,7 +2322,8 @@
 }
 
 .cacheSubmitButton:hover {
-  background: color-mix(in srgb, var(--diagram-layer-9) 20%, var(--color-bg));
+  background: color-mix(in srgb, var(--diagram-layer-9) 85%, var(--color-text));
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--diagram-layer-9) 35%, transparent);
 }
 
 .cacheWrong {
@@ -2302,10 +2341,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .navComparisonRow {
@@ -2390,17 +2429,18 @@
 .prefetchLinkBtn {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: none;
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   cursor: pointer;
-  transition-property: border-color, background-color;
+  transition-property: background-color, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
   text-align: left;
   font-family: var(--font-mono);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .prefetchLinkBtn:active:not(:disabled) {
@@ -2408,13 +2448,23 @@
 }
 
 .prefetchLinkBtn:hover {
-  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
   background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-bg));
 }
 
 .prefetchLinkBtn[data-selected="true"] {
-  border-color: var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 12%, var(--color-bg));
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
+}
+
+.prefetchLinkBtn[data-correct="true"] {
+  box-shadow: 0 0 0 1.5px var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-bg));
+}
+
+.prefetchLinkBtn[data-correct="wrong"] {
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-error) 40%, transparent);
+  opacity: 0.6;
 }
 
 .prefetchLinkPath {
@@ -2438,18 +2488,18 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
-  transition-property: opacity, border-color, background-color;
+  transition-property: opacity, background-color, box-shadow;
   transition-duration: 200ms;
   transition-timing-function: ease;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .prefetchStep[data-state="active"] {
-  border-color: color-mix(in srgb, var(--color-success) 40%, var(--color-border));
   background: color-mix(in srgb, var(--color-success) 4%, var(--color-bg));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent);
 }
 
 .prefetchStep[data-state="inactive"] { opacity: 0.4; }
@@ -2545,13 +2595,13 @@
 .budgetVerdict {
   font-size: 0.65rem;
   color: var(--color-text);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 
 .verdictPass {
@@ -2576,11 +2626,13 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
+  padding: var(--space-3);
   border-radius: var(--radius-2);
   background: var(--color-bg);
   margin-bottom: var(--space-2);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .journeyItem {
@@ -2629,11 +2681,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   margin-bottom: var(--space-2);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .waterfallOverlayRow {
@@ -2685,9 +2737,9 @@
 .rumCell {
   text-align: center;
   padding: var(--space-2);
-  border: 1px solid var(--color-border);
   border-radius: var(--radius-1);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .rumCellLabel {
@@ -2714,19 +2766,21 @@
 /* ── Step 15: Alert panel ───────────────────────────────────────── */
 
 .alertPanel {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .alertHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
 }
 
 .alertHeaderLabel {
@@ -2749,9 +2803,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-2) var(--space-3);
   font-size: 0.56rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .alertRow:last-child { border-bottom: none; }
@@ -3135,19 +3189,20 @@
 .prefetchSimBtn {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-1);
+  border: none;
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   cursor: pointer;
-  transition-property: border-color, background-color, opacity;
+  transition-property: background-color, opacity, box-shadow;
   transition-duration: 150ms;
   transition-timing-function: ease;
   text-align: left;
   font-family: var(--font-mono);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .prefetchSimBtn:active:not([data-navigating="true"]) {
@@ -3155,18 +3210,18 @@
 }
 
 .prefetchSimBtn:hover {
-  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
   background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-bg));
 }
 
 .prefetchSimBtn[data-navigating="true"] {
-  border-color: var(--diagram-layer-5);
+  box-shadow: 0 0 0 1.5px var(--diagram-layer-5);
   opacity: 0.7;
   cursor: wait;
 }
 
 .prefetchSimBtn[data-done="true"] {
-  border-color: var(--color-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .prefetchProgressTrack {
@@ -3211,10 +3266,10 @@
 
 .prefetchAttemptLog {
   margin-top: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  padding: var(--space-2);
+  border-radius: var(--radius-2);
+  padding: var(--space-2) var(--space-3);
   background: var(--color-bg);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .prefetchAttemptHeader {
