@@ -1,0 +1,197 @@
+/* ── Treemap ─────────────────────────────────────────────────────── */
+
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+/* ── Chunk frames (parent containers, sit behind module rects) ────── */
+
+.chunkFrame {
+  position: absolute;
+  border: 1.5px solid var(--chunk-accent, var(--diagram-layer-5));
+  border-radius: var(--radius-2);
+  background: color-mix(in oklch, var(--chunk-accent, var(--diagram-layer-5)) 6%, var(--color-bg));
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 0;
+}
+
+.chunkFrame[data-initial="true"] {
+  border-style: solid;
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--chunk-accent) 30%, transparent);
+}
+
+.chunkFrame:not([data-initial="true"]) {
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.chunkFrame[data-cached="true"] {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--chunk-accent) 40%, transparent),
+    0 0 0 4px color-mix(in oklch, var(--color-success) 14%, transparent);
+}
+
+.chunkFrame[data-role="monolith"] {
+  border-color: var(--color-error);
+  background: color-mix(in oklch, var(--color-error) 6%, var(--color-bg));
+}
+
+.chunkHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--chunk-accent, var(--diagram-layer-5));
+  text-transform: uppercase;
+}
+
+.chunkLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.chunkMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+.cacheBadge {
+  padding: 1px 4px;
+  border-radius: var(--radius-1);
+  background: color-mix(in oklch, var(--color-success) 18%, var(--color-bg));
+  color: var(--color-success);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.initialBadge {
+  padding: 1px 4px;
+  border-radius: var(--radius-1);
+  background: color-mix(in oklch, var(--chunk-accent) 18%, var(--color-bg));
+  color: var(--chunk-accent);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ── Module rectangles (siblings of chunks, painted above) ───────── */
+
+.moduleRect {
+  position: absolute;
+  border-radius: var(--radius-1);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  color: var(--color-bg);
+  overflow: hidden;
+  z-index: 1;
+  border: 1px solid color-mix(in oklch, var(--color-bg) 40%, transparent);
+  transition: filter 200ms ease;
+}
+
+.moduleRect[data-category="framework"] {
+  background: var(--diagram-layer-9);
+}
+.moduleRect[data-category="library"] {
+  background: var(--diagram-layer-5);
+}
+.moduleRect[data-category="library-dead"] {
+  background: var(--diagram-layer-4);
+}
+.moduleRect[data-category="app-shared"] {
+  background: var(--diagram-layer-1);
+}
+.moduleRect[data-category="app-route"] {
+  background: var(--diagram-layer-2);
+}
+.moduleRect[data-category="feature-heavy"] {
+  background: var(--diagram-layer-3);
+}
+
+.moduleRect:not([data-initial="true"]) {
+  filter: saturate(0.5) brightness(0.85);
+  opacity: 0.6;
+}
+
+.moduleRect[data-cached="true"] {
+  outline: 1.5px solid color-mix(in oklch, var(--color-success) 70%, transparent);
+  outline-offset: -2px;
+}
+
+.moduleRect[data-shaken="true"] {
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in oklch, var(--color-error) 60%, transparent) 0 2px,
+    transparent 2px 6px
+  );
+  border-color: color-mix(in oklch, var(--color-error) 50%, transparent);
+  color: var(--color-text);
+}
+
+.moduleRect[data-highlighted="true"] {
+  outline: 2px solid var(--color-warning);
+  outline-offset: -2px;
+  animation: highlightPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes highlightPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-warning) 40%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklch, var(--color-warning) 0%, transparent); }
+}
+
+.moduleLabel {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.shakenMark {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--color-error);
+  line-height: 1;
+}
+
+.moduleSize {
+  font-size: 0.5rem;
+  font-weight: 600;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .moduleRect[data-highlighted="true"] { animation: none; }
+}

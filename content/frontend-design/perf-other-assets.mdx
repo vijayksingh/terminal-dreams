@@ -1,0 +1,360 @@
+---
+title: "Fonts, Video & Third-Party Scripts"
+slug: perf-other-assets
+section: performance
+stopId: perf-assets
+order: 4
+kind: system-design-problem
+summary: "The three asset categories that quietly destroy CWV — fonts that shift layout, video that pre-loads megabytes, and third-party scripts that camp on the main thread."
+tags:
+  - fonts
+  - video
+  - third-party
+  - partytown
+  - cls
+  - inp
+  - performance
+intersections:
+  - perf-cwv
+prerequisites: []
+demo: perf-other-assets
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Font CLS: kill the swap shift, keep the brand
+
+When the browser finds an `@font-face` rule it doesn't ship the font in your HTML. It downloads the file, then decides whether to paint your fallback now, your custom font later, or both, in some sequence. **Every "decision" is a chance to shift the layout** — because a different font is, by definition, a different shape.
+
+`font-display` is the dial. Most teams ship `swap`, which is the right answer for FOIT (Flash of Invisible Text) but the *wrong* answer for CLS — the moment your custom font arrives, every paragraph nudges down by a pixel or two. Multiply by ten paragraphs and you've burned through your CLS budget for a logo.
+
+The five `font-display` values and what they actually do:
+
+- **`auto`** (no descriptor) — the browser default. The UA picks a strategy; in practice Chrome/Firefox/Safari treat it as block-like (~3s invisible block, then swap whenever the font arrives). Worst FOIT, and the eventual swap still shifts layout.
+- **`block`** — ~3s block period, then infinite swap. Same FOIT, eventual swap, large CLS.
+- **`swap`** — 0s block, infinite swap. Fallback paints immediately, custom font replaces it whenever it arrives. **Large CLS** unless metrics match.
+- **`fallback`** — 100ms block, ~3s swap window. If the font misses the window, you stay on fallback for this page view. Smaller CLS, sometimes no swap at all.
+- **`optional`** — 100ms block, then the browser may skip the custom font entirely on slow connections (the font still downloads in the background and caches for the next visit). **Zero CLS**, but no guaranteed custom font on first paint.
+
+<PredictionChallenge
+  question="Common sense says `swap` is the right answer — fallback first, custom font when it arrives. With a typical Inter web font (28 KB subset) replacing system Arial, what CLS does that swap cause?"
+  options={[
+    "0.00 — the swap is invisible because the font sizes match",
+    "0.04 — small enough to ignore",
+    "0.12 — over the 0.10 budget on its own",
+    "0.30 — catastrophic, but rare in practice",
+  ]}
+  correctIndex={2}
+  explanation="A `font-display: swap` Inter-over-Arial replacement scores ~0.12 CLS — one swap blows the 0.10 budget by itself. Inter and Arial have different cap-heights, line-gaps, and average glyph widths. When the swap happens, every paragraph reflows by 1-2px and the heading grows ~2px taller."
+  wrongHints={{
+    0: "Zero would be ideal, but only happens when fallback and web font metrics match exactly. Out of the box, Inter and Arial have ~3px line-height drift — every line moves. Use `size-adjust` to get to zero.",
+    1: "0.04 is closer to what you'd see with carefully chosen fallback fonts (e.g., system-ui that already runs close to Inter's metrics). Stock Arial-vs-Inter is much worse — ~0.12.",
+    3: "0.30 would mean text doubling in height. The actual drift between Inter and Arial is subtle but persistent: ~1px per line × dozens of lines + a 2px heading shift ≈ 0.12. Bad, but not catastrophic.",
+  }}
+/>
+
+The post-2023 best practice has a different shape. **Keep `swap`** (you still want readable text immediately) and **fix the metrics** so the fallback occupies the same line-box as the custom font. When the swap happens, nothing moves:
+
+```css
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial");
+  size-adjust: 107.4%;
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+body { font-family: "Inter", "Inter Fallback", sans-serif; }
+```
+
+Those four descriptors are doing the real work. `size-adjust` scales the fallback so an `m` in Arial fills the same width as an `m` in Inter. The three `-override` properties pin the baseline and line height. The fallback now occupies the exact same box. The swap becomes invisible.
+
+<PredictionChallenge
+  question="A page is failing CLS at 0.12 entirely because of the font swap. You add `font-display: swap` with `size-adjust: 107.4%`, `ascent-override: 90%`, `descent-override: 22%`, `line-gap-override: 0%`. What's the new CLS?"
+  options={[
+    "Still 0.12 — overrides only affect the fallback, not the custom font",
+    "About 0.06 — overrides cut the shift in half",
+    "0.00 — the fallback now occupies the same line-box as the custom font",
+    "0.18 — overrides actually compound the original shift",
+  ]}
+  correctIndex={2}
+  explanation="This is the headline 2023-2026 technique: matched overrides make the fallback and the web font interchangeable in terms of layout. The visible glyphs change on swap — the user sees Inter instead of Arial — but no element moves. Zero CLS, custom font still ships."
+  wrongHints={{
+    0: "Overrides modify the *fallback*'s metrics to match the custom font's box. When the custom font arrives, the box is already the right size — no layout work happens. CLS drops to 0.",
+    1: "Half is what you'd get from `size-adjust` alone. You also need the ascent/descent/line-gap overrides to pin every dimension of the line-box. With all four overrides, the swap is invisible — CLS 0.",
+    3: "Overrides can't make things worse — they only shrink or expand the fallback. With matched metrics the fallback box is identical to the custom font box. CLS goes to zero, not up.",
+  }}
+/>
+
+Tools that compute these values for you: [Fontaine](https://github.com/unjs/fontaine), [Capsize](https://seek-oss.github.io/capsize/), and the Next.js `next/font` loader (which inlines them automatically using the font's actual metrics). In the wild, Next emits a fallback face like `--font-inter-fallback` with `size-adjust: 107.4%`, `ascent-override: 90.2%`, `descent-override: 22.48%`, `line-gap-override: 0%` — same shape as the snippet above, just generated from the font file at build time.
+
+A few other techniques in the same toolbox:
+
+- **`unicode-range`** descriptors break a font into glyph ranges, downloaded only when needed. The first paint ships Latin-only (28 KB) and lazy-loads Cyrillic on demand:
+  ```css
+  @font-face {
+    font-family: "Inter";
+    src: url("/inter-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153;
+  }
+  @font-face {
+    font-family: "Inter";
+    src: url("/inter-cyrillic.woff2") format("woff2");
+    unicode-range: U+0400-045F;
+  }
+  ```
+- **Variable fonts** consolidate weight axes into one file. One 32 KB file replaces Regular + Medium + Bold + Italic.
+- **`<link rel="preload">`** in `<head>` removes the CSS-discovery delay. The `crossorigin` attribute is *not* optional — without it the browser would refetch the font when CSS finally references it, defeating the preload entirely. Even same-origin fonts need it because fonts are always fetched with anonymous CORS:
+  ```html
+  <link rel="preload"
+        href="/fonts/Inter-Variable.woff2"
+        as="font"
+        type="font/woff2"
+        crossorigin />
+  ```
+
+<PredictionChallenge
+  question="You added `<link rel='preload' href='/Inter.woff2' as='font' type='font/woff2'>` to `<head>` — same origin, no `crossorigin` attribute. The DevTools Network panel shows the font fetched twice. Why?"
+  options={[
+    "Browser cache miss on the second request — clear the cache to fix",
+    "Fonts are fetched with anonymous CORS, so the preload (no crossorigin) and the CSS @font-face fetch (crossorigin) don't match",
+    "Preload requests are speculative and always retry once",
+    "The preload header was deprecated in 2024 — it's now ignored unless `as=fetch`",
+  ]}
+  correctIndex={1}
+  explanation="This is a long-standing CSS spec quirk. Font fetches *always* use anonymous CORS (even for same-origin requests). A preload without `crossorigin` is treated as a different fetch than the @font-face one with anonymous CORS — so the browser fetches twice, completely defeating the preload. Add `crossorigin` and the requests match."
+  wrongHints={{
+    0: "Cache works fine — the issue is that the preload fetch and the @font-face fetch have different CORS modes, so the browser treats them as different resources. Add `crossorigin` to the preload.",
+    2: "Preload doesn't retry. The problem is CORS-mode mismatch: fonts are always fetched with anonymous CORS via @font-face, so a preload without `crossorigin` doesn't satisfy the later request.",
+    3: "Preload is alive and well. The trap is real and specific: fonts are always anonymous-CORS, so the preload must declare `crossorigin` or it's wasted bytes.",
+  }}
+/>
+
+Browser-support note: `size-adjust` and the metric overrides have been Baseline since 2023 (Chrome/Edge 92+, Firefox 89+, Safari 16.4+). For older Safari, the fallback gracefully degrades to a normal swap — slightly worse CLS, never broken.
+
+The visualization on the right replays the same paragraph load under each `font-display` value. Watch the CLS counter and the heading position as you flip between strategies.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Video: the decision changes with fold position
+
+Video is the heaviest asset on the web and the most contextual. There is no single right answer — the cost of every strategy depends on where the video sits and whether the user will actually press play.
+
+Three options worth knowing:
+
+**Raw `<video src="…" autoplay>`** — 8.5 MB starts downloading before HTML parsing finishes. Bandwidth contention pushes your LCP image back by 2–3 seconds on a throttled 4G connection. Avoid unless the video *is* the entire above-fold experience, and even then, pair it with `preload="metadata"` and a poster.
+
+**`<video poster="…" preload="metadata">`** — the poster JPEG (45 KB) paints fast and the metadata fetch (33 KB) lets the browser show duration + dimensions. The full stream waits for `play()`. This is the sane default for self-hosted video the reader is likely to watch.
+
+```html
+<video
+  poster="hero.jpg"
+  preload="metadata"
+  controls
+  playsinline
+  muted>
+  <source src="hero.av1.mp4" type="video/mp4; codecs=av01" />
+  <source src="hero.h264.mp4" type="video/mp4" />
+</video>
+```
+
+The two `<source>` rows are an AV1 → H.264 fallback. AV1 ships ~30% smaller than H.264 at equivalent quality; Safari 18 added decode in 2024 so it's now Baseline-friendly. The H.264 row covers everything else.
+
+**YouTube/Vimeo facade** — the embed itself is ~1.2 MB across 14 requests, mostly the player JS and CSS. A facade replaces it with a static poster and ~3 KB of upgrade JS that swaps in the real IFrame on click. Use [lite-youtube-embed](https://github.com/paulirish/lite-youtube-embed) for YouTube, [lite-vimeo](https://github.com/luwes/lite-vimeo-embed) for Vimeo.
+
+```html
+<lite-youtube
+  videoid="dQw4w9WgXcQ"
+  playlabel="Play product demo"
+></lite-youtube>
+```
+
+The `preload` attribute on `<video>` gives you three useful settings:
+
+| Value | Network on first paint | When to use |
+| --- | --- | --- |
+| `none` | Zero bytes — only fetched on `play()` | Below-fold video, unlikely to be watched |
+| `metadata` | Poster + ~33 KB of stream metadata | Likely-watched video (above the fold) |
+| `auto` | Browser may pre-buffer the full stream | Hero video that is the LCP element |
+
+<PredictionChallenge
+  question="A 8.5 MB product demo video sits ABOVE the fold on a product page. Which embedding strategy minimizes LCP impact while keeping the watch experience snappy?"
+  options={[
+    "Raw <video autoplay> — fastest playback when the user scrolls",
+    "<video poster preload='metadata'> — poster paints fast, metadata ready on click",
+    "YouTube facade — zero cost until click",
+    "<video preload='auto'> — the browser pre-buffers for instant playback",
+  ]}
+  correctIndex={1}
+  explanation="Above the fold, the poster IS your LCP candidate. `<video poster preload='metadata'>` ships a ~45 KB poster JPEG that paints in ~150 ms and a 33 KB metadata fetch (duration, dimensions). The full stream only starts on `play()`. Users who watch get a ~120 ms perceived stall; users who don't pay nothing extra. Adding `fetchpriority='high'` on the poster closes the last LCP gap."
+  wrongHints={{
+    0: "Raw autoplay starts an 8.5 MB download before HTML parsing finishes. It fights your LCP image for bandwidth on throttled 4G and pushes LCP back ~2.8 s. The reader still might not watch — you charged the page for nothing.",
+    2: "Facades excel BELOW the fold where the click is unlikely. Above the fold, ~80% of readers press play and pay a ~2 s upgrade cost before the player is interactive. The poster-lazy `<video>` is cheaper for the user who actually watches.",
+    3: "`preload='auto'` is the worst above-fold default: the browser may pre-buffer most of the stream, costing megabytes on every page load even if the reader never watches. Use it only when the video *is* the LCP element and you're sure the visit always plays it.",
+  }}
+/>
+
+The right answer flips on fold position. **Above the fold**, the reader almost certainly watches — pay the metadata cost so playback is instant. **Below the fold**, most readers never reach it — the facade gets you to zero until the click is actually made.
+
+<PredictionChallenge
+  question="Same 8.5 MB product demo video, now BELOW the fold (in a 'demos' section near the page bottom). Which strategy is best?"
+  options={[
+    "<video poster preload='metadata'> — same as above-fold, consistency is nice",
+    "Raw <video autoplay> — fold position doesn't matter for autoplay",
+    "YouTube facade — most readers never reach this section",
+    "<video preload='none'> — defer everything until play()",
+  ]}
+  correctIndex={2}
+  explanation="Below the fold, only a small fraction of readers ever scroll into view. A facade ships 35 KB (poster + upgrade JS) — nothing else. Readers who do click pay a ~2 s player-load cost, which feels reasonable in context (they signalled intent). Bandwidth saved for above-fold work."
+  wrongHints={{
+    0: "preload='metadata' still costs ~33 KB on every page load even for the 90% of readers who never scroll into the demos section. It's the right call above the fold, wasteful below.",
+    1: "Even autoplay video below the fold pays the same bandwidth cost as above-fold autoplay — actually worse because the user never sees it. Below the fold is the WORST place for `<video autoplay>`.",
+    3: "`preload='none'` is fine, but the facade is even better: it also skips downloading the player JS until click. Both save bandwidth; the facade saves more.",
+  }}
+/>
+
+Two further levers that pay everywhere:
+
+- **`preload="none"`** disables all preloading. The reader pays a slightly bigger stall on click (full handshake + range request) but the page weight on first paint is just the poster image. Use for video that is unlikely to be watched.
+- **HLS / DASH adaptive bitrate** (via [hls.js](https://github.com/video-dev/hls.js) or [shaka-player](https://github.com/shaka-project/shaka-player)) lets the browser pick a quality variant matching connection speed. Worth the extra integration cost when you're hosting > 5 min of content.
+
+Toggle the fold position in the panel on the right to see how the cost-per-strategy comparison flips.
+
+Two caveats worth pinning down. **Adaptive bitrate is overkill** for short content (< 5 min) or single-bitrate sources — the manifest + segmenter overhead exceeds the savings, and a plain `<video preload="metadata">` ships fewer bytes. **`playsinline` + `muted` together** are what unlock iOS autoplay: Mobile Safari only autoplays videos that are both inline (no fullscreen takeover) and muted (no surprise audio). Drop either attribute and iOS will refuse to autoplay; the user has to tap.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Third-party scripts: the audit, not the toggle
+
+Third-party scripts are the #1 cause of production performance regressions, per the HTTP Archive's [Web Almanac 2024](https://almanac.httparchive.org/en/2024/third-parties). The median page ships 15 third-party scripts and spends ~640 ms on third-party JS execution before becoming interactive. None of that work is yours; all of it counts against your INP.
+
+The four loading modes you have to choose between:
+
+```html
+<!-- Synchronous: parser stalls until the script runs. Default. -->
+<script src="analytics.js"></script>
+
+<!-- async: downloads in parallel, runs whenever it arrives, mid-parse. -->
+<script src="analytics.js" async></script>
+
+<!-- defer: downloads in parallel, runs after DOMContentLoaded in source order. -->
+<script src="analytics.js" defer></script>
+
+<!-- type="module": defer-equivalent by default, also enables import/export. -->
+<script src="analytics.js" type="module"></script>
+```
+
+`async` and `defer` look similar but differ in two important ways: **execution order** (async fires whenever it lands; defer preserves source order) and **timing relative to DOMContentLoaded** (async fires whenever; defer fires *before* DOMContentLoaded but after parsing is done). `type="module"` is `defer`-by-default and also gives you `import`/`export`. For *external* scripts you don't control, `defer` is the boring safe answer.
+
+<PredictionChallenge
+  question="Three scripts on a page: GA4 (analytics), Optimizely (A/B test flag SDK that swaps DOM copy before paint), and a Twitter embed. You add `defer` to all three. What happens to the A/B test?"
+  options={[
+    "Works fine — defer keeps execution order intact",
+    "Test renders correctly — defer waits for parsing, then SDK runs before user interaction",
+    "Readers see the control variant flash, then the SDK arrives and swaps to the test variant",
+    "Browser blocks the test entirely because defer prevents DOM mutation",
+  ]}
+  correctIndex={2}
+  explanation="The trap: `defer` waits for DOMContentLoaded, so the page paints with the CONTROL variant first. Then the Optimizely SDK arrives, evaluates the flag, and swaps copy. The reader sees the page change under them — terrible UX. This phenomenon is called **FOOC** (Flash of Original Content) and it also contaminates the experiment data (engagement is recorded on the wrong variant)."
+  wrongHints={{
+    0: "Execution order is preserved, but the SDK still runs AFTER paint. The control variant flashes first — that's the problem with deferring flag SDKs.",
+    1: "Defer runs after parsing but BEFORE the first paint? No — defer runs after parsing but the browser can paint during/after parsing too. Flag SDKs need to be in the DOM *before* paint. `defer` is too late.",
+    3: "Browsers happily execute deferred scripts and let them mutate the DOM. The execution succeeds — it just happens too late, after the control variant has already painted.",
+  }}
+/>
+
+The audit-killer for most teams is **Partytown** — a tiny library from the Builder.io team that runs third-party scripts inside a Web Worker. The main thread sees a few milliseconds of proxy overhead; the actual analytics/chat/ad code executes off the main thread and never touches your INP.
+
+```html
+<!-- Boot Partytown -->
+<script>
+  partytown = { forward: ["dataLayer.push", "gtag"] };
+</script>
+<script src="/~partytown/partytown.js"></script>
+
+<!-- The script that used to cost 220ms on main now costs ~8ms -->
+<script type="text/partytown"
+        src="https://www.googletagmanager.com/gtag/js?id=G-…"></script>
+```
+
+The `forward` array tells Partytown which global functions on the page should be proxied into the Worker. GA4's `dataLayer.push` and `gtag` are the canonical examples. Once the script is in the Worker, the page calls `gtag('event', …)` normally — Partytown transparently forwards it.
+
+**The trap.** Not every script is safe to move. Anything that mutates the DOM *before first paint* must stay on the main thread, because the postMessage round-trip to a Worker takes a paint frame. The classic case is an A/B testing SDK (Optimizely, LaunchDarkly's flag SDK, VWO) — if the SDK swaps copy in a Worker, the control variant paints first and then "flashes" to the variant.
+
+<PredictionChallenge
+  question="A page has five third-party scripts costing 1,145 ms of blocking time: GA4 (220 ms), Intercom chat (380 ms), Optimizely flag SDK (95 ms, swaps copy before paint), Google Ads (310 ms), Twitter embed (140 ms). You move all five to Partytown. What's the catch?"
+  options={[
+    "Nothing — blocking time drops to ~50 ms across the board",
+    "The Optimizely SDK still mutates DOM, but now via postMessage — the variant flashes after the control paints (FOOC)",
+    "Partytown can't proxy GA4's gtag function — analytics break silently",
+    "Ads can't render in a Worker — the ad slot stays empty",
+  ]}
+  correctIndex={1}
+  explanation="The trap is treating 3P scripts as homogeneous. GA4, Intercom, ads, and the Twitter embed are all safe in a Worker — they post beacons, boot UI lazily, or run timers. The flag SDK is different: it must mutate DOM *before paint* to swap the A/B variant. Moving it to a Worker introduces a paint frame where the control variant renders first, then the variant arrives via postMessage and replaces it. The fix: keep the flag SDK blocking (or use server-driven variant assignment); move everything else to Partytown."
+  wrongHints={{
+    0: "If only. Optimizely (and any flag SDK that swaps copy synchronously) must stay on the main thread before paint. In a Worker, the variant arrives after the control has already painted — FOOC. The other four scripts are fine in Partytown.",
+    2: "Partytown specifically supports GA4 — the `forward` array proxies `dataLayer.push` and `gtag` calls into the Worker. The trap is the A/B SDK, not analytics.",
+    3: "Ads work fine in Partytown — the GPT bid + render runs inside the Worker, and the ad iframe paints normally into a placeholder div. The real trap is the flag SDK.",
+  }}
+/>
+
+Rule of thumb: **anything that sends beacons, lazy-boots a UI, or runs timers** can move to Partytown. **Anything that mutates DOM synchronously before paint** stays on main.
+
+A few security knobs you should set on every third-party `<script>` you don't host yourself:
+
+```html
+<script
+  src="https://cdn.example.com/widget.js"
+  integrity="sha384-oqVuAfXRKap7fdgcCY5uykM6+R9GqQ8K/uxy9rx7HNQlGYl1kPzQho1wx4JwY8wC"
+  crossorigin="anonymous"
+  referrerpolicy="strict-origin-when-cross-origin"
+></script>
+```
+
+- **`integrity`** (Subresource Integrity / SRI) — the browser checks the downloaded bytes hash against the expected value. If a CDN is compromised and ships malicious bytes, the script doesn't execute.
+- **`crossorigin="anonymous"`** — required for SRI to work and prevents cookies leaking on the script fetch.
+- **`referrerpolicy`** — controls what URL the third-party server sees. `strict-origin-when-cross-origin` is the safest default.
+- **CSP + Trusted Types** — the next layer, but they need a coordinated rollout; the audit above is the prerequisite.
+
+One more modern lever worth knowing about: the **Speculation Rules API** (Chrome 121+) replaces the old `<link rel="prerender">`. It lets you describe which links the browser should speculatively prerender (full DOM construction in a hidden tab) or just prefetch (download the route chunk):
+
+```html
+<script type="speculationrules">
+{
+  "prerender": [{
+    "where": { "href_matches": "/products/*" },
+    "eagerness": "moderate"
+  }]
+}
+</script>
+```
+
+Prerendering can cut click-to-paint latency to near-zero on a matching navigation. It's expensive (each prerendered page is a full browser context), so the `where` clause and `eagerness` settings let you tune for the routes most likely to be visited. Falls back gracefully — Safari and Firefox still see the regular link, just without the speedup.
+
+<PredictionChallenge
+  question="The page has five 3P scripts. Four are safe to move to Partytown (GA4, Intercom, ads, Twitter embed). The fifth is Optimizely's flag SDK, which must paint the variant before first paint. What's the optimal loading config?"
+  options={[
+    "All five to Partytown — modern Workers are fast enough",
+    "GA4/Intercom/ads/Twitter to Partytown; Optimizely blocking",
+    "GA4/Intercom/ads/Twitter to defer; Optimizely blocking",
+    "Everything to defer — defer is universally safe",
+  ]}
+  correctIndex={1}
+  explanation="The optimal audit moves the four worker-safe scripts off main (drops ~85% of blocking time) and keeps Optimizely blocking so the variant lands in the DOM before paint. `defer` would be tempting for the safe scripts, but they still run a long task on main even after parse — Partytown is strictly better for anything beacon/UI-boot/timer-shaped."
+  wrongHints={{
+    0: "Optimizely in a Worker causes FOOC — the control variant paints first, then the SDK swaps copy. Worker fast/slow doesn't matter; the issue is the postMessage round-trip happens after paint.",
+    2: "defer is better than blocking for GA4/Intercom/ads/Twitter, but Partytown is strictly better still — the work runs off main entirely. defer just delays the long task to after DOMContent; the cost still hits your INP if the user interacts.",
+    3: "defer is fatal for Optimizely (FOOC) and only marginally helpful for the others. The right tool is Partytown for everything off-main-safe, blocking for the pre-paint-mutators.",
+  }}
+/>
+
+The lab on the right walks you through these scripts one at a time — each with its blocking cost, Partytown-safety verdict, and the trade-offs of the four loading modes. Watch the main-thread blocking gauge as you change the mix.
+
+This is also the lesson that connects directly to `perf-cwv`. Third-party scripts are the dominant source of INP regressions in production. Cleaning up the audit you build here will move your CWV gauge more than any other change in this module.
+
+</section>

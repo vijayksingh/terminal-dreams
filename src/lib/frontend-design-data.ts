@@ -118,6 +118,13 @@ export const INTERACTIVE_LAB_SLUGS = new Set([
   "virtual-scroll-implementation",
   "tree-grid-virtualization",
   "canvas-vs-dom",
+  "perf-javascript",
+  "perf-css",
+  "perf-images",
+  "perf-other-assets",
+  "core-web-vitals",
+  "bundle-optimization",
+  "resource-hints",
 ]);
 
 // Slugs that have published MDX content (may or may not have a lab)
@@ -141,6 +148,13 @@ export const PUBLISHED_CONTENT_SLUGS = new Set([
   "virtual-scroll-implementation",
   "tree-grid-virtualization",
   "canvas-vs-dom",
+  "perf-javascript",
+  "perf-css",
+  "perf-images",
+  "perf-other-assets",
+  "core-web-vitals",
+  "bundle-optimization",
+  "resource-hints",
 ]);
 
 export type StopAvailability = "interactive" | "article-only" | "coming-soon";

@@ -1,0 +1,101 @@
+/* ── ChunkList ───────────────────────────────────────────────────── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.4fr;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.4fr;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.62rem;
+  color: var(--color-text);
+  border-left: 3px solid transparent;
+  transition: background 150ms ease;
+}
+
+.row[data-initial="true"] {
+  border-left-color: var(--chunk-accent, var(--diagram-layer-5));
+  background: color-mix(in oklch, var(--chunk-accent) 5%, var(--color-surface));
+}
+
+.row[data-cached="true"] {
+  background: color-mix(in oklch, var(--color-success) 6%, var(--color-surface));
+}
+
+.row:not([data-initial="true"]) {
+  opacity: 0.7;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--chunk-accent, var(--diagram-layer-5));
+  flex-shrink: 0;
+}
+
+.name {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.size {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  padding: 1px 6px;
+  border-radius: var(--radius-1);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tag[data-variant="initial"] {
+  background: color-mix(in oklch, var(--chunk-accent) 18%, var(--color-bg));
+  color: var(--chunk-accent);
+}
+
+.tag[data-variant="lazy"] {
+  background: color-mix(in oklch, var(--color-muted) 18%, var(--color-bg));
+  color: var(--color-muted);
+}

@@ -1,0 +1,432 @@
+---
+title: "Bundle Optimization"
+slug: bundle-optimization
+section: performance
+stopId: perf-bundle
+order: 6
+kind: system-design-problem
+summary: "Fracture a 1.1 MB monolithic JavaScript bundle into a 115 KB warm-cache shell through tree-shaking, route splitting, dynamic imports, and vendor chunking"
+tags:
+  - bundle
+  - tree-shaking
+  - code-splitting
+  - dynamic-import
+  - vendor-chunk
+  - webpack
+  - vite
+  - rollup
+  - turbopack
+  - esbuild
+intersections:
+  - render-csr-ssr-ssg
+  - sdp-microfrontend
+prerequisites: []
+demo: bundle-optimization
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Bundle Anatomy
+
+A bundle is every byte of JavaScript the browser must parse before your app is interactive. On the right is one such bundle — a real-shape SPA dashboard with four routes (`/home`, `/dashboard`, `/settings`, `/admin`), three heavy feature libraries (charts, rich editor, PDF renderer), a couple of barrel-imported utility libraries, and the framework runtime. Hover the treemap. Every rectangle is a module; area scales linearly with gzipped KB.
+
+The total is **1,131 KB gzipped**. On a mid-range Android with 4× CPU slowdown and 3G bandwidth, that's roughly **6 seconds** of parse + execute before React even begins rendering. None of those 6 seconds put pixels on screen. The user is staring at white.
+
+**Three things make this bundle so large.** First, every route's code is in `main.js`, so visiting `/home` ships `/admin`'s editor and PDF renderer too. Second, several libraries are imported with `import * as ...` or barrel re-exports, which prevent tree-shaking — the bundler can't tell which exports the app actually uses. Third, polyfills and locale data ship for environments and languages your users will never see (every moment locale, every browser polyfill, every icon glyph).
+
+The headline number — initial load size — is what you optimize. Total payload only matters for total bandwidth; **initial load** is what blocks first paint.
+
+<PredictionChallenge
+  question="The dashboard's 1.1 MB bundle contains React (74 KB), lodash full (72 KB), moment with all locales (232 KB), three feature libraries (365 KB), and per-route code. Which single optimization removes the most bytes from the initial load?"
+  options={[
+    "Tree-shake the barrels (lodash, moment, icons, polyfills, apollo) — save ~390 KB",
+    "Route-split so only /home + shared loads — save ~680 KB",
+    "Dynamic-import the heavy features (charts, editor, PDF) — save ~365 KB",
+    "Switch React to Preact — save ~50 KB",
+  ]}
+  correctIndex={1}
+  explanation="Route splitting is the biggest single win. /home doesn't need /dashboard's moment + chart code or /admin's editor + PDF renderer. Splitting routes lets the bundler stop shipping the other 80% of the app on first paint. Tree-shaking and dynamic imports are real wins too, but they each remove less mass than 'don't ship this whole route yet'."
+  wrongHints={{
+    0: "Tree-shaking is huge — across the five offenders it clears ~390 KB — but it can't beat 'don't ship four entire routes'. /dashboard alone is 357 KB unshaken; route-splitting keeps that out of the initial payload before tree-shaking even starts.",
+    2: "Dynamic imports save ~90 KB on /dashboard and ~275 KB on /admin, but those bytes were already in route chunks once you route-split. On the monolith they help, but the bigger single move is splitting the monolith itself first.",
+    3: "Preact saves ~50 KB (React + ReactDOM are 56 KB together, Preact is 3 KB) but locks you to a smaller ecosystem (no React DevTools, no Suspense for streaming, no React Server Components). The 680 KB you save by route-splitting dwarfs the framework swap.",
+  }}
+/>
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Code Splitting
+
+Code splitting is the decision to **not ship all code upfront**. Instead of one `main.js`, the bundler emits multiple chunks that load on navigation. Route-based splitting is the highest-impact, lowest-risk variant: every page-component file becomes its own chunk.
+
+The pattern is one line of code per route:
+
+```tsx
+import { lazy, Suspense } from "react";
+
+const HomePage      = lazy(() => import("./routes/Home"));
+const DashboardPage = lazy(() => import(/* webpackChunkName: "dashboard" */ "./routes/Dashboard"));
+const AdminPage     = lazy(() => import(/* webpackChunkName: "admin" */ "./routes/Admin"));
+
+export function App() {
+  return (
+    <Suspense fallback={<ShellSkeleton />}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+`lazy()` returns a component that calls `import()` the first time it renders. The bundler sees the `import()` expression, traces the dependency graph from that file, and emits a separate chunk. The framework runtime, router, and shell layout stay in the "initial" chunk because they're needed before any route renders. Everything route-specific moves into its own chunk file: `dashboard.<hash>.js`, `admin.<hash>.js`, etc.
+
+The result: initial load drops from **1,131 KB → 447 KB**. The shell + home route are all the user pays for on first paint. `/dashboard` (357 KB) and `/admin` (305 KB) sit on disk until the user navigates.
+
+```tsx
+// Vite/Rollup — uses Rollup's manualChunks, NOT Webpack's splitChunks.
+// rollup.config.js  or  vite.config.ts
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes("node_modules/react")) return "vendor-react";
+          if (id.includes("node_modules/lodash-es")) return "vendor-utils";
+        },
+      },
+    },
+  },
+});
+```
+
+Webpack uses a different API. The same intent lives under `optimization.splitChunks`:
+
+```js
+// webpack.config.js
+module.exports = {
+  optimization: {
+    splitChunks: {
+      chunks: "all",
+      cacheGroups: {
+        vendor: { test: /node_modules/, name: "vendor", priority: 10 },
+      },
+    },
+  },
+};
+```
+
+**Don't conflate the two.** Vite and Rollup share the Rollup config surface — `manualChunks`, output formats, and tree-shaking heuristics behave the same. Webpack's `splitChunks` is a different mental model (cache groups, priorities, automatic splitting heuristics). Mixing the docs will frustrate every Vite developer who Googles "Vite splitChunks" and finds a stale Webpack tutorial.
+
+<PredictionChallenge
+  question="You add `lazy(() => import('./routes/Dashboard'))` to a route that renders inside `<App>`. Without any Suspense boundary, what happens when the user navigates to /dashboard?"
+  options={[
+    "The dashboard renders normally — lazy() is fully self-contained",
+    "React throws 'A component suspended while responding to synchronous input'",
+    "The dashboard renders, but the bundler emits a console warning",
+    "Vite/Webpack rejects the build because there's no fallback",
+  ]}
+  correctIndex={1}
+  explanation="`lazy()` requires a `<Suspense>` boundary somewhere above it in the tree. Without one, React throws 'A component suspended while responding to synchronous input'. The fix is a single top-level `<Suspense fallback={<Skeleton />}>` wrapping the routes. The fallback is what the user sees while the chunk downloads, and it's the difference between a graceful loading state and a flash of blank screen."
+  wrongHints={{
+    0: "The component WILL suspend while its chunk downloads — that's the whole point. Without a Suspense boundary catching the suspension, React unwinds up the tree and throws.",
+    2: "Bundlers don't enforce Suspense — that's a runtime React contract. The build succeeds and the production error only surfaces when a user actually navigates.",
+    3: "Bundlers happily emit the chunk file. The failure is a React runtime error, not a build error.",
+  }}
+/>
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Tree Shaking
+
+Tree shaking eliminates dead code at build time by walking the ESM import graph. If a module is imported but the importer only uses one of its exports, the bundler marks the rest as unreachable and drops them from the output. Two things have to be true for it to work: the modules need to be **ESM** (not CJS), and the bundler needs to **trust the module has no side effects**.
+
+**Why CJS can't tree-shake.** `require("./lib")` is a function call. The bundler can't tell at build time which branches of `require()` will execute at runtime — `require(condition ? "a" : "b")` is legal CJS. Worse, `module.exports` is a mutable object; nothing stops a downstream consumer from doing `exports[dynamicKey]`. So the bundler has to assume **every** export of a CJS module might be used and includes them all.
+
+**Why ESM can.** `import { debounce } from "lodash-es"` is a static declaration the bundler can resolve before the file even runs. It marks `debounce` as live, then walks the export list of `lodash-es` and marks the rest as dead. The dead exports never appear in the output bundle.
+
+**The barrel-file trap.** A "barrel" is `index.ts` that re-exports everything from a directory:
+
+```ts
+// icons/index.ts — a barrel
+export * from "./IconHome";
+export * from "./IconUser";
+export * from "./IconCart";
+// … 200 more icon files
+```
+
+Consumers write `import { IconHome } from "@/icons"`. Looks clean. But the bundler can't always prove that `IconUser` has no side effects, so it keeps the entire barrel. Result: importing one icon ships 200. Most bundlers handle simple `export *` correctly, but the moment a barrel adds custom logic (`export const all = [...]`), tree-shaking collapses and the whole tree ships.
+
+The fix is to **import the leaf file directly**:
+
+```tsx
+// Instead of this:
+import { IconHome } from "@/icons";
+
+// Do this:
+import { IconHome } from "@/icons/IconHome";
+```
+
+Or configure the bundler's barrel-file optimizer. Next.js has `optimizePackageImports` (`next.config.js`), Vite's `vite-plugin-optimize-deps` does similar work, and esbuild handles many barrels natively.
+
+```json
+// package.json — promises this package has no side effects.
+{
+  "name": "my-utils",
+  "version": "1.0.0",
+  "sideEffects": false
+}
+```
+
+The `sideEffects: false` flag is **the author's signed contract**: nothing in this package mutates global state on import. The bundler uses it to drop entire modules if no one imports anything from them. For libraries with one or two side-effectful files (CSS imports, polyfills), use an array: `"sideEffects": ["*.css", "./src/polyfill.js"]`.
+
+**Modern bundlers** — esbuild, SWC, Rollup, Turbopack — all do tree-shaking automatically as long as you give them ESM and honest `sideEffects` metadata. Webpack 5+ does too, with caveats around how it serializes the module graph. The win in this lesson is **88 KB** off the shared chunk: lodash full → lodash-es per-method (72 → 4 KB), moment + locales → date-fns (232 → 16 KB on the lazy dashboard route), `core-js` shipping every polyfill → browserslist-targeted polyfills (45 → 6 KB), icon barrel → per-file imports (30 → 4 KB).
+
+```tsx
+// Before
+import _ from "lodash";          // 72 KB, ships every method
+import moment from "moment";     // 232 KB, ships every locale
+
+// After
+import debounce from "lodash/debounce";        // 2.1 KB
+import format from "date-fns/format";          // 1.4 KB
+// import.meta.glob — Vite's static glob importer, tree-shakable
+const routes = import.meta.glob("./routes/*.tsx", { eager: false });
+```
+
+<PredictionChallenge
+  question="Your bundle has lodash full (72 KB). Your code only uses `debounce` and `pick`. You switch the import to `import { debounce, pick } from 'lodash-es'` AND your bundler is configured for tree-shaking. What ships?"
+  options={[
+    "Just `debounce` and `pick` — ~4 KB",
+    "All of lodash-es — 72 KB — because tree-shaking doesn't work on libraries",
+    "Just `debounce` and `pick` plus their internal dependencies — ~12 KB",
+    "Nothing — the bundler errors because lodash-es is missing exports",
+  ]}
+  correctIndex={2}
+  explanation="`debounce` and `pick` each pull in internal lodash helpers (`isObject`, `isArray`, `_baseGet`, …). The bundler keeps the import root and walks the dependency graph, dropping anything not reachable. The final cost is ~12 KB — much smaller than the 72 KB full library, but larger than the two leaf functions alone. The same pattern applies to date-fns: `format` pulls in locale + format token helpers."
+  wrongHints={{
+    0: "Functions don't live in isolation — `debounce` needs `setTimeout` wrappers and helper internals; `pick` calls `isObject` and `getPath`. Tree-shaking keeps everything REACHABLE from your imports, not just the leaf calls.",
+    1: "Tree-shaking absolutely works on libraries — that's the whole reason lodash-es exists. The reason older lodash didn't shake is that it shipped as CJS; lodash-es ships ESM.",
+    3: "lodash-es has both exports. The bundler succeeds and produces a smaller chunk than the original lodash import would have.",
+  }}
+/>
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Dynamic Imports
+
+Route splitting is one decision: when the user navigates to a route, load that route's code. **Dynamic imports** are a more granular decision: even within a route, some libraries are heavy enough that you don't want to load them until the user actually triggers the feature. A chart library, a rich text editor, a PDF renderer — these can be 100-300 KB each, and most users never open them.
+
+The pattern is identical to `lazy()` for routes — just applied to a component (or any module) inside an already-loaded route:
+
+```tsx
+import { lazy, Suspense, useState } from "react";
+
+// chart-lib's bundle is now a separate chunk, downloaded only when <ChartView /> mounts.
+const ChartView = lazy(() => import(/* webpackChunkName: "chart-lib" */ "./ChartView"));
+
+export function DashboardPage() {
+  const [showChart, setShowChart] = useState(false);
+  return (
+    <>
+      <button onClick={() => setShowChart(true)}>Show analytics</button>
+      {showChart && (
+        <Suspense fallback={<ChartSkeleton />}>
+          <ChartView />
+        </Suspense>
+      )}
+    </>
+  );
+}
+```
+
+The bundler emits `chart-lib.<hash>.js`. `DashboardPage` ships without the chart code; the moment the user clicks "Show analytics", the browser fetches that chunk and renders it.
+
+**Prefetch the chunk before the click** so the user never sees the skeleton:
+
+```tsx
+// Webpack magic comments
+import(/* webpackChunkName: "chart-lib", webpackPrefetch: true */ "./ChartView");
+// Or via <link rel="modulepreload"> — works with native ESM, no bundler magic.
+<link rel="modulepreload" href="/assets/chart-lib.abc123.mjs" />
+```
+
+`webpackPrefetch: true` adds `<link rel="prefetch">` to the document head, telling the browser to fetch the chunk during idle time after the main page settles. By the time the user clicks the button, the chunk is in the HTTP cache and the Suspense fallback never appears.
+
+`modulepreload` is the standards-track equivalent for ESM chunks. It tells the browser to fetch *and* parse the module immediately at high priority, ready for instant import. Use it for chunks you're certain to need soon (the next route the user will hit), reserve `prefetch` for chunks you only **might** need.
+
+**React Server Components shift the bar.** With Next.js 15+ App Router or Remix v2, server components don't ship any JavaScript to the client. The chart you render server-side only sends HTML; the client never downloads chart-lib at all. Dynamic imports are still useful for **interactive** components (the ones marked `"use client"`), but the entire category of "data view" components can move out of the client bundle:
+
+```tsx
+// app/dashboard/page.tsx — Next.js 15 server component, no client JS.
+import { ChartRenderer } from "@/lib/server-chart";
+
+export default async function DashboardPage() {
+  const data = await fetchAnalytics();
+  return <ChartRenderer data={data} />;  // Pure HTML out, zero JS bundle cost.
+}
+```
+
+The dashboard route's client bundle drops from 357 KB to whatever the interactive shell costs — often 20-30 KB. The chart library never enters the browser's JS heap.
+
+<PredictionChallenge
+  question="You dynamic-import the chart library on /dashboard with `lazy(() => import('./ChartView'))`. The user opens /dashboard. When does chart-lib's chunk download?"
+  options={[
+    "Immediately, in parallel with /dashboard's main chunk",
+    "When the JSX `<ChartView />` first renders inside Suspense",
+    "When the user clicks the chart UI, regardless of where the JSX sits",
+    "Only when the browser is idle, after window.load",
+  ]}
+  correctIndex={1}
+  explanation="`import()` fires the moment React tries to render the lazy component. If `<ChartView />` is mounted in the initial render, the chunk downloads then. If it's gated behind `{showChart && <ChartView />}`, it downloads only when `showChart` becomes true. The mental model: lazy components defer the FETCH to first RENDER, not to a click. To defer fetch until click, render the component conditionally."
+  wrongHints={{
+    0: "Dynamic imports are lazy by construction — they don't share the route's main chunk and they don't preload by default. You'd need explicit `webpackPrefetch` or `modulepreload` to pull them earlier.",
+    2: "React doesn't track UI events to decide when to fetch — it tracks renders. If `<ChartView />` renders on mount, the click is irrelevant. Conditional rendering is what gates the fetch.",
+    3: "There's no idle-callback gate by default. The fetch fires synchronously with render. Idle-time prefetching requires `webpackPrefetch: true` or `<link rel='prefetch'>` — different mechanisms.",
+  }}
+/>
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Vendor Chunk
+
+The first four optimizations attack initial load size. The fifth attacks **load size on every deploy** — the cost of shipping a new version when most of the bundle hasn't changed.
+
+A vendor chunk is a separately-emitted file containing dependencies that change rarely: the framework runtime (React, React DOM, react-router), low-churn utilities (date-fns, icon glyphs, polyfills), and any library you import but don't author. The bundler hashes the chunk's content into the filename — `vendor.b3a91f.js` — and the server sets `Cache-Control: public, max-age=31536000, immutable`. The browser caches it for a year and **never revalidates**.
+
+```js
+// webpack.config.js
+optimization: {
+  splitChunks: {
+    cacheGroups: {
+      vendor: {
+        test: /[\\/]node_modules[\\/]/,
+        name: "vendor",
+        priority: 20,
+        reuseExistingChunk: true,
+      },
+    },
+  },
+  runtimeChunk: "single",  // Manifest in its own tiny file — keeps vendor stable.
+}
+```
+
+```ts
+// vite.config.ts — same outcome, different API.
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        "vendor-framework": ["react", "react-dom", "react-router"],
+        "vendor-utils":     ["date-fns", "zod", "lodash-es"],
+      },
+    },
+  },
+},
+```
+
+The first visit pays the same total cost: vendor.js + app.js download together. But every subsequent deploy looks like this:
+
+1. Developer changes one line in `DashboardPage.tsx`.
+2. The bundler hashes the changed module → only `dashboard.<newhash>.js` gets a new filename.
+3. `vendor.b3a91f.js` keeps its old hash because no `node_modules` content changed.
+4. User's browser fetches `dashboard.<newhash>.js` (45 KB), hits the disk cache for `vendor.b3a91f.js` (108 KB), and renders in **116 KB of network transfer** instead of 224 KB.
+
+That's the magic — the warm-cache load is now **116 KB**. Across a year of deploys, the vendor chunk stays cached. Only the app-shell + route chunks get re-downloaded.
+
+**The trap is over-splitting.** Every chunk adds an HTTP request. HTTP/2 multiplexing helps, but each request still has a TLS overhead, a priority-tree position, and a parse step. Below ~5 KB per chunk, the overhead-to-content ratio flips and you've made things slower. The sweet spot is **3-8 chunks**: vendor (framework + immutable libs), shared (app shell + ui-kit + utils), and one chunk per route.
+
+**Brotli over gzip.** Modern CDNs (Vercel, Cloudflare, Netlify, Fastly) serve Brotli compression by default when the request header sends `Accept-Encoding: br`. Brotli compresses JavaScript **15-20% smaller** than gzip — the 116 KB warm-cache load drops to ~95 KB. Static pre-compression at build time (`brotli` CLI, `vite-plugin-compression`) means the CDN serves the pre-compressed file directly instead of compressing on demand. The difference is real: 95 KB vs 116 KB for the same user-perceived content.
+
+```html
+<!-- Modulepreload the chunks you know the user will need next. -->
+<link rel="modulepreload" href="/assets/vendor.b3a91f.mjs" />
+<link rel="modulepreload" href="/assets/shared.92ad11.mjs" />
+```
+
+<PredictionChallenge
+  question="Your vendor chunk holds React (74 KB) + date-fns (6 KB) + zod (14 KB). You upgrade React from 18.3.1 to 18.3.2. Your app code didn't change. What re-downloads on the user's next visit?"
+  options={[
+    "Just the patch diff — ~3 KB",
+    "Just vendor.<newhash>.js — ~94 KB",
+    "Vendor + shared + every route chunk — ~250 KB",
+    "Nothing — patch releases stay in cache",
+  ]}
+  correctIndex={1}
+  explanation="The vendor chunk's content changed (React was inside), so its hash changes, so the filename changes, so the browser re-fetches the whole 94 KB file. There's no 'patch diff' — HTTP serves whole files. App chunks stay cached because their content didn't change. The lesson: vendor is for stuff you DON'T upgrade often. React patches are a poor fit for a 1-year immutable cache."
+  wrongHints={{
+    0: "HTTP doesn't ship patch diffs. The browser asks for a URL; the server sends the full bytes for that URL. Whole-file replacement is the only granularity.",
+    2: "Shared and route chunks stay cached — their content didn't change, their hashes didn't change, the filenames didn't change. The browser serves them from disk cache. Only vendor gets re-downloaded.",
+    3: "The vendor filename changed because its hash changed. Same URL = served from cache; new URL = full download.",
+  }}
+/>
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Bundle Analysis
+
+Optimizations interact. Tree-shake before you route-split and the shared chunk hides waste that per-route shaking would have caught. Vendor-chunk before tree-shaking and the bundler can't remove unused exports from libraries that are now in their own chunk. Dynamic-import without route-splitting still ships every feature library in the monolith. **Order matters.**
+
+The lab on the right is now a sequencer. Drag the four optimization cards into any order; the treemap reflows in real time. The headline counter shows initial load after each step. The build budget is **250 KB** on first paint; the stretch goal is a warm-cache load under **130 KB**.
+
+A modern bundle analyzer (`webpack-bundle-analyzer`, `rollup-plugin-visualizer`, `vite-bundle-visualizer`, `source-map-explorer`) is the diagnostic tool you reach for when an existing bundle is too large. It produces a treemap exactly like the one in the lab — every module sized by its contribution. You read the treemap looking for **three things**:
+
+**Duplicates.** Two copies of the same library in different chunks, usually because two packages depend on different minor versions. The analyzer shows `chart-lib@2.1.0` AND `chart-lib@2.1.4` both in the output. Fix: lock the version with a peer dependency or a yarn/npm resolution override.
+
+**Barrels that didn't shake.** A library showing far more bytes than the named exports you import. Common culprits: `@mui/icons-material`, `@chakra-ui/react`, `lodash` (full IIFE), `moment` with locales, `rxjs` without operator-level imports. Fix: deep imports (`@mui/icons-material/Home`), or per-method imports (`lodash/debounce`), or migrate to ESM-only alternatives (date-fns, dayjs).
+
+**Polyfills for browsers you don't support.** `core-js` shipping `Promise` for browsers that have it natively. `regenerator-runtime` because of an old preset-env config. Fix: pin `browserslist` to your real target floor and rebuild.
+
+```json
+// .browserslistrc — the floor below which you don't polyfill.
+{
+  "production": [
+    ">0.5%",
+    "not dead",
+    "not ie 11",
+    "supports es6-module",
+    "supports dynamic-import"
+  ]
+}
+```
+
+**Production tooling stack:**
+
+1. **`webpack-bundle-analyzer` / `vite-bundle-visualizer`** — interactive treemap of the build output. Run on every deploy; archive the HTML so you can diff bundle composition over time.
+2. **`source-map-explorer`** — points at the production map files to see which source files contributed which bytes. Useful when minification has obscured module names.
+3. **Lighthouse CI** — runs in your PR pipeline. Enforces a hard byte budget (`resource-summary:script:size`). PRs that bust the budget fail before merge. No human judgment, no negotiation.
+4. **`@next/bundle-analyzer`** / Turbopack profiler — Next.js–native, shows server vs client bundle composition separately. Server-component bytes don't count toward the client payload.
+5. **`bundlejs.com`** — paste any npm package, see its real ESM size. Useful when comparing two libraries before you adopt one.
+
+<PredictionChallenge
+  question="Your bundle analyzer flags `chart.js` showing up in TWO chunks (dashboard and admin), each at 90 KB. Total bundle inflated by 180 KB. What does this mean and how do you fix it?"
+  options={[
+    "It's a code-splitting bug — the bundler always duplicates shared modules",
+    "Two routes both import chart.js; extract it to a shared chunk via splitChunks/manualChunks",
+    "Two different versions of chart.js are pinned; install a resolution override to dedupe",
+    "Both B and C are valid causes — check package-lock for duplicate versions first",
+  ]}
+  correctIndex={3}
+  explanation="The analyzer flag is ambiguous on its own. EITHER two routes independently import the same library (fix: extract via splitChunks or manualChunks so it ends up in a shared chunk loaded once), OR the lockfile has two pinned versions (chart.js@4.1.0 and chart.js@4.2.0 because deps disagree) and they're literally different bytes. Always check package-lock.json or pnpm-lock.yaml first — if you see two versions, dedupe with resolutions/overrides. If only one version exists, it's a chunk-graph issue and you need shared-chunk configuration."
+  wrongHints={{
+    0: "Bundlers don't duplicate shared modules by default — that's the whole point of `splitChunks` / `manualChunks`. If duplication is happening, EITHER your config doesn't extract shared modules OR you have two different versions resolved by the lockfile.",
+    1: "This is the right fix IF the lockfile shows one version. Run `npm ls chart.js` or `pnpm why chart.js` first — if two versions show, splitChunks won't help; you need a resolution.",
+    2: "This is the right fix IF the lockfile shows two versions. Run `npm ls chart.js` first — if only one shows, splitChunks/manualChunks IS the fix.",
+  }}
+/>
+
+The capstone on the right: apply the four optimizations (route-split, tree-shake, dynamic-import, vendor-chunk) in any order. Watch the treemap fracture, shrink, lift, and migrate. Notice that route-split first lets per-route tree-shaking catch waste that monolith-wide shaking missed. Notice that vendor-chunk last gives you a warm-cache load **under 130 KB** — the same dashboard, with cache, ships less than a quarter of what the monolith shipped.
+
+</section>

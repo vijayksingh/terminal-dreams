@@ -1,0 +1,341 @@
+---
+title: "Core Web Vitals"
+slug: core-web-vitals
+section: performance
+stopId: perf-cwv
+order: 5
+kind: system-design-problem
+summary: "Detective game across LCP, INP, and CLS — what each metric actually measures, how the browser reports it, and why field beats lab"
+tags:
+  - core-web-vitals
+  - lcp
+  - inp
+  - cls
+  - performance
+  - measurement
+intersections:
+  - render-ssr-streaming
+prerequisites: []
+demo: core-web-vitals
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Three numbers, three dimensions
+
+A user opens your product page on a 2021 mid-range Android. They wait. They tap "Add to cart." The page jumps. They miss. They leave. Three things just failed — each measured by a different Core Web Vital. **LCP** caught the wait, **INP** caught the missed tap latency, and **CLS** caught the jump. Together they form a three-axis snapshot of how a page *feels*.
+
+Google sets one threshold per axis, calibrated against the p75 of real Chrome users so the bar represents the slowest 25% of your audience rather than the median:
+
+- **LCP (Largest Contentful Paint) ≤ 2.5s** — the moment the largest viewport element finishes painting.
+- **INP (Interaction to Next Paint) ≤ 200ms** — the latency of the *worst* discrete interaction during the session.
+- **CLS (Cumulative Layout Shift) ≤ 0.1** — the score of the largest 5-second burst of unexpected layout movement.
+
+The lab on the right shows live gauges. All three start in the yellow "needs work" band because the simulated page has every classic problem — slow TTFB, a synchronous click handler, and an image without dimensions. Each step from here on isolates one metric, demonstrates it in motion, and watches a gauge sweep into the green.
+
+<PredictionChallenge
+  question="A user says: 'I tapped Add to Cart but the page jumped and I bought the wrong size.' Which Core Web Vital captures the failure?"
+  options={[
+    "LCP — the page wasn't ready when they tapped",
+    "INP — the tap was too slow",
+    "CLS — content moved under their finger",
+    "All three — every CWV degrades on slow phones",
+  ]}
+  correctIndex={2}
+  explanation="Classic CLS. The tap *was* processed — it just landed on the wrong button because the layout shifted while their finger was in motion. CLS exists to make this kind of failure visible to your dashboards even though no single click handler is broken."
+  wrongHints={{
+    0: "If LCP were the problem the user would say 'the page never loaded' or 'it took forever to appear.' Here the page is interactive and the tap registers — content just moved underneath. That's CLS.",
+    1: "INP measures the gap between a click and the next paint. The click *did* fire and the system *did* respond — the bug is that the response targeted the wrong element because the layout shifted mid-tap. CLS, not INP.",
+    3: "Sometimes true in aggregate, but the user described one specific failure mode: a moving target. CLS isolates that, INP and LCP do not.",
+  }}
+/>
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Which element is LCP?
+
+LCP measures one specific element: the largest *rendered* element within the viewport at the moment the browser paints it. The browser keeps watching and re-reports LCP every time a larger candidate paints, so the value can move up until the user's first interaction. That's why one common bug — lazy-loading the hero image — sometimes "passes" LCP on developer machines: the hero loads so fast that even with `loading="lazy"` it still fires before user interaction. On a real phone the same image is the LCP element and you've just delayed it by 1.5s.
+
+Only four element types ever qualify as LCP candidates: `<img>`, the poster frame of `<video>`, elements with a CSS `background-image` set via `url()`, and block-level text containers (`<p>`, `<h1>`, `<li>` blocks etc.). `<canvas>` and `<svg>` shapes are excluded by spec. (`<image>` inside SVG is technically allowed but rare in practice; the LCP element on most pages is `<img>`, a background image, a video poster, or a block of text.)
+
+```ts
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    // entry.element, entry.size, entry.startTime — the candidate updates
+    // every time a larger element paints, until the user clicks/keys.
+    console.log(entry.element, entry.size);
+  }
+}).observe({ type: "largest-contentful-paint", buffered: true });
+```
+
+Only the first user click, keypress, or scroll triggered by a keyboard stops LCP observation. (Programmatic scrolls and touch panning do *not* stop it — a common myth.) The `web-vitals` library exposes this as `onLCP(callback)` and calls back exactly once per page with the final value plus the chosen element.
+
+Hover each block in the mock page on the right. Each one reports its type, viewport area, and whether the spec includes it as a candidate. The lab picks the LCP element by area — not by layout position — so size is the only thing that matters.
+
+<PredictionChallenge
+  question="On the mock page in the lab — a nav bar, a hero image, an <h1>, a card thumbnail, a decorative SVG, and a canvas spinner — which element is the LCP candidate?"
+  options={[
+    "The <h1> headline — text is always the LCP element if present",
+    "The decorative <svg> — it covers ~22% of the viewport",
+    "The hero <img> — biggest rendered area of an eligible element",
+    "Whichever paints first — LCP is about timing, not size",
+  ]}
+  correctIndex={2}
+  explanation="The hero <img> wins because it's the largest candidate by *rendered* area (~38% of the viewport). The headline is a candidate but smaller. The SVG is bigger than the headline but disqualified — <svg> shapes are not LCP candidates. The canvas is also excluded."
+  wrongHints={{
+    0: "Text blocks are valid candidates but they're not preferred — LCP is largest-by-area. If a bigger eligible element exists, it wins. The hero image is ~4× the headline's area.",
+    1: "The SVG is the second-largest element on the page, but `<svg>` shapes are excluded by spec (along with `<canvas>`). Even a viewport-sized SVG would not register as LCP.",
+    3: "LCP is largest-by-area, not first-by-time. The browser updates LCP every time a larger eligible element paints — so the value can move *backwards in time* if a bigger element renders later (until the first user interaction).",
+  }}
+/>
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Where does the LCP time come from?
+
+A 4.0s LCP isn't one number — it's four sequential phases. Profiling work always starts with phase attribution because the cheap fixes for each phase are completely different. Toggle each fix in the lab to watch the total LCP collapse phase-by-phase.
+
+**TTFB (Time to First Byte) — server + network.** Cold cache, slow database, redirect chains, distant origin. The browser cannot start *anything* until the first byte arrives. Edge caching (CDN, Vercel, Cloudflare Workers) shrinks this from 600ms+ to under 80ms for cacheable HTML. For dynamic HTML, streaming SSR (server-side rendered chunks flushed as they're ready) buys you a fast first byte even when the full document takes longer.
+
+**Resource load delay — discovery.** The gap between HTML arrival and the moment the LCP resource *starts* downloading. If the LCP image is referenced inside CSS that's referenced inside a `<link>` tag, the browser must download HTML, then parse it, then download CSS, then parse it, then discover the image URL. `fetchpriority="high"` on the LCP `<img>` plus referencing the image directly in HTML (not via CSS) eliminates this. (`<link rel="preload">` was the older fix but `fetchpriority` is the canonical Chrome 102+ approach because the browser can use it during HTML parsing — no extra round-trip.)
+
+**Resource load duration — bytes on the wire.** AVIF compresses photographic content ~50% smaller than WebP and ~73% smaller than JPEG. Pair that with `srcset` and a `sizes` hint so phones download phone-sized images and laptops download laptop-sized ones. A 245 KB JPEG hero becomes a 60 KB AVIF on phones.
+
+**Element render delay — paint blockers.** The browser has the bytes but can't paint yet because render-blocking CSS (full stylesheet) or JavaScript is still parsing. Inlining critical CSS, deferring non-critical JS, and `font-display: swap` (so text paints before the web font arrives) all attack this phase.
+
+<PredictionChallenge
+  question="A page has TTFB 800ms, resource load delay 400ms, load duration 600ms, render delay 500ms. Which single fix removes the largest chunk of LCP?"
+  options={[
+    "CDN + edge caching — TTFB drops from 800 to ~400ms",
+    "fetchpriority + preload — resource load delay drops from 400 to ~120ms",
+    "AVIF + responsive srcset — load duration drops from 600 to ~270ms",
+    "Inline critical CSS — render delay drops from 500 to ~200ms",
+  ]}
+  correctIndex={2}
+  explanation="The image is on the critical path twice — once on the wire and once during paint. Compressing it from 600ms to ~270ms saves 330ms in absolute terms, more than any other single phase. TTFB also saves a lot (≈400ms), and on a TTFB-bound page that's the right answer — but the question's phase breakdown gives load duration the biggest single phase, so compression wins."
+  wrongHints={{
+    0: "TTFB cuts ~400ms — significant. But the question gives load duration the largest single phase (600ms), and a 55% reduction on the largest phase (~330ms saved) beats a 50% reduction on the second-largest. Phase attribution is the whole point: bigger phases pay back faster.",
+    1: "Eliminating load delay saves ~280ms — good, but the phase is smaller than load duration. Always start with the biggest phase first; this is why phase attribution dominates LCP optimisation order.",
+    3: "Critical CSS saves ~300ms on render delay — close but still smaller than the 330ms saved by attacking load duration. Order: biggest phase → smallest phase, always.",
+  }}
+/>
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — INP: feel the 200ms
+
+INP is the metric you can *physically feel*. Click the "Add to cart" button in the lab. Before the fix, the handler runs a real 200ms blocking task on the main thread — the same `while (performance.now() - start < 200)` pattern that real bad code produces. You will feel the lag: the button does not depress immediately, the label does not change, your subsequent clicks queue up behind the blocked thread. Flip the toggle and the same click returns in roughly 16ms.
+
+INP replaced **FID** in March 2024. FID was deeply misleading: it captured only the *first* input delay, so a page that loaded fast but spent the next minute janking on every interaction would still pass FID with flying colors. INP fixes this by tracking *every* discrete interaction (clicks, taps, key presses — not scrolls, not pointermoves) and reporting the worst latency from the session. For pages with more than 50 interactions, INP reports the 98th-percentile interaction; for everything else, it reports the worst single one. Either way, FID's "first impression only" blind spot is closed.
+
+Every interaction has three sub-phases that sum to its latency:
+
+```ts
+// web-vitals v4
+import { onINP } from "web-vitals";
+
+onINP((metric) => {
+  // metric.value — total INP in ms
+  // metric.attribution.eventType, eventTarget, longAnimationFrameEntries
+  // — the LoAF entries that overlapped this interaction (Chrome 123+).
+  navigator.sendBeacon("/rum", JSON.stringify(metric));
+});
+```
+
+**Input delay** — time the event sat in the queue because the main thread was busy. This is usually the dominant phase. **Processing** — your event handler running. **Presentation delay** — style/layout/paint/composite after the handler returned. Forced reflows (reading `offsetHeight` after writing `style.height`) blow this up.
+
+**LoAF (Long Animation Frames API)** is the modern way to debug INP. Where Long Tasks API reported "something ran for 78ms," LoAF reports the full animation frame including blocking scripts, style/layout work, and the source URL of the offending script. It is the only tool that reliably catches the third-party script blocking your interactions:
+
+```ts
+new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    // entry.scripts[] — each blocking script with source URL,
+    // forcedStyleAndLayoutDuration, duration, invokerType
+    console.log(entry.scripts);
+  }
+}).observe({ type: "long-animation-frame", buffered: true });
+```
+
+<PredictionChallenge
+  question="A user reports your dashboard 'feels sluggish.' web-vitals v4 reports INP 320ms. LoAF attribution shows three interactions in the session — a click at 320ms, another click at 180ms, and a keydown at 90ms. Which interaction is INP reporting?"
+  options={[
+    "click 180ms — clicks are the canonical interaction",
+    "The median of all three (180ms)",
+    "click 320ms — INP reports the worst",
+    "keydown 90ms — keypresses are weighted higher",
+  ]}
+  correctIndex={2}
+  explanation="INP reports the *worst* single interaction (or p98 for 50+ interactions). The 320ms click is the slowest, so that's what the dashboard reports. This is the FID → INP change in action: FID would have reported only the first click; INP catches the worst one regardless of when it happened. (Spec note: pointerdown → pointerup → click are grouped into one interaction, so their latencies merge before INP picks the worst.)"
+  wrongHints={{
+    0: "All clicks aren't equal — INP tracks every discrete interaction (click groups, keypress groups) and reports the worst latency. The 320ms click beats the 180ms click.",
+    1: "Median would dilute outliers, but INP is designed to surface the *worst* interaction — the one the user actually noticed and complained about. Reporting the median would defeat the metric's purpose.",
+    3: "There is no event-type weighting. INP picks the slowest interaction full stop. The 90ms keydown is the fastest of the three, not the reported value.",
+  }}
+/>
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Fixing INP
+
+Three modern patterns, in order of how aggressively they attack input delay:
+
+**`scheduler.yield()` (Chrome 129+).** Inside a long task, await `scheduler.yield()` to hand the main thread back to the browser. Pending input events run, then your continuation resumes — without going to the back of the task queue the way `setTimeout(0)` does. This is the only API that gives you "yield to input but keep my priority above background work."
+
+```ts
+async function hydrateLargeList(items: Item[]) {
+  for (let i = 0; i < items.length; i++) {
+    hydrate(items[i]);
+    if (i % 16 === 0) {
+      await scheduler.yield(); // browser processes pending input here
+    }
+  }
+}
+```
+
+If `scheduler` is undefined (Safari, older Chrome) the polyfill is `await new Promise(r => setTimeout(r, 0))` — slower because `setTimeout(0)` always re-queues at lowest priority, but functionally correct. See the perf-js lesson for the full yield strategy decision tree.
+
+**`requestAnimationFrame` for DOM writes.** When your handler updates the DOM, wrap the write in `requestAnimationFrame` so the work happens right before the next paint. The handler returns immediately (input delay shrinks), and the layout/paint cost moves into the natural 16ms frame budget.
+
+**`content-visibility: auto` for off-screen sections.** Wrapping each below-the-fold section in `content-visibility: auto` tells the browser "skip layout and paint for this until it scrolls near the viewport." Style recalculation drops dramatically — the worst case for a 200-item list is no longer "lay out 200 items," it's "lay out 10."
+
+The lab's tabs walk through all three: each one shows the same 200ms baseline and the resulting INP after the fix.
+
+<PredictionChallenge
+  question="Your handler does 280ms of synchronous work. You add `await scheduler.yield()` every 16 iterations. Wall-clock time goes from 280ms to 295ms — slightly longer. What happened to INP?"
+  options={[
+    "Worse — wall-clock is the only thing that matters",
+    "Unchanged — yielding doesn't help if total work is the same",
+    "Better — worst-case input delay drops from ~280ms to ~50ms",
+    "Better but only on the first interaction",
+  ]}
+  correctIndex={2}
+  explanation="INP measures how long input *waits*, not how long your code runs. With yields every ~16ms, no single uninterrupted block exceeds the time between yields — so worst-case input delay is the longest gap between yields (≈50ms), not the total work time. The extra 15ms of wall-clock is the cost of context switches; the user feels none of it because the browser processed their click during a yield."
+  wrongHints={{
+    0: "Wall-clock time is what you'd measure with a stopwatch on an idle CPU. INP is what the *user* experiences when they click during your work. The two diverge completely under yielding — that's the entire point.",
+    1: "Yielding splits one long block into many short blocks. INP doesn't care about total work; it cares about the longest block of uninterrupted main-thread time. Splitting reduces that longest block dramatically.",
+    3: "INP catches every interaction during the page lifetime, not just the first. (That was FID's job, and FID is retired.) Yielding improves the worst-case interaction whenever it occurs.",
+  }}
+/>
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — CLS is the worst session window, not the sum
+
+The most common bug in CLS implementations is treating it like a running total. **CLS is not the sum of all shifts.** A page with one bad shift in second 1 (score 0.18) followed by 30 tiny shifts spread across the next two minutes (cumulative score 0.4) reports CLS = 0.18, not 0.58. The spec defines a **session window**:
+
+- A window starts at the first shift.
+- A new shift extends the current window if it arrives within 1 second of the previous shift *and* within 5 seconds of the window's start.
+- Otherwise, a new window begins.
+- CLS is the **maximum** window's score across the page lifetime.
+
+```ts
+// web-vitals handles the session-window logic for you.
+import { onCLS } from "web-vitals";
+
+onCLS((metric) => {
+  // metric.value — largest-window CLS so far
+  // metric.entries — the layout-shift entries that built it
+  // metric.attribution.largestShiftSource — top-most affected element
+  navigator.sendBeacon("/rum", JSON.stringify(metric));
+});
+```
+
+Each shift has its own score: `impact_fraction × distance_fraction`. **Impact fraction** is the percentage of the viewport covered by the union of "before" and "after" rectangles. **Distance fraction** is how far the element moved as a percentage of the viewport's largest dimension. A full-width hero that drops 250px on a 1000px-tall viewport scores ~0.30 × 0.25 = 0.075 — close to blowing the 0.1 budget by itself.
+
+The lab on the right replays a four-shift sequence:
+1. **t = 1.2s** — hero image without `width`/`height` pushes content down (0.105)
+2. **t = 1.6s** — sticky ad container inflates (0.062)
+3. **t = 1.95s** — recommendation widget mounts above content (0.026)
+4. **t = 4.2s** — font swap reflows text (0.020)
+
+Naïve "sum" would be 0.213. Correct CLS is the largest session window — shifts 1–3 cluster (gap < 1s, total duration 0.75s) into a window scoring **0.193**. Shift 4 starts a new window (gap 2.25s) scoring only 0.020. CLS = 0.193, not 0.213.
+
+<PredictionChallenge
+  question="A page records four layout shifts: t=0.5s score 0.04, t=2.0s score 0.05, t=2.4s score 0.03, t=8.0s score 0.06. What CLS does web-vitals report?"
+  options={[
+    "0.18 — the sum of all four shifts",
+    "0.08 — the second window (t=2.0 + t=2.4)",
+    "0.06 — the single largest shift",
+    "0.04 — only the first shift counts",
+  ]}
+  correctIndex={1}
+  explanation="The gap between t=0.5 and t=2.0 is 1.5s — that's > 1s, so they're in different windows. The t=2.0 + t=2.4 pair clusters (0.4s gap) and totals 0.08. The t=8.0 shift starts a third window with score 0.06. CLS is the *maximum* window: 0.08. The four-shift sum (0.18) is wrong; so is reporting the single biggest shift in isolation."
+  wrongHints={{
+    0: "Summing is the classic CLS bug. Shifts that happen more than 1 second apart belong to different windows; CLS reports the biggest window, not the total. With these timings the biggest window has only the t=2.0 and t=2.4 shifts.",
+    2: "The single largest shift is 0.06 at t=8.0s — but it's alone in its window, so the window's total *is* 0.06. The other window (t=2.0 + t=2.4) sums to 0.08, which is bigger.",
+    3: "All four shifts contribute to the metric — but only via their windows. The first window's score is 0.04, the second is 0.08, the third is 0.06. CLS is the maximum: 0.08.",
+  }}
+/>
+
+The fixes are unglamorous and effective: **set explicit `width`/`height` (or `aspect-ratio`) on every image and embed**; reserve `min-height` on containers that load dynamic content; use `size-adjust` and `ascent-override` on `@font-face` to match fallback metrics to the web font so swap doesn't reflow; and never inject content above existing content (insert below, animate in).
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Field beats lab, always
+
+Your Lighthouse run shows LCP 1.2s on the homepage. Production CrUX p75 shows LCP 2.8s. The gap is real and field is the truth — for one reason: **field is always slower than lab**. Lab is one optimistic device (Lighthouse simulates Moto G Power on slow 4G, but your CI machine is probably even faster than that). Field is the slowest 25% of real users on 28 days of traffic, including the user with three tabs open, a flaky tower, and a phone from 2019.
+
+The lab's slider lets you see the gap shrink — never invert — as the p75 user's hardware improves. The closer your real users get to flagship Wi-Fi, the smaller the gap. But the field gauge can never beat the lab gauge: a lab run on optimistic hardware will always show better metrics than the slowest quartile of real-world users, regardless of how good your user base gets.
+
+```ts
+// RUM beacon — send field metrics from production
+import { onLCP, onINP, onCLS } from "web-vitals";
+
+const send = (metric) => {
+  // sendBeacon survives page unload; fetch() does not.
+  navigator.sendBeacon("/rum", JSON.stringify({
+    name: metric.name,
+    value: metric.value,
+    rating: metric.rating, // 'good' | 'needs-improvement' | 'poor'
+    delta: metric.delta,
+    id: metric.id,
+    navigationType: metric.navigationType, // includes 'back-forward-cache'
+    entries: metric.entries,
+  }));
+};
+
+onLCP(send);
+onINP(send);
+onCLS(send);
+```
+
+Three modern wrinkles for RUM accuracy:
+
+**bfcache restorations.** When the user hits Back and Chrome restores the page from bfcache, that restoration is a *new* navigation and gets its own LCP/INP/CLS. bfcache-restored pages are wildly faster (LCP ≈ 0) and pull your p75 numbers down — desirable, but only if you actually qualify for bfcache (no `unload` handler, no Cache-Control: no-store on the document, etc.). `metric.navigationType === 'back-forward-cache'` lets you slice this dimension in your dashboard.
+
+**`navigator.sendBeacon` over `fetch`.** Use beacon for the unload paths (`visibilitychange` to hidden, `pagehide`). `fetch` requests are cancelled when the browser tears down the page; `sendBeacon` is queued by the user agent and delivered after unload. `web-vitals` already uses the right transport — only roll your own if you must.
+
+**Speed Insights and CrUX disagree.** Speed Insights is your private RUM; CrUX is Chrome's aggregated public dataset. CrUX excludes browsers with "make Chrome more secure" off, excludes incognito sessions, and aggregates on a 28-day window. You can pass Speed Insights and fail CrUX for two months because of the lag. The fix: monitor both and treat CrUX as the slow but authoritative source of truth.
+
+<PredictionChallenge
+  question="Your homepage shows lab LCP 1.2s but CrUX p75 LCP 2.8s. What's the most plausible explanation?"
+  options={[
+    "Lighthouse is buggy — CrUX is the real number",
+    "p75 users are on slower hardware + networks than the lab profile, and they're 25% of your traffic",
+    "Your CDN is slow in some regions — the gap is purely network latency",
+    "CrUX is stale — its 28-day window inflates old data",
+  ]}
+  correctIndex={1}
+  explanation="The default explanation is hardware distribution. Lab tests one machine; CrUX p75 represents the slow quartile of real Chrome users. The gap shrinks as your audience modernises but never inverts — because a single Lighthouse run on optimistic hardware is, by construction, faster than the 25th percentile of a global distribution."
+  wrongHints={{
+    0: "Lighthouse is not buggy — it correctly measures LCP on a specific simulated device. The number is real *for that environment*. The 2.8s/1.2s gap is the inevitable consequence of testing one optimistic device versus measuring a global p75.",
+    2: "Regional CDN latency contributes but rarely explains a 1.6s gap on its own. Device CPU is usually the dominant factor — a 2019 Android parses JS 4× slower than the typical Lighthouse simulation, regardless of network.",
+    3: "CrUX's 28-day window smooths daily variance but doesn't inflate old data — if anything, the window includes today's bfcache-fast loads that pull values down. The gap is real device-distribution variance, not measurement lag.",
+  }}
+/>
+
+The 75th-percentile rule is what makes Core Web Vitals strict by design. Reporting against p50 would hide your slow users. Reporting against p99 would punish you for legitimately broken devices. **p75 is the threshold "75% of your real users get the good experience"** — pass it, and the metric is green; fail it, and the metric is yellow or red regardless of how good your lab numbers look.
+
+</section>

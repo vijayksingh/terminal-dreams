@@ -127,9 +127,8 @@
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
 
-  /* Inline code — uses the base hue so pills feel native to the page
-     while standing out via a visible background tint. */
-  --color-code-fg: oklch(82% 0.04 var(--base-hue));
+  /* Inline code — cyan-teal text pops against base-hue tinted bg. */
+  --color-code-fg: oklch(76% 0.1 195);
   --color-code-bg: oklch(22% 0.02 var(--base-hue));
   --color-code-border: oklch(27% 0.022 var(--base-hue));
 }
@@ -196,7 +195,7 @@
   --color-success-muted: oklch(28% 0.06 140 / 0.4);
   --color-warning: oklch(70% 0.18 80);
   --color-warning-muted: oklch(30% 0.04 80 / 0.3);
-  --color-code-fg: oklch(82% 0.04 var(--base-hue));
+  --color-code-fg: oklch(76% 0.1 195);
   --color-code-bg: oklch(22% 0.02 var(--base-hue));
   --color-code-border: oklch(27% 0.022 var(--base-hue));
 }

@@ -1,0 +1,1179 @@
+/* ── CoreWebVitalsLab ─────────────────────────────────────────────────
+   Visualisation only — no MCQ / no "selected option" state in the lab.
+   Accent for this lab: var(--diagram-layer-0) (cyan).
+   ────────────────────────────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  background: var(--color-bg);
+}
+
+/* ── Step indicator bar ───────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 var(--space-1);
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-0);
+  border-color: color-mix(in srgb, var(--diagram-layer-0) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-0);
+  border-color: var(--diagram-layer-0);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-0) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-0) 25%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-0) 12%, transparent); }
+}
+
+/* ── Scroll area + step frame ─────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stepFrame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Panel chrome ─────────────────────────────────────────────────── */
+
+.panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--diagram-layer-0) 5%, var(--color-surface));
+}
+
+.panelEyebrow {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--diagram-layer-0);
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+.panelBody {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.panelNote {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.panelNote code {
+  font-size: 0.6rem;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--diagram-layer-0) 8%, var(--color-bg));
+  padding: 1px 4px;
+  border-radius: var(--radius-1);
+}
+
+/* ── CWV gauges (reused across every step) ───────────────────────── */
+
+.cwvGauges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.cwvGauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  transition: border-color 200ms ease;
+}
+
+.cwvGauge[data-rating="good"]              { border-top: 3px solid var(--color-success); }
+.cwvGauge[data-rating="needs-improvement"] { border-top: 3px solid var(--color-warning); }
+.cwvGauge[data-rating="poor"]              { border-top: 3px solid var(--color-error); }
+
+.cwvGaugeLabel {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.cwvGaugeValue {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cwvGaugeValue[data-rating="good"]              { color: var(--color-success); }
+.cwvGaugeValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.cwvGaugeValue[data-rating="poor"]              { color: var(--color-error); }
+
+.cwvGaugeRating {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.cwvGaugeRating[data-rating="good"]              { color: var(--color-success); }
+.cwvGaugeRating[data-rating="needs-improvement"] { color: var(--color-warning); }
+.cwvGaugeRating[data-rating="poor"]              { color: var(--color-error); }
+
+.cwvGaugeThreshold {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.cwvGaugeDesc {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.compactGaugesPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.compactGaugesLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 2 — LCP discovery
+   ───────────────────────────────────────────────────────────────── */
+
+.lcpDiscoveryRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lcpPageMockup {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-rows: auto auto auto auto;
+  grid-template-areas:
+    "nav nav"
+    "hero hero"
+    "heading svg"
+    "card spinner";
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--diagram-layer-0) 4%, var(--color-bg));
+  border: 1px dashed color-mix(in srgb, var(--diagram-layer-0) 32%, transparent);
+  border-radius: var(--radius-2);
+}
+
+/*
+ * NOTE: deliberately not using nth-child or first-child selectors here —
+ * the previous CSS leaked the LCP answer via :first-child { grid-column: 1/-1 }.
+ * Grid-areas are tied to data-id so the LCP element has no positional hint.
+ */
+.lcpElement[data-id="nav"]     { grid-area: nav; min-height: 32px; }
+.lcpElement[data-id="hero-img"]{ grid-area: hero; min-height: 92px; }
+.lcpElement[data-id="heading"] { grid-area: heading; min-height: 64px; }
+.lcpElement[data-id="svg-shape"]{ grid-area: svg; min-height: 64px; }
+.lcpElement[data-id="card-img"]{ grid-area: card; min-height: 56px; }
+.lcpElement[data-id="spinner"] { grid-area: spinner; min-height: 56px; }
+
+.lcpElement {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 2px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.lcpElement[data-candidate="false"] {
+  background: color-mix(in srgb, var(--color-muted) 6%, var(--color-surface));
+  border-style: dotted;
+}
+
+.lcpElement:hover,
+.lcpElement[data-hovered="true"] {
+  border-color: var(--diagram-layer-0);
+  background: color-mix(in srgb, var(--diagram-layer-0) 8%, var(--color-surface));
+}
+
+.lcpElement[data-is-lcp="true"] {
+  border-color: var(--color-success);
+  border-style: solid;
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-success) 28%, transparent);
+}
+
+.lcpElementBadge {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lcpElementType {
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.lcpElementArea {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.lcpElementCrown {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--color-success);
+  color: var(--color-bg);
+  box-shadow: 0 1px 6px color-mix(in srgb, var(--color-success) 50%, transparent);
+}
+
+.lcpReadout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.lcpReadout[data-correct="true"] {
+  border-color: color-mix(in srgb, var(--color-success) 60%, var(--color-border));
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+}
+
+.lcpReadoutHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.lcpReadoutTag {
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--diagram-layer-0) 14%, var(--color-bg));
+  color: var(--diagram-layer-0);
+}
+
+.lcpReadout[data-correct="true"] .lcpReadoutTag {
+  background: color-mix(in srgb, var(--color-success) 22%, var(--color-bg));
+  color: var(--color-success);
+}
+
+.lcpReadoutTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.lcpReadoutCode {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-0) 8%, var(--color-bg));
+  color: var(--color-text);
+}
+
+.lcpReadoutReason {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.lcpReadoutEmpty {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.lcpReadoutEmpty code {
+  font-size: 0.6rem;
+  background: color-mix(in srgb, var(--diagram-layer-0) 8%, var(--color-bg));
+  padding: 1px 4px;
+  border-radius: var(--radius-1);
+  color: var(--color-text);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 3 — LCP sub-parts
+   ───────────────────────────────────────────────────────────────── */
+
+.subpartsRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.subpartsTotal {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+}
+
+.subpartsTotalLabel {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.subpartsTotalValue {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.subpartsTotalValue[data-rating="good"]              { color: var(--color-success); }
+.subpartsTotalValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.subpartsTotalValue[data-rating="poor"]              { color: var(--color-error); }
+
+.subpartsTotalThreshold {
+  font-size: 0.55rem;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+.subpartsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.subpartRow {
+  display: grid;
+  grid-template-columns: 130px 1fr 56px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.62rem;
+}
+
+.subpartRowLabel {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.subpartRowTrack {
+  height: 8px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-border) 80%, transparent);
+  overflow: hidden;
+}
+
+.subpartRowFill {
+  height: 100%;
+  border-radius: var(--radius-1);
+}
+
+.subpartRowFill[data-sub="ttfb"]            { background: var(--diagram-layer-4); }
+.subpartRowFill[data-sub="resource-delay"]  { background: var(--diagram-layer-3); }
+.subpartRowFill[data-sub="resource-load"]   { background: var(--diagram-layer-0); }
+.subpartRowFill[data-sub="render-delay"]    { background: var(--diagram-layer-2); }
+
+.subpartRowValue {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.subpartRowValue[data-rating="good"]              { color: var(--color-success); }
+.subpartRowValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.subpartRowValue[data-rating="poor"]              { color: var(--color-error); }
+
+.subpartFixGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.subpartFixBtn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.subpartFixBtn:hover { border-color: var(--diagram-layer-0); }
+
+.subpartFixBtn[data-active="true"] {
+  border-color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-bg));
+}
+
+.subpartFixToggle {
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  position: relative;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.subpartFixToggle[data-on="true"] {
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.subpartFixKnob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-muted);
+  transition: left 150ms ease, background 150ms ease;
+}
+
+.subpartFixToggle[data-on="true"] .subpartFixKnob {
+  left: 13px;
+  background: var(--color-bg);
+}
+
+.subpartFixContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subpartFixLabel {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.subpartFixHint {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 4 — INP felt button
+   ───────────────────────────────────────────────────────────────── */
+
+.inpButtonRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.inpButtonStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--diagram-layer-0) 5%, var(--color-surface)) 0%,
+      var(--color-bg) 100%);
+}
+
+.inpFakeCta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 200px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-2);
+  background: var(--diagram-layer-0);
+  color: var(--color-bg);
+  font-family: var(--font-mono);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: filter 150ms ease, box-shadow 150ms ease;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--diagram-layer-0) 35%, transparent);
+}
+
+.inpFakeCta:hover { filter: brightness(1.08); }
+.inpFakeCta:focus-visible {
+  outline: 2px solid var(--diagram-layer-0);
+  outline-offset: 3px;
+}
+
+.inpFakeCta[data-pressed="true"] {
+  filter: brightness(0.92);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--diagram-layer-0) 25%, transparent);
+}
+
+.inpFakeCta[data-fixed="true"] {
+  background: var(--color-success);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-success) 35%, transparent);
+}
+
+.inpFakeCtaLabel {
+  font-size: 0.8rem;
+}
+
+.inpFakeCtaSub {
+  font-size: 0.52rem;
+  font-weight: 600;
+  opacity: 0.85;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.inpToggleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.inpToggleHint {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.inpToggle {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.inpToggleBtn {
+  padding: 4px var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.inpToggleBtn[data-active="true"] {
+  background: var(--diagram-layer-0);
+  color: var(--color-bg);
+}
+
+.inpReadoutPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+}
+
+.inpReadoutHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inpReadoutLabel {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.inpReadoutValue {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.inpReadoutValue[data-rating="good"]              { color: var(--color-success); }
+.inpReadoutValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.inpReadoutValue[data-rating="poor"]              { color: var(--color-error); }
+
+.inpReadoutHint {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.inpHistory {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 56px;
+  padding-top: var(--space-2);
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.inpHistoryBar {
+  width: 10px;
+  border-radius: 2px 2px 0 0;
+  background: var(--color-muted);
+  opacity: 0.5;
+}
+
+.inpHistoryBar[data-rating="good"]              { background: var(--color-success); opacity: 1; }
+.inpHistoryBar[data-rating="needs-improvement"] { background: var(--color-warning); opacity: 1; }
+.inpHistoryBar[data-rating="poor"]              { background: var(--color-error); opacity: 1; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 5 — INP optimisation
+   ───────────────────────────────────────────────────────────────── */
+
+.inpOptRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.inpOptTabs {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  background: var(--color-surface);
+  align-self: flex-start;
+}
+
+.inpOptTab {
+  padding: 6px var(--space-3);
+  border: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.inpOptTab[data-active="true"] {
+  background: var(--diagram-layer-0);
+  color: var(--color-bg);
+}
+
+.inpOptDescription {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.inpOptCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.inpOptColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+}
+
+.inpOptColumnTitle {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.inpOptTimeline {
+  display: flex;
+  height: 38px;
+  border-radius: var(--radius-1);
+  overflow: hidden;
+  gap: 2px;
+}
+
+.inpOptBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-1);
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-bg);
+}
+
+.inpOptBlock[data-phase="input-delay"] { background: var(--color-error); }
+.inpOptBlock[data-phase="processing"]  { background: var(--color-warning); }
+.inpOptBlock[data-phase="presentation"] { background: var(--color-success); }
+
+.inpOptBlockLabel {
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.inpOptBlockValue {
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.inpOptColumnTotal {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.inpOptColumnTotal[data-rating="good"]              { color: var(--color-success); }
+.inpOptColumnTotal[data-rating="needs-improvement"] { color: var(--color-warning); }
+.inpOptColumnTotal[data-rating="poor"]              { color: var(--color-error); }
+
+.inpOptSavings {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--color-success) 40%, var(--color-border));
+  border-radius: var(--radius-2);
+  background: color-mix(in srgb, var(--color-success) 6%, var(--color-surface));
+  font-size: 0.62rem;
+  color: var(--color-text);
+}
+
+.inpOptSavings strong { color: var(--color-success); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 6 — CLS session windows
+   ───────────────────────────────────────────────────────────────── */
+
+.clsRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.clsHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.clsTotal {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  flex: 1;
+}
+
+.clsTotalLabel {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.clsTotalValue {
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.clsTotalValue[data-rating="good"]              { color: var(--color-success); }
+.clsTotalValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.clsTotalValue[data-rating="poor"]              { color: var(--color-error); }
+
+.clsTotalThreshold {
+  font-size: 0.55rem;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+.clsReplayBtn {
+  padding: 6px var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.clsReplayBtn:hover {
+  border-color: var(--diagram-layer-0);
+  color: var(--diagram-layer-0);
+}
+
+.clsBugCallout {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--diagram-layer-0);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-0) 7%, var(--color-surface));
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.clsBugCallout strong { color: var(--diagram-layer-0); }
+
+.clsTimeline {
+  position: relative;
+  min-height: 220px;
+  padding: var(--space-3) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--color-border) 25%, transparent) 1px,
+      transparent 1px) 0 0 / 14% 100%,
+    var(--color-bg);
+}
+
+.clsTimelineAxis {
+  position: relative;
+  height: 14px;
+  margin-bottom: var(--space-2);
+}
+
+.clsTimelineTick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.clsWindowBand {
+  position: absolute;
+  top: 32px;
+  bottom: 8px;
+  border: 1px dashed color-mix(in srgb, var(--diagram-layer-0) 50%, transparent);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-0) 8%, transparent);
+  padding: var(--space-1);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-1);
+  pointer-events: none;
+}
+
+.clsWindowLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--diagram-layer-0);
+}
+
+.clsWindowScore {
+  font-size: 0.62rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.clsWindowScore[data-rating="good"]              { color: var(--color-success); }
+.clsWindowScore[data-rating="needs-improvement"] { color: var(--color-warning); }
+.clsWindowScore[data-rating="poor"]              { color: var(--color-error); }
+
+.clsShiftMarker {
+  position: absolute;
+  top: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 28%;
+}
+
+.clsShiftDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid var(--color-bg);
+}
+
+.clsShiftDot[data-rating="good"]              { background: var(--color-success); }
+.clsShiftDot[data-rating="needs-improvement"] { background: var(--color-warning); }
+.clsShiftDot[data-rating="poor"]              { background: var(--color-error); }
+
+.clsShiftLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.3;
+}
+
+.clsShiftScore {
+  font-size: 0.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Step 7 — Field vs lab
+   ───────────────────────────────────────────────────────────────── */
+
+.fieldRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldHeader,
+.fieldRow {
+  display: grid;
+  grid-template-columns: 60px 1fr 1fr;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2);
+}
+
+.fieldHeader {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.fieldHeaderSpacer { display: block; }
+.fieldHeaderCell { text-align: center; }
+
+.fieldRow {
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.fieldRowLabel {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.fieldRowValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.fieldRowValue[data-rating="good"]              { color: var(--color-success); }
+.fieldRowValue[data-rating="needs-improvement"] { color: var(--color-warning); }
+.fieldRowValue[data-rating="poor"]              { color: var(--color-error); }
+
+.fieldSlider {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fieldSliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.fieldSliderLabel { color: var(--color-text); }
+
+.fieldSliderGap {
+  font-variant-numeric: tabular-nums;
+  color: var(--diagram-layer-0);
+}
+
+.fieldSliderInput {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--color-border) 80%, transparent);
+  outline: none;
+  cursor: pointer;
+}
+
+.fieldSliderInput::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--diagram-layer-0);
+  border: 2px solid var(--color-bg);
+  cursor: pointer;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-0) 35%, transparent);
+}
+
+.fieldSliderInput::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--diagram-layer-0);
+  border: 2px solid var(--color-bg);
+  cursor: pointer;
+}
+
+.fieldSliderEndpoints {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.fieldNote {
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed color-mix(in srgb, var(--diagram-layer-0) 40%, transparent);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-0) 5%, var(--color-surface));
+  font-size: 0.62rem;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.fieldNote strong { color: var(--diagram-layer-0); }
+
+/* ── Reduced motion ─────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+}

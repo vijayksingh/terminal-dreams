@@ -1,0 +1,286 @@
+/* ── BundleOptLab — pure visualization with treemap-first layout ───── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+/* ── Step indicator bar ──────────────────────────────────────────── */
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+
+.stepDot {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  padding: 0 var(--space-1);
+  transition: all 150ms ease;
+}
+
+.stepDot[data-active="true"] {
+  color: var(--diagram-layer-5);
+  border-color: color-mix(in oklch, var(--diagram-layer-5) 40%, transparent);
+}
+
+.stepDot[data-current="true"] {
+  color: var(--color-bg);
+  background: var(--diagram-layer-5);
+  border-color: var(--diagram-layer-5);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--diagram-layer-5) 25%, transparent);
+  animation: stepPulse 2s ease-in-out infinite;
+}
+
+@keyframes stepPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklch, var(--diagram-layer-5) 25%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in oklch, var(--diagram-layer-5) 12%, transparent); }
+}
+
+/* ── Scroll area ─────────────────────────────────────────────────── */
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Stage header ────────────────────────────────────────────────── */
+
+.stageHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.stageNumber {
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.stageTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  letter-spacing: -0.01em;
+}
+
+/* ── Two-column layout ──────────────────────────────────────────── */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (max-width: 880px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.treemapColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* ── Treemap panel ──────────────────────────────────────────────── */
+
+.treemapPanel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.treemapCaption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.treemapTitle {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+}
+
+.treemapHint {
+  font-size: 0.52rem;
+  color: var(--color-muted);
+}
+
+.treemapBox {
+  height: 420px;
+  min-height: 360px;
+}
+
+/* ── Legend ─────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid color-mix(in oklch, var(--color-bg) 40%, transparent);
+}
+
+.legendSwatch[data-category="framework"]    { background: var(--diagram-layer-9); }
+.legendSwatch[data-category="library"]      { background: var(--diagram-layer-5); }
+.legendSwatch[data-category="library-dead"] { background: var(--diagram-layer-4); }
+.legendSwatch[data-category="app-shared"]   { background: var(--diagram-layer-1); }
+.legendSwatch[data-category="app-route"]    { background: var(--diagram-layer-2); }
+.legendSwatch[data-category="feature-heavy"]{ background: var(--diagram-layer-3); }
+
+/* ── Waterfall panel ────────────────────────────────────────────── */
+
+.waterfallPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Chunk list panel ───────────────────────────────────────────── */
+
+.chunkPanel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Narrative card ─────────────────────────────────────────────── */
+
+.narrativeCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.narrativeLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+}
+
+.narrativeHeadline {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--diagram-layer-5);
+  letter-spacing: -0.01em;
+}
+
+.narrativeBody {
+  font-size: 0.65rem;
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+/* ── Capstone ────────────────────────────────────────────────────── */
+
+.capstoneRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.capstoneReadout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+}
+
+.capstoneReadout[data-status="optimal"] {
+  border-color: color-mix(in oklch, var(--color-success) 50%, var(--color-border));
+  background: color-mix(in oklch, var(--color-success) 6%, var(--color-surface));
+}
+
+.readoutLabel {
+  font-size: 0.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+}
+
+.readoutBody {
+  font-size: 0.65rem;
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+.readoutBody strong {
+  color: var(--diagram-layer-5);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.capstoneReadout[data-status="optimal"] .readoutBody strong {
+  color: var(--color-success);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .stepDot[data-current="true"] { animation: none; }
+}

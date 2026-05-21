@@ -17,6 +17,13 @@ import { VideoStreamingLab } from "./sdp-video-streaming/VideoStreamingLab";
 import { NotificationLab } from "./sdp-notification-system/NotificationLab";
 import { MicrofrontendLab } from "./sdp-microfrontend/MicrofrontendLab";
 import { WebPerformanceLab } from "./sdp-web-performance/WebPerformanceLab";
+import { CoreWebVitalsLab } from "./perf-cwv/CoreWebVitalsLab";
+import { BundleOptLab } from "./perf-bundle/BundleOptLab";
+import { JavaScriptPerfLab } from "./perf-javascript/JavaScriptPerfLab";
+import { CSSPerfLab } from "./perf-css/CSSPerfLab";
+import { ImagePerfLab } from "./perf-images/ImagePerfLab";
+import { OtherAssetsPerfLab } from "./perf-other-assets/OtherAssetsPerfLab";
+import { ResourceHintsLab } from "./perf-resource-hints/ResourceHintsLab";
 
 function Placeholder({ label }: { label: string }) {
   return (
@@ -215,6 +222,69 @@ const DEMO_REGISTRY: Record<
     })),
     render: (activeStep: number) => (
       <WebPerformanceLab activeStep={activeStep} />
+    ),
+  },
+  "core-web-vitals": {
+    steps: Array.from({ length: 7 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <CoreWebVitalsLab activeStep={activeStep} />
+    ),
+  },
+  "bundle-optimization": {
+    steps: Array.from({ length: 6 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <BundleOptLab activeStep={activeStep} />
+    ),
+  },
+  "perf-javascript": {
+    steps: Array.from({ length: 6 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <JavaScriptPerfLab activeStep={activeStep} />
+    ),
+  },
+  "perf-css": {
+    steps: Array.from({ length: 6 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <CSSPerfLab activeStep={activeStep} />
+    ),
+  },
+  "perf-images": {
+    steps: Array.from({ length: 7 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <ImagePerfLab activeStep={activeStep} />
+    ),
+  },
+  "perf-other-assets": {
+    steps: Array.from({ length: 3 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <OtherAssetsPerfLab activeStep={activeStep} />
+    ),
+  },
+  "resource-hints": {
+    steps: Array.from({ length: 7 }, (_, i) => ({
+      id: `step-${i + 1}`,
+      stepNumber: i + 1,
+    })),
+    render: (activeStep: number) => (
+      <ResourceHintsLab activeStep={activeStep} />
     ),
   },
 };

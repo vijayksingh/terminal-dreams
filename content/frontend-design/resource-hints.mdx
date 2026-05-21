@@ -1,0 +1,394 @@
+---
+title: "Resource Hints"
+slug: resource-hints
+section: performance
+stopId: perf-hints
+order: 7
+kind: system-design-problem
+summary: "dns-prefetch, preconnect, preload, modulepreload, prefetch, fetchpriority, 103 Early Hints, and Speculation Rules — the 2024+ tooling for steering the browser's loading order."
+tags: [resource-hints, preload, prefetch, preconnect, fetchpriority, speculation-rules, performance]
+intersections: [net-intro]
+prerequisites: []
+demo: resource-hints
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The Cost of Late Discovery
+
+Before any byte of any resource transfers, the browser pays a connection tax. For a brand-new origin, that's **DNS lookup (~50ms) → TCP handshake (~50ms) → TLS negotiation (~100ms)** — a full 200ms before the first request flies. Page-internal resources reuse the document's connection, so they skip this overhead. Third-party origins — your font CDN, your analytics endpoint, your image service — each pay it independently.
+
+Worse: the browser doesn't know an origin exists until it parses the markup that references it. A `<link>` in `<head>` discovers the stylesheet around 60ms in. The stylesheet contains `@font-face url(...)` which discovers the font around 320ms in. The hero `<img>` inside the SPA shell isn't found until JS executes around 520ms. Each step is a serial dependency.
+
+Resource hints are eight short HTML signals that flatten this chain. Some warm a connection. Some start downloads before the browser would normally discover them. The most aggressive ones prerender entire pages in a hidden tab. The lab on the right starts at the unhinted baseline — a timeline of eight resources with all the connection tax visible. Each step adds one hint and watches the timeline shift left.
+
+<PredictionChallenge
+  question="The font CDN is cross-origin. Without any hints, when does the browser START the DNS lookup for it?"
+  options={[
+    "At 0ms — the browser pre-resolves every link in <head>",
+    "At ~60ms — once <head> CSS is discovered",
+    "At ~320ms — once the @font-face declaration inside the parsed CSS is read",
+    "At ~520ms — once the JavaScript actually needs the font",
+  ]}
+  correctIndex={2}
+  explanation="The browser only learns the font URL after parsing the CSS that declares `@font-face url(...)`. That's a chain of three serial steps: HTML → CSS discovery → CSS parse → font URL → DNS. Each step is ~60–100ms on 3G. dns-prefetch and preconnect exist specifically to short-circuit this discovery chain."
+  wrongHints={{
+    0: "There's no automatic pre-resolution of every link target. The browser only resolves DNS for URLs it has actually parsed. `<link rel='dns-prefetch'>` exists precisely because the default behavior is lazy.",
+    1: "60ms is when the CSS file's URL is parsed — but the CSS itself still needs to download and be tokenised. The font URL is buried inside a `@font-face` rule that isn't seen until CSS parsing finishes (~320ms).",
+    3: "Fonts referenced in CSS are discovered as soon as the CSS is parsed — not after JS execution. (Fonts referenced in JS-built styles ARE that late, which is why preloading them matters even more.)",
+  }}
+/>
+
+Watch the timeline. The bottom legend separates the connection phases (DNS, TCP, TLS) from the body download so you can see exactly which seconds each hint reclaims.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — `dns-prefetch` vs `preconnect`
+
+Two hints, two levels of commitment. Both target the discovery cost; they differ in how much of the handshake they pre-pay.
+
+**`<link rel="dns-prefetch" href="//a.example.com">`** asks the browser to resolve only the **DNS** record early. That's the cheapest phase (~50ms) and the lowest-commitment hint. Use it for origins you're not yet sure you'll need — analytics that may fire only on interaction, a chat widget that's lazy-loaded, the third checkout provider you'll only hit if the user chooses it. It's cheap insurance. Browsers happily resolve dozens of these in parallel without bandwidth cost.
+
+**`<link rel="preconnect" href="https://cdn.example.com" crossorigin>`** does DNS + TCP + TLS — the full ~200ms handshake. When the resource is finally requested, it skips straight to the HTTP request. Use it for origins you **know** you'll hit: your CDN, your font provider, your primary API. The cost is one open TCP socket per origin, which competes for the per-origin connection cap (typically 6 on HTTP/1, less of an issue on HTTP/2 thanks to multiplexing).
+
+```html
+<link rel="preconnect" href="https://cdn.example.com" crossorigin>
+<link rel="dns-prefetch" href="//a.example.com">
+```
+
+<PredictionChallenge
+  question="dns-prefetch vs preconnect — when does each save more?"
+  options={[
+    "dns-prefetch always saves more — DNS is the longest phase",
+    "preconnect always saves more — it covers everything dns-prefetch does plus TCP and TLS",
+    "They save the same — DNS dominates on a cellular connection",
+    "It depends on how soon the resource is needed: preconnect wins when used 200ms+ before the request, dns-prefetch ties otherwise",
+  ]}
+  correctIndex={1}
+  explanation="preconnect is a strict superset of dns-prefetch: it does DNS, then TCP, then TLS — typically saving ~200ms vs ~50ms for dns-prefetch alone. The tradeoff isn't speed; it's commitment. preconnect holds an open TLS-encrypted socket. If you don't use it within ~10 seconds, the browser closes it — and you've spent battery + CPU for nothing."
+  wrongHints={{
+    0: "DNS is the cheapest phase, not the longest. TLS negotiation typically takes the longest (~100ms) because it's a cryptographic handshake. preconnect covers all three phases, so it always saves more time when the connection is actually used.",
+    2: "DNS, TCP, and TLS each take a different amount of time, and they're additive. preconnect saves all three (~200ms), dns-prefetch saves only DNS (~50ms). They're not equivalent.",
+    3: "The timing of the resource request doesn't change which phases each hint covers — preconnect always does more work upfront. The 'when used 200ms+ before' guideline is about whether preconnect's work completes before the request, but even partial overlap with the request still saves time.",
+  }}
+/>
+
+A common production combination: `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>` for your font CDN (you know you need it) paired with `<link rel="dns-prefetch" href="//metrics.example.com">` for a deferred metrics beacon. The `crossorigin` attribute on preconnect is **required** for CORS resources — without it, the browser opens two separate connections (one for CORS, one for non-CORS) and your preconnect wasted a slot.
+
+**Historical context: HTTP/2 server push** was supposed to be the "send it before you're asked" pattern, but Chrome removed it in May 2022 — push streams almost always race the browser's own cache lookup and lose. Modern stacks replaced server push with **103 Early Hints**: a tiny HTTP response sent *before* the 200, carrying `Link: </styles.css>; rel=preload; as=style` headers. The browser starts preloads before the HTML even finishes generating. Cloudflare, Fastly, and Vercel ship this today.
+
+```http
+HTTP/1.1 103 Early Hints
+Link: </styles.css>; rel=preload; as=style
+Link: <https://cdn.example.com>; rel=preconnect; crossorigin
+
+HTTP/1.1 200 OK
+Content-Type: text/html
+...
+```
+
+The lab's Step 2 wires up both hints at once — `dns-prefetch` on the analytics origin slides DNS leftward by ~50ms, and `preconnect` on the font CDN reclaims a full ~200ms (DNS + TCP + TLS) before any download begins. The dashed ghost bars show the baseline timing each hint replaces.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — `preload` (and Why Fonts Demand `crossorigin`)
+
+`<link rel="preload">` tells the browser: "you WILL need this resource for the current page — start fetching it now, before parser-driven discovery would find it." Where dns-prefetch and preconnect warm the **connection**, preload starts the **download**.
+
+The problem preload solves is **late discovery**. Fonts are the textbook case: the browser downloads HTML, finds the CSS `<link>`, downloads the stylesheet, parses it, encounters `@font-face`, and only **then** discovers the font URL. That's three serial steps before the font fetch even begins. With preload, the font starts downloading alongside CSS — the discovery chain collapses from sequential to parallel.
+
+```html
+<link rel="preload"
+      href="/Inter.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin>
+```
+
+Four attributes, all load-bearing:
+
+- **`as`** is mandatory. It tells the browser the request priority, the `Accept` header, and which CORS rules apply. Drop it and the console warns "A preload for ... was used but not loaded" and the resource fetches at the *lowest* priority — exactly the opposite of what you want.
+- **`type`** lets the browser skip the preload if it doesn't support the format (so a Safari user without AVIF support won't waste bytes pre-fetching an AVIF).
+- **`href`** must be byte-exact — the preload only matches the eventual fetch if the URL, `as`, and CORS mode all align.
+- **`crossorigin`** is the trap.
+
+<PredictionChallenge
+  question="Why does <link rel='preload' as='font'> REQUIRE the crossorigin attribute — even when the font is on the same origin as the HTML?"
+  options={[
+    "It doesn't — crossorigin is optional for same-origin fonts",
+    "The font spec requires CORS-mode requests, so the preload must match or the browser fetches the font twice",
+    "crossorigin upgrades the connection to HTTPS automatically",
+    "crossorigin is shorthand for 'high priority' on font preloads",
+  ]}
+  correctIndex={1}
+  explanation="Even on the same origin, `@font-face` URLs are fetched in CORS mode (this is a long-standing spec quirk — fonts are 'cross-origin by default' to give privacy guarantees). If the preload omits `crossorigin`, the eventual `@font-face` request — which IS in CORS mode — doesn't match the preloaded entry. The browser fetches the font twice: once via your preload (wasted), once via the actual `@font-face` rule."
+  wrongHints={{
+    0: "This is the most common bug in font preloading. Without `crossorigin`, the preloaded resource and the eventual font request don't match — Chrome silently fetches the font twice. The dev console shows 'The resource was preloaded but not used.'",
+    2: "`crossorigin` is a CORS-mode attribute, not an HTTPS upgrade signal. HTTPS comes from the `href` protocol. `crossorigin` controls credential passing and matches the request to the preloaded entry.",
+    3: "Priority is separate — see fetchpriority. `crossorigin` is purely about matching the request's CORS mode to the preload's CORS mode so the two are the same entry in the browser's resource cache.",
+  }}
+/>
+
+```html
+<link rel="modulepreload" href="/chunks/admin.mjs">
+```
+
+`<link rel="modulepreload">` is preload's smarter sibling for ES modules. Regular preload downloads the bytes and stops. modulepreload downloads, **parses, resolves the import graph, and compiles** the code — all during idle time before the module actually executes. For a deeply imported entry point (10+ files), the parse-and-resolve phase can exceed the download time. modulepreload eliminates that entire tail. The browser also auto-fetches transitive dependencies, so you only need to hint top-level chunks.
+
+Chrome DevTools surfaces unused preloads with **"The resource was preloaded but not used within a few seconds."** Treat that warning as a regression signal — every unused preload is bandwidth you spent on the critical path for nothing.
+
+**Common mistake:** preloading too much. Every preloaded resource competes for bandwidth with every other resource. Preload your LCP image, your primary font, and *maybe* one critical above-the-fold script. Beyond ~4 preloads, you're saturating bandwidth — see Step 5.
+
+Watch the timeline jump in the lab as Step 3 adds both `preload` to the font and `modulepreload` to the admin chunk. The font bar slides left to start at ~30ms, parallel with CSS, instead of after CSS parses. The admin chunk's download bar gets a thin parse-and-compile overlay underneath — the bytes are coming in AND the module graph is being resolved simultaneously.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — `fetchpriority` (the 2024+ Replacement for `<link rel=preload as=image>`)
+
+`fetchpriority="high"` is the newest hint in this set (Chrome 101+, Safari 17.2+, Firefox 132+ — now baseline-supported as of 2024). It's a single HTML attribute that overrides the browser's default priority queue. Browsers assign priorities by resource type: stylesheets and synchronous scripts get **high**, images get **medium**, async scripts get **low**. But the browser doesn't know which image is your LCP element and which is a decorative below-fold icon.
+
+```html
+<img src="/img/hero.webp"
+     fetchpriority="high"
+     width="1200" height="675"
+     alt="Hero">
+
+<img src="/img/footer-badge.png"
+     fetchpriority="low"
+     loading="lazy"
+     alt="">
+```
+
+**For LCP images, `fetchpriority="high"` has REPLACED `<link rel="preload" as="image">`.** The old preload pattern still works, but the modern guidance (web.dev, 2023) is to use the attribute on the `<img>` itself. Three reasons:
+
+1. **Simpler.** One attribute instead of a `<link>` + matching `<img>`.
+2. **Plays with `srcset`.** The browser picks the right variant *then* upgrades its priority. A preload would have to hard-code one URL.
+3. **No "late discovery" benefit anyway.** The image is already in the HTML — the browser sees it during the same `<head>`+`<body>` parse pass. There's no chain to short-circuit; only a priority lane to skip ahead in.
+
+<PredictionChallenge
+  question="You add fetchpriority='high' to your LCP image. What does that actually CHANGE for the browser?"
+  options={[
+    "The browser starts the download earlier — like preload would",
+    "The image is moved up in the priority queue, so it downloads before lower-priority resources that were already in flight",
+    "The browser pre-decodes the image so paint is instant when it arrives",
+    "fetchpriority is just a hint to dev tools — it has no runtime effect",
+  ]}
+  correctIndex={1}
+  explanation="fetchpriority changes the image's slot in the in-flight priority queue. The browser already discovered the <img> during HTML parsing — it would have started the fetch regardless. The attribute lets the LCP image leap past other medium-priority resources (other images, async scripts) that were also queued. On bandwidth-constrained connections, this can move LCP earlier by 100–400ms."
+  wrongHints={{
+    0: "Preload changes WHEN a resource is discovered. fetchpriority changes WHERE it sits in the queue once discovered. They solve different problems. For an `<img>` in HTML, the discovery is already early — what was missing was a way to mark it as more important than other images.",
+    2: "Pre-decoding is a separate concern (the browser handles it automatically once the image arrives). fetchpriority is purely about *scheduling order*, not decode timing.",
+    3: "fetchpriority is a real runtime hint that maps to the browser's internal priority levels (High, Medium, Low). Chromium's source uses it directly in `ResourcePriority`. It's not a no-op.",
+  }}
+/>
+
+**Where it shines beyond LCP images:**
+
+- `<script fetchpriority="low">` for a non-critical analytics script — lets render-blocking JS stay ahead.
+- `<link rel="preload" as="image" fetchpriority="high">` for an image triggered by JS state (so it's *both* preloaded AND prioritized).
+- `<link rel="prefetch" fetchpriority="low">` for a next-page chunk — explicitly drops it below any current-page work.
+
+The lab's Step 4 promotes the hero image to high priority via `fetchpriority`. Watch the hero bar move ahead of `analytics.js` and other medium-priority assets in the same lane.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Priority Inversion: When Everything Is High, Nothing Is
+
+Here's the trap. The reader who's just learned `preload` and `fetchpriority="high"` thinks: *if these are good, more of them are better*. Step 5 in the lab plays this out: three card images get added to the preload list to "make the gallery load faster." The cumulative count hits 5 high-priority hints, the guardrail at the bottom of the lab turns yellow, and the load endpoint moves the wrong way.
+
+Browsers cap useful concurrency. On HTTP/1.1 there's a hard 6-connection-per-origin limit; HTTP/2 multiplexes but still allocates bandwidth proportionally. When five or more resources all yell "I'm high priority," none of them gets the full pipe. The system **saturates** and each preloaded download stretches — in the simulation, by ~35%.
+
+```html
+<!-- ❌ priority inversion in progress -->
+<link rel="preload" as="image" href="/hero.webp">
+<link rel="preload" as="image" href="/card-1.webp">
+<link rel="preload" as="image" href="/card-2.webp">
+<link rel="preload" as="image" href="/card-3.webp">
+<link rel="preload" as="font" href="/Inter.woff2" crossorigin>
+<img src="/hero.webp" fetchpriority="high">
+<!-- the LCP image is now competing with 4 other high-priority assets -->
+```
+
+<PredictionChallenge
+  question="You preload a hero image (200 KB) but the page also has a render-blocking CSS file (50 KB) that hasn't started yet. The CSS is on the critical path. What does the browser do?"
+  options={[
+    "Downloads the preloaded image first — preload is explicit user intent",
+    "Downloads them in parallel, splitting bandwidth evenly",
+    "Downloads the CSS first — render-blocking resources still beat preloads",
+    "Cancels the preload and just downloads the CSS",
+  ]}
+  correctIndex={2}
+  explanation="Render-blocking CSS still beats preload for connection allocation — the browser's `Highest` priority tier (assigned to blocking stylesheets and synchronous scripts) sits above `High` (where preload + fetchpriority='high' land). If you've preloaded a 200 KB image and the browser also needs a 50 KB blocking CSS, the CSS pulls bandwidth share first. This is the priority-inversion trap: preload doesn't mean 'absolute highest' — it means 'high inside its tier.'"
+  wrongHints={{
+    0: "Preload is a strong hint but not an override. Render-blocking resources are at a STRICTLY HIGHER priority tier than preloads — the browser pulls them ahead even if you preload-attribute everything else.",
+    1: "Browsers don't split bandwidth evenly between mismatched priorities. The connection scheduler allocates 90%+ of available bandwidth to the highest-priority resource currently in flight, with lower tiers getting starved scraps.",
+    3: "The preload still happens — it's just behind the blocking CSS in the queue. The image bar in the timeline starts later than you'd hope because the CSS is consuming the available bandwidth.",
+  }}
+/>
+
+When the guardrail trips, watch the card image bars in the timeline — they don't start at ~30ms like the font preload did. They sit RIGHT BEHIND the blocking CSS, because render-blocking resources occupy a strictly higher tier than `High`. Preload doesn't mean *absolute highest*; it means *high inside its tier*. The page-load endpoint moves **right**, not left, and the colored badge on the focused card flips to `+85ms` slower vs baseline. The lesson clicks: **preload and fetchpriority are surgical, not blanket. Use them on 3–4 truly critical assets, no more.**
+
+**The corollary:** if you find yourself preloading everything to make any single resource faster, the real fix is somewhere else — too much render-blocking CSS, too many third-party origins, or a missing CDN layer.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — `prefetch` and the Bandwidth Tradeoff
+
+`<link rel="prefetch" href="/chunks/products.mjs">` loads resources for **future** navigations at the lowest possible priority. The key word is "lowest" — prefetch never competes with the current page's resources. It only fires when the browser has idle bandwidth.
+
+The strategy is anticipation. You're betting the user will navigate to `/products` next, so you front-load that route's code into the disk cache while the current page is idle. When they click, the navigation is instant — the JS is already there, no network round-trip required.
+
+```html
+<link rel="prefetch" href="/chunks/products.mjs" as="script">
+<link rel="prefetch" href="/api/products.json" as="fetch" crossorigin>
+```
+
+<PredictionChallenge
+  question="You prefetch a JSON API response with `<link rel='prefetch' href='/api/products.json'>` — no `as` attribute, no `crossorigin`. The next page's `fetch('/api/products.json')` runs and the browser… does what?"
+  options={[
+    "Uses the prefetched response — `as` is optional for prefetch",
+    "Fetches it again — the prefetched entry doesn't match the eventual `fetch()` request, so it's silently re-downloaded",
+    "Throws a console error and aborts the fetch",
+    "Uses the prefetched response but logs a warning about the missing `as`",
+  ]}
+  correctIndex={1}
+  explanation="The `as` attribute determines BOTH the `Accept` header AND the CORS mode the request is sent with. Without `as='fetch' crossorigin`, the prefetch goes out as a default `no-cors` resource request — but the eventual `fetch()` call sends a `cors`-mode request with different headers. The browser sees them as DIFFERENT entries and re-downloads. Same trap as the font preload's missing `crossorigin` — your prefetch was bandwidth wasted twice over."
+  wrongHints={{
+    0: "`as` is mandatory for preload AND strongly recommended for prefetch. Without it, the request defaults to `Accept: */*` no-cors, which doesn't match a typed `fetch()` call. Chrome surfaces this in DevTools as 'The resource was preloaded but not used.'",
+    2: "Mismatched preloads/prefetches don't throw — that's the whole problem. They fail SILENTLY, wasting bandwidth without breaking the page. Most teams discover them only when looking at the Network tab and seeing each resource fetched twice.",
+    3: "There IS a console warning but the browser also re-downloads. Worse: the warning fires asynchronously, so you usually see it AFTER the duplicate request has already burnt the bandwidth.",
+  }}
+/>
+
+**The bandwidth tradeoff is real.** Prefetching a 200 KB route chunk for a page the user never visits is 200 KB of wasted data. On metered mobile, that matters — both for cost and for battery (every byte downloaded is radio-on time). Modern guidance:
+
+- Prefetch only the top 1–2 most likely next routes (informed by analytics or viewport visibility).
+- Respect the **Save-Data** request header: `if (navigator.connection?.saveData) skipPrefetch();` — users on metered plans opt out.
+- Respect `prefers-reduced-data` once it lands in CSS-MQ4 (Chrome flag today).
+- Cap your prefetch budget at ~1 MB per page.
+
+```tsx
+// IntersectionObserver-based prefetch (the Quicklink pattern)
+const observer = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (!entry.isIntersecting) continue;
+    if (navigator.connection?.saveData) return;
+    const link = entry.target as HTMLAnchorElement;
+    const tag = document.createElement('link');
+    tag.rel = 'prefetch';
+    tag.href = link.href;
+    document.head.appendChild(tag);
+    observer.unobserve(link);
+  }
+});
+document.querySelectorAll('a[href^="/"]').forEach((a) => observer.observe(a));
+```
+
+<PredictionChallenge
+  question="103 Early Hints sends preload + preconnect headers BEFORE the 200 response. Why is this so valuable?"
+  options={[
+    "It compresses the 200 response — fewer bytes overall",
+    "It moves resource discovery before the server even finishes generating HTML, so the browser starts preloads during server-side rendering time",
+    "It bypasses the browser's CORS policy for the prefetched resources",
+    "It's just a backup mechanism in case the 200 response gets lost",
+  ]}
+  correctIndex={1}
+  explanation="The 200 OK response includes the HTML — but generating that HTML can take 100–500ms on a dynamic page (DB queries, template rendering, edge function execution). 103 Early Hints lets the server send the Link headers immediately, before any of that work happens. The browser starts preconnects and preloads during the server-think-time. On Vercel/Cloudflare/Fastly's edge networks, this often saves 100–300ms on TTFB-bound pages."
+  wrongHints={{
+    0: "103 doesn't compress anything — it adds a tiny extra response. The win is timing: hints arrive BEFORE the main response, not as part of it.",
+    2: "103 doesn't bypass CORS. The Link headers are exactly the same as their HTML <link> equivalents, including crossorigin requirements.",
+    3: "103 is the primary, intended mechanism — not a backup. RFC 8297 defines it precisely as 'a way for the server to provide hints early.' The 200 is the FINAL response.",
+  }}
+/>
+
+A `prefetch` request lives at the resource level — it downloads files into the HTTP cache. It does **not** execute JavaScript or render HTML. For full pre-execution, jump to Speculation Rules in the next step.
+
+The lab's Step 6 wires up `<link rel="prefetch">` on the `/products` chunk. The `products.mjs` bar appears for the first time on the timeline, but it starts AFTER the main load endpoint — using truly idle bandwidth. The bar is shaded at 55% opacity and tagged `idle` to make the low-priority lane visible.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Speculation Rules (and All Four Eagerness Levels)
+
+```html
+<script type="speculationrules">
+{
+  "prerender": [{
+    "source": "document",
+    "where": { "href_matches": "/products/*" },
+    "eagerness": "moderate"
+  }]
+}
+</script>
+```
+
+The Speculation Rules API (Chrome 121+) is the most aggressive hint: it prerenders entire pages in a hidden tab. Where prefetch downloads bytes, prerender does **everything** — downloads resources, parses HTML, runs JavaScript, computes layout, completes hydration. When the user clicks, the browser swaps the hidden tab to the foreground. The page is already painted; the navigation feels like switching tabs (effectively ~0ms).
+
+**`rel="prerender"` (the old single-page hint) is deprecated.** The Speculation Rules API replaces it — never reach for `<link rel="prerender">` in new code.
+
+The cost is real: a prerendered page consumes the same CPU and memory as a visible tab. Prerendering 10 candidate pages means 10 hidden tabs running JavaScript. The API provides **`eagerness`** levels to control when prerendering starts. There are **four**, and choosing the right one is the entire art of using this API safely:
+
+| Eagerness | Trigger | Use case |
+|---|---|---|
+| **`immediate`** | On page load | Single highest-confidence next route — only when conversion data says >70% of users go there |
+| **`eager`** | As soon as the link is selected/hovered | Top-of-funnel navigation links the user is reading |
+| **`moderate`** | On hover/pointerdown for ~200ms | Default — balances accuracy and cost |
+| **`conservative`** | On pointerdown / touchstart | When memory matters more than instant nav (low-end Android) |
+
+<PredictionChallenge
+  question="Your e-commerce site shows a category listing with 60 product links. Which eagerness level for a Speculation Rules PRERENDER rule on those links?"
+  options={[
+    "immediate — pre-render everything so any click is instant",
+    "eager — render as soon as the link enters viewport",
+    "moderate — render on hover/pointerdown (~200ms intent signal)",
+    "conservative — render on pointerdown only",
+  ]}
+  correctIndex={2}
+  explanation="moderate is the default and the right choice here. immediate would prerender all 60 product pages on load — that's 60 hidden tabs of JS execution, easily 2 GB of memory, and the OS will start killing tabs. eager would prerender every visible link, still 10–20 simultaneous prerenders. conservative waits until click, which works but loses the perceived 'instant' feel. moderate fires on hover for ~200ms — enough to filter out hover-flickers but cheap enough to scale to a long list. Always pair the eagerness level with a tight `where` filter to limit damage."
+  wrongHints={{
+    0: "immediate is for single highest-confidence targets — a checkout 'continue' button after a successful payment, the next chapter in a guided tutorial. Pre-rendering 60 pages eagerly will exhaust device memory on phones in seconds.",
+    1: "eager triggers as soon as the browser deems the link 'likely' — usually viewport visibility. On a long product grid, that's still 10–20 simultaneous prerenders. Better than immediate but heavier than moderate.",
+    3: "conservative is for high-cost-of-prerender scenarios. It only triggers on pointerdown — so the prerender happens during the ~50ms between pointerdown and click. You get a small head start but not the full 'tab-swap' feel.",
+  }}
+/>
+
+```html
+<script type="speculationrules">
+{
+  "prerender": [
+    {
+      "source": "document",
+      "where": { "and": [
+        { "href_matches": "/products/*" },
+        { "not": { "href_matches": "/products/admin/*" } }
+      ]},
+      "eagerness": "moderate"
+    }
+  ],
+  "prefetch": [{
+    "source": "document",
+    "where": { "href_matches": "/blog/*" },
+    "eagerness": "eager"
+  }]
+}
+</script>
+```
+
+The full grammar supports `prerender` and `prefetch` rules separately, URL patterns (`href_matches`), CSS selectors (`selector_matches`), and combinators (`and`, `or`, `not`). A practical rule for an e-commerce category page: prerender the first 3 product cards (moderate), prefetch the next 10 (eager), do nothing for the rest. Tune from analytics — prerender candidates with click-through rates above ~40%, prefetch the next tier.
+
+**Browser support note:** Speculation Rules are **Chromium-only**. Safari and Firefox ignore the `<script type="speculationrules">` tag entirely. Always treat it as **progressive enhancement** — the page must work for Safari users without prerender, then *also* feel instant for Chrome users with it.
+
+The lab's final step turns on Speculation Rules prerender for the `/products` route. The `next-page.products.mjs` bar now appears AFTER the main load endpoint, shaded as idle work, with a `prerendered` badge. The next click is the closest a web page comes to zero-latency navigation.
+
+</section>

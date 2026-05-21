@@ -1,0 +1,296 @@
+---
+title: "JavaScript Performance"
+slug: perf-javascript
+section: performance
+stopId: perf-js
+order: 1
+kind: system-design-problem
+summary: "Flame charts, code splitting, deferral, and Web Workers — moving JavaScript off the critical path"
+tags: [javascript, performance, main-thread, tti, inp, workers, code-splitting]
+intersections: [core-render-cycle, dom-query-perf]
+prerequisites: []
+demo: perf-javascript
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — The Single Bundle Problem
+
+A 2 MB JavaScript bundle sits between the user's tap and the page. The browser fetches it, hands it to V8, then V8 parses, compiles, and executes — every byte, on the main thread, before anything reacts. Until V8 yields, clicks queue. Scroll queues. The page is paint but no pulse.
+
+That is exactly what the flame chart on the right is showing in step 1: one enormous block sitting on the main thread for roughly 2 seconds, capped with a red warning triangle. The triangle marks a **long task** — a contiguous block that ran for more than 50 ms without yielding to the event loop. The Long Tasks API names a 50 ms ceiling not because 50 ms is bad, but because anything past that window is long enough to swallow an incoming `pointerdown` event and the paint that should follow it.
+
+The 2 MB → ~2 s rule of thumb comes from V8's "Cost of JavaScript" updates: parse-and-compile costs roughly 1 MB / second on mid-tier Android, and execution piles on another 30–50%. Every kilobyte of JS on the critical path costs roughly 1 ms of TTI on a phone someone actually owns. That number is not a benchmark — it is a budget.
+
+<PredictionChallenge
+  question="You ship a single 2 MB JavaScript bundle. On a mid-tier Android phone over 4G, roughly how long does it block the main thread before the page becomes interactive?"
+  options={[
+    "~0.5 s — V8 is fast on small budgets",
+    "~1.2 s — compile is lazy, only what runs at startup costs",
+    "~2.0 s — parse + compile + execute scale with bytes",
+    "~4.0 s — mobile CPUs are an order of magnitude slower",
+  ]}
+  correctIndex={2}
+  explanation="~2.0 s. V8 parses and compiles at ~1 MB/s on mid-tier Android. Add execution and you land near 2 seconds for a 2 MB bundle. That's 2 seconds where every click, every scroll, every keystroke sits in a queue. The fix has three shapes — split it, defer it, or move it off the main thread."
+  wrongHints={{
+    0: "0.5 s would correspond to a ~500 KB bundle. Parse + compile + execute scale roughly linearly with size — 2 MB is 4× the work.",
+    1: "V8 does compile lazily, but the modules that run at startup still pay full price. For a 2 MB bundle, expect ~2 s of blocking work on mid-tier Android.",
+    3: "4 s is possible on a low-end device or with V8 throttled, but mid-tier Android lands closer to 2 s. 4 s usually means a 4 MB bundle or 3G with re-download.",
+  }}
+/>
+
+Three escape routes line up in the next five steps. Split the bundle so only this route's code blocks rendering. Defer the chunks the user will not see immediately. Move pure computation onto a parallel thread. Each one re-parks the same bytes in a different time slot — and a different time slot is not the same work.
+
+Glance right: the flame chart is dimmed and red. As you scroll, each step transforms it.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Route-Based Code Splitting
+
+A typical SPA bundle contains the framework runtime, the router, the shell layout, *and* every page component. But the user lands on one route. Route-based code splitting exploits that — ship the framework + shell + this-route's code, and lazy-load each other route only on navigation. The blocking portion of the chart drops from one 2.1 s block to three smaller blocks with idle gaps between them.
+
+You hand the bundler a dynamic `import()` and it does the splitting for you. Webpack, Vite, esbuild, and Rollup all emit a separate chunk per `import()` expression:
+
+```tsx
+const Dashboard = lazy(() => import("./routes/Dashboard"));
+const Settings  = lazy(() => import("./routes/Settings"));
+
+function App() {
+  return (
+    <Suspense fallback={<ShellSkeleton />}>
+      <Routes>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/settings"  element={<Settings />} />
+      </Routes>
+    </Suspense>
+  );
+}
+```
+
+The same trick works at finer grain — a heavy modal you only open on click:
+
+```tsx
+async function openHeavyModal() {
+  const { HeavyModal } = await import("./HeavyModal");
+  mount(HeavyModal);
+}
+```
+
+<PredictionChallenge
+  question="Your 2 MB bundle splits cleanly: 400 KB framework + shell, 320 KB route-home, 280 KB route-dashboard, 180 KB route-settings, 340 KB charting library. The user lands on /home. What's the new TTI on the same mid-tier Android over 4G?"
+  options={[
+    "~0.4 s — only home code is in the critical path",
+    "~2.0 s — the same bytes still ship, just in chunks",
+    "~2.1 s — 720 KB ships sync; the rest is deferred or lazy",
+    "~3.2 s — chunking actually slows things down",
+  ]}
+  correctIndex={2}
+  explanation="~2.1 s. Splitting drops the blocking JS from 2 MB to ~720 KB (framework + shell + route-home) — the dashboard, settings, and charting library land in their own chunks and are not on this route's critical path. Each chunk also pays a small handshake cost, which is why three 720 KB chunks ≠ one 720 KB chunk perfectly."
+  wrongHints={{
+    0: "Route-home alone is ~90 KB, but it needs the framework (React) and the shell to render. The actual critical path is framework + shell + route-home ≈ 720 KB.",
+    1: "If you load every chunk synchronously you've just renamed the bundle. Splitting only helps when the non-current-route chunks are deferred via dynamic `import()` — which routers like React Router v6 and Next.js do for you.",
+    3: "Chunking does add network round-trips, but route-level splitting is 3–8 chunks, not 50. The penalty is small (~50–100 ms total) compared to the 1.3 s saved by not parsing the dashboard's code.",
+  }}
+/>
+
+**Common mistake:** splitting too granularly. Every chunk is a network round-trip. Twenty 19 KB chunks is twenty slow handshakes. The sweet spot is route-level splitting with shared vendor chunks — three to eight chunks, not fifty.
+
+**Where to split beyond routes?** Heavy libraries used by only some pages: a charting library only on the analytics dashboard, a rich text editor only in the compose view, a PDF renderer only on download. The heuristic — if a dependency is > 30 KB and used by < 50% of page views, it is a split candidate.
+
+Scroll to step 3 — the flame chart on the right now shows three blocks. One is yellow. That one is wrong.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Defer the Non-Critical
+
+`charting-lib.js` is 340 KB. It lives in a dashboard widget the user must scroll to see. It contributes nothing to first paint. Right now, even after route-splitting, it parks on the critical path for ~330 ms because nothing tells the browser it can wait.
+
+The principle is direct: **the same bytes in a different time slot are not the same work**. Bytes before first paint cost TTI directly. Bytes after cost almost nothing. The fix is the same dynamic `import()` you used for routes, fired by a visibility signal:
+
+```tsx
+useEffect(() => {
+  const io = new IntersectionObserver(async ([entry]) => {
+    if (!entry.isIntersecting) return;
+    io.disconnect();
+    const { renderChart } = await import("charting-lib");
+    renderChart(chartRef.current!);
+  });
+  io.observe(chartRef.current!);
+}, []);
+```
+
+For non-bundler contexts, the older script-element pattern still applies:
+
+```html
+<script type="module" src="/dashboard.js"></script>
+<script src="/charting-lib.js" defer></script>
+<script src="/analytics.js" async></script>
+```
+
+`defer` waits for the HTML document to parse, then runs in document order. `async` runs whenever the network completes — order is **not** guaranteed. `<script type="module">` defers by default (modules are always deferred) and is the modern target.
+
+<PredictionChallenge
+  question="`charting-lib.js` (340 KB) is only used on the dashboard widget the user scrolls to. What's the right move?"
+  options={[
+    "Keep loading it sync — 340 KB is not that much",
+    "Load it sync but place the <script> tag at the end of <body>",
+    "Defer past first paint with dynamic `import()` on viewport intersection",
+    "Remove it entirely and write the chart from scratch",
+  ]}
+  correctIndex={2}
+  explanation="Defer with dynamic `import()`. The library still ships when the user actually scrolls to the chart — but TTI drops by ~330 ms because the critical path no longer contains the library's parse + execute time. An IntersectionObserver fires the import the moment the chart's placeholder enters the viewport, so the library is usually ready by the time the user reaches it."
+  wrongHints={{
+    0: "340 KB is roughly 17% of the user's first-tap TTI budget. On a 4G mid-tier Android that's ~330 ms — long enough to push you from passing INP to failing it.",
+    1: "Position in the HTML doesn't change blocking semantics for a classic `<script>` tag. Without `defer`, `async`, or `type=\"module\"`, the script still blocks the parser the moment it appears. Moving it down delays *start*, not *end*.",
+    3: "Tempting but expensive — you'd save 340 KB once and pay engineering cost forever. Defer first. Rewrite only if profiling shows the library is wasteful at runtime, not just at load.",
+  }}
+/>
+
+Right after the option above resolves, the flame chart redraws: the yellow block lifts and parks below a dashed line labelled **First Paint**. Same bytes, later slot. TTI drops to ~1.4 s.
+
+**When *not* to defer:** code that runs on the literal first user interaction. If the user lands on `/checkout` and the very next thing they touch is the checkout form, deferring the checkout module produces a dead state. The right cut is *not on this route* — not *not on this page right now*.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Yielding the Main Thread
+
+Splitting and deferring move work *in time*. But sometimes the work has to run during initial load, just not all at once. A 280 ms hydration block is still a 280 ms hydration block — and that means INP-killing latency the moment a user taps during it.
+
+The fix is to **yield**: break a long task into chunks under 50 ms each, and let the browser process pending events between them. Three APIs cover the modern surface, in order of recency:
+
+```ts
+// Run only when the browser is actually idle (timeout caps the wait)
+requestIdleCallback(() => warmCacheFor("/dashboard"), { timeout: 2000 });
+
+// Priority-tagged scheduling — canonical 2024 API (Chrome 94+, Firefox 110+)
+scheduler.postTask(() => sendAnalytics(), { priority: "background" });
+
+// Mid-loop yield — Chrome 129+ only at writing
+async function hydrateChunks(components) {
+  for (const c of components) {
+    c.hydrate();
+    await scheduler.yield();
+  }
+}
+```
+
+`requestIdleCallback` is the long-running default — broad support, no priority knobs, and `timeout` is the only safety net against starvation. `scheduler.postTask` is the priority-aware replacement: `user-blocking` (urgent), `user-visible` (default), `background` (analytics, prefetch). `scheduler.yield()` (Chrome 129+, Chromium-only at writing) lets a single long-running function yield to input mid-loop **without** going to the back of the macrotask queue — its remaining work runs *before* lower-priority tasks but *after* user-input events.
+
+<PredictionChallenge
+  question="The browser is executing a 400 ms hydration task. A user clicks a button 100 ms into it. The code uses `scheduler.yield()` between each component. What's the click's delay?"
+  options={[
+    "Processed immediately — yielding hands control to input",
+    "Delayed ~50 ms — queued until the next yield point",
+    "Delayed ~300 ms — queued until the full task finishes",
+    "Dropped — the browser ignored the click during JS",
+  ]}
+  correctIndex={1}
+  explanation="~50 ms. Each chunk runs to its yield point, then the browser drains pending input events before resuming. Worst-case input delay drops from 280 ms (one long task) to ~50 ms (one chunk). The total wall-clock cost rises ~5% from yielding overhead — but users perceive responsiveness, not throughput."
+  wrongHints={{
+    0: "The main thread is single-threaded. While a chunk is executing, the browser cannot process input — but yielding releases control between chunks. The click waits until the current chunk hits its yield point.",
+    2: "300 ms is what happens without yielding — one 400 ms task means worst-case 400 ms input delay. `scheduler.yield()` breaks that into chunks. The click waits one chunk, not the whole task.",
+    3: "The browser never drops input events. They queue. With yielding, the queue drains every chunk; without yielding, the queue waits for the whole task.",
+  }}
+/>
+
+**Why not `setTimeout(0)`?** It yields, but `setTimeout` callbacks go to the back of the macrotask queue. If other tasks are queued (third-party scripts, microtasks, postMessage callbacks), your remaining work waits behind them. `scheduler.yield()` keeps your continuation on a higher-priority track.
+
+**INP, not FID.** Interaction to Next Paint replaced First Input Delay as a Core Web Vital in **March 2024**. FID only measured the *first* input — INP measures the *worst* interaction across the whole page lifetime (p98 for pages with 50+ interactions). If you're still tuning for FID's "first input only" measurement, you're optimizing the wrong tail.
+
+**Long task ≠ poor INP.** A 60 ms script is a Long Task by definition, but if no input lands during it, INP is unaffected. INP's 200 ms threshold is about clicks colliding with work, not arbitrary work happening.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Workers: A Second Thread
+
+Splitting and deferring move work in time. **Workers move work in space** — onto a parallel thread that does not share the main call stack. On the right, the orange `data-processor` block flies up to a new lane labelled `Worker` and runs in parallel with vendor + route + render code. The main thread is nearly empty after the first half-second.
+
+Spawning one is two lines:
+
+```ts
+const worker = new Worker(new URL("./csv-parser.ts", import.meta.url), {
+  type: "module",
+});
+worker.postMessage({ csv: bigPayload });
+worker.onmessage = (e) => render(e.data.rows);
+```
+
+`postMessage` deep-copies the payload through *structured clone*. A 1 MB JSON costs a few ms. For megabyte buffers, transfer ownership of the underlying ArrayBuffer — the sender loses access, and the transfer is effectively free:
+
+```ts
+const bytes = new Uint8Array(8 * 1024 * 1024);
+worker.postMessage(bytes, [bytes.buffer]);
+```
+
+Workers can't touch the DOM. **No `document`, no `window`, no `localStorage`.** That sounds like a limitation; it's actually the architectural lever — workers force you to separate computation from rendering. The shape is always: main thread sends raw input → worker parses, transforms, or encodes → worker posts back a result → main thread paints.
+
+<PredictionChallenge
+  question="Which of these is *not* a safe Web Worker workload?"
+  options={[
+    "Parsing a 5 MB JSON response",
+    "Decoding a Base64 image to pixel data",
+    "Re-rendering a virtualized list as the user scrolls",
+    "Computing a SHA-256 hash of a file the user just uploaded",
+  ]}
+  correctIndex={2}
+  explanation="Re-rendering a virtualized list touches the DOM (insertion, removal, reflow) — workers have no DOM access. The other three (JSON parse, image decode, crypto) are pure computation: input bytes in, output bytes out. They are textbook worker workloads — moving them off the main thread is a direct INP win."
+  wrongHints={{
+    0: "JSON.parse on a 5 MB payload is a perfect worker workload — it's pure computation that blocks the main thread for hundreds of ms. Move it to a worker and the main thread stays responsive.",
+    1: "Image decoding is pure computation. `OffscreenCanvas` and `createImageBitmap` were both designed for worker contexts — encoding/decoding off-thread is a primary worker use case.",
+    3: "`crypto.subtle.digest` is available in workers (`self.crypto`) and is a model worker workload — CPU-heavy, no DOM dependency. Hash a 50 MB file on the main thread and you'll see the freeze; hash it in a worker and the user doesn't feel a thing.",
+  }}
+/>
+
+Use a worker for: CSV/JSON parsing of large payloads, image encode/decode, crypto, markdown rendering, sort/search over big lists, gzip/brotli decompression. Skip them for: anything under ~5 ms (the round-trip cost beats the saving) and anything that needs the DOM.
+
+**[Partytown](https://partytown.builder.io/)** proxies third-party scripts (analytics, tag managers, A/B testing) onto a worker via a shim. Useful for code you don't control — not a substitute for a real worker for your own code.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Sort Your Own Scripts
+
+You've seen the pattern across five steps. Now the lab on the right hands it back to you: the seven scripts come pre-sorted from steps 2–5 (three sit on the **Critical Path**, the route chunks have already been deferred, one moved to a **Worker**), and the **Live TTI** counter at the top reflects every move you make. Re-classify what's left between the three zones:
+
+- **Critical** — needed before the user can interact with this route
+- **Deferred** — needed later, or never if the user never reaches that feature
+- **Worker** — pure computation, no DOM access
+
+The TTI formula is unsubtle. Every script in **Critical** adds its `parse + execute` cost to TTI. Every script you defer subtracts it. Every script you move to **Worker** subtracts it from the main thread (the work still happens — just in parallel).
+
+<PredictionChallenge
+  question="`data-processor.js` is 180 KB, costs ~460 ms parse + execute, and is needed on the current route. It computes geometry — pure math, no DOM. Where should it go?"
+  options={[
+    "Critical — it's needed for this route",
+    "Deferred — 460 ms is too expensive on the critical path",
+    "Worker — pure computation belongs off the main thread",
+    "Critical, but with `scheduler.yield()` between iterations",
+  ]}
+  correctIndex={2}
+  explanation="Worker. The script is needed for this route (so it can't be fully deferred) but it's pure computation with no DOM dependency — exactly the worker contract. Moving it to a worker pulls 460 ms off the main thread while still completing in roughly the same wall-clock window. Yielding mid-loop is a valid fallback for code that can't be moved off-thread, but if the code *can* be moved, that's a stronger fix."
+  wrongHints={{
+    0: "Leaving it on critical means 460 ms straight on the main thread — long enough to fail INP on any click during initial load. Pure computation is a textbook worker workload.",
+    1: "Deferring it would mean the user lands on the route and has to wait for the chunk to load before the page works. The route depends on this script — that's not the same as the dashboard's `charting-lib`.",
+    3: "Yielding helps if the code must run on the main thread. But this code does pure math — moving it to a worker is a strictly better fix (parallel execution, not just chunked).",
+  }}
+/>
+
+Try dragging `dom-renderer.js` onto the **Worker** zone in the lab. It bounces back with a red shake — workers cannot touch the DOM. That constraint isn't a list of rules; it's discovered by failure, the same way you'd discover it at runtime. The shape: workers run pure computation only.
+
+Two subtle calls worth making once you're playing:
+
+- **`route-dashboard.js` is not on this route.** Deferring it makes TTI drop in the lab, but if a user lands on `/dashboard` directly, the page sits on a loading state until the chunk arrives. The TTI you see is *this* route's TTI — `/dashboard` is a separate calculation. There is no free lunch, only a smaller bill per route.
+- **Drop `data-processor` on the Critical zone and watch TTI jump by ~460 ms.** The relationship is linear: every millisecond of script on critical is a millisecond of waiting for the user. Every drag = a metric change.
+
+After a dozen drags, the intuition becomes hard to lose: the critical path is a budget you spend in milliseconds, and every line of code chooses whether to charge it.
+
+</section>

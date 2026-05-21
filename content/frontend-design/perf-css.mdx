@@ -1,0 +1,321 @@
+---
+title: "CSS Performance"
+slug: perf-css
+section: performance
+stopId: perf-css
+order: 2
+kind: system-design-problem
+summary: "Render-blocking CSS, specificity audits, critical-CSS extraction, and the unused-CSS trap that breaks pages"
+tags: [css, performance, fcp, critical-css, specificity, cascade-layers, content-visibility]
+intersections: [core-box-model, core-gpu]
+prerequisites: []
+demo: perf-css
+---
+
+<section id="step-1" className="recipe-step">
+
+## 01 — Render-Blocking CSS
+
+Your stylesheet is **180 KB**. Your First Contentful Paint is **1.8s**. Your budget is **0.6s**. The browser is staring at a blank screen — and it's CSS, not JavaScript, that's stalling it.
+
+The HTML parser finishes at 240ms. The DOM tree is built. The text is decoded. Images are queued. But the browser refuses to paint a single pixel because a flash of unstyled content looks worse than waiting. CSS is **render-blocking** by design — and that's a different beast from parser-blocking.
+
+A synchronous `<script>` is parser-blocking: it freezes DOM construction until the script finishes. CSS doesn't do that. The parser keeps going and builds the DOM behind the stylesheet's back. What CSS holds up is the *first paint* — the browser will not flush pixels to the screen until every rule in every `<link rel="stylesheet">` is downloaded, parsed into the CSSOM, and merged with the DOM.
+
+<PredictionChallenge
+  question="Your 180 KB stylesheet is the only render-blocking resource. The HTML parser finished at 240ms, but FCP is 1.8s. Which lever moves FCP the most?"
+  options={[
+    "Compress the stylesheet — smaller bytes, faster download",
+    "Move the <link> tag to the bottom of <body>",
+    "Inline the critical 20% and defer the rest with media='print' onload",
+    "Delete one extra rule per week — chip away at the bytes over time",
+  ]}
+  correctIndex={2}
+  explanation="Inlining the critical 20% removes the network round-trip entirely for the bytes needed at first paint. The browser releases the paint as soon as it parses the inline <style> — typically ~620ms. The rest of the sheet streams in behind the paint with the media='print' onload trick."
+  wrongHints={{
+    0: "Gzip cuts CSS by ~70%, so 180 KB becomes ~55 KB on the wire — still 800-900ms on 3G. Compression helps but doesn't beat removing the round-trip entirely.",
+    1: "<link> position in the document barely matters — the browser preload-scans the whole document before constructing it. The blocking behaviour is the same whether the tag is in <head> or just before </body>.",
+    3: "67 KB of unused CSS is the median page on the 2024 Web Almanac. Trimming it helps but lands a 200-300ms FCP win — versus 1.2s from critical-CSS extraction.",
+  }}
+/>
+
+The media-attribute trick is the workhorse:
+
+```html
+<!-- The critical 20% — paints immediately -->
+<style>
+  /* nav, hero, type, root tokens... */
+</style>
+
+<!-- The other 80% — streams in behind the paint -->
+<link rel="stylesheet"
+      href="/app.css"
+      media="print"
+      onload="this.media='all'"
+      fetchpriority="low">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+```
+
+`media="print"` tells the browser this sheet doesn't apply to screens, so it doesn't block the paint. The `onload` handler flips it back to `media="all"` when the download completes, and the rules apply retroactively. Add `fetchpriority="low"` on Chromium (Chrome 102+, Safari 17.2+) to keep this load from competing with your LCP image. The `<noscript>` fallback covers users who disabled JavaScript.
+
+Watch the panel toggle between the three modes — **default** (1.8s), **deferred** (0.3s, unstyled paint), and **inline critical + deferred rest** (0.6s, fully-styled paint). The "deferred only" option is the trap: it ships an unstyled flash, then snaps to styled when the sheet arrives. Inline-critical is the only path that hits 0.6s *and* paints styled content.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Specificity Calculator
+
+Before pruning a single rule, you need to know which ones actually win. CSS specificity is a three-column count — `[id, class, element]` — compared lexicographically. One ID outweighs any number of classes. One class outweighs any number of elements. `[1, 0, 0]` beats `[0, 99, 0]` every time.
+
+This is why the framework wins. A team ships `.button { padding: 12px 24px }` in `components.css` at `[0, 1, 0]`. Someone writes `.button.button.button { padding: 16px 32px }` to override it — also `[0, 3, 0]`. Then six months later a framework upgrade ships `#hero .button { ... }` at `[1, 1, 0]`. The triple-class hack collapses overnight. *That* is the failure mode specificity exists to model.
+
+A few rules that catch people out:
+
+```css
+.card                  /* [0, 1, 0] */
+.card.active           /* [0, 2, 0] */
+#hero .card            /* [1, 1, 0]  — one ID beats two classes */
+:is(.a, #b, c)         /* [1, 0, 0]  — :is() takes its highest arg */
+:where(.a, #b, c)      /* [0, 0, 0]  — :where() is always zero */
+.card:not(.disabled)   /* [0, 2, 0]  — :not contributes its arg */
+::before               /* [0, 0, 1]  — pseudo-elements count as elements */
+```
+
+<PredictionChallenge
+  question="You wrote `.card.card.featured` to override a stubborn `#products .card` rule. The override doesn't apply. Why?"
+  options={[
+    "The framework rule loads later in the cascade",
+    "The framework rule has higher specificity — [1, 1, 0] beats [0, 3, 0]",
+    "The browser caches the old selector and ignores the new one",
+    "Triple-classing only works inside a single declaration block",
+  ]}
+  correctIndex={1}
+  explanation="Specificity is lexicographic across columns: one ID wins outright. [1, 1, 0] beats [0, 3, 0] no matter how many classes you stack, because the id column outranks the class column. To win you'd need [1, 1, 0] yourself — add `#products .card.featured`, or move the rule into a later @layer."
+  wrongHints={{
+    0: "Source order only matters when two rules tie on specificity. These rules don't tie — [1, 1, 0] vs [0, 3, 0] — so the cascade tiebreak never fires. The ID column decides it.",
+    2: "Browsers don't cache selectors that way. CSSOM is recomputed on every style invalidation. The override doesn't apply because specificity ranks the framework rule higher.",
+    3: "Triple-classing works fine syntactically — `.card.card.featured` is a valid compound selector with specificity [0, 3, 0]. The issue isn't syntax; it's that 3 classes still lose to 1 ID + 1 class.",
+  }}
+/>
+
+When two rules tie on specificity, the one that appears **later in source order** wins. That's also the silent failure mode — someone authors a sensible `.card` rule in `components.css`, and a later-loaded `utilities.css` overrides it. Cascade layers (step 5) make this controllable instead of an ordering accident.
+
+The reason this matters for the audit: a high-specificity rule with a selector that never actually matches is still dead code, but a low-specificity rule that's beaten by another is also effectively dead. **You cannot strip safely without reading the cascade.** Type two selectors into the calculator on the right and watch the columns animate to their tuples; the WINS badge marks the rule that would prevail.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Critical CSS Extractor
+
+Here's the surprise that motivates everything. Of the 180 KB stylesheet, what share is actually needed for the first paint? Most engineers guess 60-80%. Pick a number before you read on.
+
+<PredictionChallenge
+  question="Your 180 KB stylesheet has 15 rules covering the whole page. How much of that — by bytes — is actually needed to render what's above the fold?"
+  options={[
+    "Around 80% — most rules apply to the visible viewport",
+    "Around 50% — the page is roughly half above-fold, half below",
+    "Around 20% — only nav, hero, typography, and tokens are visible at first paint",
+    "Around 5% — almost nothing is critical; everything can be deferred",
+  ]}
+  correctIndex={2}
+  explanation="About 20% of a typical stylesheet is critical. Pages are mostly card grids, footers, modal dialogs, settings panes — none of which the user sees in the first 600ms. Just 8 rules cover the nav, hero, headings, root tokens, and the type rule — about 36 KB of the 180 KB. The other 144 KB streams in behind the paint."
+  wrongHints={{
+    0: "This is the most common guess — and the reason critical-CSS extraction wins so dramatically. Stylesheets accumulate rules for everything the page can possibly render: modals, dropdowns, edge-case layouts. The actual above-the-fold surface is tiny — about 20%.",
+    1: "Half feels intuitive, but the visible viewport at 1280×720 is a small share of the *layout possibility space* — modals, tooltips, accordions, focus rings, drag states, dark-mode variants, error rings. They're all in the sheet but none paint at first load. The number is closer to 20%.",
+    3: "5% is too aggressive — you still need the type rule (`h1, h2, p { font-family: ...}`), the root tokens (`:root { --bg: ...}`), the nav, and the hero. About 8 rules totalling 36 KB — roughly 20% of the 180 KB sheet.",
+  }}
+/>
+
+The eight rules above the fold — nav, nav-links, hero, hero heading, hero image, CTA, root tokens, and the type rule — are the only ones the user sees in the first second. Inline those, defer the other seven, and the browser stops waiting:
+
+```html
+<head>
+  <style>
+    :root { --accent: oklch(0.7 0.2 20); --bg: #0e0e10; }
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; }
+    .nav { display: flex; height: 56px; }
+    .hero { padding: 64px 24px; }
+    .hero h1 { font-size: 56px; line-height: 1.05; }
+    /* ~36 KB inlined; the remaining 144 KB streams behind the paint */
+  </style>
+
+  <link rel="stylesheet" href="/app.css"
+        media="print" onload="this.media='all'">
+</head>
+```
+
+Tap **Extract critical CSS** in the panel. The eight green rules collapse into the inline `<style>` block; the seven below-fold rules get crossed out — still going to load, just behind the paint. The FCP gauge drops from 1.80s to 0.62s. Budget met.
+
+In production, tools like [Critters](https://github.com/GoogleChromeLabs/critters) (used by Next.js when `experimental.optimizeCss` is on), its maintained fork [Beasties](https://github.com/danielroe/beasties), or [Penthouse](https://github.com/pocketjoso/penthouse) do this for you. They render the page in a headless browser at the target viewport, walk the computed styles of every visible element, and emit the matching rules as inline CSS. Do not roll your own — the corner cases (media queries, animations triggered by above-fold elements, font dependencies) are genuinely hard.
+
+**Common pitfall:** critical CSS is *per-viewport*. Mobile users see different content above the fold than desktop users. Either ship a single conservative critical block sized for the smallest device, or detect device class on the server and swap blocks. **When not to use it:** if your CSS is already small (&lt;15 KB), or if you're using a zero-runtime CSS-in-JS framework that already inlines critical styles at SSR time, skip the build complexity — the gain is marginal.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Unused CSS Detector (and the JS Trap)
+
+You've inlined the critical 20% and deferred the rest. Now you want to shrink the deferred sheet. You open Chrome DevTools → Coverage. It tells you **42% of the bytes are unused**. Delete them?
+
+**Don't.** Not without reading further.
+
+DevTools Coverage is a static snapshot of "which rules match the DOM *right now*." But the DOM at page load doesn't include states that haven't happened yet. The modal isn't open. The theme isn't dark. The toast hasn't popped. The form input isn't focused. The drag handle hasn't been grabbed. Every CSS rule that styles those states will be flagged as unused — and if you trust the report and delete them, the page breaks on the first user interaction.
+
+<PredictionChallenge
+  question="Coverage flags 14 rules as unused — 8 truly dead (legacy banners, IE shims, last year's pricing widget) and 6 that match no element yet but are added by JS at runtime (.modal--open, [data-theme='dark'], .toast--visible, .form--focused, .dragging, body.modal-open). You delete all 14. What happens?"
+  options={[
+    "Everything works — those rules weren't being applied anyway",
+    "The page is slightly faster, but the modal opens slowly the first time",
+    "The page renders fine until a user interacts — then the modal appears unstyled, dark mode flashes white, the toast skips its animation",
+    "The browser throws a CSS parse error on the JS-toggled selectors",
+  ]}
+  correctIndex={2}
+  explanation="JS-toggled rules ship perfectly valid CSS — the browser doesn't error. They just never match anything *at page load*, which is exactly what DevTools Coverage measures. The bug appears the moment a user clicks 'Open modal' or flips dark mode: the matching DOM appears, but its CSS is gone. Visible artefacts include unstyled modals in the top-left corner, dark-mode flashes that show light backgrounds, and toasts that pop without their slide-in transition."
+  wrongHints={{
+    0: "This is the seductive interpretation — 'unused means unused.' But Coverage's snapshot was taken *before* JS opened the modal or fired the theme toggle. The rules were unmatched at that instant. They are still load-bearing.",
+    1: "It's not a speed issue — it's a *correctness* issue. The modal doesn't open slowly; it opens with no styles at all. Users see raw HTML drifted to the top-left of the viewport, no overlay, no centering, no padding.",
+    3: "Selectors like `body.modal-open` or `[data-theme='dark']` parse fine — they're standard CSS. The trap is purely a runtime correctness break, not a syntax error. Browsers don't validate semantic intent.",
+  }}
+/>
+
+The audit needs **two snapshots**, not one. Drive every interactive state, then take Coverage again. Anything unused across *both* snapshots is genuinely dead:
+
+```js
+// 1. Snapshot the cold load
+await page.coverage.startCSSCoverage();
+await page.goto(url);
+await page.waitForLoadState('networkidle');
+
+// 2. Drive every interactive state
+await page.click('[data-open-modal]');
+await page.click('[data-theme-toggle]');
+await page.focus('input[name=email]');
+await page.hover('.has-dropdown');
+
+// 3. Anything still unused is genuinely dead
+const final = await page.coverage.stopCSSCoverage();
+```
+
+Better still: ship CSS in feature-scoped chunks (`modal.css`, `theme.css`, `forms.css`) and load each with `<link rel="preload" as="style">` plus a `media`-attribute switch flipped when the feature activates. Each chunk becomes a single point of audit, and you never ship dark-mode CSS to users who haven't toggled the theme.
+
+In the panel, **click each red-flagged rule** and decide: *safe to remove*, or *needed by JS*. The lab tracks your audit. If you remove a JS-toggled rule, the simulated page on the right breaks visibly — the modal renders in the top-left corner, the dark-mode bar flashes white, the toast appears without its transition. Correct audits strip the eight truly-dead rules and leave the six JS-toggled ones alone.
+
+The [Web Almanac 2024](https://almanac.httparchive.org/en/2024/css) found the median page ships 67 KB of unused CSS. The number isn't wrong — blind static analysis on it is. Two snapshots take a Saturday morning to set up and save you from a Monday-morning customer support storm.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — Modern CSS Performance
+
+Three CSS properties shipped in the last 30 months change how to think about CSS performance.
+
+**`@layer` cascade layers** (Baseline 2023): wrap rules in named layers, and the cascade ranks layers *before* specificity. A low-specificity rule in `overrides` wins over a high-specificity rule in `framework` — no `!important`, no `.component.component.component` arms race. Author order *inside* a layer is the only thing that still matters within it.
+
+```css
+@layer reset, framework, components, utilities, overrides;
+
+@layer framework {
+  .button { padding: 12px 24px; }     /* [0, 1, 0] */
+}
+
+@layer overrides {
+  button { padding: 16px 28px; }      /* [0, 0, 1] — wins; later layer */
+}
+```
+
+That `button` element selector at `[0, 0, 1]` beats the layered `.button` class at `[0, 1, 0]` because the entire `overrides` layer outranks `framework`, regardless of specificity. Inside a layer, the usual rules apply. Across layers, the layer order is king.
+
+<PredictionChallenge
+  question="A long article page has 200 `.card` elements stacked in a list. You add `content-visibility: auto; contain-intrinsic-size: auto 480px` to each card. What happens to initial render time?"
+  options={[
+    "No change — content-visibility only affects scroll performance",
+    "~5-10% faster — minor paint optimization for off-screen cards",
+    "~85% faster — the browser skips style, layout, and paint for off-screen cards entirely",
+    "Slower — the browser has to track visibility, which adds overhead",
+  ]}
+  correctIndex={2}
+  explanation="content-visibility: auto skips style recalculation, layout, and paint for any subtree outside the viewport. The Web.dev case study on Chrome's HTML spec page measured initial rendering dropping from ~232ms to ~30ms — about 85% faster — with one CSS property. The browser keeps the element in the DOM (so anchors and find-in-page work), it just doesn't do the work to render it until you scroll near it. contain-intrinsic-size: auto 480px reserves the scroll height so the scrollbar stays honest, and the auto keyword lets the browser remember the last-rendered size."
+  wrongHints={{
+    0: "content-visibility affects *initial* render too — that's its main win. Off-screen subtrees skip style, layout, and paint at first paint, not just during scroll. The scroll behaviour comes for free.",
+    1: "5-10% would be a minor optimization. content-visibility is one of the largest single-property wins available in modern CSS — Chrome's own HTML spec page measured an 85% reduction in initial render time.",
+    3: "The visibility tracking is cheap because it uses the existing intersection-observer infrastructure. The savings from skipping layout + paint for hundreds of off-screen elements vastly outweigh the tracking cost.",
+  }}
+/>
+
+`content-visibility: auto` shipped in Chrome 85 (Aug 2020), Firefox 125 (April 2024), and **Safari 18 (September 2024)** — that's Baseline 2024. Use it on any long scrolling list: card grids, table rows, blog post listings. Pair with `contain-intrinsic-size: auto 480px` so the browser reserves scroll space at the size of the last render. The `auto` keyword is the modern form — the bare `0 480px` syntax requires you to guess.
+
+```css
+.card-grid > .card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+```
+
+A sibling: `content-visibility: hidden` is the always-skip variant — the subtree is never rendered until you remove the property. Use it for tab panes parked in the DOM so they can be swapped in instantly (no remount cost), or for offscreen modals that should keep their state across opens.
+
+**`view-transition-name`** (Chrome 111+, Safari 18+): named participants in the View Transitions API. Each named element gets a snapshot before the DOM mutation and another after; the browser interpolates the two on the compositor. Powerful, but it's a *new compositor cost* — slap `view-transition-name: card-{id}` on 200 list cards and the browser is now taking 400 snapshots when the list re-orders. Budget it. Use named transitions for the 3-5 elements that benefit from visual continuity (page title, hero image, primary action), not as confetti.
+
+Two more worth knowing:
+
+- **`fetchpriority`** on `<link rel="stylesheet">` — Chromium 102+ (May 2022), Safari 17.2 (Dec 2023). Set the deferred non-critical stylesheet to `fetchpriority="low"` so it doesn't compete with the LCP image's network budget. The browser preload-scanner already prioritises CSS over images by default; this just leans the dial further.
+- **CSS-in-JS runtime cost.** Libraries that inject rules at hydration time (`styled-components`, `@emotion/styled`) run that work on the main thread *after* the JS bundle parses, which delays both FCP and INP. Zero-runtime equivalents (`vanilla-extract`, `linaria`, Tailwind v4) compile to a static `.css` file at build time — the browser treats them like any other stylesheet, no hydration penalty, no main-thread cost.
+
+Toggle the modes in the panel to see the layer cascade resolve overrides, the off-screen subtree skip its render cost, and the CSS-in-JS comparison hit the main thread.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — WINS Recap & FCP Budget
+
+The unified scenario is closed: 180 KB sheet, 1.8s FCP, 0.6s budget. The fix is three concrete moves you can ship on any project this afternoon.
+
+1. **Inline the critical 20%.** Run Critters or Beasties at build time, pinned to your above-the-fold viewport (640×360 mobile, 1280×720 desktop). Ship the rest with the `media="print" onload="this.media='all'"` trick. Adds ~36 KB to the HTML response and removes ~1.2s from FCP.
+2. **Audit unused CSS with two snapshots.** One snapshot is a trap — drive every interactive state (modal, theme, focus, drag) before you trust the Coverage report. Anything still unused across both snapshots is genuinely dead. Or skip the audit entirely by shipping CSS in feature-scoped chunks loaded on demand.
+3. **Adopt `@layer` and `content-visibility`.** Cascade layers cut the cost of every future override decision. `content-visibility: auto` halves initial render time on long pages with one line of CSS. Both are Baseline 2023-2024.
+
+<PredictionChallenge
+  question="A Lighthouse audit on your current page reports FCP at 1.8s. You apply all three fixes above. Which delta most closely matches the production outcome?"
+  options={[
+    "FCP drops to 1.4s — the deferred sheet still blocks parts of the paint",
+    "FCP drops to 0.6s — critical inlining is the dominant move; the other two are polish",
+    "FCP drops to 0.3s — content-visibility halves the work and layers cut paint cost",
+    "FCP improves marginally — most of the win is in INP, not FCP",
+  ]}
+  correctIndex={1}
+  explanation="Inlining the critical 20% does roughly 80% of the FCP work — it removes the render-blocking round-trip entirely, so the browser paints as soon as it parses the inline <style>. Cascade layers improve maintainability, not FCP. content-visibility improves initial *render* (paint + layout) on long pages but doesn't move FCP unless your above-the-fold content is itself long. On a typical e-commerce listing this fix-set lands FCP at ~0.6s — budget met."
+  wrongHints={{
+    0: "The deferred sheet doesn't block once you've inlined the critical 20% — it's loaded with media='print', so the browser doesn't gate the paint on it. FCP releases as soon as the inline <style> parses, regardless of how heavy the deferred sheet is.",
+    2: "0.3s is the pure-deferred path — but that ships unstyled content. The inline-critical path lands at ~0.6s and paints styled content. content-visibility helps render time on long pages but doesn't move FCP below the parse-and-paint floor.",
+    3: "FCP is squarely the metric this fix-set targets. INP comes from main-thread JS, not CSS. You'd want third-party deferral and long-task chunking (covered in perf-js) for INP wins.",
+  }}
+/>
+
+```yaml
+# .github/workflows/perf-budget.yml — block PRs that regress
+- run: npx lhci autorun --collect.url=https://staging.app.dev
+  env:
+    LHCI_BUDGET: |
+      timings:
+        - metric: first-contentful-paint
+          budget: 600
+        - metric: largest-contentful-paint
+          budget: 2500
+      resourceSizes:
+        - resourceType: stylesheet
+          budget: 60        # KB after critical-CSS extraction
+```
+
+When the **WINS** badge lights up at the top of the lab — render-blocking handled, critical extracted, unused audited, modern features adopted — that budget pass is roughly equivalent to a Lighthouse Performance score climbing from the 60s to the 90s on a real-world e-commerce page.
+
+Three closing notes worth carrying into the next lesson:
+
+- **Specificity is the foundation.** You cannot audit safely without it.
+- **Render-blocking is the headline.** First paint is what users feel.
+- **JS-toggled CSS is the hidden gotcha.** Static coverage misses it. Two snapshots — or feature-scoped chunking — fix it.
+
+</section>
