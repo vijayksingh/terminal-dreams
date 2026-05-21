@@ -61,9 +61,9 @@
 }
 
 .tab[data-active="true"] {
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-surface));
+  background: color-mix(in srgb, var(--diagram-layer-9) 7%, var(--color-surface));
 }
 
 .tabIndex {
@@ -84,9 +84,9 @@
 }
 
 .tab[data-active="true"] .tabIndex {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
 }
 
 .tabLabel {
@@ -135,7 +135,7 @@
 }
 
 .splitToggleOption[data-active="true"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
 }
 
@@ -197,17 +197,17 @@
 }
 
 .viewToggleOption[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 18%, var(--color-bg));
+  background: color-mix(in srgb, var(--diagram-layer-9) 18%, var(--color-bg));
   color: var(--color-text);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 40%, transparent) inset;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--diagram-layer-9) 40%, transparent) inset;
 }
 
 .viewToggleOption[data-active="true"][data-mode="state"] {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   box-shadow:
-    0 0 0 1px var(--color-accent) inset,
-    0 0 12px -2px color-mix(in srgb, var(--color-accent) 55%, transparent);
+    0 0 0 1px var(--diagram-layer-9) inset,
+    0 0 12px -2px color-mix(in srgb, var(--diagram-layer-9) 55%, transparent);
 }
 
 /* ── Blurb ──────────────────────────────────────────────────────── */
@@ -238,7 +238,7 @@
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-accent) 3%, var(--color-surface)) 0%,
+      color-mix(in srgb, var(--diagram-layer-9) 3%, var(--color-surface)) 0%,
       var(--color-surface) 60%
     );
   overflow: hidden;
@@ -257,7 +257,7 @@
   width: 1px;
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--color-accent) 25%, transparent) 0 3px,
+    color-mix(in srgb, var(--diagram-layer-9) 25%, transparent) 0 3px,
     transparent 3px 9px
   );
   opacity: 0.35;
@@ -486,7 +486,7 @@
 }
 
 .wsCaret {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-size: 1.05em;
   font-weight: 700;
 }
@@ -518,9 +518,9 @@
   border-radius: inherit;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-accent) 0%, transparent),
-    color-mix(in srgb, var(--color-accent) 45%, transparent),
-    color-mix(in srgb, var(--color-accent) 0%, transparent)
+    color-mix(in srgb, var(--diagram-layer-9) 0%, transparent),
+    color-mix(in srgb, var(--diagram-layer-9) 45%, transparent),
+    color-mix(in srgb, var(--diagram-layer-9) 0%, transparent)
   );
   opacity: 0.5;
   transition: background 240ms ease, opacity 240ms ease;
@@ -544,7 +544,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    var(--color-accent),
+    var(--diagram-layer-9),
     transparent
   );
   border-radius: inherit;
@@ -559,18 +559,18 @@
   flex-direction: column;
   gap: 12px;
   padding: 18px 16px 16px;
-  border: 1.5px solid color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  border: 1.5px solid color-mix(in srgb, var(--diagram-layer-9) 45%, var(--color-border));
   border-radius: var(--radius-2);
   background:
     radial-gradient(
       ellipse 60% 30% at 50% 0%,
-      color-mix(in srgb, var(--color-accent) 8%, transparent),
+      color-mix(in srgb, var(--diagram-layer-9) 8%, transparent),
       transparent
     ),
     var(--color-bg);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 6%, transparent) inset,
-    0 8px 28px -16px color-mix(in srgb, var(--color-accent) 65%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--diagram-layer-9) 6%, transparent) inset,
+    0 8px 28px -16px color-mix(in srgb, var(--diagram-layer-9) 65%, transparent);
   z-index: 1;
 }
 
@@ -585,9 +585,9 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   background: var(--color-surface);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 35%, var(--color-border));
   border-radius: 999px;
 }
 
@@ -636,8 +636,8 @@
   background: linear-gradient(
     180deg,
     transparent 0%,
-    color-mix(in srgb, var(--color-accent) 28%, transparent) 5%,
-    color-mix(in srgb, var(--color-accent) 28%, transparent) 95%,
+    color-mix(in srgb, var(--diagram-layer-9) 28%, transparent) 5%,
+    color-mix(in srgb, var(--diagram-layer-9) 28%, transparent) 95%,
     transparent 100%
   );
   border-radius: 1px;
@@ -678,10 +678,10 @@
 }
 
 .stateBadge[data-accent="primary"] {
-  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, var(--color-border));
 }
 .stateBadge[data-accent="primary"] .stateBadgeValue {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .stateBadge[data-accent="warn"] {
@@ -701,7 +701,7 @@
 .stateBadgeFlash {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
   pointer-events: none;
 }
 
@@ -752,7 +752,7 @@
   margin-left: 1.5px; /* aligns dot center with rail at left:6 */
   border-radius: 50%;
   background: var(--color-bg);
-  border: 1.5px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--diagram-layer-9) 50%, transparent);
   transition: background 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
 }
 
@@ -763,8 +763,8 @@
   margin-left: -0.5px;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-accent) 45%, transparent) 0%,
-    color-mix(in srgb, var(--color-accent) 24%, transparent) 100%
+    color-mix(in srgb, var(--diagram-layer-9) 45%, transparent) 0%,
+    color-mix(in srgb, var(--diagram-layer-9) 24%, transparent) 100%
   );
   transition: background 220ms ease, box-shadow 220ms ease;
 }
@@ -813,36 +813,36 @@
   margin-top: -4px;
   margin-left: -4px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   box-shadow:
-    0 0 8px color-mix(in srgb, var(--color-accent) 90%, transparent),
-    0 0 14px color-mix(in srgb, var(--color-accent) 60%, transparent);
+    0 0 8px color-mix(in srgb, var(--diagram-layer-9) 90%, transparent),
+    0 0 14px color-mix(in srgb, var(--diagram-layer-9) 60%, transparent);
   pointer-events: none;
 }
 
 /* Active state — fires when matching chip flies or state changes. */
 .componentArm[data-active="true"] .componentArmDot {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent),
-    0 0 10px color-mix(in srgb, var(--color-accent) 70%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 22%, transparent),
+    0 0 10px color-mix(in srgb, var(--diagram-layer-9) 70%, transparent);
 }
 
 .componentArm[data-active="true"] .componentArmWire {
   background: linear-gradient(
     90deg,
-    var(--color-accent),
-    color-mix(in srgb, var(--color-accent) 75%, transparent) 90%,
-    color-mix(in srgb, var(--color-accent) 60%, transparent) 100%
+    var(--diagram-layer-9),
+    color-mix(in srgb, var(--diagram-layer-9) 75%, transparent) 90%,
+    color-mix(in srgb, var(--diagram-layer-9) 60%, transparent) 100%
   );
-  box-shadow: 0 0 9px -1px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  box-shadow: 0 0 9px -1px color-mix(in srgb, var(--diagram-layer-9) 70%, transparent);
 }
 
 .componentArm[data-active="true"] .componentArmLabel {
-  color: var(--color-accent);
-  border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
-  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-bg));
+  color: var(--diagram-layer-9);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 50%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 12%, var(--color-bg));
 }
 
 /* Pill — the JSX tag that terminates the wire. Refined typography
@@ -857,22 +857,22 @@
   font-size: var(--stage-text-xs);
   font-weight: 700;
   letter-spacing: -0.005em;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--color-accent) 14%, var(--color-bg)) 0%,
-    color-mix(in srgb, var(--color-accent) 7%, var(--color-bg)) 100%
+    color-mix(in srgb, var(--diagram-layer-9) 14%, var(--color-bg)) 0%,
+    color-mix(in srgb, var(--diagram-layer-9) 7%, var(--color-bg)) 100%
   );
-  border: 1px solid color-mix(in srgb, var(--color-accent) 32%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 32%, var(--color-border));
   border-radius: 6px;
   line-height: 1.3;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 16%, transparent),
-    0 1px 2px -1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--diagram-layer-9) 16%, transparent),
+    0 1px 2px -1px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 }
 
 .componentTagBracket {
-  color: color-mix(in srgb, var(--color-accent) 55%, var(--color-muted));
+  color: color-mix(in srgb, var(--diagram-layer-9) 55%, var(--color-muted));
   font-weight: 400;
   margin: 0 1px;
 }
@@ -889,20 +889,20 @@
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: -0.005em;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--color-accent) 16%, var(--color-bg)),
-    color-mix(in srgb, var(--color-accent) 8%, var(--color-bg))
+    color-mix(in srgb, var(--diagram-layer-9) 16%, var(--color-bg)),
+    color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg))
   );
-  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 40%, var(--color-border));
   border-radius: 999px;
   line-height: 1.2;
   pointer-events: none;
   white-space: nowrap;
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--color-accent) 20%, transparent),
-    0 2px 6px -2px color-mix(in srgb, var(--color-accent) 50%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--diagram-layer-9) 20%, transparent),
+    0 2px 6px -2px color-mix(in srgb, var(--diagram-layer-9) 50%, transparent);
 }
 
 /* ── State Inspector (X-ray panel) ──────────────────────────────────
@@ -918,9 +918,9 @@
   flex-direction: column;
   gap: 8px;
   padding: 9px 14px 10px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 30%, var(--color-border));
   border-radius: var(--radius-1);
-  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-accent));
+  background: color-mix(in srgb, var(--color-bg) 92%, var(--diagram-layer-9));
   font-family: var(--stage-font);
   font-size: var(--stage-text-xs);
   line-height: 1.45;
@@ -949,7 +949,7 @@
 }
 
 .inspectorKeyword {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 700;
 }
 
@@ -982,13 +982,13 @@
 }
 
 .inspectorRow[data-changed="true"] {
-  border-left-color: color-mix(in srgb, var(--color-accent) 65%, transparent);
+  border-left-color: color-mix(in srgb, var(--diagram-layer-9) 65%, transparent);
 }
 
 .inspectorRowFlash {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
   pointer-events: none;
   border-radius: inherit;
 }
@@ -1013,7 +1013,7 @@
   color: var(--diagram-layer-9);
 }
 .inspectorPropValue[data-type="number"] {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 .inspectorPropValue[data-type="boolean"] {
   color: var(--diagram-layer-2, #c89000);
@@ -1045,7 +1045,7 @@
 }
 
 .inspectorSourceArrow {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   font-weight: 700;
 }
 
@@ -1147,14 +1147,14 @@
 }
 
 .messageRow[data-author="you"] {
-  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, transparent);
 }
 
 .messageRow[data-active="true"] {
-  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 14%, transparent);
   box-shadow:
-    inset 2px 0 0 var(--color-accent),
-    0 0 0 1px color-mix(in srgb, var(--color-accent) 30%, transparent);
+    inset 2px 0 0 var(--diagram-layer-9),
+    0 0 0 1px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
 }
 
 .messageAuthor {
@@ -1164,7 +1164,7 @@
 }
 
 .messageRow[data-author="you"] .messageAuthor {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 
 .messageTime {
@@ -1193,7 +1193,7 @@
 }
 
 .messageStatus[data-status="sending"] {
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
 }
 .messageStatus[data-status="sent"] {
   color: var(--diagram-layer-9);
@@ -1220,7 +1220,7 @@
   padding: 4px 10px;
   margin-top: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: color-mix(in srgb, var(--diagram-layer-9) 8%, transparent);
   font-size: var(--stage-text-xs);
   color: var(--color-muted);
 }
@@ -1239,7 +1239,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   display: inline-block;
   animation: typing-dot 1.2s ease-in-out infinite;
 }
@@ -1275,8 +1275,8 @@
 }
 
 .composeBar[data-focused="true"] {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  border-color: var(--diagram-layer-9);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 18%, transparent);
 }
 
 .composeInput {
@@ -1308,7 +1308,7 @@
   display: inline-block;
   width: 1.5px;
   height: 1em;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   margin-left: 1px;
   vertical-align: -2px;
 }
@@ -1317,7 +1317,7 @@
   padding: 5px 14px;
   border: 0;
   border-radius: 999px;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
   font-family: var(--stage-font);
   font-size: var(--stage-text-xs);
@@ -1329,8 +1329,8 @@
 
 .composeSend[data-glow="true"] {
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent),
-    0 0 16px -2px color-mix(in srgb, var(--color-accent) 65%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent),
+    0 0 16px -2px color-mix(in srgb, var(--diagram-layer-9) 65%, transparent);
   transform: scale(1.04);
 }
 
@@ -1352,14 +1352,14 @@
   padding: 5px 10px;
   border-radius: 999px;
   background: var(--color-bg);
-  border: 1.5px solid var(--color-accent);
+  border: 1.5px solid var(--diagram-layer-9);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent),
-    0 6px 18px -8px color-mix(in srgb, var(--color-accent) 60%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 14%, transparent),
+    0 6px 18px -8px color-mix(in srgb, var(--diagram-layer-9) 60%, transparent);
   font-family: var(--stage-font);
   font-size: var(--stage-text-micro);
   font-weight: 700;
-  color: var(--color-accent);
+  color: var(--diagram-layer-9);
   white-space: nowrap;
   letter-spacing: -0.005em;
   will-change: transform, left, top;
@@ -1374,8 +1374,8 @@
 }
 
 .chip[data-kind="frame"] {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
+  color: var(--diagram-layer-9);
 }
 
 .chip[data-kind="ack"] {
@@ -1406,12 +1406,12 @@
   height: 1px;
   background: repeating-linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-accent) 65%, transparent) 0 4px,
+    color-mix(in srgb, var(--diagram-layer-9) 65%, transparent) 0 4px,
     transparent 4px 8px
   );
   pointer-events: none;
   border-radius: 1px;
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--color-accent) 50%, transparent));
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--diagram-layer-9) 50%, transparent));
 }
 
 /* Impact ring — expanding circle at chip's destination on arrival.
@@ -1422,12 +1422,12 @@
   height: 36px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  border: 2px solid var(--color-accent);
+  border: 2px solid var(--diagram-layer-9);
   pointer-events: none;
   background: transparent;
   box-shadow:
-    0 0 18px -2px color-mix(in srgb, var(--color-accent) 50%, transparent),
-    inset 0 0 12px -4px color-mix(in srgb, var(--color-accent) 60%, transparent);
+    0 0 18px -2px color-mix(in srgb, var(--diagram-layer-9) 50%, transparent),
+    inset 0 0 12px -4px color-mix(in srgb, var(--diagram-layer-9) 60%, transparent);
 }
 
 .chipImpactRing[data-kind="callback"] {
@@ -1452,9 +1452,9 @@
   height: 14px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   pointer-events: none;
-  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--color-accent) 70%, transparent);
+  box-shadow: 0 0 16px 2px color-mix(in srgb, var(--diagram-layer-9) 70%, transparent);
 }
 
 .chipImpactDot[data-kind="callback"] {
@@ -1481,8 +1481,8 @@
   align-items: baseline;
   gap: 10px;
   padding: 8px 12px;
-  border-left: 2px solid var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface));
+  border-left: 2px solid var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 4%, var(--color-surface));
   border-radius: 0 var(--radius-1) var(--radius-1) 0;
   font-size: var(--stage-text-sm);
   line-height: 1.5;
@@ -1533,7 +1533,7 @@
   border: 1.25px solid var(--color-border);
   background: var(--color-surface);
   cursor: pointer;
-  transition: all 180ms ease;
+  transition: background 180ms ease, border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 .scrubDot:hover {
@@ -1547,10 +1547,10 @@
 }
 
 .scrubDot[data-state="active"] {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
+  background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
   transform: scale(1.4);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 24%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--diagram-layer-9) 24%, transparent);
 }
 
 .controlBtn,
@@ -1567,7 +1567,7 @@
   font-family: var(--stage-font);
   font-size: var(--stage-text-sm);
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, opacity 150ms ease;
   flex-shrink: 0;
   line-height: 1;
 }
@@ -1584,17 +1584,17 @@
 }
 
 .controlBtnPrimary {
-  background: var(--color-accent);
+  background: var(--diagram-layer-9);
   color: var(--color-bg);
-  border-color: var(--color-accent);
+  border-color: var(--diagram-layer-9);
   font-size: var(--stage-text-xs);
   font-weight: 700;
 }
 
 .controlBtnPrimary:hover {
-  background: color-mix(in srgb, var(--color-accent) 82%, white);
+  background: color-mix(in srgb, var(--diagram-layer-9) 82%, white);
   color: var(--color-bg);
-  border-color: color-mix(in srgb, var(--color-accent) 82%, white);
+  border-color: color-mix(in srgb, var(--diagram-layer-9) 82%, white);
 }
 
 /* ── Narrow viewport ────────────────────────────────────────────── */

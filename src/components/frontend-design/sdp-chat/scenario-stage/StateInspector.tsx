@@ -10,7 +10,7 @@ type StateInspectorProps = {
   /** Unique key driving the entrance animation when scene changes. */
   flashKey: string;
   reducedMotion: boolean;
-  /** Optional accent override (defaults to var(--color-accent)). */
+  /** Optional accent override (defaults to var(--diagram-layer-9)). */
   accent?: "primary" | "network";
 };
 

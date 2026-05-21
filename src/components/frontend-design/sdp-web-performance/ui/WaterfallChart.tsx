@@ -221,7 +221,7 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
                     y={y}
                     width={totalWidth}
                     height={ROW_HEIGHT}
-                    fill="var(--color-accent)"
+                    fill="var(--diagram-layer-9)"
                     opacity={0.08}
                     rx={2}
                   />
