@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { SPRING, TRANSITION } from "@/lib/motion";
@@ -13,16 +13,37 @@ export interface PredictionChallengeProps {
   options: string[];
   correctIndex: number;
   explanation: string;
-  /**
-   * Per-distractor diagnosis shown when the user picks a wrong answer.
-   * Keys are option indices (number or string-coerced number from MDX).
-   */
   wrongHints?: WrongHints;
-  /** Optional callback invoked once the user picks the correct answer. */
   onCorrect?: () => void;
 }
 
-export function PredictionChallenge({
+class PredictionErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[PredictionChallenge]", error, info.componentStack);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <aside className={styles.root} style={{ borderLeftColor: "red" }}>
+          <p className={styles.label}>Prediction challenge failed to render</p>
+          <pre style={{ fontSize: "0.75rem", whiteSpace: "pre-wrap", color: "var(--color-error, red)" }}>
+            {this.state.error.message}
+          </pre>
+        </aside>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function PredictionChallengeInner({
   question,
   options,
   correctIndex,
@@ -32,6 +53,10 @@ export function PredictionChallenge({
 }: PredictionChallengeProps) {
   const [selected, setSelected] = useState<number | null>(null);
   const noMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    console.log("[PredictionChallenge] mounted:", question?.substring(0, 40));
+  }, [question]);
 
   if (!options || !question) return null;
   const revealed = selected !== null;
@@ -96,6 +121,14 @@ export function PredictionChallenge({
         )}
       </AnimatePresence>
     </aside>
+  );
+}
+
+export function PredictionChallenge(props: PredictionChallengeProps) {
+  return (
+    <PredictionErrorBoundary>
+      <PredictionChallengeInner {...props} />
+    </PredictionErrorBoundary>
   );
 }
 

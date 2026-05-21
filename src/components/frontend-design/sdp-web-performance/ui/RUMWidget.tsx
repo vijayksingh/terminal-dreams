@@ -6,13 +6,17 @@ import {
   computePerformance,
   getCWVRating,
   RESOURCE_COLORS,
+  type WaterfallResource,
 } from "../engine/perf-simulator";
 import styles from "../WebPerformanceLab.module.css";
 
-const BASELINE_METRICS = { lcp: 2900, inp: 340, cls: 0.34, totalSizeKB: 1280 };
-
 export function RUMWidget() {
   const { metrics, enabledOptimizations, activeProfile: nw, resources } = usePerfContext();
+
+  const baselineMetrics = useMemo(
+    () => computePerformance(new Set(), nw).metrics,
+    [nw],
+  );
 
   const p75Lcp = metrics.lcp;
   const p75Inp = metrics.inp;
@@ -21,30 +25,30 @@ export function RUMWidget() {
   const journey = [
     {
       label: "LCP",
-      before: `${BASELINE_METRICS.lcp}ms`,
+      before: `${baselineMetrics.lcp}ms`,
       after: `${metrics.lcp}ms`,
-      improved: metrics.lcp < BASELINE_METRICS.lcp,
+      improved: metrics.lcp < baselineMetrics.lcp,
       passing: metrics.lcp <= 2500,
     },
     {
       label: "INP",
-      before: `${BASELINE_METRICS.inp}ms`,
+      before: `${baselineMetrics.inp}ms`,
       after: `${metrics.inp}ms`,
-      improved: metrics.inp < BASELINE_METRICS.inp,
+      improved: metrics.inp < baselineMetrics.inp,
       passing: metrics.inp <= 200,
     },
     {
       label: "CLS",
-      before: BASELINE_METRICS.cls.toFixed(2),
+      before: baselineMetrics.cls.toFixed(2),
       after: metrics.cls.toFixed(2),
-      improved: metrics.cls < BASELINE_METRICS.cls,
+      improved: metrics.cls < baselineMetrics.cls,
       passing: metrics.cls <= 0.1,
     },
     {
       label: "Size",
-      before: `${BASELINE_METRICS.totalSizeKB} KB`,
+      before: `${baselineMetrics.totalSizeKB} KB`,
       after: `${metrics.totalSizeKB} KB`,
-      improved: metrics.totalSizeKB < BASELINE_METRICS.totalSizeKB,
+      improved: metrics.totalSizeKB < baselineMetrics.totalSizeKB,
       passing: true,
     },
   ];
@@ -74,7 +78,7 @@ export function RUMWidget() {
     [nw],
   );
   const baselineMaxMs = Math.max(baseline.timelineEndMs, 500);
-  const currentMaxMs = Math.max(...resources.map((r: { endMs: number }) => r.endMs), 500);
+  const currentMaxMs = Math.max(...resources.map((r) => r.endMs), 500);
   const overlayMax = Math.max(baselineMaxMs, currentMaxMs);
 
   return (
@@ -114,7 +118,7 @@ export function RUMWidget() {
         <div className={styles.waterfallOverlayRow}>
           <span className={styles.waterfallOverlayLabel}>Current</span>
           <div className={styles.waterfallOverlayTrack}>
-            {resources.slice(0, 6).map((r: { id: string; startMs: number; endMs: number; type: keyof typeof RESOURCE_COLORS }) => (
+            {resources.slice(0, 6).map((r) => (
               <div
                 key={r.id}
                 className={styles.waterfallOverlayBar}
@@ -148,7 +152,7 @@ export function RUMWidget() {
         </div>
         {alerts.map((a) => (
           <div key={a.metric} className={styles.alertRow} data-status="firing">
-            <span className={styles.alertIcon}>!</span>
+            <span className={styles.alertIcon} role="img" aria-label="Alert">!</span>
             <span className={styles.alertText}>
               {a.metric} p75 = {a.p75} (threshold: {a.threshold})
             </span>
@@ -156,7 +160,7 @@ export function RUMWidget() {
         ))}
         {allGreen && (
           <div className={styles.alertRow} data-status="resolved">
-            <span className={styles.alertIcon}>✓</span>
+            <span className={styles.alertIcon} role="img" aria-label="Resolved">✓</span>
             <span className={styles.alertText}>
               All CWV within threshold — {optCount} optimization{optCount !== 1 ? "s" : ""} active
             </span>

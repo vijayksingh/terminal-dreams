@@ -85,31 +85,6 @@ export function AppProfileView() {
           {isComplete ? "↻ Replay" : "↻ Restart"}
         </button>
       </div>
-      <div className={styles.timeProgressor} aria-label={`Page load progress: ${Math.round(playbackMs)}ms of ${totalMs}ms`}>
-        <div className={styles.timeProgressorTrack}>
-          <div className={styles.timeProgressorFill} style={{ width: `${progressPct}%` }} />
-          {frames.filter((f) => f.checkpoint).map((f) => {
-            const pct = (f.at / totalMs) * 100;
-            const reached = playbackMs >= f.at;
-            return (
-              <div
-                key={f.checkpoint}
-                className={styles.timeCheckpoint}
-                style={{ left: `${pct}%` }}
-                data-reached={reached ? "true" : undefined}
-                data-state={f.state}
-              >
-                <span className={styles.timeCheckpointDot} />
-                <span className={styles.timeCheckpointLabel}>{f.checkpoint}</span>
-                <span className={styles.timeCheckpointTime}>{f.label}</span>
-              </div>
-            );
-          })}
-        </div>
-        <span className={styles.timeProgressorClock}>
-          {Math.round(playbackMs)}ms / {totalMs}ms
-        </span>
-      </div>
       <div className={styles.filmstrip}>
         {frames.map((f, i) => (
           <div
@@ -139,9 +114,37 @@ export function AppProfileView() {
           </div>
         ))}
       </div>
+      <div className={styles.timeProgressor} aria-label={`Page load progress: ${Math.round(playbackMs)}ms of ${totalMs}ms`}>
+        <div className={styles.timeProgressorTrack}>
+          <div
+            className={styles.timeProgressorFill}
+            style={{ transform: `scaleX(${progressPct / 100})` }}
+          />
+          {frames.filter((f) => f.checkpoint).map((f) => {
+            const pct = (f.at / totalMs) * 100;
+            const reached = playbackMs >= f.at;
+            return (
+              <div
+                key={f.checkpoint}
+                className={styles.timeCheckpoint}
+                style={{ left: `${pct}%` }}
+                data-reached={reached ? "true" : undefined}
+                data-state={f.state}
+              >
+                <span className={styles.timeCheckpointDot} />
+                <span className={styles.timeCheckpointLabel}>{f.checkpoint}</span>
+                <span className={styles.timeCheckpointTime}>{f.label}</span>
+              </div>
+            );
+          })}
+        </div>
+        <span className={styles.timeProgressorClock}>
+          {Math.round(playbackMs)}ms / {totalMs}ms
+        </span>
+      </div>
       <p className={styles.widgetNote}>
         On 3G, the user stares at a blank screen for {timings.blank}ms. The page isn't interactive until {timings.interactive}ms.
-        On Wi-Fi, total load drops to {timings.interactive}ms. Each checkpoint above marks a moment the user is waiting for.
+        On Wi-Fi, total load drops to {timings.interactive}ms. Each checkpoint on the timeline marks a moment the user is waiting for.
       </p>
     </div>
   );
