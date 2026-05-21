@@ -1017,6 +1017,48 @@
 
 /* ── Step 6: Rendering pipeline ─────────────────────────────────── */
 
+.criticalSliderWrap {
+  margin-bottom: var(--space-2);
+}
+
+.criticalSliderLabel {
+  font-size: 0.6rem;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.criticalFouc {
+  color: var(--color-error);
+  font-weight: 600;
+  font-size: 0.5rem;
+}
+
+.criticalBloat {
+  color: var(--color-warning, var(--diagram-layer-7));
+  font-weight: 600;
+  font-size: 0.5rem;
+}
+
+.criticalSlider {
+  width: 100%;
+  margin: var(--space-1) 0;
+  accent-color: var(--diagram-layer-3);
+}
+
+.criticalSliderTicks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.45rem;
+  color: var(--color-muted);
+}
+
+.criticalSliderSweet {
+  color: var(--diagram-layer-9);
+  font-weight: 600;
+}
+
 .pipelineTimelines {
   display: flex;
   flex-direction: column;
@@ -1729,8 +1771,15 @@
   font-weight: 600;
 }
 
-.shiftRow[data-fixed-earlier="true"] .shiftFix {
+.shiftFormula {
+  font-size: 0.5rem;
   color: var(--color-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.shiftRow[data-fixed-earlier="true"] .shiftFormula {
+  color: var(--color-success);
   font-style: italic;
 }
 
@@ -1757,6 +1806,38 @@
 }
 
 /* ── Step 12: Cache strategy grid ────────────────────────────────── */
+
+.cacheDecisionCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.cacheDecisionCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  font-size: 0.55rem;
+  color: var(--color-text);
+}
+
+.cacheDecisionQ {
+  font-weight: 700;
+  font-size: 0.5rem;
+  color: var(--diagram-layer-4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cacheDecisionAnswer {
+  font-size: 0.5rem;
+  color: var(--color-muted);
+}
 
 .cacheGrid {
   display: flex;

@@ -41,11 +41,20 @@ export type WaterfallResource = {
   dependsOn: string | null;
 };
 
+export type CLSSource = {
+  source: string;
+  viewportFrac: number;
+  distFrac: number;
+  shift: number;
+  fixed: boolean;
+};
+
 export type PerfMetrics = {
   fcp: number;
   lcp: number;
   inp: number;
   cls: number;
+  clsSources: CLSSource[];
   tbt: number;
   totalSizeKB: number;
   jsSizeKB: number;
@@ -380,11 +389,29 @@ function deriveMetrics(
   }
   inp = Math.max(inp, 45);
 
-  const heroShift = hero && hero.sizeKB > 100 ? 0.12 : hero && hero.sizeKB > 50 ? 0.04 : 0;
+  const heroHasDimensions = enabled.has("imageOptimization") || enabled.has("layoutStability");
+  const heroViewportFrac = hero ? Math.min(hero.sizeKB / 600, 0.42) : 0;
+  const heroDistFrac = 0.30;
+  const heroShift = heroHasDimensions ? 0 : Math.round(heroViewportFrac * heroDistFrac * 100) / 100;
+
   const fontRes = resources.find((r) => r.id === "font");
-  const fontShift = fontRes && fontRes.sizeKB > 40 ? 0.11 : fontRes && fontRes.sizeKB > 20 ? 0.03 : 0;
-  const adShift = enabled.has("layoutStability") ? 0 : 0.08;
-  const widgetShift = enabled.has("layoutStability") ? 0 : 0.03;
+  const fontHasOverrides = enabled.has("fontLoading") || enabled.has("layoutStability");
+  const fontViewportFrac = fontRes ? Math.min(fontRes.sizeKB / 100, 0.40) : 0;
+  const fontDistFrac = 0.27;
+  const fontShift = fontHasOverrides ? 0 : Math.round(fontViewportFrac * fontDistFrac * 100) / 100;
+
+  const adViewportFrac = 0.25;
+  const adDistFrac = 0.32;
+  const adShift = enabled.has("layoutStability") ? 0 : Math.round(adViewportFrac * adDistFrac * 100) / 100;
+  const widgetViewportFrac = 0.08;
+  const widgetDistFrac = 0.20;
+  const widgetShift = enabled.has("layoutStability") ? 0 : Math.round(widgetViewportFrac * widgetDistFrac * 100) / 100;
+  const clsSources: CLSSource[] = [
+    { source: "Hero image", viewportFrac: heroViewportFrac, distFrac: heroDistFrac, shift: heroShift, fixed: heroHasDimensions },
+    { source: "Font swap", viewportFrac: fontViewportFrac, distFrac: fontDistFrac, shift: fontShift, fixed: fontHasOverrides },
+    { source: "Ad injection", viewportFrac: adViewportFrac, distFrac: adDistFrac, shift: adShift, fixed: enabled.has("layoutStability") },
+    { source: "Late widget", viewportFrac: widgetViewportFrac, distFrac: widgetDistFrac, shift: widgetShift, fixed: enabled.has("layoutStability") },
+  ];
   let cls = heroShift + fontShift + adShift + widgetShift;
   cls = Math.max(cls, 0.01);
   cls = Math.round(cls * 100) / 100;
@@ -422,6 +449,7 @@ function deriveMetrics(
     lcp: Math.round(lcp),
     inp: Math.round(inp),
     cls,
+    clsSources,
     tbt: Math.round(tbt),
     totalSizeKB,
     jsSizeKB,

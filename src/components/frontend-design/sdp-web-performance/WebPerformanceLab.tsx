@@ -665,31 +665,58 @@ function CriticalCSSWidget() {
   const on = enabledOptimizations.has("criticalCSS");
   const rtt = nw.rtt;
   const multiplier = nw.multiplier;
+  const [inlineKB, setInlineKB] = useState(4);
 
+  const totalCSS = 48;
   const htmlParse = 15;
-  const cssDownload = Math.round(48 * multiplier + rtt);
+  const cssDownload = Math.round(totalCSS * multiplier + rtt);
   const cssParse = 8;
-  const criticalInline = 3;
-  const asyncCssDownload = Math.round(44 * multiplier + rtt);
+  const criticalInline = Math.round(inlineKB * 0.8);
+  const asyncKB = totalCSS - inlineKB;
+  const asyncCssDownload = Math.round(asyncKB * multiplier + rtt);
   const fcpBefore = htmlParse + cssDownload + cssParse;
   const fcpAfter = htmlParse + criticalInline;
+  const fouc = inlineKB < 3;
 
   const beforeSteps = [
     { label: "HTML parse", ms: htmlParse, type: "html" },
-    { label: `styles.css (48 KB)`, ms: cssDownload, type: "blocking" },
+    { label: `styles.css (${totalCSS} KB)`, ms: cssDownload, type: "blocking" },
     { label: "CSS parse", ms: cssParse, type: "blocking" },
     { label: "FCP", ms: 0, type: "marker" },
   ];
 
   const afterSteps = [
-    { label: "HTML + inline CSS", ms: htmlParse + criticalInline, type: "html" },
+    { label: `HTML + ${inlineKB} KB inline`, ms: htmlParse + criticalInline, type: "html" },
     { label: "FCP", ms: 0, type: "marker" },
-    { label: `async CSS (44 KB)`, ms: asyncCssDownload, type: "async" },
+    { label: `async CSS (${asyncKB} KB)`, ms: asyncCssDownload, type: "async" },
   ];
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Rendering Pipeline</div>
+
+      <div className={styles.criticalSliderWrap}>
+        <label className={styles.criticalSliderLabel}>
+          Inline CSS: <strong>{inlineKB} KB</strong> / {totalCSS} KB
+          {fouc && <span className={styles.criticalFouc}> FOUC risk</span>}
+          {inlineKB > 14 && <span className={styles.criticalBloat}> HTML bloat</span>}
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={20}
+          step={1}
+          value={inlineKB}
+          onChange={(e) => setInlineKB(Number(e.target.value))}
+          className={styles.criticalSlider}
+        />
+        <div className={styles.criticalSliderTicks}>
+          <span>0 KB</span>
+          <span className={styles.criticalSliderSweet}>~4 KB sweet spot</span>
+          <span>20 KB</span>
+        </div>
+      </div>
+
       <div className={styles.pipelineTimelines}>
         <div className={styles.pipelineRow}>
           <span className={styles.pipelineRowLabel}>Before</span>
@@ -716,7 +743,7 @@ function CriticalCSSWidget() {
           <div className={styles.pipelineTrack}>
             {afterSteps.map((s, i) => s.type === "marker" ? (
               <div key={i} className={styles.pipelineMarker} data-type="early" data-state={on ? "active" : "inactive"}>
-                <span>FCP @ {fcpAfter}ms</span>
+                <span>FCP @ {fcpAfter}ms{fouc ? " ⚠" : ""}</span>
               </div>
             ) : (
               <div
@@ -736,9 +763,13 @@ function CriticalCSSWidget() {
         FCP: {fcpBefore}ms → {fcpAfter}ms (saved {fcpBefore - fcpAfter}ms)
       </div>
       <p className={styles.widgetNote}>
-        {on
-          ? `Critical CSS inlined — browser paints at ${fcpAfter}ms instead of waiting ${cssDownload}ms for the full stylesheet. Async CSS loads in parallel without blocking.`
-          : `The full 48 KB stylesheet blocks rendering for ~${cssDownload}ms on ${nw.label}. Nothing paints until every CSS byte downloads.`}
+        {fouc
+          ? `Only ${inlineKB} KB inline — above-fold content will render unstyled (FOUC). Increase to ~4 KB to cover the critical rendering path.`
+          : inlineKB > 14
+          ? `${inlineKB} KB of inline CSS bloats the HTML document. The savings diminish past ~4 KB because extra inline CSS rarely covers more critical-path rules.`
+          : on
+          ? `${inlineKB} KB critical CSS inlined — browser paints at ${fcpAfter}ms. Async CSS (${asyncKB} KB) loads without blocking.`
+          : `The full ${totalCSS} KB stylesheet blocks rendering for ~${cssDownload}ms on ${nw.label}. Drag the slider to find the optimal inline threshold.`}
       </p>
     </div>
   );
@@ -1278,10 +1309,10 @@ function LongTaskWidget() {
 // ── Step 11: Layout stability ───────────────────────────────────────
 
 const SHIFT_SOURCES = [
-  { source: "Hero image", shift: 0.12, fix: "aspect-ratio: 16/9", optKey: "imageOptimization" as const },
-  { source: "Font swap", shift: 0.11, fix: "size-adjust fallback", optKey: "fontLoading" as const },
-  { source: "Ad injection", shift: 0.08, fix: "min-height reservation", optKey: null },
-  { source: "Late widget", shift: 0.03, fix: "CSS contain: layout", optKey: null },
+  { source: "Hero image", shift: 0.12 },
+  { source: "Font swap", shift: 0.11 },
+  { source: "Ad injection", shift: 0.08 },
+  { source: "Late widget", shift: 0.02 },
 ];
 
 const SHUFFLED_SOURCES = [
@@ -1370,36 +1401,31 @@ function LayoutStabilityWidget() {
             <span className={styles.predictionResultIcon}>{rankCorrect ? "✓" : "✗"}</span>
             <span>
               {rankCorrect
-                ? "Perfect ranking — hero image (0.12) > font swap (0.11) > ad injection (0.08) > late widget (0.03)."
-                : "The correct order: Hero image (0.12) > Font swap (0.11) > Ad injection (0.08) > Late widget (0.03). The hero is the largest element and displaces the most viewport area."}
+                ? "Perfect ranking — hero image (0.12) > font swap (0.11) > ad injection (0.08) > late widget (0.02)."
+                : "The correct order: Hero image (0.12) > Font swap (0.11) > Ad injection (0.08) > Late widget (0.02). The hero is the largest element and displaces the most viewport area."}
             </span>
           </div>
           <div className={styles.shiftGrid}>
-            {SHIFT_SOURCES.map((s) => {
-              const isFixed = (s.optKey && enabledOptimizations.has(s.optKey)) || on;
-              const fixedEarlier = s.optKey !== null && enabledOptimizations.has(s.optKey);
-
-              return (
-                <div key={s.source} className={styles.shiftRow} data-fixed-earlier={fixedEarlier ? "true" : undefined}>
-                  <span className={styles.shiftSource}>{s.source}</span>
-                  <div className={styles.shiftBarWrap}>
-                    <div
-                      className={styles.shiftBar}
-                      data-state={isFixed ? "fixed" : "shifting"}
-                      style={{ width: isFixed ? "2%" : `${(s.shift / 0.15) * 100}%` }}
-                    />
-                  </div>
-                  <span className={styles.shiftValue} data-state={isFixed ? "fixed" : "shifting"}>
-                    {isFixed ? "0" : s.shift.toFixed(2)}
-                  </span>
-                  {isFixed && (
-                    <span className={styles.shiftFix}>
-                      {fixedEarlier ? `Fixed in step ${s.optKey === "imageOptimization" ? "7" : "8"}` : s.fix}
-                    </span>
-                  )}
+            {metrics.clsSources.map((cs) => (
+              <div key={cs.source} className={styles.shiftRow} data-fixed-earlier={cs.fixed ? "true" : undefined}>
+                <span className={styles.shiftSource}>{cs.source}</span>
+                <div className={styles.shiftBarWrap}>
+                  <div
+                    className={styles.shiftBar}
+                    data-state={cs.fixed ? "fixed" : "shifting"}
+                    style={{ width: cs.fixed ? "2%" : `${(cs.shift / 0.15) * 100}%` }}
+                  />
                 </div>
-              );
-            })}
+                <span className={styles.shiftValue} data-state={cs.fixed ? "fixed" : "shifting"}>
+                  {cs.fixed ? "0" : cs.shift.toFixed(2)}
+                </span>
+                <span className={styles.shiftFormula}>
+                  {cs.fixed
+                    ? "fixed"
+                    : `${cs.viewportFrac.toFixed(2)} × ${cs.distFrac.toFixed(2)}`}
+                </span>
+              </div>
+            ))}
           </div>
           <div className={styles.clsTotal}>
             Total CLS: <strong data-status={metrics.cls <= 0.1 ? "good" : "bad"}>
@@ -1497,8 +1523,25 @@ function CachingWidget() {
 
       {!submitted ? (
         <>
-          <p className={styles.widgetNote}>
-            Two questions determine every cache strategy: (1) Can this resource&apos;s URL change between deploys? If yes, it needs revalidation. (2) Is the URL content-hashed (fingerprinted)? If yes, it&apos;s immutable forever — the filename changes instead. Everything else falls to stale-while-revalidate: serve the cached copy instantly, refresh in the background.
+          <div className={styles.cacheDecisionCards}>
+            <div className={styles.cacheDecisionCard}>
+              <span className={styles.cacheDecisionQ}>Q1</span>
+              <span>Does the URL change between deploys?</span>
+              <span className={styles.cacheDecisionAnswer}>Yes → <strong>no-cache</strong> (revalidate)</span>
+            </div>
+            <div className={styles.cacheDecisionCard}>
+              <span className={styles.cacheDecisionQ}>Q2</span>
+              <span>Is the URL content-hashed?</span>
+              <span className={styles.cacheDecisionAnswer}>Yes → <strong>immutable</strong> (cache forever)</span>
+            </div>
+            <div className={styles.cacheDecisionCard}>
+              <span className={styles.cacheDecisionQ}>else</span>
+              <span>Neither?</span>
+              <span className={styles.cacheDecisionAnswer}><strong>stale-while-revalidate</strong></span>
+            </div>
+          </div>
+          <p className={styles.widgetNote} style={{ marginTop: "var(--space-1)" }}>
+            Apply the decision tree above to assign each resource its cache strategy:
           </p>
           <div className={styles.cacheMatchGrid}>
             <div className={styles.cacheMatchHeader}>
