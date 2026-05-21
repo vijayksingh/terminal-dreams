@@ -1,59 +1,19 @@
 /* ── AutocompleteLab ──────────────────────────────────────────────── */
 
 .labRoot {
+  --lab-xs: 0.5625rem;
+  --lab-sm: 0.625rem;
+  --lab-base: 0.6875rem;
+  --lab-md: 0.8125rem;
+  --lab-lg: 0.9375rem;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
   font-family: var(--font-mono);
-}
-
-/* ── Step indicator bar ──────────────────────────────────────────── */
-
-.stepBar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  flex-shrink: 0;
-}
-
-.stepDot {
-  min-width: 1.4rem;
-  height: 1.4rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-mono);
-  font-size: 0.625rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  border-radius: 999px;
-  border: 1px solid var(--color-border);
-  padding: 0 3px;
-  transition: all 150ms ease;
-}
-
-.stepDot[data-active="true"] {
-  color: var(--diagram-layer-9);
-  border-color: color-mix(in srgb, var(--diagram-layer-9) 40%, transparent);
-}
-
-.stepDot[data-current="true"] {
-  color: var(--color-bg);
-  background: var(--diagram-layer-9);
-  border-color: var(--diagram-layer-9);
-  font-weight: 700;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent);
-  animation: stepPulse 2s ease-in-out infinite;
-}
-
-@keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--diagram-layer-9) 25%, transparent); }
-  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--diagram-layer-9) 12%, transparent); }
+  line-height: 1.4;
+  container-type: inline-size;
+  container-name: ac-lab;
 }
 
 /* ── Scroll area ─────────────────────────────────────────────────── */
@@ -99,7 +59,7 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-surface);
   cursor: pointer;
   text-align: left;
@@ -132,7 +92,9 @@
   align-items: center;
   justify-content: center;
   margin-top: 1px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .checkItem[data-checked="true"] .checkToggle {
@@ -162,7 +124,7 @@
   padding: var(--space-2) var(--space-3);
   background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
   border: 1px solid color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
 }
 
 .scopeLabel {
@@ -187,7 +149,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
 }
 
 .complexityRow {
@@ -221,7 +183,7 @@
   display: flex;
   gap: 1px;
   background: var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   overflow: hidden;
 }
 
@@ -236,7 +198,9 @@
   font-weight: 600;
   color: var(--color-muted);
   min-height: 44px;
-  transition: all 150ms ease;
+  transition-property: background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .panelTab:focus-visible {
@@ -261,7 +225,7 @@
   flex-direction: column;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-surface);
   text-align: left;
   font-family: var(--font-mono);
@@ -290,7 +254,7 @@
 .endpointHeader:focus-visible {
   outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-1);
 }
 
 .httpMethod {
@@ -376,7 +340,7 @@
 
 .typeCard {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
 }
@@ -446,7 +410,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
 }
 
 .metric {
@@ -491,11 +455,13 @@
   padding: var(--space-1) var(--space-2);
   background: none;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   cursor: pointer;
   font-family: var(--font-mono);
   min-height: 44px;
-  transition: all 150ms ease;
+  transition-property: border-color, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .featureToggle:focus-visible {
@@ -509,17 +475,21 @@
 }
 
 .toggleTrack {
-  width: 36px;
-  height: 20px;
-  border-radius: 10px;
-  background: var(--color-border);
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-2);
   position: relative;
-  transition: background 150ms ease;
+  transition-property: background-color, border-color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   flex-shrink: 0;
 }
 
 .featureToggle[data-on="true"] .toggleTrack {
   background: var(--diagram-layer-9);
+  border-color: var(--diagram-layer-9);
 }
 
 .toggleThumb {
@@ -529,12 +499,15 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--color-bg);
-  transition: transform 150ms ease;
+  background: var(--color-text);
+  transition-property: transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .featureToggle[data-on="true"] .toggleThumb {
-  transform: translateX(16px);
+  transform: translateX(20px);
+  background: var(--color-bg);
 }
 
 .toggleLabel {
@@ -598,10 +571,12 @@
   color: var(--color-muted);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   cursor: pointer;
   min-height: 44px;
-  transition: all 150ms ease;
+  transition-property: border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .clearButton:hover { border-color: var(--color-error); color: var(--color-error); }
@@ -619,7 +594,7 @@
   padding: var(--space-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2);
-  background: var(--color-surface-1);
+  background: var(--color-surface);
 }
 
 .predictionQ {
@@ -652,8 +627,8 @@
 }
 
 .predictionOption:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface-2));
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-surface-2));
 }
 
 .predictionOption:focus-visible {
@@ -707,7 +682,7 @@
   gap: var(--space-2);
   padding: 0 var(--space-3);
   border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   transition: border-color 200ms ease;
   min-height: 48px;
@@ -765,7 +740,7 @@
 .debounceBar {
   height: 3px;
   background: var(--color-border);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-radius: 0 0 var(--radius-2) var(--radius-2);
   overflow: hidden;
   margin-top: -2px;
 }
@@ -785,7 +760,7 @@
   left: 0;
   right: 0;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--color-text) 10%, transparent);
   z-index: 10;
@@ -859,7 +834,7 @@
 
 .networkPanel {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
 }
@@ -946,7 +921,7 @@
 
 .triePanel {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
 }
@@ -1025,7 +1000,7 @@
 
 .widgetCard {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   overflow: hidden;
 }
 
@@ -1067,7 +1042,7 @@
   padding: var(--space-2) var(--space-3);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   color: var(--color-text);
@@ -1248,7 +1223,9 @@
   font-size: 0.625rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .simButton:hover { background: color-mix(in srgb, var(--diagram-layer-0) 22%, transparent); }
@@ -1264,7 +1241,9 @@
   font-family: var(--font-mono);
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .simButtonSecondary:hover { background: var(--color-bg); }
@@ -1344,7 +1323,7 @@
 
 .kbSandbox {
   border: 2px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   overflow: hidden;
   cursor: text;
   transition: border-color 150ms ease;
@@ -1452,7 +1431,7 @@
 .highlightBad,
 .highlightGood {
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   font-size: 0.625rem;
 }
 
@@ -1499,7 +1478,9 @@
   font-family: var(--font-mono);
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: background-color, border-color, color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
   min-height: 44px;
 }
 
@@ -1737,7 +1718,9 @@
   color: var(--color-muted);
   padding: 4px var(--space-2);
   border-radius: 3px;
-  transition: all 300ms ease;
+  transition-property: color, background-color;
+  transition-duration: 300ms;
+  transition-timing-function: ease;
   text-align: center;
 }
 
@@ -1760,7 +1743,7 @@
   font-family: var(--font-mono);
   font-size: 0.625rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-bg);
   color: var(--color-text);
   min-height: 44px;
@@ -1778,7 +1761,7 @@
   font-size: 0.625rem;
   font-weight: 600;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-surface);
   color: var(--color-muted);
   cursor: pointer;
@@ -1804,7 +1787,7 @@
   gap: 2px;
   padding: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-2);
   background: var(--color-surface);
 }
 
@@ -1935,7 +1918,9 @@
   font-family: var(--font-mono);
   font-size: 0.625rem;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 .payloadButton:hover {
@@ -1988,14 +1973,16 @@
   cursor: pointer;
   background: none;
   border: none;
-  padding: 12px 4px;
-  box-sizing: content-box;
+  padding: 0;
   min-width: 44px;
-  min-height: 20px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ariaToggleButton:focus-visible {
-  outline: 2px solid var(--diagram-layer-0);
+  outline: 2px solid var(--diagram-layer-9);
   outline-offset: 2px;
 }
 
@@ -2014,7 +2001,9 @@
   font-size: 0.625rem;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  transition: all 200ms ease;
+  transition-property: background-color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease;
 }
 
 .ariaLiveRow[data-active="true"] {
@@ -2100,7 +2089,6 @@
 /* ── Reduced motion ──────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .stepDot[data-current="true"] { animation: none; }
   .debounceFill { transition: none; }
   .lruFill { transition: none; }
   .comparisonFill { transition: none; }

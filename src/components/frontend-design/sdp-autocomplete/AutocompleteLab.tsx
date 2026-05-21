@@ -23,9 +23,18 @@ import {
   TrieVisualizer,
   highlightMatch,
 } from "./ui/SearchComponents";
+import { StepBar } from "../_shared/StepBar";
 import styles from "./AutocompleteLab.module.css";
 
 // ── Public API ──────────────────────────────────────────────────────
+
+const STEP_LABELS = [
+  "R", "A", "C",
+  "B", "Db", "Ab", "Tr",
+  "Kb", "Gen", "Hi",
+  "Err", "A11y", "LRU",
+  "Cmp", "Scl",
+];
 
 export function AutocompleteLab({ activeStep }: { activeStep: number }) {
   const isPlanning = activeStep <= 3;
@@ -33,7 +42,7 @@ export function AutocompleteLab({ activeStep }: { activeStep: number }) {
   return (
     <AutocompleteProvider activeStep={activeStep}>
       <div className={styles.labRoot}>
-        <StepBar activeStep={activeStep} />
+        <StepBar activeStep={activeStep} labels={STEP_LABELS} />
         <div className={styles.scrollArea}>
           {isPlanning ? (
             <AnimatePresence mode="wait">
@@ -53,45 +62,6 @@ export function AutocompleteLab({ activeStep }: { activeStep: number }) {
         </div>
       </div>
     </AutocompleteProvider>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// Step indicator bar
-// ═══════════════════════════════════════════════════════════════════
-
-const STEP_LABELS = [
-  "R", "A", "C",
-  "B", "Db", "Ab", "Tr",
-  "Kb", "Gen", "Hi",
-  "Err", "A11y", "LRU",
-  "Cmp", "Scl",
-];
-
-const STEP_TITLES = [
-  "Requirements", "API Design", "Architecture",
-  "Baseline", "Debounce", "AbortController", "Trie Cache",
-  "Keyboard Nav", "Generation Counter", "Highlighting",
-  "Error Handling", "Accessibility", "LRU Eviction",
-  "Compare Mode", "Scale",
-];
-
-function StepBar({ activeStep }: { activeStep: number }) {
-  return (
-    <nav className={styles.stepBar} aria-label="Build steps">
-      {STEP_LABELS.map((label, i) => (
-        <span
-          key={i}
-          className={styles.stepDot}
-          data-active={i + 1 <= activeStep ? "true" : undefined}
-          data-current={i + 1 === activeStep ? "true" : undefined}
-          aria-current={i + 1 === activeStep ? "step" : undefined}
-          aria-label={`Step ${i + 1}: ${STEP_TITLES[i]}${i + 1 < activeStep ? " (complete)" : ""}`}
-        >
-          {label}
-        </span>
-      ))}
-    </nav>
   );
 }
 
