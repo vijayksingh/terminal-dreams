@@ -20,113 +20,7 @@
   gap: var(--space-3);
 }
 
-/* ── Section headings ────────────────────────────────────────────── */
-
-.sectionHeading {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: var(--space-3) 0 var(--space-2);
-  letter-spacing: -0.01em;
-}
-
-.sectionHeading:first-child { margin-top: 0; }
-
-/* ── Planning panel ──────────────────────────────────────────────── */
-
-.planningPanel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
 /* ── Step 1: App diagnostic profile ─────────────────────────────── */
-
-.profileGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-.profileCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-
-.profileCardHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.profileCardLabel {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.severityBadge {
-  font-family: var(--font-mono);
-  font-size: 0.52rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 1px var(--space-2);
-  border-radius: 999px;
-}
-
-.severityBadge[data-severity="high"] {
-  background: color-mix(in srgb, var(--color-error) 15%, var(--color-surface));
-  color: var(--color-error);
-}
-
-.severityBadge[data-severity="medium"] {
-  background: color-mix(in srgb, var(--color-warning) 15%, var(--color-surface));
-  color: var(--color-warning);
-}
-
-.profileCardDetail {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--diagram-layer-9);
-}
-
-.profileCardRisk {
-  font-size: 0.6rem;
-  color: var(--color-muted);
-}
-
-.profileSummary {
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-.profileSummaryLabel {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--color-muted);
-  font-weight: 700;
-}
-
-.profileSummaryValue {
-  font-size: 0.68rem;
-  color: var(--color-text);
-  line-height: 1.5;
-}
 
 /* ── Step 1: Page load filmstrip ───────────────────────────────── */
 
@@ -213,54 +107,9 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-.filmBlank[data-waiting="true"] {
-  background: var(--color-border);
-  opacity: 0.3;
-  flex: 1;
-}
-
-.filmBlank {
-  flex: 1;
-}
-
-.filmNavbar {
-  height: 6px;
-  border-radius: 2px;
-  background: var(--diagram-layer-4);
-  opacity: 0.6;
-}
-
-.filmSkeleton {
-  height: 10px;
-  border-radius: 2px;
-  background: var(--color-border);
-  animation: skeletonPulse 1.2s ease-in-out infinite;
-}
-
-.filmSkeleton[data-short="true"] {
-  width: 60%;
-}
-
 @keyframes skeletonPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
-}
-
-.filmHero {
-  height: 24px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--diagram-layer-5) 30%, var(--color-bg));
-}
-
-.filmText {
-  height: 4px;
-  border-radius: 1px;
-  background: var(--color-muted);
-  opacity: 0.4;
-}
-
-.filmText[data-short="true"] {
-  width: 55%;
 }
 
 .filmFrameTime {
@@ -298,12 +147,6 @@
     0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
-.vitalCardHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .vitalName {
   font-family: var(--font-mono);
   font-size: 0.85rem;
@@ -311,47 +154,10 @@
   color: var(--color-text);
 }
 
-.vitalMeasures {
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-muted);
-  font-weight: 700;
-}
-
 .vitalFull {
   font-size: 0.62rem;
   color: var(--color-muted);
 }
-
-.vitalValues {
-  display: flex;
-  gap: var(--space-4);
-  margin-top: var(--space-1);
-}
-
-.vitalValueRow {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.vitalValueLabel {
-  font-size: 0.55rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--color-muted);
-}
-
-.vitalValue {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.vitalValue[data-rating="poor"] { color: var(--color-error); }
-.vitalValue[data-rating="good"] { color: var(--color-success); }
 
 .vitalCause {
   font-size: 0.6rem;
@@ -459,88 +265,6 @@
 .optMapTarget[data-metric="FCP"] {
   background: color-mix(in srgb, var(--diagram-layer-3) 12%, transparent);
   color: var(--diagram-layer-3);
-}
-
-/* ── Step 3: Optimization map (legacy matrix) ─────────────────── */
-
-.optMatrix {
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--radius-2);
-  overflow: hidden;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
-}
-
-.optMatrixHeader {
-  display: grid;
-  grid-template-columns: 1fr 50px 50px 50px;
-  gap: 1px;
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  font-size: 0.6rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--color-muted);
-}
-
-.optMatrixHeader span:not(:first-child) { text-align: center; }
-
-.optMatrixRow {
-  display: grid;
-  grid-template-columns: 1fr 50px 50px 50px;
-  gap: 1px;
-  padding: var(--space-2) var(--space-3);
-  font-size: 0.65rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
-  transition: background 100ms ease;
-}
-
-.optMatrixRow:last-child { border-bottom: none; }
-
-.optMatrixRow[data-hovered="true"] {
-  background: color-mix(in srgb, var(--diagram-layer-9) 6%, transparent);
-}
-
-.optMatrixName {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.optMatrixStep {
-  font-family: var(--font-mono);
-  font-size: 0.52rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-1);
-  padding: 0 var(--space-1);
-  min-width: 1.2rem;
-  text-align: center;
-}
-
-.optMatrixCell {
-  text-align: center;
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-}
-
-.optMatrixCell[data-impact="3"] { color: var(--diagram-layer-9); }
-.optMatrixCell[data-impact="2"] { color: var(--diagram-layer-4); opacity: 0.8; }
-.optMatrixCell[data-impact="1"] { color: var(--color-muted); }
-.optMatrixCell[data-impact="0"] { color: transparent; }
-
-/* ── Evolution layout ────────────────────────────────────────────── */
-
-.evolutionLayout {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -700,39 +424,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    Waterfall container
    ═══════════════════════════════════════════════════════════════════ */
-
-.waterfallContainer {
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  overflow: hidden;
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent),
-    0 1px 2px color-mix(in srgb, var(--color-text) 4%, transparent),
-    0 2px 8px color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-
-.waterfallHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-
-.waterfallTitle {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-text);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.waterfallStats {
-  font-size: 0.62rem;
-  color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-}
 
 .waterfallControls {
   display: flex;
@@ -940,103 +631,6 @@
    Optimization toggles (in control panel)
    ═══════════════════════════════════════════════════════════════════ */
 
-.optimizationToggles {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.optimizationRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: var(--space-1) 0;
-  border: none;
-  background: none;
-  width: 100%;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  text-align: left;
-  border-radius: var(--radius-1);
-  transition: background 150ms ease;
-}
-
-.optimizationRow:hover {
-  background: color-mix(in srgb, var(--diagram-layer-9) 5%, transparent);
-}
-
-.optimizationRow:focus-visible {
-  outline: 2px solid var(--diagram-layer-9);
-  outline-offset: -1px;
-}
-
-.optimizationInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.optimizationLabel {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.optimizationDesc {
-  font-size: 0.56rem;
-  color: var(--color-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.optimizationEmpty {
-  font-size: 0.65rem;
-  color: var(--color-muted);
-  text-align: center;
-  padding: var(--space-2);
-}
-
-.toggleButton {
-  width: 36px;
-  height: 20px;
-  border-radius: 999px;
-  border: 2px solid var(--color-border);
-  background: var(--color-bg);
-  position: relative;
-  transition-property: border-color, background-color;
-  transition-duration: 200ms;
-  transition-timing-function: ease;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-.toggleButton[data-on="true"] {
-  border-color: var(--diagram-layer-9);
-  background: var(--diagram-layer-9);
-}
-
-.toggleKnob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--color-muted);
-  transition-property: left, background-color;
-  transition-duration: 200ms;
-  transition-timing-function: ease;
-}
-
-.toggleButton[data-on="true"] .toggleKnob {
-  left: 18px;
-  background: var(--color-bg);
-}
-
 /* ═══════════════════════════════════════════════════════════════════
    Metrics panel (full CWV gauges)
    ═══════════════════════════════════════════════════════════════════ */
@@ -1116,130 +710,6 @@
   margin: 0;
   text-wrap: pretty;
 }
-
-.widgetExercise {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface));
-  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--color-text) 4%, transparent);
-}
-
-/* ── Step 4: Baseline verdict ────────────────────────────────────── */
-
-.baselineVerdict {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: color-mix(in srgb, var(--color-error) 6%, var(--color-surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent);
-}
-
-.verdictIcon {
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--color-error);
-  color: var(--color-bg);
-  font-size: 0.68rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.verdictLabel {
-  display: block;
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-error);
-}
-
-.verdictDesc {
-  display: block;
-  font-size: 0.6rem;
-  color: var(--color-muted);
-  line-height: 1.4;
-}
-
-/* ── Step 4: Prediction interaction ─────────────────────────────── */
-
-.predictionGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  margin: var(--space-2) 0;
-}
-
-.predictionChoice {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 0.6rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition-property: background-color, color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
-  border: none;
-}
-
-.predictionChoice:active {
-  transform: scale(0.96);
-}
-
-.predictionChoice:hover {
-  box-shadow: 0 0 0 1px var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-bg));
-}
-
-.predictionChoice:focus-visible {
-  outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 2px;
-}
-
-.predictionResult {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  font-size: 0.6rem;
-  line-height: 1.6;
-  color: var(--color-text);
-  background: color-mix(in srgb, var(--color-error) 5%, var(--color-surface));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-
-.predictionResult[data-correct="true"] {
-  background: color-mix(in srgb, var(--color-success) 5%, var(--color-surface));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-
-.predictionResultIcon {
-  font-weight: 800;
-  font-size: 0.75rem;
-  flex-shrink: 0;
-}
-
-.predictionResult[data-correct="true"] .predictionResultIcon { color: var(--color-success); }
-.predictionResult:not([data-correct="true"]) .predictionResultIcon { color: var(--color-error); }
 
 /* ── Step 5: Bundle compare ──────────────────────────────────────── */
 
@@ -1546,68 +1016,6 @@
 
 /* ── Step 11: Shift ranking ────────────────────────────────────── */
 
-.shiftRankGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.shiftRankRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  user-select: none;
-  transition-property: transform, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
-}
-
-.shiftRankRow[data-dragging="true"] {
-  box-shadow:
-    0 0 0 1px var(--diagram-layer-9),
-    0 4px 12px color-mix(in srgb, var(--diagram-layer-9) 20%, transparent);
-  transform: scale(1.02);
-  z-index: 2;
-}
-
-.shiftRankPosition {
-  width: 1.4rem;
-  height: 1.4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--diagram-layer-9);
-  color: var(--color-bg);
-  font-family: var(--font-mono);
-  font-size: 0.56rem;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-.shiftRankName {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--color-text);
-  flex: 1;
-}
-
-.shiftRankHandle {
-  font-size: 0.8rem;
-  color: var(--color-muted);
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity 150ms ease;
-}
-
-.shiftRankRow:hover .shiftRankHandle {
-  opacity: 1;
-}
-
 /* ── Step 7: Image optimization ──────────────────────────────────── */
 
 .imageGrid {
@@ -1670,126 +1078,6 @@
 
 .imageSavings strong[data-status="good"] { color: var(--color-success); }
 .imageSavings strong[data-status="bad"] { color: var(--color-error); }
-
-/* ── Step 7: Image classification ───────────────────────────────── */
-
-.imageClassifyGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.imageClassifyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-.imageClassifyInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.imageClassifyHint {
-  font-size: 0.5rem;
-  color: var(--color-muted);
-}
-
-.imageClassifyButtons {
-  display: flex;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.imageClassifyBtn {
-  padding: var(--space-1) var(--space-2);
-  border: none;
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-family: var(--font-mono);
-  font-size: 0.5rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition-property: background-color, color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  min-width: 44px;
-  min-height: 28px;
-  text-align: center;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 8%, transparent);
-}
-
-.imageClassifyBtn:active {
-  transform: scale(0.96);
-}
-
-.imageClassifyBtn:hover {
-  box-shadow: 0 0 0 1px var(--diagram-layer-9);
-  color: var(--color-text);
-}
-
-.imageClassifyBtn[data-selected="true"] {
-  background: var(--diagram-layer-9);
-  color: var(--color-bg);
-  box-shadow: 0 0 0 1px var(--diagram-layer-9);
-}
-
-/* ── Step 8: Font compare ────────────────────────────────────────── */
-
-.fontCompare {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-}
-
-.fontCompareCol {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.fontCompareLabel {
-  font-size: 0.56rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.fontCompareBlock {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: 0.6rem;
-  transition-property: opacity;
-  transition-duration: 200ms;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-.fontCompareBlock[data-state="inactive"] { opacity: 0.3; }
-
-.fontCompareRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: var(--color-text);
-}
-
-.fontBad { color: var(--color-error); }
-.fontGood { color: var(--color-success); }
 
 /* ── Step 8: Font metrics summary ──────────────────────────────── */
 
@@ -1892,23 +1180,6 @@
 
 .lifecycleBlock[data-state="inactive"] { opacity: 0.2; }
 
-.lifecycleDivider {
-  height: 100%;
-  border-left: 2px dashed var(--color-border);
-  position: relative;
-}
-
-.lifecycleDividerLabel {
-  position: absolute;
-  top: -14px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.4rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  white-space: nowrap;
-}
-
 .lifecycleAxisRow {
   display: grid;
   grid-template-columns: 80px 1fr;
@@ -1924,66 +1195,6 @@
 }
 
 /* ── Step 9: Third-party cards (legacy) ──────────────────────────── */
-
-.thirdPartyGrid {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.thirdPartyCard {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  transition-property: background-color, box-shadow;
-  transition-duration: 200ms;
-  transition-timing-function: ease;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
-}
-
-.thirdPartyCard[data-state="deferred"] {
-  background: color-mix(in srgb, var(--color-success) 3%, var(--color-bg));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-success) 20%, transparent);
-}
-
-.thirdPartyCard[data-state="eager"] {
-  background: color-mix(in srgb, var(--color-error) 4%, var(--color-bg));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-error) 20%, transparent),
-    0 1px 3px color-mix(in srgb, var(--color-text) 3%, transparent);
-}
-
-.thirdPartyHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.thirdPartyName {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--color-text);
-}
-
-.thirdPartySize {
-  font-size: 0.62rem;
-  font-weight: 600;
-  color: var(--diagram-layer-7);
-}
-
-.thirdPartyImpact {
-  font-size: 0.56rem;
-  color: var(--color-muted);
-}
-
-.thirdPartyStrategy {
-  font-size: 0.56rem;
-  font-weight: 600;
-  color: var(--color-success);
-}
 
 .thirdPartySavings {
   font-size: 0.58rem;
@@ -2100,12 +1311,6 @@
 .shiftValue[data-state="shifting"] { color: var(--color-error); }
 .shiftValue[data-state="fixed"] { color: var(--color-success); }
 
-.shiftFix {
-  font-size: 0.5rem;
-  color: var(--color-success);
-  font-weight: 600;
-}
-
 .shiftFormula {
   font-size: 0.5rem;
   color: var(--color-muted);
@@ -2138,38 +1343,6 @@
 }
 
 /* ── Step 12: Cache strategy grid ────────────────────────────────── */
-
-.cacheDecisionCards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-1);
-  margin-bottom: var(--space-1);
-}
-
-.cacheDecisionCard {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--space-2);
-  border-radius: var(--radius-2);
-  background: var(--color-surface);
-  font-size: 0.55rem;
-  color: var(--color-text);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-.cacheDecisionQ {
-  font-weight: 700;
-  font-size: 0.5rem;
-  color: var(--diagram-layer-4);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.cacheDecisionAnswer {
-  font-size: 0.5rem;
-  color: var(--color-muted);
-}
 
 .cacheGrid {
   display: flex;
@@ -2216,235 +1389,12 @@
 .cacheStrategy { color: var(--diagram-layer-5); }
 .cacheTTL { color: var(--color-muted); text-align: right; }
 
-/* ── Step 12: Cache matching grid ───────────────────────────────── */
-
-.cacheMatchGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cacheMatchHeader {
-  display: grid;
-  grid-template-columns: 70px repeat(3, 1fr);
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  font-size: 0.5rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.cacheMatchStrategyLabel {
-  text-align: center;
-  font-size: 0.44rem;
-}
-
-.cacheMatchRow {
-  display: grid;
-  grid-template-columns: 70px repeat(3, 1fr);
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-1);
-  background: var(--color-bg);
-  align-items: center;
-}
-
-.cacheMatchCell {
-  width: 100%;
-  height: 24px;
-  border: none;
-  border-radius: var(--radius-1);
-  background: var(--color-surface);
-  cursor: pointer;
-  transition-property: background-color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 8%, transparent);
-}
-
-.cacheMatchCell:active {
-  transform: scale(0.96);
-}
-
-.cacheMatchCell:hover {
-  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 6%, var(--color-surface));
-}
-
-.cacheMatchCell[data-selected="true"] {
-  background: var(--diagram-layer-9);
-  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
-}
-
-.cacheSubmitButton {
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-2);
-  background: var(--diagram-layer-9);
-  color: var(--color-bg);
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition-property: background-color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  box-shadow: 0 1px 3px color-mix(in srgb, var(--diagram-layer-9) 30%, transparent);
-  min-height: 36px;
-}
-
-.cacheSubmitButton:active {
-  transform: scale(0.96);
-}
-
-.cacheSubmitButton:hover {
-  background: color-mix(in srgb, var(--diagram-layer-9) 85%, var(--color-text));
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--diagram-layer-9) 35%, transparent);
-}
-
-.cacheWrong {
-  text-decoration: line-through;
-  color: var(--color-error);
-  opacity: 0.6;
-  margin-right: 4px;
-}
-
-/* ── Step 13: Prefetch pipeline ──────────────────────────────────── */
-
 /* ── Step 13: Navigation comparison ─────────────────────────────── */
-
-.navComparison {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-
-.navComparisonRow {
-  display: grid;
-  grid-template-columns: 64px 1fr 50px;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.navComparisonLabel {
-  font-size: 0.56rem;
-  font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-}
-
-.navComparisonTrack {
-  display: flex;
-  gap: 1px;
-  align-items: center;
-}
-
-.navComparisonBlock {
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 2px;
-  font-size: 0.44rem;
-  font-weight: 700;
-  overflow: hidden;
-  white-space: nowrap;
-  transition-property: opacity, background-color, color, border-color;
-  transition-duration: 300ms;
-  transition-timing-function: ease;
-  background: color-mix(in srgb, var(--diagram-layer-7) 20%, var(--color-bg));
-  color: var(--diagram-layer-7);
-  border: 1px solid color-mix(in srgb, var(--diagram-layer-7) 30%, var(--color-border));
-}
-
-.navComparisonBlock[data-state="inactive"] {
-  opacity: 0.25;
-}
-
-.navComparisonBlock[data-type="prefetched"] {
-  background: color-mix(in srgb, var(--color-success) 20%, var(--color-bg));
-  color: var(--color-success);
-  border-color: color-mix(in srgb, var(--color-success) 30%, var(--color-border));
-}
-
-.navComparisonSaved {
-  font-size: 0.44rem;
-  font-weight: 700;
-  color: var(--color-success);
-  padding: 0 var(--space-1);
-  white-space: nowrap;
-  transition: opacity 300ms ease;
-}
-
-.navComparisonSaved[data-state="inactive"] {
-  opacity: 0;
-}
-
-.navComparisonTime {
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--color-muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.navComparisonTime[data-fast="true"] {
-  color: var(--color-success);
-}
 
 .prefetchLinkGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
-}
-
-.prefetchLinkBtn {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  cursor: pointer;
-  transition-property: background-color, box-shadow;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-  text-align: left;
-  font-family: var(--font-mono);
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-text) 8%, transparent);
-}
-
-.prefetchLinkBtn:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.prefetchLinkBtn:hover {
-  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-bg));
-}
-
-.prefetchLinkBtn[data-selected="true"] {
-  box-shadow: 0 0 0 1.5px var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 10%, var(--color-bg));
-}
-
-.prefetchLinkBtn[data-correct="true"] {
-  box-shadow: 0 0 0 1.5px var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 6%, var(--color-bg));
-}
-
-.prefetchLinkBtn[data-correct="wrong"] {
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--color-error) 40%, transparent);
-  opacity: 0.6;
 }
 
 .prefetchLinkPath {
@@ -3048,53 +1998,6 @@
    Code-fill exercise
    ═══════════════════════════════════════════════════════════════════ */
 
-.codeFillPre {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  line-height: 2;
-  color: var(--color-muted);
-  padding: var(--space-3);
-  border-radius: var(--radius-2);
-  background: var(--color-bg);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-text) 6%, transparent);
-  white-space: pre;
-  overflow-x: auto;
-  margin: 0;
-}
-
-.codeFillSelect {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
-  font-weight: 700;
-  color: var(--diagram-layer-9);
-  background: color-mix(in srgb, var(--diagram-layer-9) 8%, var(--color-bg));
-  border: 1px solid var(--diagram-layer-9);
-  border-radius: var(--radius-1);
-  padding: 0 var(--space-1);
-  min-width: 50px;
-  cursor: pointer;
-  transition-property: color, border-color, background-color;
-  transition-duration: 150ms;
-  transition-timing-function: ease;
-}
-
-.codeFillSelect:focus {
-  outline: 2px solid var(--diagram-layer-9);
-  outline-offset: 1px;
-}
-
-.codeFillSelect[data-status="correct"] {
-  color: var(--color-success);
-  border-color: var(--color-success);
-  background: color-mix(in srgb, var(--color-success) 10%, var(--color-bg));
-}
-
-.codeFillSelect[data-status="wrong"] {
-  color: var(--color-error);
-  border-color: var(--color-error);
-  background: color-mix(in srgb, var(--color-error) 10%, var(--color-bg));
-}
-
 /* ── Uncached waterfall (Cache "feel the problem") ─────────────── */
 
 .uncachedWaterfall {
@@ -3139,11 +2042,6 @@
   color: var(--color-muted);
   margin-top: var(--space-1);
   padding-left: calc(72px + var(--space-2));
-}
-
-.uncachedSavings {
-  color: var(--color-success);
-  font-weight: 700;
 }
 
 /* ── Prefetch sim buttons ──────────────────────────────────────── */
@@ -3303,13 +2201,8 @@
   .deviceBtn:active,
   .networkButton:active,
   .visitToggleButton:active,
-  .predictionChoice:active,
   .yieldPresetBtn:active,
   .clickSimButton:active,
-  .imageClassifyBtn:active,
-  .cacheMatchCell:active,
-  .cacheSubmitButton:active,
-  .prefetchLinkBtn:active,
   .prefetchSimBtn:active,
   .toggleChip:active,
   .drawerToggle:active {
