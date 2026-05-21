@@ -174,14 +174,14 @@ export function PrefetchWidget() {
             </div>
           ))}
           {bestAttempt != null && worstAttempt != null && worstAttempt > bestAttempt && (
-            <p className={styles.widgetNote} style={{ marginTop: "var(--space-1)" }}>
+            <p className={styles.widgetNote}>
               Best: {bestAttempt}ms vs worst: {worstAttempt}ms — {Math.round((1 - bestAttempt / worstAttempt) * 100)}% faster with a complete prefetch.
             </p>
           )}
         </div>
       )}
 
-      <div className={styles.prefetchPipeline} style={{ marginTop: "var(--space-3)" }}>
+      <div className={styles.prefetchPipeline}>
         {[
           { stage: "1", label: "Viewport links", desc: "IntersectionObserver detects visible <a> tags" },
           { stage: "2", label: "Route prediction", desc: "Hover/focus triggers prefetch of route chunk" },
