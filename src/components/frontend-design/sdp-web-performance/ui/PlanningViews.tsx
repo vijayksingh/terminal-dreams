@@ -75,7 +75,23 @@ export function AppProfileView() {
             data-visible={i <= visibleFrame ? "true" : undefined}
           >
             <span className={styles.filmFrameTime}>{f.label}</span>
-            <div className={styles.filmFrameScreen} data-state={f.state} />
+            <div className={styles.filmFrameScreen} data-state={f.state}>
+              {f.state !== "blank" && <div className={styles.filmNavbar} />}
+              {f.state === "partial" && (
+                <>
+                  <div className={styles.filmSkeleton} />
+                  <div className={styles.filmSkeleton} style={{ width: "60%" }} />
+                  <div className={styles.filmSkeleton} style={{ width: "80%" }} />
+                </>
+              )}
+              {(f.state === "loaded" || f.state === "interactive") && (
+                <>
+                  <div className={styles.filmHero} />
+                  <div className={styles.filmText} />
+                  <div className={styles.filmText} style={{ width: "70%" }} />
+                </>
+              )}
+            </div>
             <span className={styles.filmFrameDesc}>{f.desc}</span>
           </div>
         ))}
