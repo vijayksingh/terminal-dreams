@@ -13,10 +13,11 @@ import styles from "../WebPerformanceLab.module.css";
 export function RUMWidget() {
   const { metrics, enabledOptimizations, activeProfile: nw, resources } = usePerfContext();
 
-  const baselineMetrics = useMemo(
-    () => computePerformance(new Set(), nw).metrics,
+  const baseline = useMemo(
+    () => computePerformance(new Set(), nw),
     [nw],
   );
+  const baselineMetrics = baseline.metrics;
 
   const p75Lcp = metrics.lcp;
   const p75Inp = metrics.inp;
@@ -73,10 +74,6 @@ export function RUMWidget() {
   const allGreen = alerts.length === 0;
   const optCount = enabledOptimizations.size;
 
-  const baseline = useMemo(
-    () => computePerformance(new Set(), nw),
-    [nw],
-  );
   const baselineMaxMs = Math.max(baseline.timelineEndMs, 500);
   const currentMaxMs = Math.max(...resources.map((r) => r.endMs), 500);
   const overlayMax = Math.max(baselineMaxMs, currentMaxMs);

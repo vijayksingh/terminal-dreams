@@ -105,12 +105,13 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
     (e: React.KeyboardEvent<SVGSVGElement>) => {
       const len = sortedResources.length;
       if (len === 0) return;
+      const toX = (ms: number) => LABEL_WIDTH + (ms / maxMs) * BAR_AREA_WIDTH;
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
         e.preventDefault();
         const next = focusedIdx === null ? 0 : Math.min(focusedIdx + 1, len - 1);
         setFocusedIdx(next);
         const r = sortedResources[next];
-        const barX = msToX(r.startMs);
+        const barX = toX(r.startMs);
         const y = TOP_PAD + next * ROW_HEIGHT;
         setTooltip({ resource: r, x: barX, y: y - 10 });
       } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
@@ -118,7 +119,7 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
         const prev = focusedIdx === null ? 0 : Math.max(focusedIdx - 1, 0);
         setFocusedIdx(prev);
         const r = sortedResources[prev];
-        const barX = msToX(r.startMs);
+        const barX = toX(r.startMs);
         const y = TOP_PAD + prev * ROW_HEIGHT;
         setTooltip({ resource: r, x: barX, y: y - 10 });
       } else if (e.key === "Enter" || e.key === " ") {
@@ -133,7 +134,7 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
         setFocusedIdx(null);
       }
     },
-    [focusedIdx, sortedResources, selectedId, msToX],
+    [focusedIdx, sortedResources, selectedId, maxMs],
   );
 
   const totalHeight = TOP_PAD + sortedResources.length * ROW_HEIGHT + BOTTOM_PAD;

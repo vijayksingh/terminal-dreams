@@ -9,7 +9,6 @@ import styles from "../WebPerformanceLab.module.css";
 type MetricsPanelProps = {
   metrics: PerfMetrics;
   showAll?: boolean;
-  simulatedInp?: number | null;
 };
 
 type GaugeConfig = {
@@ -31,15 +30,14 @@ const EXTRA_GAUGES: GaugeConfig[] = [
   { key: "totalSizeKB", label: "Size", unit: "KB", format: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)} MB` : `${v} KB` },
 ];
 
-export function MetricsPanel({ metrics, showAll = false, simulatedInp }: MetricsPanelProps) {
+export function MetricsPanel({ metrics, showAll = false }: MetricsPanelProps) {
   const rm = usePrefersReducedMotion();
   const gauges = showAll ? [...CWV_GAUGES, ...EXTRA_GAUGES] : CWV_GAUGES;
 
   return (
     <div className={styles.metricsGrid} data-count={gauges.length}>
       {gauges.map((g) => {
-        const isInpOverride = g.key === "inp" && simulatedInp != null;
-        const value = isInpOverride ? simulatedInp : (metrics[g.key] as number);
+        const value = metrics[g.key] as number;
         const rating = getCWVRating(g.key, value);
 
         return (

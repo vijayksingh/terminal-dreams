@@ -143,8 +143,9 @@ export function AppProfileView() {
         </span>
       </div>
       <p className={styles.widgetNote}>
-        On 3G, the user stares at a blank screen for {timings.blank}ms. The page isn't interactive until {timings.interactive}ms.
-        On Wi-Fi, total load drops to {timings.interactive}ms. Each checkpoint on the timeline marks a moment the user is waiting for.
+        {device === "3g"
+          ? `On 3G, the user stares at a blank screen for ${timings.blank}ms. The page isn't interactive until ${timings.interactive}ms — switch to Wi-Fi to see the difference.`
+          : `On Wi-Fi, total load is ${timings.interactive}ms — fast, but 3G users wait ${1700}ms for anything to appear. The gap is where optimization matters most.`}
       </p>
     </div>
   );

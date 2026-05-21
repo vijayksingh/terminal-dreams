@@ -191,6 +191,8 @@ function WaterfallPanel() {
     return () => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
     };
   }, []);
 
