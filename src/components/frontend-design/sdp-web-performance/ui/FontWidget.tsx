@@ -1,13 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
+
+type FontStrategy = "block" | "swap" | "fallback" | "optional";
+const STRATEGY_LABELS: Record<FontStrategy, string> = {
+  block: "block",
+  swap: "swap",
+  fallback: "fallback",
+  optional: "optional",
+};
+
+const STRATEGY_INFO: Record<FontStrategy, { foit: string; cls: string; description: string }> = {
+  block: { foit: "3s max", cls: "High if late", description: "Invisible text for up to 3s, then fallback. Swap causes CLS." },
+  swap: { foit: "None", cls: "Always shifts", description: "Fallback immediately visible, swaps when font loads. Always causes CLS." },
+  fallback: { foit: "~100ms", cls: "Low", description: "Brief invisible period, then fallback. Only swaps if font loads within ~100ms." },
+  optional: { foit: "~100ms", cls: "Zero", description: "Brief invisible period, then fallback forever. Font cached for next page load." },
+};
 
 export function FontWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("fontLoading");
   const rtt = nw.rtt;
   const multiplier = nw.multiplier;
+  const [strategy, setStrategy] = useState<FontStrategy>("swap");
 
   const cssDownload = Math.round(48 * multiplier + rtt);
   const cssParse = 8;
@@ -27,6 +44,8 @@ export function FontWidget() {
     { label: "Preload + CSS (parallel)", ms: Math.max(cssDownload, fontDownloadAfter), type: "parallel" },
     { label: "Text visible (no shift)", ms: 0, type: "good-marker" },
   ];
+
+  const info = STRATEGY_INFO[strategy];
 
   return (
     <div className={styles.widgetPanel}>
@@ -73,6 +92,29 @@ export function FontWidget() {
           </div>
         </div>
       </div>
+
+      {on && (
+        <div className={styles.fontStrategyWrap}>
+          <label className={styles.criticalSliderLabel}>font-display strategy:</label>
+          <div className={styles.yieldPresets} role="radiogroup" aria-label="font-display strategy">
+            {(["block", "swap", "fallback", "optional"] as FontStrategy[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={styles.yieldPresetBtn}
+                data-active={s === strategy ? "true" : undefined}
+                onClick={() => setStrategy(s)}
+                role="radio"
+                aria-checked={s === strategy}
+              >
+                {STRATEGY_LABELS[s]}
+              </button>
+            ))}
+          </div>
+          <p className={styles.widgetNote}>{info.description}</p>
+        </div>
+      )}
+
       <div className={styles.fontMetrics}>
         <div className={styles.fontMetricItem}>
           <span className={styles.fontMetricLabel}>Font size</span>
@@ -81,15 +123,15 @@ export function FontWidget() {
           </span>
         </div>
         <div className={styles.fontMetricItem}>
-          <span className={styles.fontMetricLabel}>Discovery</span>
+          <span className={styles.fontMetricLabel}>FOIT</span>
           <span className={styles.fontMetricValue} data-state={on ? "good" : "bad"}>
-            {on ? "Preloaded in <head>" : `After CSS parse (${fontDiscover}ms)`}
+            {on ? info.foit : `${fontDownloadBefore}ms`}
           </span>
         </div>
         <div className={styles.fontMetricItem}>
           <span className={styles.fontMetricLabel}>CLS impact</span>
           <span className={styles.fontMetricValue} data-state={on ? "good" : "bad"}>
-            {on ? "~0 (metric overrides)" : "+0.11 (font swap)"}
+            {on ? info.cls : "+0.11 (font swap)"}
           </span>
         </div>
       </div>

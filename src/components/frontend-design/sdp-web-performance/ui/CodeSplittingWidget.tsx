@@ -1,13 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TRANSITION, SPRING } from "@/lib/motion";
 import { usePerfContext } from "../perf-context";
 import styles from "../WebPerformanceLab.module.css";
 
+const TOTAL_JS = 385;
+
 export function CodeSplittingWidget() {
   const { enabledOptimizations } = usePerfContext();
   const on = enabledOptimizations.has("codeSplitting");
+  const [corePct, setCorePct] = useState(30);
+
+  const coreKB = Math.round(TOTAL_JS * (corePct / 100));
+  const lazyKB = TOTAL_JS - coreKB;
 
   return (
     <div className={styles.widgetPanel}>
@@ -32,7 +39,7 @@ export function CodeSplittingWidget() {
                   animate={{ width: "100%" }}
                   transition={SPRING.snappy}
                 />
-                <span>main.js — 385 KB (render-blocking)</span>
+                <span>main.js — {TOTAL_JS} KB (render-blocking)</span>
               </div>
             </motion.div>
           ) : (
@@ -54,10 +61,10 @@ export function CodeSplittingWidget() {
                 <motion.div
                   className={styles.bundleBar}
                   style={{ background: "var(--diagram-layer-4)" }}
-                  animate={{ width: "30%" }}
+                  animate={{ width: `${corePct}%` }}
                   transition={SPRING.snappy}
                 />
-                <span>core.js — 115 KB (blocking)</span>
+                <span>core.js — {coreKB} KB (blocking)</span>
               </motion.div>
               <motion.div
                 className={styles.bundleBlock}
@@ -68,19 +75,47 @@ export function CodeSplittingWidget() {
                 <motion.div
                   className={styles.bundleBar}
                   style={{ background: "var(--diagram-layer-2)" }}
-                  animate={{ width: "19%" }}
+                  animate={{ width: `${100 - corePct}%` }}
                   transition={SPRING.snappy}
                 />
-                <span>routes.js — 75 KB (lazy, deferred)</span>
+                <span>routes.js — {lazyKB} KB (lazy, deferred)</span>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      {on && (
+        <div className={styles.criticalSliderWrap}>
+          <label className={styles.criticalSliderLabel}>
+            Core bundle: <strong>{coreKB} KB</strong> / {TOTAL_JS} KB ({corePct}%)
+            {corePct > 60 && <span className={styles.criticalBloat}> large core — diminishing returns</span>}
+            {corePct < 15 && <span className={styles.criticalFouc}> too small — frequent lazy loads</span>}
+          </label>
+          <input
+            type="range"
+            min={10}
+            max={80}
+            step={5}
+            value={corePct}
+            onChange={(e) => setCorePct(Number(e.target.value))}
+            className={styles.criticalSlider}
+            aria-label={`Core bundle size: ${corePct}%`}
+          />
+          <div className={styles.criticalSliderTicks}>
+            <span>10%</span>
+            <span className={styles.criticalSliderSweet}>~30% sweet spot</span>
+            <span>80%</span>
+          </div>
+        </div>
+      )}
+
       <p className={styles.widgetNote}>
         {on
-          ? "Initial blocking JS drops from 385 KB to 115 KB — render-blocking time shrinks proportionally and everything downstream starts earlier."
-          : "The monolithic 385 KB main.js blocks every dependent resource. Enable Code Splitting above to see the waterfall change."}
+          ? corePct <= 35
+            ? `Initial blocking JS drops from ${TOTAL_JS} KB to ${coreKB} KB — render-blocking time shrinks proportionally and everything downstream starts earlier.`
+            : `Core at ${coreKB} KB is still large. The goal is the smallest bundle that renders the above-fold UI without a lazy-load waterfall.`
+          : `The monolithic ${TOTAL_JS} KB main.js blocks every dependent resource. Enable Code Splitting above to experiment with the split threshold.`}
       </p>
     </div>
   );

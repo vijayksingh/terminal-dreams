@@ -12,6 +12,8 @@
   overflow: hidden;
   font-family: var(--font-mono);
   line-height: 1.4;
+  container-type: inline-size;
+  container-name: perf-lab;
 }
 
 /* ── Scroll area ─────────────────────────────────────────────────── */
@@ -1194,6 +1196,12 @@
 
 /* ── Step 7: Image optimization ──────────────────────────────────── */
 
+.imageControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 .imageGrid {
   display: flex;
   flex-direction: column;
@@ -1277,6 +1285,12 @@
 .fontMetricValue[data-state="good"] { color: var(--color-success); }
 .fontMetricValue[data-state="bad"] { color: var(--color-error); }
 
+.fontStrategyWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
 /* ── Step 9: Third-party lifecycle ─────────────────────────────── */
 
 .lifecycleTimeline {
@@ -1359,6 +1373,26 @@
   font-size: var(--perf-xs);
   color: var(--color-muted);
   padding: 0 2px;
+}
+
+.thirdPartyControls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.thirdPartyControlRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.thirdPartyControlLabel {
+  font-size: var(--perf-sm);
+  font-weight: 600;
+  color: var(--color-muted);
+  min-width: 80px;
 }
 
 /* ── Step 10: Task timeline ──────────────────────────────────────── */
@@ -2342,6 +2376,63 @@
 
 .prefetchAttemptTime[data-fast="true"] {
   color: var(--color-success);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Responsive: container queries for narrow split-pane widths
+   ═══════════════════════════════════════════════════════════════════ */
+
+@container perf-lab (max-width: 420px) {
+  .metricsGrid[data-count="3"],
+  .metricsGrid[data-count="6"] {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .milestoneGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rumGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fontMetrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .budgetRow {
+    grid-template-columns: 45px 1fr 80px;
+  }
+
+  .toggleChips {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toggleChips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .prefetchLinkGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container perf-lab (max-width: 320px) {
+  .metricsGrid[data-count="3"],
+  .metricsGrid[data-count="6"],
+  .milestoneGrid,
+  .fontMetrics,
+  .rumGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .budgetRow {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
