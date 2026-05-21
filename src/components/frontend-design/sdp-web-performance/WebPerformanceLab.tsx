@@ -1217,14 +1217,27 @@ function ThirdPartyWidget() {
 
 // ── Step 10: Long task breaking ─────────────────────────────────────
 
+const YIELD_PRESETS = [10, 25, 50, 100, 200];
+const TOTAL_WORK_MS = 400;
+
 function LongTaskWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("longTaskBreaking");
+  const [yieldMs, setYieldMs] = useState(50);
   const [clickState, setClickState] = useState<"idle" | "queued" | "processed">("idle");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const chunkCount = Math.ceil(TOTAL_WORK_MS / yieldMs);
+  const chunks = Array.from({ length: chunkCount }, (_, i) => {
+    const remaining = TOTAL_WORK_MS - i * yieldMs;
+    return Math.min(yieldMs, remaining);
+  });
+  const longestChunk = Math.max(...chunks);
+  const isLongTask = longestChunk > 50;
+  const overheadPct = Math.round(((chunkCount - 1) * 0.5 / TOTAL_WORK_MS) * 100);
+
   const networkScale = Math.min(nw.multiplier / 4.2, 1.8);
-  const queueDelay = on ? Math.round(50 * networkScale) : Math.round(300 * networkScale);
+  const queueDelay = on ? Math.round(longestChunk * networkScale) : Math.round(300 * networkScale);
 
   const handleSimClick = () => {
     if (clickState !== "idle") return;
@@ -1264,12 +1277,13 @@ function LongTaskWidget() {
         <div className={styles.taskTimelineRow}>
           <span className={styles.taskTimelineLabel}>After</span>
           <div className={styles.taskTimelineTrack}>
-            {[50, 48, 50, 50, 50, 48, 50, 50].map((ms, i) => (
+            {chunks.map((ms, i) => (
               <div
                 key={i}
                 className={styles.taskBlock}
+                data-long={ms > 50 ? "true" : undefined}
                 data-state={on ? "active" : "inactive"}
-                style={{ width: `${(ms / 400) * 100}%` }}
+                style={{ width: `${(ms / TOTAL_WORK_MS) * 100}%` }}
               >
                 <span>{ms}ms</span>
               </div>
@@ -1277,6 +1291,31 @@ function LongTaskWidget() {
           </div>
         </div>
       </div>
+
+      {on && (
+        <div className={styles.yieldSliderWrap}>
+          <label className={styles.criticalSliderLabel}>
+            Yield every: <strong>{yieldMs}ms</strong>
+            {isLongTask && <span className={styles.criticalFouc}> still a long task!</span>}
+          </label>
+          <div className={styles.yieldPresets}>
+            {YIELD_PRESETS.map((ms) => (
+              <button
+                key={ms}
+                type="button"
+                className={styles.yieldPresetBtn}
+                data-active={ms === yieldMs ? "true" : undefined}
+                onClick={() => setYieldMs(ms)}
+              >
+                {ms}ms
+              </button>
+            ))}
+          </div>
+          <span className={styles.yieldInfo}>
+            {chunkCount} chunks · worst-case delay {longestChunk}ms · +{overheadPct}% overhead
+          </span>
+        </div>
+      )}
 
       <div className={styles.clickSimulation}>
         <button
@@ -1299,7 +1338,9 @@ function LongTaskWidget() {
 
       <p className={styles.widgetNote}>
         {on
-          ? "Tasks yielded via scheduler.yield() — no single task exceeds 50ms. Browser can process input between chunks, dramatically improving INP."
+          ? isLongTask
+            ? `Chunks of ${yieldMs}ms still exceed the 50ms Long Task threshold. Try a smaller yield interval.`
+            : `${chunkCount} chunks of ≤${yieldMs}ms — no single task exceeds 50ms. Browser processes input between chunks, worst-case delay: ${longestChunk}ms.`
           : "Two long tasks (280ms + 120ms = 400ms blocking) hold the main thread. Any click during these tasks queues until the task completes — that's your INP."}
       </p>
     </div>
@@ -1772,8 +1813,16 @@ function PrefetchWidget() {
 
 // ── Step 14: Performance budgets ────────────────────────────────────
 
+type BudgetStrictness = "relaxed" | "standard" | "aggressive";
+const BUDGET_PRESETS: Record<BudgetStrictness, { lcp: number; inp: number; cls: number; js: number }> = {
+  relaxed: { lcp: 4000, inp: 500, cls: 0.25, js: 400 },
+  standard: { lcp: 2500, inp: 200, cls: 0.1, js: 250 },
+  aggressive: { lcp: 1500, inp: 100, cls: 0.05, js: 150 },
+};
+
 function BudgetWidget() {
   const { metrics, enabledOptimizations, toggleOptimization } = usePerfContext();
+  const [strictness, setStrictness] = useState<BudgetStrictness>("standard");
   const [regressionActive, setRegressionActive] = useState(false);
   const [regressionOpt, setRegressionOpt] = useState<OptimizationId | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1794,11 +1843,12 @@ function BudgetWidget() {
     }, 3000);
   };
 
+  const bp = BUDGET_PRESETS[strictness];
   const budgets = [
-    { metric: "LCP", budget: 2500, actual: metrics.lcp, unit: "ms", key: "lcp" },
-    { metric: "INP", budget: 200, actual: metrics.inp, unit: "ms", key: "inp" },
-    { metric: "CLS", budget: 0.1, actual: metrics.cls, unit: "", key: "cls" },
-    { metric: "JS size", budget: 250, actual: metrics.jsSizeKB, unit: "KB", key: "js" },
+    { metric: "LCP", budget: bp.lcp, actual: metrics.lcp, unit: "ms", key: "lcp" },
+    { metric: "INP", budget: bp.inp, actual: metrics.inp, unit: "ms", key: "inp" },
+    { metric: "CLS", budget: bp.cls, actual: metrics.cls, unit: "", key: "cls" },
+    { metric: "JS size", budget: bp.js, actual: metrics.jsSizeKB, unit: "KB", key: "js" },
   ];
 
   const failCount = budgets.filter((b) => b.actual > b.budget).length;
@@ -1807,6 +1857,19 @@ function BudgetWidget() {
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Performance Budget</div>
+      <div className={styles.yieldPresets} style={{ marginBottom: "var(--space-1)" }}>
+        {(["relaxed", "standard", "aggressive"] as BudgetStrictness[]).map((level) => (
+          <button
+            key={level}
+            type="button"
+            className={styles.yieldPresetBtn}
+            data-active={level === strictness ? "true" : undefined}
+            onClick={() => setStrictness(level)}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
       <div className={styles.budgetGrid}>
         {budgets.map((b) => {
           const passed = b.actual <= b.budget;

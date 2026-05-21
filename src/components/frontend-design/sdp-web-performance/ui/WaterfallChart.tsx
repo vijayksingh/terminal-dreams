@@ -222,6 +222,32 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
             );
           })}
         </AnimatePresence>
+
+        {/* Dependency arrows */}
+        {sortedResources.map((r, i) => {
+          if (!r.dependsOn) return null;
+          const depIdx = sortedResources.findIndex((d) => d.id === r.dependsOn);
+          if (depIdx < 0) return null;
+          const dep = sortedResources[depIdx];
+          const fromX = msToX(dep.endMs);
+          const fromY = TOP_PAD + depIdx * ROW_HEIGHT + ROW_HEIGHT / 2;
+          const toX = msToX(r.startMs);
+          const toY = TOP_PAD + i * ROW_HEIGHT + ROW_HEIGHT / 2;
+          const onCriticalPath = selectedId ? depChain.has(r.id) && depChain.has(dep.id) : false;
+          return (
+            <line
+              key={`dep-${r.id}`}
+              x1={fromX}
+              y1={fromY}
+              x2={toX}
+              y2={toY}
+              stroke={onCriticalPath ? "var(--diagram-layer-4)" : "var(--color-border)"}
+              strokeWidth={onCriticalPath ? 1.2 : 0.6}
+              strokeDasharray={onCriticalPath ? undefined : "2,3"}
+              opacity={selectedId && !onCriticalPath ? 0.15 : 0.5}
+            />
+          );
+        })}
       </svg>
 
       {/* Custom tooltip */}
