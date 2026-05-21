@@ -9,9 +9,9 @@ import styles from "../WebPerformanceLab.module.css";
 
 const LABEL_WIDTH = 96;
 const BAR_AREA_WIDTH = 260;
-const ROW_HEIGHT = 22;
-const TOP_PAD = 20;
-const BOTTOM_PAD = 8;
+const ROW_HEIGHT = 28;
+const TOP_PAD = 24;
+const BOTTOM_PAD = 12;
 
 type TooltipState = {
   resource: WaterfallResource;
