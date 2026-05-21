@@ -23,7 +23,7 @@ export function BaselineWidget() {
       <MetricsPanel metrics={metrics} showAll />
 
       {bottleneckPick === null && (
-        <div style={{ marginTop: "var(--space-2)" }}>
+        <>
           <p className={styles.widgetNote}>Which resource is the biggest bottleneck? Click to identify it.</p>
           <div className={styles.prefetchLinkGrid}>
             {BOTTLENECK_CHOICES.map((c) => (
@@ -32,7 +32,7 @@ export function BaselineWidget() {
               </button>
             ))}
           </div>
-        </div>
+        </>
       )}
 
       {bottleneckPick !== null && (

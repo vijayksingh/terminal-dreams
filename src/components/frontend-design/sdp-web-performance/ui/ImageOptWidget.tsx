@@ -99,7 +99,7 @@ export function ImageOptWidget() {
           )}
 
           {classified && !on && (
-            <div className={styles.widgetPanel} style={{ padding: "var(--space-2)", gap: "var(--space-1)" }}>
+            <div className={styles.widgetExercise}>
               <div className={styles.widgetTitle}>Fill the hero &lt;img&gt; attributes</div>
               <pre className={styles.codeFillPre}>
                 {'<img\n  src="hero.webp"\n  alt="Hero banner"'}

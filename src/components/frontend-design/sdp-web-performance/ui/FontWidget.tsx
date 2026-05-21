@@ -21,7 +21,7 @@ function FontMetricExercise() {
   const allCorrect = FONT_DESCRIPTORS.every((d) => picks[d.property] === d.correct);
 
   return (
-    <div style={{ marginTop: "var(--space-2)" }}>
+    <div className={styles.widgetExercise}>
       <p className={styles.widgetNote}>Match each @font-face descriptor to its value:</p>
       <div className={styles.codeFillPre}>
         <code>{"@font-face {\n"}</code>

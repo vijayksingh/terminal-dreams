@@ -49,7 +49,7 @@ export function BudgetWidget() {
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Performance Budget</div>
-      <div className={styles.yieldPresets} style={{ marginBottom: "var(--space-1)" }}>
+      <div className={styles.yieldPresets}>
         {(["relaxed", "standard", "aggressive"] as BudgetStrictness[]).map((level) => (
           <button
             key={level}

@@ -16,7 +16,7 @@ export function CodeSplittingWidget() {
       <div className={styles.widgetTitle}>Bundle Analysis</div>
 
       {!on && splitPrediction === null && (
-        <div style={{ marginBottom: "var(--space-2)" }}>
+        <>
           <p className={styles.widgetNote}>Before toggling: how much will blocking JS drop?</p>
           <div className={styles.prefetchLinkGrid}>
             {[
@@ -30,11 +30,11 @@ export function CodeSplittingWidget() {
               </button>
             ))}
           </div>
-        </div>
+        </>
       )}
 
       {splitPrediction !== null && !on && (
-        <div className={styles.predictionResult} data-correct={splitPrediction === 1 ? "true" : undefined} style={{ marginBottom: "var(--space-2)" }}>
+        <div className={styles.predictionResult} data-correct={splitPrediction === 1 ? "true" : undefined}>
           <span className={styles.predictionResultIcon}>{splitPrediction === 1 ? "✓" : "✗"}</span>
           <span>
             {splitPrediction === 1
@@ -94,10 +94,9 @@ export function CodeSplittingWidget() {
               </motion.div>
               <motion.div
                 className={styles.bundleBlock}
-                data-state="active"
+                data-state="lazy"
                 layout
                 transition={SPRING.snappy}
-                style={{ opacity: 0.65, borderStyle: "dashed" }}
               >
                 <motion.div
                   className={styles.bundleBar}

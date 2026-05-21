@@ -58,7 +58,7 @@ function TransferChallenge() {
   const score = [...picks].filter((id) => correctSet.has(id)).length;
 
   return (
-    <div style={{ marginTop: "var(--space-3)", borderTop: "1px solid var(--color-border)", paddingTop: "var(--space-2)" }}>
+    <div className={styles.widgetExercise}>
       <div className={styles.widgetTitle}>Transfer Challenge</div>
       <p className={styles.widgetNote}>
         New page profile: <strong>{TRANSFER_PROFILE.name}</strong> — {TRANSFER_PROFILE.traits}. Pick the 3 most impactful optimizations:

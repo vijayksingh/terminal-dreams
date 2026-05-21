@@ -91,7 +91,7 @@ export function CachingWidget() {
               <span className={styles.cacheDecisionAnswer}><strong>stale-while-revalidate</strong></span>
             </div>
           </div>
-          <p className={styles.widgetNote} style={{ marginTop: "var(--space-1)" }}>
+          <p className={styles.widgetNote}>
             Apply the decision tree above to assign each resource its cache strategy:
           </p>
           <div className={styles.cacheMatchGrid}>
