@@ -61,6 +61,8 @@ export function BudgetWidget() {
             className={styles.yieldPresetBtn}
             data-active={level === strictness ? "true" : undefined}
             onClick={() => setStrictness(level)}
+            aria-label={`${level} budget strictness`}
+            aria-pressed={level === strictness}
           >
             {level}
           </button>
@@ -108,6 +110,7 @@ export function BudgetWidget() {
           data-state={regressionActive ? "queued" : "idle"}
           onClick={simulateRegression}
           disabled={regressionActive}
+          aria-label={regressionActive ? "Regression simulation in progress" : "Simulate a careless PR disabling a random optimization"}
         >
           {regressionActive
             ? `Careless PR disabled ${regressionOpt ? OPTIMIZATIONS.find((o) => o.id === regressionOpt)?.label : ""}...`

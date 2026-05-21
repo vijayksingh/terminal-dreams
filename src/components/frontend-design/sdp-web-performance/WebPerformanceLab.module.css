@@ -183,7 +183,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-2) var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
 }
 
 .timeProgressorTrack {
@@ -191,19 +193,24 @@
   height: 6px;
   border-radius: var(--radius-1);
   background: var(--color-border);
-  margin-top: var(--space-3);
+  margin: var(--space-4) var(--space-3);
 }
 
 .timeProgressorFill {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: var(--radius-1);
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--diagram-layer-9) 70%, transparent),
     var(--diagram-layer-9)
   );
-  transition: width 60ms linear;
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
 }
 
 .timeCheckpoint {
@@ -282,7 +289,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .timeProgressorFill {
-    transition: none;
+    transform: scaleX(1);
   }
   .timeCheckpointDot,
   .timeCheckpointLabel {
@@ -449,17 +456,6 @@
   padding: var(--space-4);
 }
 
-/* ── Instrument bar (metrics + toggle chips) ───────────────────── */
-
-.instrumentBar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 4px 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
-  min-height: 0;
-}
-
 /* ── Toggle chips ──────────────────────────────────────────────── */
 
 .toggleChips {
@@ -477,7 +473,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--color-muted);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans, system-ui);
   font-size: var(--perf-sm);
   font-weight: 600;
   cursor: pointer;
@@ -504,8 +500,8 @@
 }
 
 .chipDot {
-  width: 5px;
-  height: 5px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
   background: var(--color-border);
   flex-shrink: 0;
@@ -872,11 +868,14 @@
 }
 
 .widgetTitle {
-  font-size: var(--perf-lg);
+  font-family: var(--font-sans, system-ui);
+  font-size: 1rem;
   font-weight: 700;
   color: var(--color-text);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   line-height: 1.2;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
 }
 
 .widgetNote {
@@ -2356,8 +2355,7 @@
   .yieldPresetBtn:active,
   .clickSimButton:active,
   .prefetchSimBtn:active,
-  .toggleChip:active,
-  .drawerToggle:active {
+  .toggleChip:active {
     transform: none;
   }
 

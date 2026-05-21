@@ -221,9 +221,9 @@ function WaterfallPanel() {
           ))}
         </div>
         {showVisitToggle && (
-          <div className={styles.visitToggle}>
-            <button type="button" className={styles.visitToggleButton} data-active={visitType === "first" ? "true" : undefined} onClick={() => setVisitType("first")}>First</button>
-            <button type="button" className={styles.visitToggleButton} data-active={visitType === "repeat" ? "true" : undefined} onClick={() => setVisitType("repeat")}>Repeat</button>
+          <div className={styles.visitToggle} role="radiogroup" aria-label="Visit type">
+            <button type="button" className={styles.visitToggleButton} data-active={visitType === "first" ? "true" : undefined} onClick={() => setVisitType("first")} role="radio" aria-checked={visitType === "first"}>First</button>
+            <button type="button" className={styles.visitToggleButton} data-active={visitType === "repeat" ? "true" : undefined} onClick={() => setVisitType("repeat")} role="radio" aria-checked={visitType === "repeat"}>Repeat</button>
           </div>
         )}
         <div className={styles.networkSliderWrap}>

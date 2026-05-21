@@ -105,6 +105,8 @@ export function LongTaskWidget() {
                 className={styles.yieldPresetBtn}
                 data-active={ms === yieldMs ? "true" : undefined}
                 onClick={() => setYieldMs(ms)}
+                aria-label={`Yield every ${ms} milliseconds`}
+                aria-pressed={ms === yieldMs}
               >
                 {ms}ms
               </button>
@@ -123,6 +125,7 @@ export function LongTaskWidget() {
           data-state={clickState}
           onClick={handleSimClick}
           disabled={clickState !== "idle"}
+          aria-label={clickState === "idle" ? "Simulate a user click during a long task" : clickState === "queued" ? `Input queued for ${lastDelay}ms` : `Input processed with ${lastDelay}ms delay`}
         >
           {clickState === "idle" && "Click during long task"}
           {clickState === "queued" && `Queued ~${lastDelay}ms...`}

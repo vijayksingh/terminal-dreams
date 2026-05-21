@@ -68,6 +68,8 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
     return chain;
   }, [selectedId, sortedResources]);
 
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
+
   const handleMouseEnter = useCallback(
     (r: WaterfallResource, e: React.MouseEvent<SVGGElement>) => {
       if (!wrapperRef.current) return;
@@ -97,14 +99,49 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
   const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
   const maxMs = Math.max(timelineEndMs, 500);
+  const msToX = (ms: number) => LABEL_WIDTH + (ms / maxMs) * BAR_AREA_WIDTH;
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<SVGSVGElement>) => {
+      const len = sortedResources.length;
+      if (len === 0) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const next = focusedIdx === null ? 0 : Math.min(focusedIdx + 1, len - 1);
+        setFocusedIdx(next);
+        const r = sortedResources[next];
+        const barX = msToX(r.startMs);
+        const y = TOP_PAD + next * ROW_HEIGHT;
+        setTooltip({ resource: r, x: barX, y: y - 10 });
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        const prev = focusedIdx === null ? 0 : Math.max(focusedIdx - 1, 0);
+        setFocusedIdx(prev);
+        const r = sortedResources[prev];
+        const barX = msToX(r.startMs);
+        const y = TOP_PAD + prev * ROW_HEIGHT;
+        setTooltip({ resource: r, x: barX, y: y - 10 });
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (focusedIdx !== null) {
+          const r = sortedResources[focusedIdx];
+          setSelectedId(selectedId === r.id ? null : r.id);
+        }
+      } else if (e.key === "Escape") {
+        setSelectedId(null);
+        setTooltip(null);
+        setFocusedIdx(null);
+      }
+    },
+    [focusedIdx, sortedResources, selectedId, msToX],
+  );
+
   const totalHeight = TOP_PAD + sortedResources.length * ROW_HEIGHT + BOTTOM_PAD;
   const totalWidth = LABEL_WIDTH + BAR_AREA_WIDTH + 12;
 
   const tickInterval = maxMs <= 1000 ? 200 : maxMs <= 2000 ? 500 : 1000;
   const ticks: number[] = [];
   for (let t = 0; t <= maxMs; t += tickInterval) ticks.push(t);
-
-  const msToX = (ms: number) => LABEL_WIDTH + (ms / maxMs) * BAR_AREA_WIDTH;
 
   return (
     <div className={styles.waterfallWrapper} ref={wrapperRef} style={{ position: "relative" }}>
@@ -114,7 +151,10 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
         height={totalHeight}
         className={styles.waterfallSvg}
         role="img"
-        aria-label={`Resource waterfall: ${sortedResources.length} resources loading over ${maxMs >= 1000 ? `${(maxMs / 1000).toFixed(1)}s` : `${maxMs}ms`}`}
+        aria-label={`Resource waterfall: ${sortedResources.length} resources loading over ${maxMs >= 1000 ? `${(maxMs / 1000).toFixed(1)}s` : `${maxMs}ms`}. Use arrow keys to navigate resources, Enter to select, Escape to deselect.`}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onBlur={() => { setFocusedIdx(null); setTooltip(null); }}
       >
         <title>Resource loading waterfall chart</title>
         <defs>
@@ -171,7 +211,19 @@ export function WaterfallChart({ resources, timelineEndMs }: WaterfallChartProps
                 onMouseEnter={(e) => handleMouseEnter(r, e)}
                 onMouseMove={(e) => handleMouseMove(r, e)}
                 onMouseLeave={handleMouseLeave}
+                aria-label={`${r.label} — ${r.sizeKB}KB, ${r.startMs}ms to ${r.endMs}ms${r.blocking ? ", render-blocking" : ""}`}
               >
+                {focusedIdx === i && (
+                  <rect
+                    x={0}
+                    y={y}
+                    width={totalWidth}
+                    height={ROW_HEIGHT}
+                    fill="var(--color-accent)"
+                    opacity={0.08}
+                    rx={2}
+                  />
+                )}
                 {/* Label */}
                 <text
                   x={LABEL_WIDTH - 6}

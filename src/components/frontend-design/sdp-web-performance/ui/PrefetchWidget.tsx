@@ -130,6 +130,8 @@ export function PrefetchWidget() {
               data-done={navTime != null ? "true" : undefined}
               onMouseEnter={() => startPrefetch(l.path)}
               onMouseLeave={() => stopPrefetch(l.path)}
+              onFocus={() => startPrefetch(l.path)}
+              onBlur={() => stopPrefetch(l.path)}
               onClick={() => navigate(l.path)}
               disabled={navigating}
             >

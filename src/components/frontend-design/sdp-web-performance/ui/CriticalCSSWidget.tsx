@@ -53,6 +53,7 @@ export function CriticalCSSWidget() {
           value={inlineKB}
           onChange={(e) => setInlineKB(Number(e.target.value))}
           className={styles.criticalSlider}
+          aria-label={`Inline CSS size: ${inlineKB} KB`}
         />
         <div className={styles.criticalSliderTicks}>
           <span>0 KB</span>

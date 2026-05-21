@@ -135,10 +135,8 @@ export const RESOURCE_COLORS: Record<ResourceType, string> = {
 
 // ── Bandwidth model ─────────────────────────────────────────────
 
-let activeProfile: NetworkProfile = NETWORK_PROFILES["3g"];
-
-function downloadMs(sizeKB: number): number {
-  return Math.round(sizeKB * activeProfile.multiplier + activeProfile.rtt);
+function downloadMs(sizeKB: number, profile: NetworkProfile): number {
+  return Math.round(sizeKB * profile.multiplier + profile.rtt);
 }
 
 // ── Baseline Resources ──────────────────────────────────────────
@@ -291,7 +289,7 @@ const TRANSFORM_ORDER: OptimizationId[] = [
 const MAX_THIRD_PARTY_CONNECTIONS = 2;
 const BANDWIDTH_SHARING_PENALTY = 0.08;
 
-function computeTimings(templates: ResourceTemplate[]): WaterfallResource[] {
+function computeTimings(templates: ResourceTemplate[], profile: NetworkProfile): WaterfallResource[] {
   const endTimes = new Map<string, number>();
   const result: WaterfallResource[] = [];
   const queue = [...templates];
@@ -325,7 +323,7 @@ function computeTimings(templates: ResourceTemplate[]): WaterfallResource[] {
       }
 
       const bandwidthPenalty = isThirdParty ? 0 : concurrentSameOrigin * BANDWIDTH_SHARING_PENALTY;
-      const endMs = startMs + Math.round(downloadMs(r.sizeKB) * (1 + bandwidthPenalty));
+      const endMs = startMs + Math.round(downloadMs(r.sizeKB, profile) * (1 + bandwidthPenalty));
 
       if (isThirdParty) thirdPartySlots.push(endMs);
 
@@ -486,7 +484,7 @@ export function computePerformance(
   metrics: PerfMetrics;
   timelineEndMs: number;
 } {
-  activeProfile = typeof network === "string" ? NETWORK_PROFILES[network] : network;
+  const profile = typeof network === "string" ? NETWORK_PROFILES[network] : network;
   let templates: ResourceTemplate[] = BASELINE.map((r) => ({ ...r }));
 
   for (const opt of TRANSFORM_ORDER) {
@@ -500,7 +498,7 @@ export function computePerformance(
     templates = applyCachingRepeat(templates);
   }
 
-  const resources = computeTimings(templates);
+  const resources = computeTimings(templates, profile);
 
   const baselineIds = new Set(BASELINE.map((r) => r.id));
   const baselineSizes = new Map(BASELINE.map((r) => [r.id, r.sizeKB]));
