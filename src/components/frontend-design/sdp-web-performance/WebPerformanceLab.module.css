@@ -677,6 +677,15 @@
 .metricsSummaryValue[data-rating="needs-improvement"] { color: var(--color-warning); }
 .metricsSummaryValue[data-rating="poor"] { color: var(--color-error); }
 
+.metricsSummaryValue[data-flash="true"] {
+  animation: inpFlash 0.6s ease-out;
+}
+
+@keyframes inpFlash {
+  0% { transform: scale(1.3); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
 .metricsDelta {
   display: block;
   font-size: 0.5rem;
@@ -2765,6 +2774,198 @@
   color: var(--color-error);
   border-color: var(--color-error);
   background: color-mix(in srgb, var(--color-error) 10%, var(--color-bg));
+}
+
+/* ── Uncached waterfall (Cache "feel the problem") ─────────────── */
+
+.uncachedWaterfall {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+}
+
+.uncachedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.uncachedLabel {
+  width: 72px;
+  font-size: 0.56rem;
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.uncachedBar {
+  height: 20px;
+  border-radius: var(--radius-1);
+  background: var(--diagram-layer-4);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 0.48rem;
+  font-family: var(--font-mono);
+  color: var(--color-bg);
+  font-weight: 700;
+  min-width: 40px;
+  white-space: nowrap;
+}
+
+.uncachedTotal {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  margin-top: var(--space-1);
+  padding-left: calc(72px + var(--space-2));
+}
+
+.uncachedSavings {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+/* ── Prefetch sim buttons ──────────────────────────────────────── */
+
+.prefetchSimBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  cursor: pointer;
+  transition: all 150ms ease;
+  text-align: left;
+  font-family: var(--font-mono);
+  position: relative;
+  overflow: hidden;
+}
+
+.prefetchSimBtn:hover {
+  border-color: var(--diagram-layer-9);
+  background: color-mix(in srgb, var(--diagram-layer-9) 5%, var(--color-bg));
+}
+
+.prefetchSimBtn[data-navigating="true"] {
+  border-color: var(--diagram-layer-5);
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.prefetchSimBtn[data-done="true"] {
+  border-color: var(--color-border);
+}
+
+.prefetchProgressTrack {
+  width: 100%;
+  height: 3px;
+  background: var(--color-border);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.prefetchProgressFill {
+  height: 100%;
+  background: var(--diagram-layer-5);
+  border-radius: 2px;
+  transition: width 50ms linear;
+}
+
+.prefetchProgressFill[data-complete="true"] {
+  background: var(--color-success);
+}
+
+.prefetchNavSpinner {
+  font-size: 0.48rem;
+  color: var(--diagram-layer-5);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.prefetchNavResult {
+  font-size: 0.56rem;
+  font-weight: 800;
+  color: var(--color-error);
+  margin-top: 2px;
+}
+
+.prefetchNavResult[data-fast="true"] {
+  color: var(--color-success);
+}
+
+/* ── Prefetch attempt log ──────────────────────────────────────── */
+
+.prefetchAttemptLog {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  padding: var(--space-2);
+  background: var(--color-bg);
+}
+
+.prefetchAttemptHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+.prefetchResetBtn {
+  font-size: 0.5rem;
+  padding: 2px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.prefetchResetBtn:hover {
+  border-color: var(--diagram-layer-9);
+  color: var(--color-text);
+}
+
+.prefetchAttemptRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.52rem;
+  font-family: var(--font-mono);
+  padding: 2px 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+
+.prefetchAttemptRow:first-of-type {
+  border-top: none;
+}
+
+.prefetchAttemptPath {
+  flex: 1;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.prefetchAttemptPct {
+  color: var(--color-muted);
+}
+
+.prefetchAttemptTime {
+  font-weight: 800;
+  color: var(--color-error);
+  min-width: 48px;
+  text-align: right;
+}
+
+.prefetchAttemptTime[data-fast="true"] {
+  color: var(--color-success);
 }
 
 /* ── Reduced motion ──────────────────────────────────────────────── */

@@ -424,13 +424,14 @@ function PersistentWaterfall() {
 // ── Metrics summary bar ─────────────────────────────────────────────
 
 function MetricsSummaryBar() {
-  const { metrics } = usePerfContext();
+  const { metrics, simulatedInp } = usePerfContext();
   const prevMetricsRef = useRef(metrics);
   const prevMetrics = prevMetricsRef.current;
 
-  const items: { label: string; value: string; key: string; delta: number }[] = [
+  const displayInp = simulatedInp != null ? simulatedInp : metrics.inp;
+  const items: { label: string; value: string; key: string; delta: number; flash?: boolean }[] = [
     { label: "LCP", value: metrics.lcp >= 1000 ? `${(metrics.lcp / 1000).toFixed(1)}s` : `${metrics.lcp}ms`, key: "lcp", delta: metrics.lcp - prevMetrics.lcp },
-    { label: "INP", value: `${metrics.inp}ms`, key: "inp", delta: metrics.inp - prevMetrics.inp },
+    { label: simulatedInp != null ? "INP ⚡" : "INP", value: `${displayInp}ms`, key: "inp", delta: metrics.inp - prevMetrics.inp, flash: simulatedInp != null },
     { label: "CLS", value: metrics.cls.toFixed(2), key: "cls", delta: Math.round((metrics.cls - prevMetrics.cls) * 100) / 100 },
     { label: "Size", value: `${metrics.totalSizeKB} KB`, key: "totalSizeKB", delta: metrics.totalSizeKB - prevMetrics.totalSizeKB },
   ];
@@ -442,12 +443,13 @@ function MetricsSummaryBar() {
 
   return (
     <div className={styles.metricsSummaryBar} aria-live="polite" aria-label="Performance metrics">
-      {items.map(({ label, value, key, delta }) => {
-        const rating = getCWVRating(key, metrics[key as keyof typeof metrics] as number);
+      {items.map(({ label, value, key, delta, flash }) => {
+        const ratingValue = key === "inp" ? displayInp : (metrics[key as keyof typeof metrics] as number);
+        const rating = getCWVRating(key, ratingValue);
         return (
           <div key={key} className={styles.metricsSummaryItem}>
             <span className={styles.metricsSummaryLabel}>{label}</span>
-            <span className={styles.metricsSummaryValue} data-rating={rating}>{value}</span>
+            <span className={styles.metricsSummaryValue} data-rating={rating} data-flash={flash ? "true" : undefined}>{value}</span>
             {delta !== 0 && (
               <span className={styles.metricsDelta} data-direction={delta < 0 ? "improved" : "regressed"}>
                 {delta > 0 ? "+" : ""}{key === "cls" ? delta.toFixed(2) : delta}{key === "totalSizeKB" ? " KB" : key === "cls" ? "" : "ms"}
@@ -1330,7 +1332,7 @@ const YIELD_PRESETS = [10, 25, 50, 100, 200];
 const TOTAL_WORK_MS = 400;
 
 function LongTaskWidget() {
-  const { enabledOptimizations, activeProfile: nw } = usePerfContext();
+  const { enabledOptimizations, activeProfile: nw, setSimulatedInp } = usePerfContext();
   const on = enabledOptimizations.has("longTaskBreaking");
   const [yieldMs, setYieldMs] = useState(50);
   const [clickState, setClickState] = useState<"idle" | "queued" | "processed">("idle");
@@ -1354,11 +1356,15 @@ function LongTaskWidget() {
     const arrivalMs = Math.round(arrivalPct * taskDuration);
     const waitMs = taskDuration - arrivalMs;
     setLastDelay(waitMs);
+    setSimulatedInp(waitMs);
     setClickState("queued");
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setClickState("processed");
-      timerRef.current = setTimeout(() => setClickState("idle"), 1200);
+      timerRef.current = setTimeout(() => {
+        setClickState("idle");
+        setSimulatedInp(null);
+      }, 1200);
     }, waitMs);
   };
 
@@ -1657,25 +1663,63 @@ const CACHE_RESOURCES = [
 ];
 
 function CachingWidget() {
-  const { enabledOptimizations, visitType } = usePerfContext();
+  const { enabledOptimizations, visitType, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("caching");
+  const [phase, setPhase] = useState<"problem" | "exercise" | "result">("problem");
   const [assignments, setAssignments] = useState<Record<string, CacheStrategyChoice>>({});
-  const [submitted, setSubmitted] = useState(false);
 
   const allAssigned = CACHE_RESOURCES.every((r) => assignments[r.resource]);
   const correctCount = CACHE_RESOURCES.filter((r) => assignments[r.resource] === r.correct).length;
   const allCorrect = correctCount === CACHE_RESOURCES.length;
 
   const handleAssign = (resource: string, strategy: CacheStrategyChoice) => {
-    if (submitted) return;
+    if (phase === "result") return;
     setAssignments((prev) => ({ ...prev, [resource]: strategy }));
   };
+
+  const uncachedResources = [
+    { name: "HTML", size: 12, ms: Math.round(12 * nw.multiplier + nw.rtt) },
+    { name: "styles.css", size: 48, ms: Math.round(48 * nw.multiplier + nw.rtt) },
+    { name: "app.js", size: 180, ms: Math.round(180 * nw.multiplier + nw.rtt) },
+    { name: "hero.jpg", size: 245, ms: Math.round(245 * nw.multiplier + nw.rtt) },
+    { name: "font.woff2", size: 32, ms: Math.round(32 * nw.multiplier + nw.rtt) },
+    { name: "api/data", size: 8, ms: Math.round(8 * nw.multiplier + nw.rtt * 2) },
+  ];
+  const uncachedTotal = uncachedResources.reduce((s, r) => s + r.ms, 0);
+  const cachedTotal = Math.round(12 * nw.multiplier + nw.rtt + 25);
 
   return (
     <div className={styles.widgetPanel}>
       <div className={styles.widgetTitle}>Cache Strategy Matrix</div>
 
-      {!submitted ? (
+      {phase === "problem" && (
+        <>
+          <p className={styles.widgetNote}>
+            A returning user visits the same page. Without cache headers, every resource re-downloads over the network:
+          </p>
+          <div className={styles.uncachedWaterfall}>
+            {uncachedResources.map((r) => (
+              <div key={r.name} className={styles.uncachedRow}>
+                <span className={styles.uncachedLabel}>{r.name}</span>
+                <div className={styles.uncachedBar} style={{ width: `${Math.max((r.ms / uncachedTotal) * 100, 8)}%` }}>
+                  <span>{r.size} KB · {r.ms}ms</span>
+                </div>
+              </div>
+            ))}
+            <div className={styles.uncachedTotal}>
+              Total: {uncachedTotal}ms — every byte re-downloaded.
+              {cachedTotal < uncachedTotal && (
+                <span className={styles.uncachedSavings}> With caching: ~{cachedTotal}ms ({Math.round((1 - cachedTotal / uncachedTotal) * 100)}% faster)</span>
+              )}
+            </div>
+          </div>
+          <button type="button" className={styles.cacheSubmitButton} onClick={() => setPhase("exercise")}>
+            Fix this — assign cache strategies
+          </button>
+        </>
+      )}
+
+      {phase === "exercise" && (
         <>
           <div className={styles.cacheDecisionCards}>
             <div className={styles.cacheDecisionCard}>
@@ -1724,13 +1768,15 @@ function CachingWidget() {
             <button
               type="button"
               className={styles.cacheSubmitButton}
-              onClick={() => setSubmitted(true)}
+              onClick={() => setPhase("result")}
             >
               Check answers
             </button>
           )}
         </>
-      ) : (
+      )}
+
+      {phase === "result" && (
         <>
           <div className={styles.predictionResult} data-correct={allCorrect ? "true" : undefined}>
             <span className={styles.predictionResultIcon}>{allCorrect ? "✓" : "✗"}</span>
@@ -1785,141 +1831,181 @@ const ROUTE_LINKS = [
   { path: "/terms-of-service", clicks: 1, correct: false },
 ];
 
+type PrefetchLinkState = {
+  prefetchProgress: number;
+  navigating: boolean;
+  navTime: number | null;
+};
+
 function PrefetchWidget() {
   const { enabledOptimizations, activeProfile: nw } = usePerfContext();
   const on = enabledOptimizations.has("prefetching");
+  const rm = usePrefersReducedMotion();
 
-  const multiplier = nw.multiplier;
-  const rtt = nw.rtt;
+  const prefetchDurationMs = Math.round(75 * nw.multiplier + nw.rtt * 2);
+  const coldNavMs = Math.round(nw.rtt * 2.6 + 75 * nw.multiplier + 20 * nw.multiplier + nw.rtt * 2 + 45);
+  const renderOnlyMs = 50;
 
-  const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set());
-  const [linkSubmitted, setLinkSubmitted] = useState(false);
+  const [linkStates, setLinkStates] = useState<Record<string, PrefetchLinkState>>({});
+  const [attempts, setAttempts] = useState<{ path: string; hovered: boolean; prefetchPct: number; navTime: number }[]>([]);
+  const intervalRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+  const navTimerRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const toggleLink = (path: string) => {
-    if (linkSubmitted) return;
-    setSelectedLinks((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
+  const startPrefetch = (path: string) => {
+    if (!on || linkStates[path]?.navigating) return;
+    if (intervalRefs.current[path]) clearInterval(intervalRefs.current[path]);
+
+    setLinkStates((prev) => ({
+      ...prev,
+      [path]: { ...prev[path], prefetchProgress: prev[path]?.prefetchProgress ?? 0, navigating: false, navTime: null },
+    }));
+
+    const tickMs = 50;
+    const increment = (tickMs / prefetchDurationMs) * 100;
+    intervalRefs.current[path] = setInterval(() => {
+      setLinkStates((prev) => {
+        const cur = prev[path]?.prefetchProgress ?? 0;
+        if (cur >= 100) {
+          clearInterval(intervalRefs.current[path]);
+          return prev;
+        }
+        return { ...prev, [path]: { ...prev[path], prefetchProgress: Math.min(cur + increment, 100), navigating: false, navTime: null } };
+      });
+    }, tickMs);
   };
 
-  const correctPicks = ROUTE_LINKS.filter((l) => l.correct).map((l) => l.path);
-  const userCorrect = linkSubmitted && correctPicks.every((p) => selectedLinks.has(p)) && selectedLinks.size === correctPicks.length;
+  const stopPrefetch = (path: string) => {
+    if (intervalRefs.current[path]) {
+      clearInterval(intervalRefs.current[path]);
+      delete intervalRefs.current[path];
+    }
+  };
 
-  const coldSteps = [
-    { label: "DNS", ms: Math.round(rtt * 0.8) },
-    { label: "TCP", ms: Math.round(rtt * 0.6) },
-    { label: "TLS", ms: Math.round(rtt * 1.2) },
-    { label: "route.js (75 KB)", ms: Math.round(75 * multiplier + rtt) },
-    { label: "data fetch", ms: Math.round(20 * multiplier + rtt * 2) },
-    { label: "render", ms: 45 },
-  ];
-  const coldTotal = coldSteps.reduce((s, x) => s + x.ms, 0);
+  const navigate = (path: string) => {
+    if (linkStates[path]?.navigating) return;
+    stopPrefetch(path);
+    const progress = linkStates[path]?.prefetchProgress ?? 0;
+    const remainingFrac = Math.max(0, 1 - progress / 100);
+    const navTime = Math.round(remainingFrac * coldNavMs + renderOnlyMs);
 
-  const prefetchedSteps = [
-    { label: "cache hit", ms: 5 },
-    { label: "render", ms: 45 },
-  ];
-  const prefetchedTotal = prefetchedSteps.reduce((s, x) => s + x.ms, 0);
+    setLinkStates((prev) => ({
+      ...prev,
+      [path]: { ...prev[path], prefetchProgress: progress, navigating: true, navTime: null },
+    }));
+
+    const displayDelay = rm ? 50 : Math.min(navTime * 0.6, 1200);
+    navTimerRefs.current[path] = setTimeout(() => {
+      setLinkStates((prev) => ({
+        ...prev,
+        [path]: { ...prev[path], navigating: false, navTime },
+      }));
+      setAttempts((prev) => [...prev, { path, hovered: on, prefetchPct: Math.round(progress), navTime }]);
+    }, displayDelay);
+  };
+
+  const resetAll = () => {
+    Object.values(intervalRefs.current).forEach(clearInterval);
+    Object.values(navTimerRefs.current).forEach(clearTimeout);
+    intervalRefs.current = {};
+    navTimerRefs.current = {};
+    setLinkStates({});
+    setAttempts([]);
+  };
+
+  const bestAttempt = attempts.length > 0 ? Math.min(...attempts.map((a) => a.navTime)) : null;
+  const worstAttempt = attempts.length > 0 ? Math.max(...attempts.map((a) => a.navTime)) : null;
 
   return (
     <div className={styles.widgetPanel}>
-      <div className={styles.widgetTitle}>Navigation: /products</div>
+      <div className={styles.widgetTitle}>Hover-to-Prefetch Simulation</div>
+      <p className={styles.widgetNote}>
+        {on
+          ? "Hover a link to start prefetching its route chunk. Click to navigate — timing depends on how much loaded before you clicked."
+          : "Toggle Prefetching above to enable hover-triggered prefetch. Then try clicking links below."}
+      </p>
 
-      {!linkSubmitted ? (
-        <>
-          <p className={styles.widgetNote}>
-            A product listing page has 6 outgoing links. Pick the 3 worth prefetching — balance click probability against bandwidth cost.
-          </p>
-          <div className={styles.prefetchLinkGrid}>
-            {ROUTE_LINKS.map((l) => (
-              <button
-                key={l.path}
-                type="button"
-                className={styles.prefetchLinkBtn}
-                data-selected={selectedLinks.has(l.path) ? "true" : undefined}
-                onClick={() => toggleLink(l.path)}
-              >
-                <span className={styles.prefetchLinkPath}>{l.path}</span>
-                <span className={styles.prefetchLinkClicks}>{l.clicks}% of clicks</span>
-              </button>
-            ))}
-          </div>
-          {selectedLinks.size === 3 && (
-            <button type="button" className={styles.cacheSubmitButton} onClick={() => setLinkSubmitted(true)}>
-              Check selection
+      <div className={styles.prefetchLinkGrid}>
+        {ROUTE_LINKS.map((l) => {
+          const st = linkStates[l.path];
+          const progress = st?.prefetchProgress ?? 0;
+          const navigating = st?.navigating ?? false;
+          const navTime = st?.navTime;
+
+          return (
+            <button
+              key={l.path}
+              type="button"
+              className={styles.prefetchSimBtn}
+              data-navigating={navigating ? "true" : undefined}
+              data-done={navTime != null ? "true" : undefined}
+              onMouseEnter={() => startPrefetch(l.path)}
+              onMouseLeave={() => stopPrefetch(l.path)}
+              onClick={() => navigate(l.path)}
+              disabled={navigating}
+            >
+              <span className={styles.prefetchLinkPath}>{l.path}</span>
+              <span className={styles.prefetchLinkClicks}>{l.clicks}% of clicks</span>
+              {on && progress > 0 && navTime == null && (
+                <div className={styles.prefetchProgressTrack}>
+                  <div
+                    className={styles.prefetchProgressFill}
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                    data-complete={progress >= 100 ? "true" : undefined}
+                  />
+                </div>
+              )}
+              {navigating && <span className={styles.prefetchNavSpinner}>loading…</span>}
+              {navTime != null && (
+                <span className={styles.prefetchNavResult} data-fast={navTime <= renderOnlyMs + 30 ? "true" : undefined}>
+                  {navTime}ms
+                </span>
+              )}
             </button>
-          )}
-        </>
-      ) : (
-        <>
-          <div className={styles.predictionResult} data-correct={userCorrect ? "true" : undefined}>
-            <span className={styles.predictionResultIcon}>{userCorrect ? "✓" : "✗"}</span>
-            <span>
-              {userCorrect
-                ? "Perfect — /products (62%), /cart (38%), and /account/settings (28%) cover 87% of navigations. Prefetching low-traffic pages wastes bandwidth."
-                : `The top 3 by click probability: /products (62%), /cart (38%), /account/settings (28%). Low-traffic pages (<5%) aren't worth the bandwidth cost. Your selection covers ${ROUTE_LINKS.filter((l) => selectedLinks.has(l.path) && l.correct).length}/3 correct.`}
-            </span>
-          </div>
-
-          <div className={styles.navComparison}>
-        <div className={styles.navComparisonRow}>
-          <span className={styles.navComparisonLabel}>Cold</span>
-          <div className={styles.navComparisonTrack}>
-            {coldSteps.map((s, i) => (
-              <div
-                key={i}
-                className={styles.navComparisonBlock}
-                data-state={on ? "inactive" : "active"}
-                style={{ flex: s.ms }}
-              >
-                <span>{s.label}</span>
-              </div>
-            ))}
-          </div>
-          <span className={styles.navComparisonTime}>{coldTotal}ms</span>
-        </div>
-        <div className={styles.navComparisonRow}>
-          <span className={styles.navComparisonLabel}>Prefetched</span>
-          <div className={styles.navComparisonTrack}>
-            {prefetchedSteps.map((s, i) => (
-              <div
-                key={i}
-                className={styles.navComparisonBlock}
-                data-type="prefetched"
-                data-state={on ? "active" : "inactive"}
-                style={{ flex: s.ms }}
-              >
-                <span>{s.label}</span>
-              </div>
-            ))}
-            <div className={styles.navComparisonSaved} data-state={on ? "active" : "inactive"}>
-              saved {coldTotal - prefetchedTotal}ms
-            </div>
-          </div>
-          <span className={styles.navComparisonTime} data-fast={on ? "true" : undefined}>{prefetchedTotal}ms</span>
-        </div>
+          );
+        })}
       </div>
 
-          <div className={styles.prefetchPipeline}>
-            {[
-              { stage: "1", label: "Viewport links", desc: "IntersectionObserver detects visible <a> tags" },
-              { stage: "2", label: "Route prediction", desc: "Hover/focus triggers prefetch of route chunk" },
-              { stage: "3", label: "Speculation Rules", desc: "Browser speculatively prerenders top candidates (Chrome 121+)" },
-            ].map((step) => (
-              <div key={step.stage} className={styles.prefetchStep} data-state={on ? "active" : "inactive"}>
-                <span className={styles.prefetchBadge}>{step.stage}</span>
-                <div>
-                  <span className={styles.prefetchStepTitle}>{step.label}</span>
-                  <span className={styles.prefetchStepDesc}>{step.desc}</span>
-                </div>
-              </div>
-            ))}
+      {attempts.length > 0 && (
+        <div className={styles.prefetchAttemptLog}>
+          <div className={styles.prefetchAttemptHeader}>
+            <span>Navigation log</span>
+            <button type="button" className={styles.prefetchResetBtn} onClick={resetAll}>Reset</button>
           </div>
-        </>
+          {attempts.map((a, i) => (
+            <div key={i} className={styles.prefetchAttemptRow}>
+              <span className={styles.prefetchAttemptPath}>{a.path}</span>
+              <span className={styles.prefetchAttemptPct}>{a.prefetchPct}% prefetched</span>
+              <span
+                className={styles.prefetchAttemptTime}
+                data-fast={a.navTime <= renderOnlyMs + 30 ? "true" : undefined}
+              >
+                {a.navTime}ms
+              </span>
+            </div>
+          ))}
+          {bestAttempt != null && worstAttempt != null && worstAttempt > bestAttempt && (
+            <p className={styles.widgetNote} style={{ marginTop: "var(--space-1)" }}>
+              Best: {bestAttempt}ms vs worst: {worstAttempt}ms — {Math.round((1 - bestAttempt / worstAttempt) * 100)}% faster with a complete prefetch.
+            </p>
+          )}
+        </div>
       )}
+
+      <div className={styles.prefetchPipeline} style={{ marginTop: "var(--space-3)" }}>
+        {[
+          { stage: "1", label: "Viewport links", desc: "IntersectionObserver detects visible <a> tags" },
+          { stage: "2", label: "Route prediction", desc: "Hover/focus triggers prefetch of route chunk" },
+          { stage: "3", label: "Speculation Rules", desc: "Browser speculatively prerenders top candidates (Chrome 121+)" },
+        ].map((step) => (
+          <div key={step.stage} className={styles.prefetchStep} data-state={on ? "active" : "inactive"}>
+            <span className={styles.prefetchBadge}>{step.stage}</span>
+            <div>
+              <span className={styles.prefetchStepTitle}>{step.label}</span>
+              <span className={styles.prefetchStepDesc}>{step.desc}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
