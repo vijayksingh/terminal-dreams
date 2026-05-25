@@ -1,0 +1,413 @@
+/* ── HeightComparisonLab ──────────────────────────────────────────── */
+
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Widget panel ──────────────────────────────────────────────── */
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.widgetNote code {
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+/* ── Item list visualization ───────────────────────────────────── */
+
+.itemList {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.6rem;
+  transition: background 150ms ease;
+}
+
+.itemRow:last-child {
+  border-bottom: none;
+}
+
+.itemRow[data-highlight="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 15%, var(--color-bg));
+  outline: 2px solid var(--diagram-layer-3);
+  outline-offset: -2px;
+}
+
+.itemRow[data-search="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 6%, var(--color-bg));
+}
+
+.itemIdx {
+  font-weight: 700;
+  color: var(--color-muted);
+  min-width: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.itemBar {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-1);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.itemBarFill {
+  height: 100%;
+  border-radius: var(--radius-1);
+  background: var(--diagram-layer-3);
+  transition: width 300ms ease;
+}
+
+.itemHeight {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-muted);
+  min-width: 32px;
+  text-align: right;
+  font-size: 0.56rem;
+}
+
+/* ── Formula display ───────────────────────────────────────────── */
+
+.formula {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.8;
+}
+
+.formulaVal {
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+.formulaResult {
+  font-size: 0.85rem;
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+.formulaBadge {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+/* ── Offset array ──────────────────────────────────────────────── */
+
+.offsetArray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+}
+
+.offsetCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+  min-width: 36px;
+  transition: all 150ms ease;
+}
+
+.offsetCell[data-active="true"] {
+  border-color: var(--diagram-layer-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 12%, var(--color-bg));
+}
+
+.offsetIdx {
+  font-size: 0.48rem;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.offsetVal {
+  font-size: 0.58rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* ── Binary search steps ───────────────────────────────────────── */
+
+.searchSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.searchStep {
+  display: grid;
+  grid-template-columns: 24px 1fr 60px 60px;
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  font-size: 0.6rem;
+  border: 1px solid var(--color-border);
+  transition: all 150ms ease;
+}
+
+.searchStep[data-final="true"] {
+  border-color: var(--diagram-layer-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, var(--color-bg));
+}
+
+.stepNum {
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepRange {
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepMid {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepOffset {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Comparison panel ──────────────────────────────────────────── */
+
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.compCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.compCard[data-active="true"] {
+  border-color: var(--diagram-layer-3);
+}
+
+.compTitle {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.compBigO {
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+}
+
+.compCard[data-active="true"] .compBigO {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.compValue {
+  font-size: 1.2rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  text-align: center;
+}
+
+.compNote {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+/* ── Estimation timeline ───────────────────────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.timelinePhase {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  transition: all 150ms ease;
+}
+
+.timelinePhase[data-active="true"] {
+  border-color: var(--diagram-layer-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 6%, var(--color-bg));
+}
+
+.phaseNum {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.56rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.timelinePhase[data-active="true"] .phaseNum {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.phaseContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.phaseTitle {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.phaseDesc {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+/* ── Height bar chart ──────────────────────────────────────────── */
+
+.heightBars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 64px;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+}
+
+.heightBarItem {
+  flex: 1;
+  border-radius: 1px 1px 0 0;
+  background: var(--color-border);
+  transition: all 150ms ease;
+  min-width: 0;
+}
+
+.heightBarItem[data-estimated="true"] {
+  background: color-mix(in srgb, var(--color-warning) 50%, var(--color-border));
+  border: 1px dashed var(--color-warning);
+  border-bottom: none;
+}
+
+.heightBarItem[data-measured="true"] {
+  background: var(--diagram-layer-3);
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .itemBarFill,
+  .offsetCell,
+  .searchStep,
+  .timelinePhase,
+  .heightBarItem {
+    transition: none !important;
+  }
+}

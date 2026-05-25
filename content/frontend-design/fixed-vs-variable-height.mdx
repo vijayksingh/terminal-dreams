@@ -4,7 +4,7 @@ slug: fixed-vs-variable-height
 section: virtualisation
 stopId: virt-fixed-vs-variable
 order: 2
-kind: article
+kind: system-design-problem
 summary: "Fixed-height items give O(1) position lookup. Variable heights need prefix sums and binary search."
 tags:
   - virtualisation
@@ -17,32 +17,112 @@ prerequisites:
   - virt-windowing
 ---
 
-## Two Worlds of Height Calculation
+<section id="step-1" className="recipe-step">
 
-The windowing technique from the previous stop works perfectly when every item has the same height — position is pure multiplication. But real-world lists contain chat messages, expandable rows, and rich-content cards. The moment items have different heights, position lookup goes from O(1) to O(log n).
+## 01 — The Position Lookup Problem
 
-Toggle between the two modes below. Watch how the calculation panel changes from a single division to a multi-step binary search.
+A virtual scroller only mounts the items currently visible in the viewport. To know *which* items are visible at a given scroll position, it must map `scrollTop` to an item index. That mapping has two very different costs depending on whether items share the same height.
 
-<HeightStrategyExplorer />
+The panel on the right shows both worlds side by side. Fixed-height items are uniform — one division finds any item. Variable-height items vary from 28px to 96px, and finding the right one requires searching through cumulative offsets.
 
-## Fixed Height: Direct Math
+<PredictionChallenge
+  question="A virtual list has 10,000 items. With fixed heights, the position lookup is O(1). With variable heights, how many comparisons does binary search need?"
+  options={[
+    "~10 — log₂(10,000) ≈ 13",
+    "~100 — sqrt(10,000)",
+    "~1,000 — 10% of items",
+    "~10,000 — must check every item",
+  ]}
+  correctIndex={0}
+  explanation="Binary search halves the range each step. log₂(10,000) ≈ 13.3, so you need at most 14 comparisons to find any item among 10,000. That's the power of a sorted prefix-sum array."
+/>
+
+Every virtual list library faces this exact tradeoff. The next five steps walk through each side.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Fixed Height: Direct Math
 
 When every item is exactly 40px tall, the position of item #200 is `200 × 40 = 8000px`. No data structure needed — one multiplication gives you the exact pixel offset. Scrolling to any position is equally trivial: `floor(scrollTop / 40)` gives you the first visible item.
 
-This is why every virtual list library defaults to fixed-height mode. Libraries like `react-window` require you to pass a `itemSize` number, and they use this direct math internally.
+This is why every virtual list library defaults to fixed-height mode. Libraries like `react-window` require you to pass an `itemSize` number, and they use this direct math internally.
 
-## Variable Height: Prefix Sums
+Drag the scroll position slider on the right to watch the formula compute instantly. The highlighted item tracks the result of `floor(scrollTop / itemHeight)` — a single O(1) operation regardless of list size.
+
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — Variable Height: Prefix Sums
 
 When items have different heights, the position of item #200 depends on the heights of items #0 through #199. You need a **prefix-sum array** — a cumulative offset table where `offsets[i]` equals the sum of all heights before item `i`.
 
-Building this array is O(n) and done once. Looking up a scroll position requires finding which offset range contains the target pixel — a classic binary search on a sorted array, costing O(log n) per lookup.
+Building this array is O(n) and done once. Each entry is just `offsets[i] = offsets[i-1] + heights[i-1]`. The right panel shows the height distribution as a bar chart and the resulting offset array below it. Hover over bars to see how each height contributes to the next offset.
 
-## The Estimation Problem
+<PredictionChallenge
+  question="You have 5,000 variable-height items. How much memory does the prefix-sum offset array use?"
+  options={[
+    "~5 KB — one byte per item",
+    "~20 KB — one 32-bit int per item",
+    "~40 KB — one 64-bit float per item",
+    "~400 KB — one object per item",
+  ]}
+  correctIndex={2}
+  explanation="JavaScript numbers are 64-bit floats (8 bytes). A typed Float64Array for 5,001 offsets (n+1 entries) uses ~40 KB. A plain Array uses more due to object overhead, but either way it's trivially small compared to the DOM nodes it saves."
+/>
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Binary Search on Offsets
+
+Looking up a scroll position requires finding which offset range contains the target pixel — a classic binary search on a sorted array. The offset array is inherently sorted (heights are positive), so binary search works directly.
+
+Each step halves the search range. For 50 items, binary search takes at most 6 steps. For 10,000 items, at most 14 steps. The right panel lets you step through the search one comparison at a time — watch the range narrow from `[0..49]` to the exact item.
+
+The key insight: binary search on a prefix-sum array gives O(log n) position lookup. That's the fundamental data structure behind every variable-height virtual scroller.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The Estimation Problem
 
 There's a catch: you often don't know item heights until they render. Text wraps differently based on container width, images load asynchronously, and content is dynamic. Libraries like `@tanstack/virtual` solve this with a two-phase approach:
 
 1. **Estimate first** — use a default height (say 50px) for all items to create the initial offset array and scrollbar
 2. **Measure after render** — use `ResizeObserver` to capture the actual rendered height of each item
-3. **Correct the offsets** — update the prefix-sum array with measured heights, which shifts the scroll position to account for the difference
+3. **Correct the offsets** — update the prefix-sum array with measured heights
 
-This estimation-correction cycle is why variable-height virtual lists sometimes "jump" slightly — the scrollbar adjusts as estimated heights are replaced with measured ones. The Resize Observer stop covers the measurement mechanism in detail.
+The right panel shows the gap between estimated heights (uniform 50px bars) and actual measured heights (varying 28-96px). The delta between estimated and actual totals is the scroll correction the library must apply — this is why variable-height virtual lists sometimes "jump" slightly.
+
+<PredictionChallenge
+  question="A virtual list estimates all items at 50px. After rendering, the first 20 items measure at an average of 65px. What happens to the scrollbar?"
+  options={[
+    "Nothing — the scrollbar stays the same",
+    "It shrinks — total height increased, so the thumb gets smaller",
+    "It jumps — scroll position shifts to account for the height difference",
+    "Both B and C — the thumb shrinks AND the position adjusts",
+  ]}
+  correctIndex={3}
+  explanation="The total height increases (20 items × 15px extra = 300px more), so the scrollbar thumb shrinks relative to the new total. The scroll position also adjusts because the offset of every item below the measured range shifts by the accumulated difference."
+/>
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — The ResizeObserver Correction Cycle
+
+The `ResizeObserver` API is the measurement mechanism. You create one observer, attach it to each rendered item, and it fires a callback whenever an item's size changes. The callback updates the prefix-sum array, which triggers a re-render with corrected positions.
+
+Click through the four phases on the right to see the cycle: Estimate → Render → Measure → Correct. This cycle runs continuously as the user scrolls — new items enter the viewport, get measured, and their heights replace the estimates.
+
+This estimation-correction cycle is why `@tanstack/virtual` exposes a `measureElement` ref callback. You attach it to each item's DOM node, and the library handles the rest — measuring via ResizeObserver, updating offsets, and adjusting scroll position.
+
+The Resize Observer stop in the Web APIs section covers the measurement mechanism in detail. This stop focused on *why* measurement is needed: because variable heights can't be known until render, and the position lookup that makes virtual scrolling work depends on accurate heights.
+
+</section>

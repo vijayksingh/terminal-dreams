@@ -1,0 +1,343 @@
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.widgetNote code {
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+.treeContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.treeNode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: 0.6rem;
+  transition: background 150ms ease;
+}
+
+.treeNode:hover {
+  background: color-mix(in srgb, var(--diagram-layer-3) 6%, transparent);
+}
+
+.treeNode[data-highlight="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 15%, var(--color-bg));
+  outline: 2px solid var(--diagram-layer-3);
+  outline-offset: -2px;
+}
+
+.nodeToggle {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  color: var(--color-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  border-radius: var(--radius-1);
+  transition: color 150ms ease, background 150ms ease;
+  flex-shrink: 0;
+}
+
+.nodeToggle:hover {
+  color: var(--diagram-layer-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 12%, transparent);
+}
+
+.nodeIcon {
+  font-size: 0.62rem;
+  flex-shrink: 0;
+}
+
+.nodeLabel {
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nodeLabel[data-folder="true"] {
+  color: var(--diagram-layer-3);
+  font-weight: 700;
+}
+
+.nodeDepth {
+  font-size: 0.48rem;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.flatListContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.flatListItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.6rem;
+  transition: background 150ms ease;
+}
+
+.flatListItem:last-child {
+  border-bottom: none;
+}
+
+.flatListItem[data-highlight="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 15%, var(--color-bg));
+}
+
+.flatIdx {
+  font-weight: 700;
+  color: var(--color-muted);
+  min-width: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.flatDepthBadge {
+  font-size: 0.48rem;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.flatDepthBadge[data-accent="true"] {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.countBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  font-variant-numeric: tabular-nums;
+}
+
+.splitView {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.gridContainer {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  padding: var(--space-2);
+  display: grid;
+  gap: 2px;
+}
+
+.gridHeader {
+  font-size: 0.48rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.gridCell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--color-border);
+  transition: background 150ms ease, outline 150ms ease;
+  font-size: 0.36rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+}
+
+.gridCell[data-visible="true"] {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  font-weight: 700;
+}
+
+.gridCell[data-row="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 35%, var(--color-border));
+}
+
+.gridCell[data-col="true"] {
+  background: color-mix(in srgb, var(--diagram-layer-3) 35%, var(--color-border));
+}
+
+.gridCell[data-intersect="true"] {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  font-weight: 700;
+}
+
+.gridStats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-surface);
+}
+
+.gridStatVal {
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.compTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.58rem;
+}
+
+.compTable th {
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.52rem;
+  padding: var(--space-2);
+  border-bottom: 2px solid var(--diagram-layer-3);
+  text-align: left;
+}
+
+.compTable td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-muted);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.compTable tr:last-child td {
+  border-bottom: none;
+}
+
+.compTable td:first-child {
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.formula {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.8;
+}
+
+.formulaVal {
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+.formulaResult {
+  font-size: 0.85rem;
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+.formulaBadge {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .treeNode,
+  .flatListItem,
+  .gridCell,
+  .nodeToggle {
+    transition: none !important;
+  }
+}

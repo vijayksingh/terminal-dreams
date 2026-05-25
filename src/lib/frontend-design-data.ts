@@ -41,9 +41,9 @@ export const STOPS: FdStop[] = [
   { id: "api-assignment-4", sectionSlug: "web-apis", label: "Coding Assignment #4", slug: "observer-coding-assignment-4", order: 7, kind: "coding-assignment", intersections: [] },
 
   // ── 4. Virtualisation ───────────────────────────────────────────
-  { id: "virt-windowing", sectionSlug: "virtualisation", label: "Windowing Fundamentals", slug: "windowing-fundamentals", order: 1, kind: "article", intersections: ["api-intersection"] },
-  { id: "virt-fixed-vs-variable", sectionSlug: "virtualisation", label: "Fixed vs Variable Height Rows", slug: "fixed-vs-variable-height", order: 2, kind: "article", intersections: ["virt-variable-height"] },
-  { id: "virt-variable-height", sectionSlug: "virtualisation", label: "Virtual Scroll Implementation", slug: "virtual-scroll-implementation", order: 3, kind: "live-coding", intersections: ["api-resize", "virt-fixed-vs-variable"] },
+  { id: "virt-windowing", sectionSlug: "virtualisation", label: "Windowing Fundamentals", slug: "windowing-fundamentals", order: 1, kind: "system-design-problem", intersections: ["api-intersection"] },
+  { id: "virt-fixed-vs-variable", sectionSlug: "virtualisation", label: "Fixed vs Variable Height Rows", slug: "fixed-vs-variable-height", order: 2, kind: "system-design-problem", intersections: ["virt-variable-height"] },
+  { id: "virt-variable-height", sectionSlug: "virtualisation", label: "Virtual Scroll Implementation", slug: "virtual-scroll-implementation", order: 3, kind: "system-design-problem", intersections: ["api-resize", "virt-fixed-vs-variable"] },
   { id: "virt-tree-grid", sectionSlug: "virtualisation", label: "Tree & Grid Virtualization", slug: "tree-grid-virtualization", order: 4, kind: "system-design-problem", intersections: ["sdp-spreadsheet"] },
   { id: "virt-canvas-dom", sectionSlug: "virtualisation", label: "Canvas vs DOM Rendering", slug: "canvas-vs-dom", order: 5, kind: "system-design-problem", intersections: ["sdp-whiteboard"] },
 

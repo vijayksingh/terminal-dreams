@@ -1,0 +1,386 @@
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.widgetNote code {
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+.domBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.domBadge[data-severity="high"] {
+  background: var(--color-error);
+  color: var(--color-bg);
+}
+
+.domBadge[data-severity="low"] {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.nodeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18px, 1fr));
+  gap: 2px;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  max-height: 180px;
+  overflow: hidden;
+}
+
+.nodeCell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--color-error);
+  opacity: 0.6;
+}
+
+.viewportContainer {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow: hidden;
+  min-height: 260px;
+}
+
+.spacer {
+  background: repeating-linear-gradient(
+    180deg,
+    var(--color-border) 0px,
+    var(--color-border) 1px,
+    transparent 1px,
+    transparent 40px
+  );
+  width: 100%;
+}
+
+.viewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border: 2px solid var(--diagram-layer-3);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-3) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+}
+
+.viewportLabel {
+  position: absolute;
+  top: -18px;
+  left: 4px;
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.visibleItem {
+  height: 28px;
+  border-radius: var(--radius-1);
+  background: var(--diagram-layer-3);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-bg);
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.compCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.compCard[data-active="true"] {
+  border-color: var(--diagram-layer-3);
+}
+
+.compTitle {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.compNote {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.pipelineBadge {
+  display: inline-block;
+  font-size: 0.52rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pipelineBadge[data-type="layout"] {
+  background: var(--color-error);
+  color: var(--color-bg);
+}
+
+.pipelineBadge[data-type="compositor"] {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.codeBlock {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.codeHighlight {
+  color: var(--diagram-layer-3);
+  font-weight: 700;
+}
+
+.codeComment {
+  color: var(--color-muted);
+}
+
+.overscanItem {
+  height: 28px;
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-3) 25%, var(--color-border));
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  border: 1px dashed var(--diagram-layer-3);
+}
+
+.overscanLabel {
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: var(--space-1) 0;
+}
+
+.pipelineGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.pipelineCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.pipelineCard[data-active="true"] {
+  border-color: var(--diagram-layer-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 6%, var(--color-bg));
+}
+
+.pipelineNum {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.52rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 150ms ease;
+}
+
+.pipelineCard[data-active="true"] .pipelineNum {
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.pipelineTitle {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pipelineDesc {
+  font-size: 0.56rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.pipelineStat {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.featureTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.58rem;
+}
+
+.featureTable th {
+  text-align: left;
+  padding: var(--space-1) var(--space-2);
+  font-weight: 800;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.54rem;
+}
+
+.featureTable td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.featureTable tr:last-child td {
+  border-bottom: none;
+}
+
+.featureTable td:first-child {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.checkMark {
+  color: var(--color-success);
+  font-weight: 800;
+}
+
+.crossMark {
+  color: var(--color-error);
+  font-weight: 800;
+}
+
+.formula {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.8;
+}
+
+.formulaVal {
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+.formulaResult {
+  font-size: 0.85rem;
+  color: var(--diagram-layer-3);
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipelineCard,
+  .pipelineNum,
+  .nodeCell {
+    transition: none !important;
+  }
+}

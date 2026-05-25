@@ -4,7 +4,7 @@ slug: tree-grid-virtualization
 section: virtualisation
 stopId: virt-tree-grid
 order: 4
-kind: article
+kind: system-design-problem
 summary: "Trees become flat lists. Grids need two windows. Both extend the same virtualisation fundamentals."
 tags:
   - virtualisation
@@ -18,13 +18,31 @@ prerequisites:
   - virt-fixed-vs-variable
 ---
 
-## Trees Are Lists in Disguise
+<section id="step-1" className="recipe-step">
 
-A file tree looks hierarchical, but a virtual scroller needs a flat array. The solution: **flatten the tree** by walking it depth-first, including only nodes whose parents are expanded. Click folders below to expand and collapse — watch the flat list on the right grow and shrink in real time.
+## 01 — Trees Are Lists in Disguise
 
-<TreeGridExplorer />
+A file tree looks hierarchical, but a virtual scroller needs a flat array. The solution: **flatten the tree** by walking it depth-first, including only nodes whose parents are expanded. The right panel shows a mock file system tree — the structure the user sees.
 
-## How Flattening Works
+<PredictionChallenge
+  question="A tree has 1,000 nodes across 5 levels. The user has expanded 3 top-level folders. How many items does the virtual scroller need to render?"
+  options={[
+    "1,000 — every node is always in the list",
+    "Only the visible nodes — collapsed subtrees are excluded from the flat list",
+    "3 — just the expanded folders",
+    "Depends on the virtualisation library's tree API",
+  ]}
+  correctIndex={1}
+  explanation="The flat list only includes nodes whose entire ancestor chain is expanded. Collapsed subtrees are excluded entirely — they don't exist in the array the virtualizer receives. This is why flattening is done on every expand/collapse: the list length changes."
+/>
+
+The key insight: virtualisation libraries don't need tree support. You flatten the tree yourself and hand the virtualizer a list.
+
+</section>
+
+<section id="step-2" className="recipe-step">
+
+## 02 — Depth-First Flattening
 
 The flattening algorithm is a depth-first walk with one rule: skip a node's children if it's collapsed.
 
@@ -37,16 +55,98 @@ flattenTree(node, expanded, depth):
   return result
 ```
 
-The output is a plain array — exactly what a 1D virtual scroller expects. Each item carries its `depth` for indentation. When the user clicks a folder, the expanded set changes, the flat list is recomputed, and the virtualizer renders from the new array.
+The output is a plain array. Each item carries its `depth` for indentation — `depth × 16px` of left padding gives the visual tree structure. The right panel shows the DFS walk producing a flat array with depth values.
 
-This is why libraries like `@tanstack/virtual` don't have a special "tree mode." You flatten the tree yourself and hand the virtualizer a list. The virtualizer doesn't know or care that the data was hierarchical.
+</section>
 
-## Grids: Two Windows
+<section id="step-3" className="recipe-step">
 
-A grid with 100 rows and 26 columns has 2,600 cells. A viewport might fit 12 rows and 6 columns — 72 cells. The trick: run two independent windowing calculations, one for rows and one for columns. The **intersection** of the two windows determines which cells to mount.
+## 03 — Interactive Expand/Collapse
 
-Switch to the Grid tab above and scroll in both directions. The stats show how the row window and column window independently track the scroll position, and only cells inside both windows are rendered.
+Click folders on the right to expand and collapse. Watch the flat list grow and shrink in real time. The item count badge updates instantly.
 
-## Why This Matters
+When the user clicks a folder, the expanded set changes, the flat list is recomputed, and the virtualizer renders from the new array. This is a full re-flatten — O(visible nodes) — but it's fast because collapsed subtrees are skipped entirely.
 
-File explorers, JSON viewers, org charts, and expandable tables all use tree virtualization. Spreadsheets, data grids, and kanban boards use 2D grid virtualization. Both patterns reduce to the same fundamentals from the previous stops — the only difference is how you compute the "visible items" list from a more complex data structure.
+<PredictionChallenge
+  question="A tree has 50,000 total nodes but only 200 are currently visible (the rest are in collapsed subtrees). How expensive is the flatten operation?"
+  options={[
+    "O(50,000) — must walk the entire tree",
+    "O(200) — only walks visible nodes",
+    "O(log 50,000) — binary search on the tree",
+    "O(1) — cached from the previous flatten",
+  ]}
+  correctIndex={1}
+  explanation="DFS flattening skips collapsed subtrees entirely. If 200 nodes are visible, the walk visits exactly 200 nodes plus their collapsed parents (to check the expanded set). The 49,800 nodes in collapsed subtrees are never touched."
+/>
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Grids: The Two-Dimensional Problem
+
+A grid with 100 rows and 26 columns has 2,600 cells. A viewport might fit 12 rows and 6 columns — 72 cells. Rendering all 2,600 would defeat the purpose of virtualisation.
+
+The solution: run two independent windowing calculations, one for rows and one for columns. The right panel shows a 10×6 visible grid within a larger 100×26 data space.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The Row Window
+
+The row window is identical to a 1D virtual list. Given `scrollTop` and `rowHeight`, compute the first visible row and the last visible row. Only mount rows in this range.
+
+For a viewport of 480px height with 40px rows: `floor(scrollTop / 40)` gives the first row, `ceil((scrollTop + 480) / 40)` gives the last. Add overscan and you have the row window.
+
+The right panel highlights the row window — the horizontal slice of rows that are mounted.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — The Column Window
+
+The column window works the same way but horizontally. Given `scrollLeft` and `columnWidth`, compute the first and last visible columns.
+
+<PredictionChallenge
+  question="A spreadsheet has 100 rows × 26 columns (2,600 cells). The viewport shows 12 rows × 6 columns. How many cells are actually in the DOM?"
+  options={[
+    "72 — exactly 12 × 6",
+    "~108 — with 3-cell overscan on each axis: (12+6) × (6+6)",
+    "2,600 — all cells must exist for scroll position to work",
+    "~72 + row/column headers",
+  ]}
+  correctIndex={1}
+  explanation="With 3 cells of overscan on each side: rows = 12 + 6 = 18, columns = 6 + 6 = 12, total = 216 cells. That's ~8% of the full grid. The exact count depends on overscan settings, but the principle is the same: only mount cells inside both windows plus overscan."
+/>
+
+The right panel highlights the column window — the vertical slice of columns that are mounted.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Cell Intersection
+
+The final rendering set is the **intersection** of the row window and column window. A cell is mounted only if its row index is in the row window AND its column index is in the column window.
+
+The right panel shows both windows overlapping, with the intersection — the cells that actually exist in the DOM — highlighted in the accent color. Everything outside the intersection is not rendered.
+
+This is the core of 2D virtualisation. Two 1D calculations, composed by intersection.
+
+</section>
+
+<section id="step-8" className="recipe-step">
+
+## 08 — Production Patterns
+
+File explorers, JSON viewers, org charts, and expandable tables all use tree virtualization. Spreadsheets, data grids, and kanban boards use 2D grid virtualization.
+
+**Tree**: `@tanstack/virtual` + manual flattening. The library doesn't know your data is a tree — you flatten it and pass a list. Libraries like `react-arborist` wrap this pattern with expand/collapse state management.
+
+**Grid**: `@tanstack/virtual` supports both row and column virtualizers. AG Grid and react-data-grid implement the full 2D intersection pattern with built-in cell rendering, selection, and editing.
+
+Both patterns reduce to the same fundamentals from previous stops — the only difference is how you compute the "visible items" list from a more complex data structure. The Spreadsheet system design problem explores these patterns in a real-world context.
+
+</section>

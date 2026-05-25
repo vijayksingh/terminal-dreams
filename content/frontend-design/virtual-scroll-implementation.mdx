@@ -4,7 +4,7 @@ slug: virtual-scroll-implementation
 section: virtualisation
 stopId: virt-variable-height
 order: 3
-kind: live-coding
+kind: system-design-problem
 summary: "Build a virtual scroller step by step — from naive rendering to transform-positioned, overscan-buffered windowing"
 tags:
   - virtualisation
@@ -19,32 +19,150 @@ prerequisites:
   - virt-fixed-vs-variable
 ---
 
-## Four Phases of Optimization
+<section id="step-1" className="recipe-step">
 
-A virtual scroller isn't one clever trick — it's four optimizations layered on top of each other. Each phase solves a specific problem introduced by the previous one. Click through the phases below to watch the rendering pipeline evolve from naive to production-ready.
+## 01 — The Naive Rendering Problem
 
-<ScrollPipelineExplorer />
+Render 500 items into the DOM. Every single one — 500 `<div>` elements in the document. The browser calculates styles for all 500, computes layout for all 500, and paints all 500. Scroll down and the browser repeats the entire rendering pipeline for every frame.
 
-## Phase 1 → 2: From All to Windowed
+The right panel shows what this looks like: 500 DOM nodes, all mounted, the browser working to render elements the user will never see.
 
-The first optimization is the most dramatic. Phase 1 renders all 500 items — 500 DOM nodes, all in the document. Phase 2 introduces the **spacer + window** pattern: an empty container with `height: totalItems × itemHeight` fakes the scrollbar, while only the visible items are mounted inside it.
+<PredictionChallenge
+  question="A list renders 500 items, each a simple div with text. On a mid-range phone, roughly how many DOM nodes does the browser maintain?"
+  options={[
+    "~500 — one per item",
+    "~1,500 — each item has 2-3 child nodes (text, wrapper)",
+    "~5,000 — including shadow DOM and internal nodes",
+    "It depends on the framework's virtual DOM",
+  ]}
+  correctIndex={1}
+  explanation="Each list item typically has the element itself plus 2-3 child nodes (text nodes, inner spans). 500 items × 3 nodes ≈ 1,500 DOM nodes. This is before any framework overhead. The browser's rendering pipeline processes all of them every frame."
+/>
 
-This single change drops DOM nodes from 500 to ~10. The scroll event handler computes `floor(scrollTop / itemHeight)` to find the first visible item, then mounts items from that index through the bottom of the viewport.
+The fix isn't about faster rendering. It's about rendering less.
 
-## Phase 2 → 3: From Top/Left to Transforms
+</section>
 
-Phase 2 positions items with `top: Npx` — which triggers a layout recalculation on every scroll. Phase 3 switches to `transform: translateY(Npx)` — which runs entirely on the compositor thread. The browser skips layout and paint, moving the element on the GPU.
+<section id="step-2" className="recipe-step">
 
-The visual result is identical, but the performance difference is significant. On a 60fps display, each frame has 16ms to complete. Layout recalculation can consume 5-10ms of that budget. Transform-only updates take less than 1ms, leaving the rest of the frame budget for JavaScript execution and garbage collection.
+## 02 — Phase 1: Windowed Rendering
 
-## Phase 3 → 4: Overscan Buffer
+The first optimization is the most dramatic. Instead of mounting all 500 items, calculate which ones are visible in the viewport and mount only those — typically 8-12 items.
 
-Phase 3 renders exactly the visible items — nothing more. During fast scrolling, the browser renders a frame before React can mount the new items that should appear at the scroll edge. This produces blank flashes — a visible white gap before the content catches up.
+The trick: an empty container with `height: totalItems × itemHeight` fakes the scrollbar height, while only the visible items exist in the DOM. The scroll event handler computes `floor(scrollTop / itemHeight)` to find the first visible item.
 
-Phase 4 adds an **overscan buffer**: a few extra items above and below the viewport. These items are already in the DOM before they become visible, eliminating the gap. The tradeoff is more DOM nodes (typically 6 extra — 3 above, 3 below), but the visual result is smooth scrolling without any flicker.
+The right panel shows the DOM count dropping from 500 to approximately 12. Same visual result — 500-item scrollbar, same content — but the browser processes 97% fewer nodes.
 
-## What This Builds Toward
+</section>
 
-These four phases are the foundation that every virtual scroll library builds on. `react-window` and `@tanstack/virtual` both implement this exact pipeline internally — spacer for scroll height, windowed rendering for DOM efficiency, transform positioning for compositor performance, and overscan for smooth scrolling.
+<section id="step-3" className="recipe-step">
 
-The next stops in this section explore what happens when you need **variable-height items** (Tree & Grid Virtualization) and when the DOM itself becomes the bottleneck (**Canvas vs DOM Rendering**).
+## 03 — Phase 2: Transform Positioning
+
+Phase 1 positions items with `top: Npx` — which triggers a layout recalculation on every scroll. Phase 2 switches to `transform: translateY(Npx)` — which runs entirely on the compositor thread.
+
+<PredictionChallenge
+  question="Why is transform: translateY() faster than top: Npx for positioning virtual list items?"
+  options={[
+    "Transforms are hardware-accelerated by the GPU",
+    "Transforms skip the layout and paint phases — they only need compositing",
+    "Both A and B — transforms run on the GPU compositor, bypassing layout entirely",
+    "Transforms batch updates more efficiently than position properties",
+  ]}
+  correctIndex={2}
+  explanation="Transforms skip layout and paint entirely. The browser promotes the element to its own compositor layer, and the GPU repositions the layer without recalculating any other element's geometry. Position properties (top, left) invalidate layout, which cascades through siblings."
+/>
+
+The visual result is identical, but the performance difference is significant. On a 60fps display, each frame has 16ms to complete. Layout recalculation can consume 5-10ms of that budget. Transform-only updates take less than 1ms.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Phase 3: Overscan Buffer
+
+Phase 2 renders exactly the visible items — nothing more. During fast scrolling, the browser renders a frame before React can mount the new items that should appear at the scroll edge. This produces **blank flashes** — a visible white gap before the content catches up.
+
+Phase 3 adds an **overscan buffer**: a few extra items above and below the viewport. These items are already in the DOM before they become visible, eliminating the gap.
+
+The right panel shows the viewport with 3 extra items above and 3 below. DOM count rises from 12 to ~18, but the visual result is smooth scrolling without any flicker.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The Complete Pipeline
+
+All four phases compose into a single pipeline:
+
+1. **Spacer** — fake scroll height for the scrollbar
+2. **Window** — mount only visible items (by scroll position)
+3. **Transforms** — position with `translateY` not `top`
+4. **Overscan** — buffer items above and below
+
+Each phase solves a specific problem introduced by the previous one. The right panel shows all four as a combined pipeline — each phase a card showing what it optimizes.
+
+<PredictionChallenge
+  question="You build a virtual list with windowing + transforms but no overscan. A user scrolls at moderate speed. What do they see?"
+  options={[
+    "Perfectly smooth scrolling — windowing handles everything",
+    "Brief white flashes at the scroll edge as new items mount",
+    "Janky scrolling because transforms are not enough",
+    "Nothing wrong — overscan only matters on slow devices",
+  ]}
+  correctIndex={1}
+  explanation="Without overscan, the next items don't exist in the DOM until React mounts them. Between the scroll event and the next paint, there's a gap where no content exists at the scroll edge. On fast scrolling, this gap becomes a visible white flash."
+/>
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — Core Implementation
+
+The core of a virtual scroller fits in under 30 lines of logic. The scroll handler computes the visible range, the render function mounts only those items with transform positioning, and overscan extends the range by a fixed count.
+
+```tsx
+function VirtualList({ items, itemHeight, viewportHeight }: Props) {
+  const [scrollTop, setScrollTop] = useState(0);
+  const overscan = 3;
+  const totalHeight = items.length * itemHeight;
+  const startIdx = Math.max(0,
+    Math.floor(scrollTop / itemHeight) - overscan);
+  const endIdx = Math.min(items.length,
+    Math.ceil((scrollTop + viewportHeight) / itemHeight)
+    + overscan);
+
+  return (
+    <div onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
+         style={{ height: viewportHeight, overflow: "auto" }}>
+      <div style={{ height: totalHeight, position: "relative" }}>
+        {items.slice(startIdx, endIdx).map((item, i) => (
+          <div key={startIdx + i}
+               style={{ position: "absolute",
+                 transform: `translateY(${(startIdx + i) * itemHeight}px)`,
+                 height: itemHeight }}>
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+The right panel shows this code alongside the key measurements: total height, visible range, overscan range, and DOM count.
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Production Libraries
+
+These four phases are the foundation that every virtual scroll library builds on. `react-window` and `@tanstack/virtual` both implement this exact pipeline internally.
+
+**react-window** is the simpler choice — fixed API, smaller bundle (6 KB), battle-tested for fixed-height lists. **@tanstack/virtual** is framework-agnostic, supports variable heights with measurement, and offers more control over the rendering pipeline.
+
+Both handle the details this lesson covered: spacer containers for scroll height, windowed rendering for DOM efficiency, transform positioning for compositor performance, and overscan for smooth scrolling. The next stops explore what happens when you need variable-height items (Fixed vs Variable Height) and when the DOM itself becomes the bottleneck (Canvas vs DOM).
+
+</section>

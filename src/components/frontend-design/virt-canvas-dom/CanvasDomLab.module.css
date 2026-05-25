@@ -1,0 +1,406 @@
+.labRoot {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.widgetPanel {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.widgetTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetNote {
+  font-size: 0.62rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.widgetNote code {
+  font-family: var(--font-mono);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+.pipelineFlow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+  overflow-x: auto;
+}
+
+.pipelineStep {
+  padding: var(--space-1) var(--space-2);
+  border: 1.5px solid var(--diagram-layer-3);
+  border-radius: var(--radius-1);
+  background: color-mix(in srgb, var(--diagram-layer-3) 10%, var(--color-bg));
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pipelineArrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+  padding: 0 var(--space-1);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.advantageCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color 150ms ease;
+}
+
+.advantageCard:hover {
+  border-color: var(--diagram-layer-3);
+}
+
+.advantageIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-1);
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.advantageTitle {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.perfChart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-bg);
+}
+
+.perfBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.perfBarTrack {
+  flex: 1;
+  height: 18px;
+  border-radius: var(--radius-1);
+  background: var(--color-border);
+  overflow: hidden;
+  position: relative;
+}
+
+.perfBarFill {
+  height: 100%;
+  border-radius: var(--radius-1);
+  transition: width 300ms ease;
+}
+
+.perfBarFillDom {
+  background: var(--color-warning);
+}
+
+.perfBarFillCanvas {
+  background: var(--diagram-layer-3);
+}
+
+.perfLabel {
+  font-size: 0.56rem;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 48px;
+  font-variant-numeric: tabular-nums;
+}
+
+.perfValue {
+  font-size: 0.54rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  min-width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.crossoverBadge {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.layerStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  overflow: hidden;
+}
+
+.canvasLayer {
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--diagram-layer-3) 8%, var(--color-bg));
+  border-bottom: 2px dashed var(--diagram-layer-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.domLayer {
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--color-warning) 6%, var(--color-bg));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.layerTitle {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.layerTitleCanvas {
+  color: var(--diagram-layer-3);
+}
+
+.layerTitleDom {
+  color: var(--color-warning);
+}
+
+.layerItems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.layerItem {
+  font-size: 0.54rem;
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.exampleCard {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2);
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color 150ms ease;
+}
+
+.exampleCard:hover {
+  border-color: var(--diagram-layer-3);
+}
+
+.exampleTitle {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.exampleDetail {
+  font-size: 0.58rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.exampleSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.exampleColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.exampleColumnTitle {
+  font-size: 0.52rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.exampleColumnTitleCanvas {
+  color: var(--diagram-layer-3);
+}
+
+.exampleColumnTitleDom {
+  color: var(--color-warning);
+}
+
+.exampleItem {
+  font-size: 0.54rem;
+  color: var(--color-text);
+  padding: 2px 0;
+}
+
+.codeSample {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  padding: var(--space-2);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.52rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--diagram-layer-3);
+  color: var(--color-bg);
+}
+
+.badgeWarning {
+  background: var(--color-warning);
+  color: var(--color-bg);
+}
+
+.costGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.costCell {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-1);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.costCellTitle {
+  font-size: 0.54rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.costCellValue {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--diagram-layer-3);
+}
+
+.costCellNote {
+  font-size: 0.48rem;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.pipelinesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.pipelineCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pipelineLabel {
+  font-size: 0.6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+}
+
+.pipelineStepCount {
+  font-size: 0.48rem;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .perfBarFill,
+  .advantageCard,
+  .exampleCard,
+  .pipelineStep {
+    transition: none !important;
+  }
+}

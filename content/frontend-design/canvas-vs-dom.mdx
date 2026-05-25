@@ -4,7 +4,7 @@ slug: canvas-vs-dom
 section: virtualisation
 stopId: virt-canvas-dom
 order: 5
-kind: article
+kind: system-design-problem
 summary: "DOM gives you events and accessibility for free. Canvas skips the rendering pipeline entirely. At scale, the choice defines the architecture."
 tags:
   - virtualisation
@@ -18,28 +18,140 @@ prerequisites:
   - virt-windowing
 ---
 
-## Two Rendering Pipelines
+<section id="step-1" className="recipe-step">
 
-Every DOM element passes through style calculation, layout, and paint before reaching pixels. Canvas bypasses all three — you draw directly to a pixel buffer. Drag the slider below to scale from 50 to 20,000 elements and watch where each approach breaks.
+## 01 — Two Rendering Pipelines
 
-<CanvasDomExplorer />
+Every DOM element passes through style calculation, layout, and paint before reaching pixels. Canvas bypasses all three — you draw directly to a pixel buffer.
 
-## When DOM Wins
+The right panel shows both pipelines side by side. DOM has five stages: HTML → Style → Layout → Paint → Composite. Canvas has three: JS → Draw → Composite. The difference is not optimization — it's a fundamentally different rendering model.
 
-Below ~1,000 elements, DOM is the right default. The browser gives you:
+<PredictionChallenge
+  question="A DOM element changes its background color. Which rendering pipeline stages does the browser execute?"
+  options={[
+    "Only Paint — color doesn't affect layout",
+    "Style + Paint + Composite — recalculate the style, repaint, composite",
+    "Style + Layout + Paint + Composite — layout must verify nothing shifted",
+    "Only Composite — the GPU layer is recolored directly",
+  ]}
+  correctIndex={1}
+  explanation="A background color change triggers Style (recalculate which rules match), Paint (redraw the element's visual), and Composite (merge layers). It skips Layout because the element's geometry didn't change. This is why 'paint-only' properties are cheaper than layout-triggering ones."
+/>
 
-- **Native events** — click, hover, focus, and every pointer event work automatically on every element. Canvas requires manual hit-testing: you receive a single click coordinate and must calculate which drawn shape contains it.
-- **Accessibility** — every DOM element participates in the accessibility tree. Screen readers can traverse it, `tabindex` enables keyboard navigation, and `aria-*` attributes describe semantics. Canvas is a single opaque rectangle to assistive technology.
-- **Text selection and CSS** — the browser handles text wrapping, font rendering, selection highlighting, and style inheritance. In Canvas, you implement all of this yourself.
+</section>
 
-## When Canvas Wins
+<section id="step-2" className="recipe-step">
 
-Above ~5,000 elements, DOM's overhead becomes the bottleneck. Each element's style is recalculated, its box dimensions are laid out, and its pixels are painted — three passes per frame. Canvas skips all three: you call `fillRect()` or `arc()` and the GPU draws pixels immediately.
+## 02 — DOM: The Full Pipeline
 
-This is why Google Sheets renders its cells on Canvas, not as `<div>` elements. A 100×100 grid has 10,000 cells. In the DOM, that's 10,000 style calculations and 10,000 layout boxes per frame. On Canvas, it's 10,000 `fillRect` calls — an order of magnitude faster.
+Each DOM element is a separate entity in the rendering pipeline. The browser maintains a style tree, a layout tree, and a paint record for every element. When you have N elements:
 
-## The Hybrid Pattern
+- **Style calculation**: O(N) — each element's computed styles are resolved against the cascade
+- **Layout**: O(N) — each element's position and size are computed relative to its parent
+- **Paint**: O(N regions) — each dirty element is repainted into its layer
 
-Production applications often combine both: Canvas for the high-volume rendering (spreadsheet cells, chart data points, whiteboard shapes) with a thin DOM overlay for interactive elements (selection handles, tooltips, input fields, context menus). The Canvas handles the visual bulk while the DOM handles the interaction surface.
+The right panel expands the DOM pipeline stages, showing the per-element cost multiplied by element count. At 100 elements, this is invisible. At 10,000, each frame costs significant milliseconds.
 
-This is the pattern used by Figma, Excalidraw, and Google Sheets. The Collaborative Whiteboard system design problem explores this architecture in depth.
+</section>
+
+<section id="step-3" className="recipe-step">
+
+## 03 — DOM Advantages
+
+Below ~1,000 elements, DOM is the right default. The browser gives you three things Canvas cannot:
+
+**Native events** — click, hover, focus, and every pointer event work automatically on every element. Canvas receives a single click coordinate and you must calculate which drawn shape contains it.
+
+**Accessibility** — every DOM element participates in the accessibility tree. Screen readers can traverse it, `tabindex` enables keyboard navigation, and `aria-*` attributes describe semantics. Canvas is a single opaque rectangle to assistive technology.
+
+**Text and CSS** — the browser handles text wrapping, font rendering, selection highlighting, and style inheritance. In Canvas, you implement all of this yourself.
+
+</section>
+
+<section id="step-4" className="recipe-step">
+
+## 04 — Canvas: Direct Pixel Buffer
+
+Canvas bypasses the rendering pipeline entirely. You call `fillRect()`, `arc()`, or `drawImage()` and the GPU draws pixels immediately. No style resolution, no layout computation, no paint records.
+
+```js
+const ctx = canvas.getContext("2d");
+ctx.fillStyle = "#3b82f6";
+ctx.fillRect(x, y, width, height);
+ctx.beginPath();
+ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+ctx.fill();
+```
+
+<PredictionChallenge
+  question="You need to render 10,000 colored rectangles on screen. Which approach will achieve 60fps on a mid-range device?"
+  options={[
+    "DOM with CSS transforms — GPU-accelerated positioning",
+    "Canvas 2D — direct draw calls bypass the rendering pipeline",
+    "SVG — vector rendering is inherently scalable",
+    "WebGL — the only way to handle 10,000 elements at 60fps",
+  ]}
+  correctIndex={1}
+  explanation="Canvas 2D handles 10,000 fillRect calls comfortably at 60fps. Each call is a simple GPU operation with no style/layout overhead. DOM with transforms still requires style calculation for 10,000 elements. SVG has the same per-element overhead as DOM. WebGL is faster still but overkill for 2D rectangles."
+/>
+
+The right panel shows the Canvas API in action — a code block alongside the key insight that each draw call goes straight to the pixel buffer.
+
+</section>
+
+<section id="step-5" className="recipe-step">
+
+## 05 — The Crossover Point
+
+The right panel has an element count slider. Drag it from 50 to 20,000 and watch where each approach breaks.
+
+Below ~1,000 elements, DOM wins — the overhead is invisible, and you get events, a11y, and CSS for free. Above ~5,000 elements, Canvas wins — each frame's style+layout cost exceeds the 16ms budget, while Canvas draw calls stay under 2ms.
+
+The crossover zone (1,000–5,000) depends on element complexity. Simple `div` elements push the crossover higher. Complex elements with shadows, borders, and pseudo-elements push it lower.
+
+Google Sheets renders cells on Canvas because a 100×100 grid has 10,000 cells. In the DOM, that's 10,000 style calculations and 10,000 layout boxes per frame. On Canvas, it's 10,000 `fillRect` calls — an order of magnitude faster.
+
+</section>
+
+<section id="step-6" className="recipe-step">
+
+## 06 — The Hybrid Pattern
+
+Production applications often combine both: Canvas for the high-volume rendering with a thin DOM overlay for interactive elements.
+
+The right panel shows the two-layer architecture:
+
+- **Canvas layer** (bottom): spreadsheet cells, chart data points, whiteboard shapes — the bulk rendering
+- **DOM overlay** (top): selection handles, tooltips, input fields, context menus — the interaction surface
+
+The Canvas handles the visual bulk while the DOM handles the interaction surface. This is exactly how Figma renders: the design canvas is a WebGL surface, but selection handles, property panels, and menus are DOM elements positioned on top.
+
+<PredictionChallenge
+  question="In a hybrid Canvas+DOM app, the user clicks on a shape drawn on the Canvas. How does the app know which shape was clicked?"
+  options={[
+    "Canvas elements fire click events like DOM elements",
+    "The app performs hit-testing: converts click coordinates to canvas space and checks which shape's bounds contain the point",
+    "A hidden DOM element is created for each canvas shape to receive events",
+    "The browser automatically maps pointer events to the nearest drawn shape",
+  ]}
+  correctIndex={1}
+  explanation="Canvas has no element model — it's a pixel buffer. The app must implement hit-testing manually: transform the click coordinates to canvas space, iterate through shapes (often using a spatial index like a quadtree), and check which shape's bounding box or path contains the point."
+/>
+
+</section>
+
+<section id="step-7" className="recipe-step">
+
+## 07 — Production Examples
+
+Three production apps that demonstrate these patterns:
+
+**Figma** — WebGL for the design canvas (millions of vectors at any zoom level), DOM for the UI chrome (panels, toolbars, property editors). The canvas is a single GPU texture; interaction happens via hit-testing on a scene graph.
+
+**Google Sheets** — Canvas 2D for cells (10,000+ cells rendered per frame), DOM overlay for the active cell editor, column/row headers, and context menus. The cell grid is painted in a single pass.
+
+**Excalidraw** — Canvas 2D for shapes and drawing, DOM for the toolbar, properties panel, and text editing. When you edit text on a shape, a DOM `<textarea>` is positioned exactly over the Canvas shape.
+
+The Collaborative Whiteboard system design problem explores the Canvas + DOM hybrid architecture in depth, including the scene graph, spatial indexing, and real-time collaboration layer.
+
+</section>

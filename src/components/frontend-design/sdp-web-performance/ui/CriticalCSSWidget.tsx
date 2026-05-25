@@ -54,6 +54,7 @@ export function CriticalCSSWidget() {
             value={inlineKB}
             onChange={(e) => setInlineKB(Number(e.target.value))}
             className={styles.criticalSlider}
+            style={{ "--fill-pct": `${(inlineKB / 20) * 100}%` } as React.CSSProperties}
             aria-label={`Inline CSS size: ${inlineKB} KB`}
           />
           <div className={styles.criticalSliderTicks}>

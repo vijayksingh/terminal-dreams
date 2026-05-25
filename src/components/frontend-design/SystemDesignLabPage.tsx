@@ -24,24 +24,10 @@ import { CSSPerfLab } from "./perf-css/CSSPerfLab";
 import { ImagePerfLab } from "./perf-images/ImagePerfLab";
 import { OtherAssetsPerfLab } from "./perf-other-assets/OtherAssetsPerfLab";
 import { ResourceHintsLab } from "./perf-resource-hints/ResourceHintsLab";
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100%",
-        fontFamily: "var(--font-mono)",
-        fontSize: "var(--text-sm)",
-        color: "var(--color-muted)",
-      }}
-    >
-      {label} — rebuilding
-    </div>
-  );
-}
+import { HeightComparisonLab } from "./virt-height/HeightComparisonLab";
+import { VirtualScrollLab } from "./virt-scroll/VirtualScrollLab";
+import { TreeGridLab } from "./virt-tree-grid/TreeGridLab";
+import { CanvasDomLab } from "./virt-canvas-dom/CanvasDomLab";
 
 // ── Demo registry ──────────────────────────────────────────────────
 // Maps system-design-problem slugs to their lab components and step configs.
@@ -68,7 +54,7 @@ const DEMO_REGISTRY: Record<
       stepNumber: i + 1,
     })),
     render: (activeStep: number) => (
-      <Placeholder label="Fixed vs Variable Height" />
+      <HeightComparisonLab activeStep={activeStep} />
     ),
   },
   "virtual-scroll-implementation": {
@@ -77,7 +63,7 @@ const DEMO_REGISTRY: Record<
       stepNumber: i + 1,
     })),
     render: (activeStep: number) => (
-      <Placeholder label="Virtual Scroll Implementation" />
+      <VirtualScrollLab activeStep={activeStep} />
     ),
   },
   "tree-grid-virtualization": {
@@ -86,7 +72,7 @@ const DEMO_REGISTRY: Record<
       stepNumber: i + 1,
     })),
     render: (activeStep: number) => (
-      <Placeholder label="Tree & Grid Virtualization" />
+      <TreeGridLab activeStep={activeStep} />
     ),
   },
   "canvas-vs-dom": {
@@ -95,7 +81,7 @@ const DEMO_REGISTRY: Record<
       stepNumber: i + 1,
     })),
     render: (activeStep: number) => (
-      <Placeholder label="Canvas vs DOM" />
+      <CanvasDomLab activeStep={activeStep} />
     ),
   },
   "design-image-gallery": {
