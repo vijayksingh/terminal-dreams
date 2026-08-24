@@ -33,7 +33,7 @@ function signSlug(slug: string): string {
 }
 
 export async function GET(
-    _req: NextRequest,
+    req: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const { slug } = await params;
@@ -43,7 +43,9 @@ export async function GET(
     try {
         const pb = await getServerClient();
         const metrics = await readMetrics(pb, slug);
-        return NextResponse.json({ metrics });
+        const liked =
+            req.cookies.get(cookieName(slug))?.value === signSlug(slug);
+        return NextResponse.json({ metrics, liked });
     } catch (e) {
         console.error("metrics read failed:", e);
         return NextResponse.json(
@@ -76,6 +78,7 @@ export async function POST(
             res.cookies.set(cookieName(slug), expected, {
                 httpOnly: true,
                 sameSite: "lax",
+                secure: process.env.NODE_ENV === "production",
                 maxAge: 60 * 60 * 24 * 365,
                 path: "/",
             });

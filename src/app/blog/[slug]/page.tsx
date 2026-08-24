@@ -4,6 +4,7 @@ import { BreadcrumbBar } from "@/components/retro/BreadcrumbBar";
 import { RetroFooter } from "@/components/retro/RetroFooter";
 import { ToC } from "@/components/retro/ToC";
 import { PostMetrics } from "@/components/post-metrics/PostMetrics";
+import { GiscusComments } from "@/components/comments/GiscusComments";
 import { getAllPostSlugs, getPostBySlug } from "@/lib/mdx";
 import { buildComponentsForSlug } from "@/mdx/registry";
 import { MDXRemote } from "next-mdx-remote/rsc";
@@ -60,11 +61,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className={styles.tocMobileBottom}>
             <ToC variant="bottom" />
           </div>
+          <GiscusComments slug={post.slug} />
         </main>
       </div>
       <RetroFooter />
     </div>
   );
 }
-
-

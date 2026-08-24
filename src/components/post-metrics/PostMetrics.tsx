@@ -32,15 +32,17 @@ export function PostMetrics({ slug }: { slug: string }) {
                 };
                 const likeData = (await likeRes.json().catch(() => ({}))) as {
                     metrics?: Metrics;
+                    liked?: boolean;
                 };
                 if (cancelled) return;
                 // Prefer the view response (it's strictly newer) but fall back
                 // to like data if view 500s.
                 setMetrics(viewData.metrics ?? likeData.metrics ?? null);
-                // We can't read the HttpOnly cookie from JS, so we infer
-                // initial liked state by checking the like GET headers...
-                // simplest path: leave liked=null until first toggle.
-                setLiked(null);
+                setLiked(
+                    typeof likeData.liked === "boolean"
+                        ? likeData.liked
+                        : false
+                );
             } catch {
                 /* silent */
             }
@@ -85,7 +87,7 @@ export function PostMetrics({ slug }: { slug: string }) {
                 aria-pressed={liked === true}
                 className="flex items-center gap-1 rounded border border-app-border px-2 py-1 font-mono transition hover:border-app-accent hover:text-app-accent disabled:opacity-50"
             >
-                <span aria-hidden>{liked ? "♥" : "♡"}</span>
+                <span aria-hidden>{liked === true ? "♥" : "♡"}</span>
                 <span className="text-app-text">
                     {metrics?.likes ?? "—"}
                 </span>
