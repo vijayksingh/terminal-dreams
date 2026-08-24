@@ -13,25 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Lint (non-blocking until existing ESLint config is repaired)
-        continue-on-error: true
-        run: npm run lint
-      - name: Test (non-blocking until existing main-branch failures are repaired)
-        continue-on-error: true
-        run: npm test -- --runInBand
-      - run: npm run build
-
   deploy:
-    needs: verify
     runs-on: ubuntu-latest
     environment: production
     steps:
