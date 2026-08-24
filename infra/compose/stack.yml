@@ -7,15 +7,15 @@
 # Build steps run on the host (see infra/deploy.sh). Images are tagged
 # locally; we don't push to a registry yet.
 #
-# Public hostname: https://terminal-dreams.unlocalhosted.com (proxied through
-# Cloudflare, Traefik DNS-01 for the LE cert, HSTS via hsts@file middleware).
+# Public hostnames are proxied through Cloudflare. Traefik uses DNS-01 for
+# certificates and the shared hsts@file middleware.
 # NOT SSO-gated -- this is a public-facing portfolio app.
 
 version: "3.9"
 
 services:
   pocketbase:
-    image: terminal-dreams-pocketbase:local
+    image: terminal-dreams-pocketbase:${IMAGE_TAG:-local}
     networks:
       - dokploy-network
     volumes:
@@ -28,6 +28,9 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 5
+      update_config:
+        order: start-first
+        failure_action: rollback
       resources:
         limits:
           memory: 256M
@@ -35,7 +38,7 @@ services:
       # via http://pocketbase:8090 on dokploy-network.
 
   app:
-    image: terminal-dreams-app:local
+    image: terminal-dreams-app:${IMAGE_TAG:-local}
     networks:
       - dokploy-network
     environment:
@@ -54,13 +57,16 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 5
+      update_config:
+        order: start-first
+        failure_action: rollback
       resources:
         limits:
           memory: 512M
       labels:
         - traefik.enable=true
         - traefik.swarm.network=dokploy-network
-        - traefik.http.routers.terminal-dreams.rule=Host(`terminal-dreams.unlocalhosted.com`)
+        - traefik.http.routers.terminal-dreams.rule=Host(`dprophecyguy.com`) || Host(`www.dprophecyguy.com`) || Host(`terminal-dreams.unlocalhosted.com`)
         - traefik.http.routers.terminal-dreams.entrypoints=websecure
         - traefik.http.routers.terminal-dreams.tls.certresolver=letsencrypt
         - traefik.http.routers.terminal-dreams.middlewares=hsts@file
