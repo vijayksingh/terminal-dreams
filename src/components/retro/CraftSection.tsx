@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /**
- * ~/craft section on the homepage — showcases the cookbook and playground.
+ * ~/craft section on the homepage — links to the playground.
  */
 export function CraftSection() {
   return (
@@ -14,42 +14,6 @@ export function CraftSection() {
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {/* Cookbook card */}
-        <Link
-          href="/cookbook"
-          className="group rounded-xl border p-6 transition-all hover:shadow-lg"
-          style={{
-            borderColor: "var(--color-border)",
-            backgroundColor: "var(--color-surface)",
-          }}
-        >
-          <div className="mb-4">
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              {/* Knife */}
-              <path d="M12 36 L22 12" stroke="var(--color-accent)" strokeWidth="2" strokeLinecap="round" />
-              <path d="M22 12 L24 11 L23 16 Z" fill="var(--color-accent)" opacity="0.6" />
-              {/* Cutting board */}
-              <rect x="18" y="30" width="24" height="14" rx="2" stroke="var(--color-accent)" strokeWidth="1.5" fill="var(--color-accent)" fillOpacity="0.08" />
-              {/* Herbs/garnish on board */}
-              <circle cx="26" cy="36" r="2" fill="var(--color-accent)" opacity="0.3" />
-              <circle cx="32" cy="34" r="1.5" fill="var(--color-accent)" opacity="0.25" />
-              <circle cx="36" cy="38" r="2.5" fill="var(--color-accent)" opacity="0.2" />
-              {/* Steam/aroma */}
-              <path d="M28 26 Q27 22 29 18" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
-              <path d="M34 28 Q33 24 35 20" stroke="var(--color-accent)" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
-            </svg>
-          </div>
-          <h3
-            className="mb-1 text-lg font-bold group-hover:underline"
-            style={{ color: "var(--color-text)", fontFamily: "var(--font-mono)" }}
-          >
-            this guy cooks
-          </h3>
-          <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-            Interactive recipes with timers, step-by-step guidance, and delightful micro-interactions.
-          </p>
-        </Link>
-
         {/* Playground card */}
         <Link
           href="/playground"

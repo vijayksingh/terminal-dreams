@@ -37,7 +37,12 @@ echo "[deploy] building pocketbase image"
 docker build -t terminal-dreams-pocketbase:local "$REPO_ROOT/infra/pocketbase"
 
 echo "[deploy] building app image"
-docker build -t terminal-dreams-app:local "$REPO_ROOT"
+GIT_COMMIT="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "")"
+GIT_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+docker build \
+    --build-arg "GIT_COMMIT=$GIT_COMMIT" \
+    --build-arg "GIT_BRANCH=$GIT_BRANCH" \
+    -t terminal-dreams-app:local "$REPO_ROOT"
 
 echo "[deploy] deploying stack"
 docker stack deploy \

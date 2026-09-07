@@ -3,11 +3,12 @@
 import styles from "./retro.module.css";
 
 export function RetroFooter() {
+  const year = new Date().getFullYear();
   return (
     <footer className={styles.footer} style={{ padding: "var(--space-3) var(--space-4)" }}>
       <div className={styles.footerInner}>
         <p className="font-mono text-xs" style={{ color: "var(--color-muted)" }}>
-          ──────────────── [EOF] // © 2026 ────────────────
+          ──────────────── [EOF] // © {year} ────────────────
         </p>
       </div>
     </footer>

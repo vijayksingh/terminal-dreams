@@ -22,7 +22,14 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-ENV NEXT_TELEMETRY_DISABLED=1
+# Git metadata injected by infra/deploy.sh (.git is excluded by .dockerignore,
+# so we can't shell out to git here). Both values are optional; an empty
+# string is fine and the UI falls back gracefully.
+ARG GIT_COMMIT=""
+ARG GIT_BRANCH=""
+ENV NEXT_PUBLIC_GIT_COMMIT=$GIT_COMMIT \
+    NEXT_PUBLIC_GIT_BRANCH=$GIT_BRANCH \
+    NEXT_TELEMETRY_DISABLED=1
 RUN npm run build && npm prune --omit=dev
 
 # ---------- runtime ----------
