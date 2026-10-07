@@ -26,8 +26,10 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
-        delay: 5s
-        max_attempts: 5
+        # Never give up: after a Docker restart the app can boot before its
+        # database answers, and a capped retry leaves it down for good.
+        delay: 10s
+        max_attempts: 0
       update_config:
         order: start-first
         failure_action: rollback
@@ -55,8 +57,10 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
-        delay: 5s
-        max_attempts: 5
+        # Never give up: after a Docker restart the app can boot before its
+        # database answers, and a capped retry leaves it down for good.
+        delay: 10s
+        max_attempts: 0
       update_config:
         order: start-first
         failure_action: rollback
